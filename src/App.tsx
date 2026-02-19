@@ -8,6 +8,7 @@ import { TooltipProvider } from './components/ui/Tooltip'
 import { saveFile, saveFileAs, openFile } from './lib/fileOps'
 import type { BoxElement } from './types/frame'
 import { startMcpBridge, stopMcpBridge } from './mcp/bridge'
+import { TitleBar } from './components/TitleBar/TitleBar'
 
 const LEFT_MIN = 150
 const LEFT_MAX = 400
@@ -104,14 +105,28 @@ function App() {
   useEffect(() => {
     loadFromStorage()
     startMcpBridge()
+
+    // Sync initial view prefs to native menu check states
+    if (isTauri) {
+      import('@tauri-apps/api/core').then(({ invoke }) => {
+        const { showSpacingOverlays, showOverlayValues } = useFrameStore.getState()
+        invoke('set_menu_check', { id: 'toggle-spacing-overlays', checked: showSpacingOverlays }).catch(() => {})
+        invoke('set_menu_check', { id: 'toggle-overlay-values', checked: showOverlayValues }).catch(() => {})
+      }).catch(() => {})
+    }
+
     return () => stopMcpBridge()
   }, [loadFromStorage])
 
   // Listen for native menu events (Tauri)
   useEffect(() => {
     if (!isTauri) return
-    let unlisten: (() => void) | undefined
+    let active = true
+    const unlisteners: (() => void)[] = []
     import('@tauri-apps/api/event').then(({ listen }) => {
+      if (!active) return
+
+      // Regular menu events
       listen<string>('menu-event', (e) => {
         switch (e.payload) {
           case 'new':
@@ -138,16 +153,25 @@ function App() {
           case 'export':
             setShowExport(true)
             break
-          case 'toggle-spacing-overlays':
-            useFrameStore.getState().toggleSpacingOverlays()
-            break
-          case 'toggle-overlay-values':
-            useFrameStore.getState().toggleOverlayValues()
-            break
         }
-      }).then((fn) => { unlisten = fn })
+      }).then((fn) => {
+        if (active) unlisteners.push(fn); else fn()
+      })
+
+      // Check menu events (View toggles) — payload is [id, checked]
+      listen<[string, boolean]>('menu-check-event', (e) => {
+        const [id, checked] = e.payload
+        const store = useFrameStore.getState()
+        if (id === 'toggle-spacing-overlays') {
+          store.setSpacingOverlays(checked)
+        } else if (id === 'toggle-overlay-values') {
+          store.setOverlayValues(checked)
+        }
+      }).then((fn) => {
+        if (active) unlisteners.push(fn); else fn()
+      })
     })
-    return () => { unlisten?.() }
+    return () => { active = false; unlisteners.forEach((fn) => fn()) }
   }, [handleOpen, handleSave, handleSaveAs])
 
   // Keyboard shortcuts
@@ -187,6 +211,27 @@ function App() {
       if ((e.metaKey || e.ctrlKey) && e.key === 'o') {
         e.preventDefault()
         handleOpen()
+      }
+      // View toggles (keyboard shortcut — also sync native menu check state)
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'o') {
+        e.preventDefault()
+        useFrameStore.getState().toggleSpacingOverlays()
+        if (isTauri) {
+          const checked = useFrameStore.getState().showSpacingOverlays
+          import('@tauri-apps/api/core').then(({ invoke }) => {
+            invoke('set_menu_check', { id: 'toggle-spacing-overlays', checked })
+          }).catch(() => {})
+        }
+      }
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'v') {
+        e.preventDefault()
+        useFrameStore.getState().toggleOverlayValues()
+        if (isTauri) {
+          const checked = useFrameStore.getState().showOverlayValues
+          import('@tauri-apps/api/core').then(({ invoke }) => {
+            invoke('set_menu_check', { id: 'toggle-overlay-values', checked })
+          }).catch(() => {})
+        }
       }
     }
 
@@ -231,6 +276,7 @@ function App() {
   return (
     <TooltipProvider>
       <div className="h-full flex flex-col bg-surface-0">
+        <TitleBar />
         {/* Main panels */}
         <div className="flex-1 flex overflow-hidden">
           <div style={{ width: leftWidth }} className="shrink-0">

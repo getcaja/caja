@@ -164,6 +164,28 @@ async fn mcp_respond(
     Ok(())
 }
 
+// ── Menu sync command ──
+
+#[tauri::command]
+fn set_menu_check(app: AppHandle, id: String, checked: bool) -> Result<(), String> {
+    use tauri::menu::MenuItemKind;
+    if let Some(menu) = app.menu() {
+        for item in menu.items().unwrap_or_default() {
+            if let MenuItemKind::Submenu(sub) = item {
+                for sub_item in sub.items().unwrap_or_default() {
+                    if let MenuItemKind::Check(check) = sub_item {
+                        if check.id().0 == id {
+                            let _ = check.set_checked(checked);
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 // ── App Setup ──
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -173,7 +195,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
-        .invoke_handler(tauri::generate_handler![mcp_respond])
+        .invoke_handler(tauri::generate_handler![mcp_respond, set_menu_check])
         .setup(|app| {
             // ── Native Menu ──
             let app_menu = SubmenuBuilder::new(app, "Caja")
@@ -227,10 +249,10 @@ pub fn run() {
                 .build()?;
 
             let spacing_overlays_item = CheckMenuItemBuilder::with_id("toggle-spacing-overlays", "Spacing Overlays")
-                .checked(true)
+                .accelerator("CmdOrCtrl+Shift+O")
                 .build(app)?;
             let overlay_values_item = CheckMenuItemBuilder::with_id("toggle-overlay-values", "Overlay Values")
-                .checked(false)
+                .accelerator("CmdOrCtrl+Shift+V")
                 .build(app)?;
 
             let view_menu = SubmenuBuilder::new(app, "View")
@@ -289,8 +311,37 @@ pub fn run() {
 
             Ok(())
         })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { .. } = event {
+                use tauri_plugin_window_state::AppHandleExt;
+                let _ = window.app_handle().save_window_state(tauri_plugin_window_state::StateFlags::all());
+            }
+        })
         .on_menu_event(|app, event| {
-            let _ = app.emit("menu-event", event.id().0.as_str());
+            let id = event.id().0.as_str();
+            // For check menu items, emit their new checked state
+            match id {
+                "toggle-spacing-overlays" | "toggle-overlay-values" => {
+                    use tauri::menu::MenuItemKind;
+                    if let Some(menu) = app.menu() {
+                        for item in menu.items().unwrap_or_default() {
+                            if let MenuItemKind::Submenu(sub) = item {
+                                for sub_item in sub.items().unwrap_or_default() {
+                                    if let MenuItemKind::Check(check) = sub_item {
+                                        if check.id().0 == id {
+                                            let checked = check.is_checked().unwrap_or(false);
+                                            let _ = app.emit("menu-check-event", (id, checked));
+                                            return;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                _ => {}
+            }
+            let _ = app.emit("menu-event", id);
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

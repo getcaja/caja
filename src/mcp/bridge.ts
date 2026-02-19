@@ -22,6 +22,7 @@ export async function startMcpBridge() {
 
   const { listen } = await import('@tauri-apps/api/event')
   const { invoke } = await import('@tauri-apps/api/core')
+  const { useFrameStore } = await import('../store/frameStore')
 
   // Handle tool calls from MCP server (serialized)
   const unlistenTool = await listen<{ id: string; name: string; params: Record<string, unknown> }>(
@@ -53,6 +54,9 @@ export async function startMcpBridge() {
   )
 
   unlisten = [unlistenTool, unlistenResource]
+
+  // MCP bridge runs in-process — mark connected when listeners are up
+  useFrameStore.setState({ mcpConnected: true })
 }
 
 export function stopMcpBridge() {

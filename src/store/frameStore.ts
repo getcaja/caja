@@ -485,6 +485,7 @@ interface FrameStore {
   dirty: boolean
   showSpacingOverlays: boolean
   showOverlayValues: boolean
+  mcpConnected: boolean
 
   past: BoxElement[]
   future: BoxElement[]
@@ -516,7 +517,30 @@ interface FrameStore {
   markClean: () => void
   toggleSpacingOverlays: () => void
   toggleOverlayValues: () => void
+  setSpacingOverlays: (value: boolean) => void
+  setOverlayValues: (value: boolean) => void
 }
+
+const VIEW_PREFS_KEY = 'caja-view-prefs'
+
+interface ViewPrefs {
+  showSpacingOverlays: boolean
+  showOverlayValues: boolean
+}
+
+function loadViewPrefs(): ViewPrefs {
+  try {
+    const raw = localStorage.getItem(VIEW_PREFS_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch { /* ignore */ }
+  return { showSpacingOverlays: true, showOverlayValues: false }
+}
+
+function saveViewPrefs(prefs: ViewPrefs) {
+  localStorage.setItem(VIEW_PREFS_KEY, JSON.stringify(prefs))
+}
+
+const initialViewPrefs = loadViewPrefs()
 
 function pushHistory(state: { root: BoxElement; past: BoxElement[]; future: BoxElement[] }) {
   return {
@@ -533,8 +557,9 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   collapsedIds: new Set(),
   filePath: null,
   dirty: false,
-  showSpacingOverlays: true,
-  showOverlayValues: false,
+  showSpacingOverlays: initialViewPrefs.showSpacingOverlays,
+  showOverlayValues: initialViewPrefs.showOverlayValues,
+  mcpConnected: false,
   past: [],
   future: [],
 
@@ -720,8 +745,24 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
 
   setFilePath: (path) => set({ filePath: path }),
   markClean: () => set({ dirty: false }),
-  toggleSpacingOverlays: () => set((s) => ({ showSpacingOverlays: !s.showSpacingOverlays })),
-  toggleOverlayValues: () => set((s) => ({ showOverlayValues: !s.showOverlayValues })),
+  toggleSpacingOverlays: () => set((s) => {
+    const next = !s.showSpacingOverlays
+    saveViewPrefs({ showSpacingOverlays: next, showOverlayValues: s.showOverlayValues })
+    return { showSpacingOverlays: next }
+  }),
+  toggleOverlayValues: () => set((s) => {
+    const next = !s.showOverlayValues
+    saveViewPrefs({ showSpacingOverlays: s.showSpacingOverlays, showOverlayValues: next })
+    return { showOverlayValues: next }
+  }),
+  setSpacingOverlays: (value) => set((s) => {
+    saveViewPrefs({ showSpacingOverlays: value, showOverlayValues: s.showOverlayValues })
+    return { showSpacingOverlays: value }
+  }),
+  setOverlayValues: (value) => set((s) => {
+    saveViewPrefs({ showSpacingOverlays: s.showSpacingOverlays, showOverlayValues: value })
+    return { showOverlayValues: value }
+  }),
 }))
 
 // Auto-save
