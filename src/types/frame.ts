@@ -16,7 +16,14 @@ export interface Border {
   style: 'none' | 'solid' | 'dashed' | 'dotted'
 }
 
-export type ElementType = 'box' | 'text' | 'image' | 'button' | 'input'
+export interface BorderRadius {
+  topLeft: number
+  topRight: number
+  bottomRight: number
+  bottomLeft: number
+}
+
+export type ElementType = 'box' | 'text' | 'image' | 'button' | 'input' | 'textarea' | 'select'
 
 // Shared properties for all elements
 interface BaseElement {
@@ -34,19 +41,35 @@ interface BaseElement {
   padding: Spacing
   margin: Spacing
 
+  // Size constraints
+  minWidth: number
+  maxWidth: number
+  minHeight: number
+  maxHeight: number
+
+  // Flex child
+  alignSelf: 'auto' | 'start' | 'center' | 'end' | 'stretch'
+
   // Visuals
   bg: string
   border: Border
-  borderRadius: number
+  borderRadius: BorderRadius
   overflow: 'visible' | 'hidden' | 'scroll'
   opacity: number // 0–100
+  boxShadow: 'none' | 'sm' | 'base' | 'md' | 'lg' | 'xl' | '2xl'
+  cursor: 'auto' | 'default' | 'pointer' | 'text' | 'not-allowed' | 'grab'
 
   // Advanced
   tailwindClasses: string
 }
 
+export type BoxTag = 'div' | 'section' | 'nav' | 'header' | 'footer' | 'main' | 'article' | 'aside' | 'ul' | 'ol' | 'li' | 'form'
+
 export interface BoxElement extends BaseElement {
   type: 'box'
+
+  // Semantic tag
+  tag: BoxTag
 
   // Layout (box is a flex container)
   direction: 'row' | 'column'
@@ -59,7 +82,7 @@ export interface BoxElement extends BaseElement {
   children: Frame[]
 }
 
-export type TextTag = 'p' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'span' | 'a'
+export type TextTag = 'p' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'span' | 'a' | 'label'
 
 export interface TextElement extends BaseElement {
   type: 'text'
@@ -71,6 +94,11 @@ export interface TextElement extends BaseElement {
   lineHeight: number // multiplier, e.g. 1.5
   color: string
   textAlign: 'left' | 'center' | 'right'
+  fontStyle: 'normal' | 'italic'
+  textDecoration: 'none' | 'underline' | 'line-through'
+  letterSpacing: number
+  textTransform: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
+  whiteSpace: 'normal' | 'nowrap' | 'pre-wrap'
 
   // Semantic tag
   tag: TextTag
@@ -104,5 +132,25 @@ export interface InputElement extends BaseElement {
   disabled: boolean
 }
 
+export interface TextareaElement extends BaseElement {
+  type: 'textarea'
+
+  placeholder: string
+  rows: number
+  disabled: boolean
+}
+
+export interface SelectOption {
+  value: string
+  label: string
+}
+
+export interface SelectElement extends BaseElement {
+  type: 'select'
+
+  options: SelectOption[]
+  disabled: boolean
+}
+
 // Union type
-export type Frame = BoxElement | TextElement | ImageElement | ButtonElement | InputElement
+export type Frame = BoxElement | TextElement | ImageElement | ButtonElement | InputElement | TextareaElement | SelectElement

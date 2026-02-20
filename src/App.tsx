@@ -6,7 +6,7 @@ import { RightPanel } from './components/RightPanel/RightPanel'
 import { ExportModal } from './components/Export/ExportModal'
 import { TooltipProvider } from './components/ui/Tooltip'
 import { saveFile, saveFileAs, openFile } from './lib/fileOps'
-import type { BoxElement } from './types/frame'
+
 import { startMcpBridge, stopMcpBridge } from './mcp/bridge'
 import { TitleBar } from './components/TitleBar/TitleBar'
 

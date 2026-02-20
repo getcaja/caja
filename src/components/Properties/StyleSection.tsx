@@ -4,10 +4,13 @@ import { Section } from '../ui/Section'
 import { NumberInput } from '../ui/NumberInput'
 import { ColorInput } from '../ui/ColorInput'
 import { ToggleGroup } from '../ui/ToggleGroup'
-import { OVERFLOW_OPTIONS } from './constants'
+import { Select } from '../ui/Select'
+import { BorderRadiusControl } from '../ui/BorderRadiusControl'
+import { OVERFLOW_OPTIONS, BOX_SHADOW_OPTIONS, CURSOR_OPTIONS } from './constants'
 
 export function StyleSection({ frame }: { frame: Frame }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
+  const updateBorderRadius = useFrameStore((s) => s.updateBorderRadius)
 
   return (
     <Section title="Style">
@@ -35,20 +38,24 @@ export function StyleSection({ frame }: { frame: Frame }) {
         />
 
         <div className="flex flex-col gap-1.5">
-          <ToggleGroup
-            value={frame.border.style}
-            options={[
-              { value: 'none', label: 'None' },
-              { value: 'solid', label: 'Solid' },
-              { value: 'dashed', label: 'Dashed' },
-              { value: 'dotted', label: 'Dotted' },
-            ]}
-            onChange={(style) =>
-              updateFrame(frame.id, {
-                border: { ...frame.border, style, width: style === 'none' ? 0 : Math.max(frame.border.width, 1) },
-              })
-            }
-          />
+          <div className="flex items-center gap-1.5">
+            <span className="c-label">Border</span>
+            <ToggleGroup
+              value={frame.border.style}
+              options={[
+                { value: 'none', label: 'None' },
+                { value: 'solid', label: 'Solid' },
+                { value: 'dashed', label: 'Dashed' },
+                { value: 'dotted', label: 'Dotted' },
+              ]}
+              className="flex-1"
+              onChange={(style) =>
+                updateFrame(frame.id, {
+                  border: { ...frame.border, style, width: style === 'none' ? 0 : Math.max(frame.border.width, 1) },
+                })
+              }
+            />
+          </div>
           {frame.border.style !== 'none' && (
             <>
               <NumberInput
@@ -66,19 +73,37 @@ export function StyleSection({ frame }: { frame: Frame }) {
           )}
         </div>
 
-        <NumberInput
+        <BorderRadiusControl
           value={frame.borderRadius}
-          onChange={(v) => updateFrame(frame.id, { borderRadius: v })}
-          min={0}
-          label="Radius"
+          onChange={(v) => updateBorderRadius(frame.id, v)}
         />
 
         <div className="flex items-center gap-1.5">
-          <span className="c-label">Clip</span>
+          <span className="c-label">Overflow</span>
           <ToggleGroup
             value={frame.overflow}
             options={OVERFLOW_OPTIONS}
             onChange={(v) => updateFrame(frame.id, { overflow: v as Frame['overflow'] })}
+            className="flex-1"
+          />
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <span className="c-label">Shadow</span>
+          <Select
+            value={frame.boxShadow}
+            options={BOX_SHADOW_OPTIONS}
+            onChange={(v) => updateFrame(frame.id, { boxShadow: v as Frame['boxShadow'] })}
+            className="flex-1"
+          />
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <span className="c-label">Cursor</span>
+          <Select
+            value={frame.cursor}
+            options={CURSOR_OPTIONS}
+            onChange={(v) => updateFrame(frame.id, { cursor: v as Frame['cursor'] })}
             className="flex-1"
           />
         </div>

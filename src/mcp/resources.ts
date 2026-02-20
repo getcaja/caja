@@ -2,6 +2,7 @@
 
 import { useFrameStore } from '../store/frameStore'
 import { exportToJSX } from '../utils/exportTailwind'
+import { exportToHTML } from '../utils/exportHtml'
 import type { Frame } from '../types/frame'
 
 function findInTree(root: Frame, id: string): Frame | null {
@@ -41,6 +42,12 @@ export const resourceDefinitions: Resource[] = [
     description: 'The current layout exported as Tailwind JSX code',
     mimeType: 'text/plain',
   },
+  {
+    uri: 'caja://export/html',
+    name: 'Tailwind HTML Export',
+    description: 'The current layout exported as Tailwind HTML code',
+    mimeType: 'text/html',
+  },
 ]
 
 export function readResource(uri: string): { content: string; mimeType: string } | null {
@@ -78,6 +85,16 @@ export function readResource(uri: string): { content: string; mimeType: string }
     return {
       content: code,
       mimeType: 'text/plain',
+    }
+  }
+
+  if (uri === 'caja://export/html') {
+    const code = store.root.children.length > 0
+      ? store.root.children.map((child) => exportToHTML(child)).join('\n')
+      : '<!-- Empty layout -->'
+    return {
+      content: code,
+      mimeType: 'text/html',
     }
   }
 

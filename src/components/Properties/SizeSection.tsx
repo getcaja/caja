@@ -3,6 +3,8 @@ import { useFrameStore } from '../../store/frameStore'
 import { Section } from '../ui/Section'
 import { NumberInput } from '../ui/NumberInput'
 import { InlineSizeControl } from '../ui/InlineSizeControl'
+import { ToggleGroup } from '../ui/ToggleGroup'
+import { ALIGN_SELF_OPTIONS } from './constants'
 
 export function SizeSection({ frame }: { frame: Frame }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
@@ -33,6 +35,43 @@ export function SizeSection({ frame }: { frame: Frame }) {
             onChange={(v) => updateFrame(frame.id, { shrink: v })}
             min={0}
             label="Shrink"
+          />
+        </div>
+        <div className="flex gap-2">
+          <NumberInput
+            value={frame.minWidth}
+            onChange={(v) => updateFrame(frame.id, { minWidth: v })}
+            min={0}
+            label="Min W"
+          />
+          <NumberInput
+            value={frame.maxWidth}
+            onChange={(v) => updateFrame(frame.id, { maxWidth: v })}
+            min={0}
+            label="Max W"
+          />
+        </div>
+        <div className="flex gap-2">
+          <NumberInput
+            value={frame.minHeight}
+            onChange={(v) => updateFrame(frame.id, { minHeight: v })}
+            min={0}
+            label="Min H"
+          />
+          <NumberInput
+            value={frame.maxHeight}
+            onChange={(v) => updateFrame(frame.id, { maxHeight: v })}
+            min={0}
+            label="Max H"
+          />
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="c-label">Align</span>
+          <ToggleGroup
+            value={frame.alignSelf}
+            options={ALIGN_SELF_OPTIONS}
+            onChange={(v) => updateFrame(frame.id, { alignSelf: v as Frame['alignSelf'] })}
+            className="flex-1"
           />
         </div>
       </div>

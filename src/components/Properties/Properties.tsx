@@ -5,14 +5,16 @@ import { ContentSection } from './ContentSection'
 import { ImageSection } from './ImageSection'
 import { ButtonSection } from './ButtonSection'
 import { InputSection } from './InputSection'
+import { TextareaSection } from './TextareaSection'
+import { SelectSection } from './SelectSection'
 import { SizeSection } from './SizeSection'
 import { SpacingSection } from './SpacingSection'
 import { StyleSection } from './StyleSection'
 import { AdvancedSection } from './AdvancedSection'
 
 export function Properties() {
-  const selected = useFrameStore((s) => s.getSelected)()
-  const rootId = useFrameStore((s) => s.getRootId)()
+  const selected = useFrameStore((s) => s.getSelected())
+  const rootId = useFrameStore((s) => s.getRootId())
 
   if (!selected) {
     return (
@@ -32,6 +34,8 @@ export function Properties() {
       {selected.type === 'image' && <ImageSection frame={selected} />}
       {selected.type === 'button' && <ButtonSection frame={selected} />}
       {selected.type === 'input' && <InputSection frame={selected} />}
+      {selected.type === 'textarea' && <TextareaSection frame={selected} />}
+      {selected.type === 'select' && <SelectSection frame={selected} />}
       <StyleSection frame={selected} />
       <SizeSection frame={selected} />
       <SpacingSection frame={selected} />

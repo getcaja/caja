@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect, useLayoutEffect } from 'react'
-import { ImageIcon } from 'lucide-react'
+import { ChevronDown, ImageIcon } from 'lucide-react'
 import type { Frame, Spacing } from '../../types/frame'
 import { frameToClasses } from '../../utils/frameToClasses'
-import { frameToPreviewStyle } from '../../utils/frameToPreviewStyle'
 import { useFrameStore } from '../../store/frameStore'
+import './FrameRenderer.css'
 
 interface FrameRendererProps {
   frame: Frame
@@ -11,39 +11,15 @@ interface FrameRendererProps {
   rootMinHeight?: boolean
 }
 
-const HIGHLIGHT_COLOR = '#0D99FF'
-const HIGHLIGHT_HOVER = 'rgba(13, 153, 255, 0.4)'
-const PAD_COLOR = 'rgba(147, 196, 125, 0.55)'
-const MARGIN_COLOR = 'rgba(246, 178, 107, 0.66)'
-const GAP_FILL = 'rgba(127, 32, 210, 0.3)'
-const GAP_HATCH = 'rgba(127, 32, 210, 0.8)'
-const LABEL_COLOR = 'rgba(0, 0, 0, 0.7)'
 const LABEL_MIN_SIZE = 14
 
 function hasSpacing(s: Spacing) {
   return s.top > 0 || s.right > 0 || s.bottom > 0 || s.left > 0
 }
 
-const stripBase: React.CSSProperties = {
-  position: 'absolute',
-  pointerEvents: 'none',
-  zIndex: 1,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-}
-
-const labelStyle: React.CSSProperties = {
-  fontSize: 10,
-  fontFamily: 'monospace',
-  color: LABEL_COLOR,
-  lineHeight: 1,
-  userSelect: 'none',
-}
-
 function PadLabel({ value, axis }: { value: number; axis: 'h' | 'v' }) {
   if ((axis === 'v' && value < LABEL_MIN_SIZE) || (axis === 'h' && value < LABEL_MIN_SIZE)) return null
-  return <span style={labelStyle}>{value}</span>
+  return <span className="overlay-label">{value}</span>
 }
 
 function SpacingOverlay({ padding, margin, showValues }: { padding: Spacing; margin: Spacing; showValues: boolean }) {
@@ -55,38 +31,38 @@ function SpacingOverlay({ padding, margin, showValues }: { padding: Spacing; mar
     <>
       {/* Padding strips — picture-frame: top/bottom full width, left/right fill between */}
       {padding.top > 0 && (
-        <div style={{ ...stripBase, top: 0, left: 0, right: 0, height: padding.top, background: PAD_COLOR }}>
+        <div className="overlay-strip overlay-pad" style={{ top: 0, left: 0, right: 0, height: padding.top }}>
           {showValues && <PadLabel value={padding.top} axis="v" />}
         </div>
       )}
       {padding.bottom > 0 && (
-        <div style={{ ...stripBase, bottom: 0, left: 0, right: 0, height: padding.bottom, background: PAD_COLOR }}>
+        <div className="overlay-strip overlay-pad" style={{ bottom: 0, left: 0, right: 0, height: padding.bottom }}>
           {showValues && <PadLabel value={padding.bottom} axis="v" />}
         </div>
       )}
       {padding.left > 0 && (
-        <div style={{ ...stripBase, top: padding.top, bottom: padding.bottom, left: 0, width: padding.left, background: PAD_COLOR }}>
+        <div className="overlay-strip overlay-pad" style={{ top: padding.top, bottom: padding.bottom, left: 0, width: padding.left }}>
           {showValues && <PadLabel value={padding.left} axis="h" />}
         </div>
       )}
       {padding.right > 0 && (
-        <div style={{ ...stripBase, top: padding.top, bottom: padding.bottom, right: 0, width: padding.right, background: PAD_COLOR }}>
+        <div className="overlay-strip overlay-pad" style={{ top: padding.top, bottom: padding.bottom, right: 0, width: padding.right }}>
           {showValues && <PadLabel value={padding.right} axis="h" />}
         </div>
       )}
 
       {/* Margin strips — top/bottom include corners, left/right fill middle */}
       {margin.top > 0 && (
-        <div style={{ ...stripBase, top: -margin.top, left: -margin.left, right: -margin.right, height: margin.top, background: MARGIN_COLOR }} />
+        <div className="overlay-strip overlay-margin" style={{ top: -margin.top, left: -margin.left, right: -margin.right, height: margin.top }} />
       )}
       {margin.bottom > 0 && (
-        <div style={{ ...stripBase, bottom: -margin.bottom, left: -margin.left, right: -margin.right, height: margin.bottom, background: MARGIN_COLOR }} />
+        <div className="overlay-strip overlay-margin" style={{ bottom: -margin.bottom, left: -margin.left, right: -margin.right, height: margin.bottom }} />
       )}
       {margin.left > 0 && (
-        <div style={{ ...stripBase, top: 0, bottom: 0, left: -margin.left, width: margin.left, background: MARGIN_COLOR }} />
+        <div className="overlay-strip overlay-margin" style={{ top: 0, bottom: 0, left: -margin.left, width: margin.left }} />
       )}
       {margin.right > 0 && (
-        <div style={{ ...stripBase, top: 0, bottom: 0, right: -margin.right, width: margin.right, background: MARGIN_COLOR }} />
+        <div className="overlay-strip overlay-margin" style={{ top: 0, bottom: 0, right: -margin.right, width: margin.right }} />
       )}
     </>
   )
@@ -169,17 +145,11 @@ function GapOverlay({ containerRef, gap, showValues }: {
       {strips.map((s, i) => (
         <div
           key={i}
-          style={{
-            ...stripBase,
-            left: s.left,
-            top: s.top,
-            width: s.width,
-            height: s.height,
-            background: `repeating-linear-gradient(-45deg, ${GAP_HATCH}, ${GAP_HATCH} 1px, transparent 1px, transparent 6px), ${GAP_FILL}`,
-          }}
+          className="overlay-strip overlay-gap"
+          style={{ left: s.left, top: s.top, width: s.width, height: s.height }}
         >
           {showValues && s.width >= LABEL_MIN_SIZE && s.height >= LABEL_MIN_SIZE && (
-            <span style={{ ...labelStyle, color: '#fff', textShadow: '0 0 2px rgba(0,0,0,0.5)' }}>{gap}</span>
+            <span className="overlay-label is-gap">{gap}</span>
           )}
         </div>
       ))}
@@ -207,36 +177,22 @@ export function FrameRenderer({ frame, rootMinHeight }: FrameRendererProps) {
   const isImage = frame.type === 'image'
   const isButton = frame.type === 'button'
   const isInput = frame.type === 'input'
+  const isTextarea = frame.type === 'textarea'
+  const isSelect = frame.type === 'select'
   const hasFixedSize = frame.width.mode === 'fixed' || frame.height.mode === 'fixed'
   const isEmpty = isBox && frame.children.length === 0 && !hasFixedSize && !frame.bg
 
   // Tailwind classes (source of truth for export & display)
-  const classes = frameToClasses(frame)
+  const tailwind = frameToClasses(frame)
 
-  // Inline styles for canvas preview (dynamic values Tailwind can't generate at build time)
-  const previewStyle = frameToPreviewStyle(frame)
-
-  // Root frame: use min-height so it grows with content instead of clipping
-  if (rootMinHeight && frame.height.mode === 'fill') {
-    previewStyle.minHeight = '100%'
-    previewStyle.height = 'auto'
-  }
-
-  // Editor-only styles (hover outline, empty state)
-  const editorStyle: React.CSSProperties = {
-    position: 'relative',
-    outline: isSelected
-      ? 'none'
-      : isHovered
-        ? `1px solid ${HIGHLIGHT_HOVER}`
-        : isEmpty
-          ? '1px dashed var(--color-surface-3)'
-          : 'none',
-    outlineOffset: '-1px',
-    minHeight: isEmpty ? 40 : undefined,
-    minWidth: isEmpty ? 40 : undefined,
-    cursor: editingText ? 'text' : 'pointer',
-  }
+  // Compose editor state classes
+  const stateClasses = [
+    'frame-node',
+    isHovered && 'is-hovered',
+    isEmpty && 'is-empty',
+    editingText && 'is-editing',
+    rootMinHeight && frame.height.mode === 'fill' && 'is-root-fill',
+  ].filter(Boolean).join(' ')
 
   useEffect(() => {
     if (editingText && textRef.current) {
@@ -267,8 +223,7 @@ export function FrameRenderer({ frame, rootMinHeight }: FrameRendererProps) {
     <div
       ref={containerRef}
       data-frame-id={frame.id}
-      className={classes}
-      style={{ ...previewStyle, ...editorStyle }}
+      className={`${tailwind} ${stateClasses}`}
       onClick={(e) => {
         e.stopPropagation()
         if (!editingText) select(frame.id)
@@ -285,9 +240,7 @@ export function FrameRenderer({ frame, rootMinHeight }: FrameRendererProps) {
       }}
       onMouseLeave={() => hover(null)}
     >
-      {isSelected && (
-        <div style={{ position: 'absolute', inset: 0, border: `2px solid ${HIGHLIGHT_COLOR}`, pointerEvents: 'none', zIndex: 10 }} />
-      )}
+      {isSelected && <div className="frame-selection" />}
       {isSelected && showSpacingOverlays && (
         <SpacingOverlay padding={frame.padding} margin={frame.margin} showValues={showOverlayValues} />
       )}
@@ -299,6 +252,7 @@ export function FrameRenderer({ frame, rootMinHeight }: FrameRendererProps) {
         editingText ? (
           <div
             ref={textRef}
+            className="frame-text-editing"
             contentEditable
             suppressContentEditableWarning
             onBlur={commitText}
@@ -308,7 +262,6 @@ export function FrameRenderer({ frame, rootMinHeight }: FrameRendererProps) {
                 commitText()
               }
             }}
-            style={{ outline: 'none', minWidth: 1, position: 'relative', zIndex: 2 }}
           >
             {frame.content}
           </div>
@@ -321,27 +274,45 @@ export function FrameRenderer({ frame, rootMinHeight }: FrameRendererProps) {
           <img
             src={frame.src}
             alt={frame.alt}
-            className={frameToClasses(frame)}
-            style={{ width: '100%', height: '100%', display: 'block', objectFit: frame.objectFit }}
+            className={`frame-img ${frameToClasses(frame)}`}
             draggable={false}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-surface-2/50 text-text-muted" style={{ minHeight: 40, minWidth: 40 }}>
+          <div className="frame-img-placeholder w-full h-full flex items-center justify-center bg-surface-2/50 text-text-muted">
             <ImageIcon size={24} />
           </div>
         )
       )}
       {isButton && (
-        <span style={{ pointerEvents: 'none', userSelect: 'none' }}>{frame.label}</span>
+        <span className="frame-btn-label">{frame.label}</span>
       )}
       {isInput && (
         <input
+          className="frame-form-control"
           type={frame.inputType}
           placeholder={frame.placeholder}
           disabled={frame.disabled}
           readOnly
-          style={{ pointerEvents: 'none', width: '100%', background: 'transparent', outline: 'none', fontSize: 'inherit', color: 'inherit' }}
         />
+      )}
+      {isTextarea && (
+        <textarea
+          className="frame-form-control"
+          placeholder={frame.placeholder}
+          rows={frame.rows}
+          disabled={frame.disabled}
+          readOnly
+        />
+      )}
+      {isSelect && (
+        <>
+          <select className="frame-form-control" disabled={frame.disabled}>
+            {frame.options.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+          <ChevronDown size={14} className="frame-select-chevron" />
+        </>
       )}
       {isBox && frame.children.map((child) => (
         <FrameRenderer key={child.id} frame={child} />

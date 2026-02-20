@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { Minus, FoldHorizontal, UnfoldHorizontal, Lock } from 'lucide-react'
 import type { SizeValue } from '../../types/frame'
 import { ToggleGroup } from './ToggleGroup'
 
@@ -37,10 +36,10 @@ export function InlineSizeControl({
       <ToggleGroup
         value={value.mode}
         options={[
-          { value: 'default', label: <Minus size={12} />, tooltip: 'Auto' },
-          { value: 'hug', label: <FoldHorizontal size={12} />, tooltip: 'Hug contents' },
-          { value: 'fill', label: <UnfoldHorizontal size={12} />, tooltip: 'Fill container' },
-          { value: 'fixed', label: <Lock size={12} />, tooltip: 'Fixed size' },
+          { value: 'default', label: 'Auto' },
+          { value: 'hug', label: 'Hug' },
+          { value: 'fill', label: 'Fill' },
+          { value: 'fixed', label: 'Fixed' },
         ]}
         onChange={(mode) => onChange({ mode: mode as SizeValue['mode'] })}
         className="flex-1"

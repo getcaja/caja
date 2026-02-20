@@ -10,7 +10,7 @@ export function ImageSection({ frame }: { frame: ImageElement }) {
     <Section title="Image">
       <div className="flex flex-col gap-2.5">
         <div className="flex items-center gap-1.5">
-          <span className="c-label">Src</span>
+          <span className="c-label">Source</span>
           <input
             type="text"
             value={frame.src}

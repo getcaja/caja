@@ -1,11 +1,11 @@
-import { AlignLeft, AlignCenter, AlignRight } from 'lucide-react'
+import { Italic, Underline, Strikethrough } from 'lucide-react'
 import type { TextElement } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { Section } from '../ui/Section'
 import { NumberInput } from '../ui/NumberInput'
 import { ToggleGroup } from '../ui/ToggleGroup'
 import { Select } from '../ui/Select'
-import { TEXT_TAG_OPTIONS, FONT_WEIGHT_OPTIONS } from './constants'
+import { TEXT_TAG_OPTIONS, FONT_WEIGHT_OPTIONS, TEXT_TRANSFORM_OPTIONS, WHITE_SPACE_OPTIONS } from './constants'
 
 export function ContentSection({ frame }: { frame: TextElement }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
@@ -54,7 +54,7 @@ export function ContentSection({ frame }: { frame: TextElement }) {
             value={frame.lineHeight}
             onChange={(v) => updateFrame(frame.id, { lineHeight: v })}
             min={0.5}
-            label="Line H."
+            label="Leading"
           />
         </div>
 
@@ -73,11 +73,77 @@ export function ContentSection({ frame }: { frame: TextElement }) {
           <ToggleGroup
             value={frame.textAlign}
             options={[
-              { value: 'left', label: <AlignLeft size={12} /> },
-              { value: 'center', label: <AlignCenter size={12} /> },
-              { value: 'right', label: <AlignRight size={12} /> },
+              { value: 'left', label: 'Left' },
+              { value: 'center', label: 'Center' },
+              { value: 'right', label: 'Right' },
             ]}
             onChange={(v) => updateFrame(frame.id, { textAlign: v as TextElement['textAlign'] })}
+          />
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <span className="c-label">Style</span>
+          <div className="flex bg-surface-0 rounded-md p-0.5">
+            <button
+              type="button"
+              onClick={() => updateFrame(frame.id, { fontStyle: frame.fontStyle === 'italic' ? 'normal' : 'italic' })}
+              className={`py-1 px-1.5 rounded transition-all flex items-center justify-center ${
+                frame.fontStyle === 'italic'
+                  ? 'bg-surface-3 text-text-primary shadow-sm'
+                  : 'text-text-muted hover:text-text-secondary'
+              }`}
+            >
+              <Italic size={12} />
+            </button>
+            <button
+              type="button"
+              onClick={() => updateFrame(frame.id, { textDecoration: frame.textDecoration === 'underline' ? 'none' : 'underline' })}
+              className={`py-1 px-1.5 rounded transition-all flex items-center justify-center ${
+                frame.textDecoration === 'underline'
+                  ? 'bg-surface-3 text-text-primary shadow-sm'
+                  : 'text-text-muted hover:text-text-secondary'
+              }`}
+            >
+              <Underline size={12} />
+            </button>
+            <button
+              type="button"
+              onClick={() => updateFrame(frame.id, { textDecoration: frame.textDecoration === 'line-through' ? 'none' : 'line-through' })}
+              className={`py-1 px-1.5 rounded transition-all flex items-center justify-center ${
+                frame.textDecoration === 'line-through'
+                  ? 'bg-surface-3 text-text-primary shadow-sm'
+                  : 'text-text-muted hover:text-text-secondary'
+              }`}
+            >
+              <Strikethrough size={12} />
+            </button>
+          </div>
+        </div>
+
+        <NumberInput
+          value={frame.letterSpacing}
+          onChange={(v) => updateFrame(frame.id, { letterSpacing: v })}
+          min={-10}
+          label="Tracking"
+        />
+
+        <div className="flex items-center gap-1.5">
+          <span className="c-label">Case</span>
+          <ToggleGroup
+            value={frame.textTransform}
+            options={TEXT_TRANSFORM_OPTIONS}
+            onChange={(v) => updateFrame(frame.id, { textTransform: v as TextElement['textTransform'] })}
+            className="flex-1"
+          />
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <span className="c-label">Wrap</span>
+          <ToggleGroup
+            value={frame.whiteSpace}
+            options={WHITE_SPACE_OPTIONS}
+            onChange={(v) => updateFrame(frame.id, { whiteSpace: v as TextElement['whiteSpace'] })}
+            className="flex-1"
           />
         </div>
       </div>

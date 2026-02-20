@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
-import { HexColorPicker } from 'react-colorful'
+import { HexAlphaColorPicker } from 'react-colorful'
 import { Popover } from './Popover'
 
-const VALID_HEX = /^#([0-9a-fA-F]{3}){1,2}$/
+// Accepts #RGB, #RRGGBB, #RRGGBBAA
+const VALID_HEX = /^#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
 
 export function ColorInput({
   value,
@@ -35,6 +36,15 @@ export function ColorInput({
     }
   }
 
+  // Strip trailing "ff" alpha from the picker output for cleaner values
+  const handlePickerChange = (hex: string) => {
+    if (hex.length === 9 && hex.endsWith('ff')) {
+      onChange(hex.slice(0, 7))
+    } else {
+      onChange(hex)
+    }
+  }
+
   return (
     <div>
       <div className="flex gap-1.5 items-center">
@@ -51,10 +61,10 @@ export function ColorInput({
             }
           >
             <div className="p-2 rounded-lg overflow-hidden">
-              <HexColorPicker
+              <HexAlphaColorPicker
                 color={value || '#000000'}
-                onChange={onChange}
-                style={{ width: 200, height: 140 }}
+                onChange={handlePickerChange}
+                style={{ width: 200, height: 160 }}
               />
             </div>
           </Popover>
@@ -66,7 +76,7 @@ export function ColorInput({
           onBlur={commitDraft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') commitDraft() }}
-          placeholder="#000"
+          placeholder="transparent"
           className="flex-1 c-input font-mono px-1.5"
         />
         <div className="w-5 h-5 shrink-0 flex items-center justify-center">

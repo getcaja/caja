@@ -1,10 +1,11 @@
-import { Columns3, Rows3, AlignHorizontalJustifyCenter, AlignHorizontalSpaceBetween, AlignHorizontalSpaceAround, Square, LayoutGrid } from 'lucide-react'
 import type { BoxElement } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { Section } from '../ui/Section'
 import { NumberInput } from '../ui/NumberInput'
 import { ToggleGroup } from '../ui/ToggleGroup'
 import { Switch } from '../ui/Switch'
+import { Select } from '../ui/Select'
+import { BOX_TAG_OPTIONS } from './constants'
 
 export function LayoutSection({ frame }: { frame: BoxElement }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
@@ -20,27 +21,40 @@ export function LayoutSection({ frame }: { frame: BoxElement }) {
     <Section title="Layout">
       <div className="flex flex-col gap-2.5">
         <div className="flex items-center gap-1.5">
+          <span className="c-label">Tag</span>
+          <Select
+            value={frame.tag || 'div'}
+            options={BOX_TAG_OPTIONS}
+            onChange={(v) => updateFrame(frame.id, { tag: v as BoxElement['tag'] })}
+            className="flex-1"
+          />
+        </div>
+        <div className="flex items-center gap-1.5">
           <span className="c-label">Display</span>
           <ToggleGroup
             value="flex"
             options={[
-              { value: 'block', label: <Square size={12} />, tooltip: 'Block', disabled: true },
-              { value: 'flex', label: 'Flex', tooltip: 'Flex' },
-              { value: 'grid', label: <LayoutGrid size={12} />, tooltip: 'Grid', disabled: true },
+              { value: 'block', label: 'Block', disabled: true },
+              { value: 'flex', label: 'Flex' },
+              { value: 'grid', label: 'Grid', disabled: true },
             ]}
             onChange={() => {}}
             className="flex-1"
           />
         </div>
 
-        <ToggleGroup
-          value={frame.direction}
-          options={[
-            { value: 'row', label: <Columns3 size={14} />, tooltip: 'Horizontal' },
-            { value: 'column', label: <Rows3 size={14} />, tooltip: 'Vertical' },
-          ]}
-          onChange={(v) => updateFrame(frame.id, { direction: v })}
-        />
+        <div className="flex items-center gap-1.5">
+          <span className="c-label">Direction</span>
+          <ToggleGroup
+            value={frame.direction}
+            options={[
+              { value: 'row', label: 'Row' },
+              { value: 'column', label: 'Column' },
+            ]}
+            onChange={(v) => updateFrame(frame.id, { direction: v })}
+            className="flex-1"
+          />
+        </div>
 
         <div className="flex items-start gap-3">
           <div
@@ -71,9 +85,9 @@ export function LayoutSection({ frame }: { frame: BoxElement }) {
             <ToggleGroup
               value={isSpaceBetween ? frame.justify : 'default'}
               options={[
-                { value: 'default', label: <AlignHorizontalJustifyCenter size={14} />, tooltip: 'Packed' },
-                { value: 'between', label: <AlignHorizontalSpaceBetween size={14} />, tooltip: 'Space between' },
-                { value: 'around', label: <AlignHorizontalSpaceAround size={14} />, tooltip: 'Space around' },
+                { value: 'default', label: 'Packed' },
+                { value: 'between', label: 'Between' },
+                { value: 'around', label: 'Around' },
               ]}
               onChange={(v) => {
                 if (v === 'default') updateFrame(frame.id, { justify: currentJ })

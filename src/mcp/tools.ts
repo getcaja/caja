@@ -2,7 +2,7 @@
 // This is the single entry point for both the built-in chat and the external MCP server.
 
 import { useFrameStore } from '../store/frameStore'
-import type { Frame, Spacing, SizeValue } from '../types/frame'
+import type { Frame, Spacing, SizeValue, SelectOption } from '../types/frame'
 import type { ToolName } from './schema'
 
 interface ToolResult {
@@ -43,7 +43,7 @@ const handlers: Record<string, ToolHandler> = {
   add_frame(params) {
     const { parent_id, element_type, properties } = params as {
       parent_id: string
-      element_type: 'box' | 'text' | 'image' | 'button' | 'input'
+      element_type: 'box' | 'text' | 'image' | 'button' | 'input' | 'textarea' | 'select'
       properties?: Record<string, unknown>
     }
 
@@ -73,7 +73,30 @@ const handlers: Record<string, ToolHandler> = {
     const frame = findInTree(store.root, id)
     if (!frame) return { success: false, error: `Frame ${id} not found` }
 
-    store.updateFrame(id, properties as Partial<Frame>)
+    // Sanitize properties that have complex types to prevent renderer crashes
+    const sanitized = { ...properties }
+
+    // options: must be SelectOption[], coerce from string or reject
+    if ('options' in sanitized) {
+      const raw = sanitized.options
+      if (typeof raw === 'string') {
+        // Coerce newline-separated string → SelectOption[]
+        sanitized.options = raw.split('\n').filter(Boolean).map((line: string) => {
+          const trimmed = line.trim()
+          return { value: trimmed.toLowerCase().replace(/\s+/g, '-'), label: trimmed } as SelectOption
+        })
+      } else if (!Array.isArray(raw)) {
+        return { success: false, error: 'options must be an array of {value, label} objects or a newline-separated string' }
+      }
+    }
+
+    // borderRadius: coerce number → uniform object
+    if ('borderRadius' in sanitized && typeof sanitized.borderRadius === 'number') {
+      const v = sanitized.borderRadius as number
+      sanitized.borderRadius = { topLeft: v, topRight: v, bottomRight: v, bottomLeft: v }
+    }
+
+    store.updateFrame(id, sanitized as Partial<Frame>)
     const updated = findInTree(getStore().root, id)
     return { success: true, data: updated ? frameSnapshot(updated) : undefined }
   },

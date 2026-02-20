@@ -76,7 +76,7 @@ server.tool(
 
 server.tool(
   'update_frame',
-  'Update properties of an existing frame. Settable: bg, direction, justify, align, gap, wrap, content, fontSize, fontWeight, color, textAlign, borderRadius, overflow, grow, shrink, tailwindClasses.',
+  'Update properties of an existing frame. Settable: bg, direction, justify, align, gap, wrap, content, fontSize, fontWeight, fontStyle, textDecoration, color, textAlign, borderRadius, overflow, grow, shrink, tailwindClasses.',
   {
     id: z.string().describe('ID of the frame to update'),
     properties: z.record(z.string(), z.unknown()).describe('Properties to set (partial update)'),
@@ -294,6 +294,21 @@ server.resource(
         uri: uri.href,
         text: result.content || JSON.stringify(result),
         mimeType: result.mimeType || 'text/plain',
+      }],
+    }
+  }
+)
+
+server.resource(
+  'caja://export/html',
+  'caja://export/html',
+  async (uri) => {
+    const result = await readResource(uri.href)
+    return {
+      contents: [{
+        uri: uri.href,
+        text: result.content || JSON.stringify(result),
+        mimeType: result.mimeType || 'text/html',
       }],
     }
   }

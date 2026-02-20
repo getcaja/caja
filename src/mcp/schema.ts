@@ -9,7 +9,7 @@ export const toolSchemas = {
       type: 'object' as const,
       properties: {
         parent_id: { type: 'string', description: 'ID of the parent box to add into' },
-        element_type: { type: 'string', enum: ['box', 'text', 'image', 'button', 'input'], description: 'Type of element to add' },
+        element_type: { type: 'string', enum: ['box', 'text', 'image', 'button', 'input', 'textarea', 'select'], description: 'Type of element to add' },
         properties: {
           type: 'object',
           description: 'Optional initial properties to set on the new element. Can include "id" to assign a custom ID (useful in batch_update to reference the frame in subsequent operations).',
@@ -22,7 +22,7 @@ export const toolSchemas = {
 
   update_frame: {
     name: 'update_frame',
-    description: 'Update properties of an existing frame. Settable: bg, direction, justify, align, gap, wrap, content, fontSize, fontWeight, color, textAlign, borderRadius, overflow, grow, shrink, tailwindClasses, opacity.',
+    description: 'Update properties of an existing frame. Settable: bg, direction, justify, align, gap, wrap, content, fontSize, fontWeight, fontStyle, textDecoration, letterSpacing, textTransform, whiteSpace, color, textAlign, borderRadius, overflow, grow, shrink, alignSelf, minWidth, maxWidth, minHeight, maxHeight, boxShadow, cursor, tailwindClasses, opacity, tag, options, rows.',
     inputSchema: {
       type: 'object' as const,
       properties: {

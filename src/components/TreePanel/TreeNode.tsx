@@ -3,7 +3,7 @@ import type { Frame } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { AddMenu } from './AddMenu'
 import { useTreeDnd, type DropPosition } from './TreeDndContext'
-import { ChevronRight, ChevronDown, Square, Type, ImageIcon, RectangleHorizontal, TextCursorInput, Plus, X, Copy, Trash2, WrapText, SquarePlus } from 'lucide-react'
+import { ChevronRight, ChevronDown, Square, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse, Plus, X, Copy, Trash2, WrapText, SquarePlus } from 'lucide-react'
 
 interface TreeNodeProps {
   frame: Frame
@@ -205,13 +205,15 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
           : frame.type === 'text' ? 'text-emerald-400'
           : frame.type === 'image' ? 'text-violet-400'
           : frame.type === 'button' ? 'text-amber-400'
-          : frame.type === 'input' ? 'text-sky-400'
+          : frame.type === 'input' || frame.type === 'textarea' || frame.type === 'select' ? 'text-sky-400'
           : 'text-text-muted'
         }`}>
           {frame.type === 'text' ? <Type size={12} />
             : frame.type === 'image' ? <ImageIcon size={12} />
             : frame.type === 'button' ? <RectangleHorizontal size={12} />
             : frame.type === 'input' ? <TextCursorInput size={12} />
+            : frame.type === 'textarea' ? <AlignLeft size={12} />
+            : frame.type === 'select' ? <ListCollapse size={12} />
             : <Square size={12} />}
         </span>
 
@@ -333,6 +335,18 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
                 onClick={() => { addChild(addTargetId, 'input'); setContextMenu(null) }}
               >
                 <TextCursorInput size={12} /> Add Input
+              </button>
+              <button
+                className="c-menu-item"
+                onClick={() => { addChild(addTargetId, 'textarea'); setContextMenu(null) }}
+              >
+                <AlignLeft size={12} /> Add Textarea
+              </button>
+              <button
+                className="c-menu-item"
+                onClick={() => { addChild(addTargetId, 'select'); setContextMenu(null) }}
+              >
+                <ListCollapse size={12} /> Add Select
               </button>
             </>
           )}
