@@ -30,7 +30,7 @@ export function SelectSection({ frame }: { frame: SelectElement }) {
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between">
             <span className="c-label">Options</span>
-            <button className="c-icon-btn w-5 h-5 hover:text-accent hover:bg-accent/10" onClick={addOption}>
+            <button className="c-icon-btn w-5 h-5 hover:text-text-primary hover:bg-surface-2" onClick={addOption}>
               <Plus size={12} />
             </button>
           </div>

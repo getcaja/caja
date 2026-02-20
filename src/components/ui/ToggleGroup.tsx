@@ -22,7 +22,7 @@ export function ToggleGroup<T extends string>({
       className={`flex bg-surface-0 rounded-md p-0.5 ${className ?? ''}`}
     >
       {options.map((opt) => {
-        const itemCls = `flex-1 py-1 px-1.5 text-[12px] rounded transition-all flex items-center justify-center ${
+        const itemCls = `flex-1 py-1 px-1.5 text-[12px] rounded flex items-center justify-center ${
           opt.disabled
             ? 'text-text-muted/40 cursor-not-allowed'
             : value === opt.value

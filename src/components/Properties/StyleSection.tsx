@@ -3,6 +3,7 @@ import { useFrameStore } from '../../store/frameStore'
 import { Section } from '../ui/Section'
 import { NumberInput } from '../ui/NumberInput'
 import { ColorInput } from '../ui/ColorInput'
+import { FillInput } from '../ui/FillInput'
 import { ToggleGroup } from '../ui/ToggleGroup'
 import { Select } from '../ui/Select'
 import { BorderRadiusControl } from '../ui/BorderRadiusControl'
@@ -15,9 +16,11 @@ export function StyleSection({ frame }: { frame: Frame }) {
   return (
     <Section title="Style">
       <div className="flex flex-col gap-2.5">
-        <ColorInput
-          value={frame.bg}
-          onChange={(v) => updateFrame(frame.id, { bg: v })}
+        <FillInput
+          color={frame.bg}
+          opacity={frame.opacity}
+          onColorChange={(v) => updateFrame(frame.id, { bg: v })}
+          onOpacityChange={(v) => updateFrame(frame.id, { opacity: v })}
           label="Fill"
         />
 
@@ -28,14 +31,6 @@ export function StyleSection({ frame }: { frame: Frame }) {
             label="Color"
           />
         )}
-
-        <NumberInput
-          value={frame.opacity}
-          onChange={(v) => updateFrame(frame.id, { opacity: v })}
-          min={0}
-          max={100}
-          label="Opacity"
-        />
 
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-1.5">

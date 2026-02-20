@@ -12,7 +12,7 @@ export function Select({ value, options, onChange, className }: SelectProps) {
   return (
     <RadixSelect.Root value={value} onValueChange={onChange}>
       <RadixSelect.Trigger
-        className={`flex items-center justify-between bg-surface-0 border border-border rounded-md px-2 py-1 text-[12px] text-text-primary outline-none focus:border-accent transition-colors cursor-pointer ${className ?? ''}`}
+        className={`c-input flex items-center justify-between cursor-pointer ${className ?? ''}`}
       >
         <RadixSelect.Value />
         <RadixSelect.Icon>
@@ -31,7 +31,7 @@ export function Select({ value, options, onChange, className }: SelectProps) {
               <RadixSelect.Item
                 key={opt.value}
                 value={opt.value}
-                className="flex items-center gap-2 px-3 py-1.5 text-[12px] text-text-secondary hover:bg-surface-3/60 hover:text-text-primary outline-none cursor-pointer transition-colors data-[highlighted]:bg-surface-3/60 data-[highlighted]:text-text-primary"
+                className="flex items-center gap-2 px-3 py-1.5 text-[12px] text-text-secondary hover:bg-surface-3/60 hover:text-text-primary outline-none cursor-pointer data-[highlighted]:bg-surface-3/60 data-[highlighted]:text-text-primary"
               >
                 <RadixSelect.ItemText>{opt.label}</RadixSelect.ItemText>
                 <RadixSelect.ItemIndicator>

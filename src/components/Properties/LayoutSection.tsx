@@ -72,8 +72,8 @@ export function LayoutSection({ frame }: { frame: BoxElement }) {
                 return (
                   <button
                     key={`${ri}-${ci}`}
-                    className={`w-[14px] h-[14px] rounded-sm transition-all ${
-                      isActive ? 'bg-accent' : 'bg-surface-3 hover:bg-border-accent'
+                    className={`w-[14px] h-[14px] rounded-sm ${
+                      isActive ? 'bg-text-primary' : 'bg-surface-3 hover:bg-border-accent'
                     }`}
                     onClick={() => updateFrame(frame.id, { justify: j, align: a })}
                   />
@@ -95,7 +95,7 @@ export function LayoutSection({ frame }: { frame: BoxElement }) {
               }}
             />
             <button
-              className={`px-2 py-1 text-[12px] rounded-md transition-all ${
+              className={`px-2 py-1 text-[12px] rounded-md ${
                 frame.align === 'stretch'
                   ? 'bg-surface-3 text-text-primary shadow-sm'
                   : 'bg-surface-0 text-text-muted hover:text-text-secondary'

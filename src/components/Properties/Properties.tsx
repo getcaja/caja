@@ -2,6 +2,7 @@ import { useFrameStore } from '../../store/frameStore'
 import { NameHeader } from './NameHeader'
 import { LayoutSection } from './LayoutSection'
 import { ContentSection } from './ContentSection'
+import { TypographySection } from './TypographySection'
 import { ImageSection } from './ImageSection'
 import { ButtonSection } from './ButtonSection'
 import { InputSection } from './InputSection'
@@ -31,6 +32,7 @@ export function Properties() {
       <NameHeader frame={selected} isRoot={isRoot} />
       {selected.type === 'box' && <LayoutSection frame={selected} />}
       {selected.type === 'text' && <ContentSection frame={selected} />}
+      {selected.type === 'text' && <TypographySection frame={selected} />}
       {selected.type === 'image' && <ImageSection frame={selected} />}
       {selected.type === 'button' && <ButtonSection frame={selected} />}
       {selected.type === 'input' && <InputSection frame={selected} />}

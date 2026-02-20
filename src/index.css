@@ -23,6 +23,9 @@
   --color-border: #32323a;
   --color-border-accent: #3e3e48;
 
+  /* Focus */
+  --color-focus: #4A90D9;
+
   /* Semantic */
   --color-destructive: #ef4444;
 }
@@ -98,9 +101,9 @@ input[type=number] {
   -moz-appearance: textfield;
 }
 
-/* Focus ring */
+/* Focus ring — default for all elements outside canvas */
 *:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--color-focus);
   outline-offset: -2px;
 }
 
@@ -113,10 +116,13 @@ input[type=number] {
 @layer components {
   /* --- Inputs --- */
   .c-input {
-    @apply bg-surface-0 border border-border rounded-md px-2 py-1 text-[12px] text-text-primary outline-none focus:border-accent transition-colors;
+    @apply bg-surface-0 border border-border rounded-md px-2 py-1 text-[12px] text-text-primary outline-none;
+  }
+  .c-scale-input {
+    @apply bg-surface-0 border border-border rounded-md px-2 py-1 text-[12px] text-text-primary;
   }
   .c-textarea {
-    @apply bg-surface-0 border border-border rounded-md px-2 py-1.5 text-[12px] text-text-primary outline-none focus:border-accent resize-none transition-colors;
+    @apply bg-surface-0 border border-border rounded-md px-2 py-1.5 text-[12px] text-text-primary outline-none resize-none;
   }
 
   /* --- Labels --- */
@@ -137,19 +143,41 @@ input[type=number] {
     @apply bg-surface-2 border border-border-accent rounded-lg shadow-2xl z-[9999] py-1.5;
   }
   .c-menu-item {
-    @apply w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-text-secondary hover:bg-surface-3/60 hover:text-text-primary transition-colors;
+    @apply w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-text-secondary hover:bg-surface-3/60 hover:text-text-primary;
   }
   .c-menu-item-destructive {
-    @apply w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-destructive hover:bg-destructive/10 transition-colors;
+    @apply w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-destructive hover:bg-destructive/10;
   }
 
   /* --- Icon buttons --- */
   .c-icon-btn {
-    @apply flex items-center justify-center rounded transition-all text-text-muted;
+    @apply flex items-center justify-center rounded text-text-muted;
   }
 
   /* --- Class pills (Advanced section) --- */
   .c-pill {
     @apply inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] font-mono leading-none select-none;
   }
+}
+
+/* Focus states — outside @layer so they always win specificity.
+   !important needed to beat Tailwind v4's unlayered &:focus ring-shadow. */
+.c-input:focus,
+.c-textarea:focus {
+  border-color: var(--color-focus);
+  outline: none;
+  box-shadow: none !important;
+}
+.c-scale-input:focus-within {
+  border-color: var(--color-focus);
+  box-shadow: none !important;
+}
+
+/* ScaleInput — reset the inner input */
+.c-scale-input input {
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
 }

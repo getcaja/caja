@@ -53,7 +53,6 @@ export function NumberInput({
         }}
         className="w-full c-input"
       />
-      {!compact && <div className="w-5 shrink-0" />}
     </div>
   )
 }

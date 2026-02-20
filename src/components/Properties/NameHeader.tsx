@@ -7,7 +7,7 @@ export function NameHeader({ frame, isRoot }: { frame: Frame; isRoot: boolean })
   const key = getBadgeKey(frame.type, isRoot)
 
   return (
-    <div className="border-b border-border pb-3 mb-3">
+    <div className="-mx-3 px-3 border-b border-border pb-3 mb-3">
       <div className="flex items-center gap-2">
         <span className={`text-[12px] px-1.5 py-0.5 rounded-md font-medium ${TYPE_BADGE_STYLES[key]}`}>
           {TYPE_BADGE_LABELS[key]}
