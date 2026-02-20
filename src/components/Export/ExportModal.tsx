@@ -25,7 +25,7 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <div className="bg-surface-1 border border-border-accent rounded-xl w-[640px] max-h-[80vh] flex flex-col shadow-2xl">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border/60">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <span className="text-[12px] text-text-primary font-semibold">Export — Tailwind JSX</span>
           <div className="flex gap-2">
             <button

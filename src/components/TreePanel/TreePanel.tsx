@@ -47,11 +47,11 @@ export function TreePanel() {
   return (
     <TreeDndProvider>
       <div className="h-full bg-surface-1 flex flex-col">
-        <div className="px-4 py-2.5 border-b border-border/60 flex items-center justify-between">
+        <div className="px-4 py-2.5 border-b border-border flex items-center justify-between">
           <span className="text-[12px] text-text-muted font-semibold">Elements</span>
           <button
             ref={addBtnRef}
-            className="w-5 h-5 flex items-center justify-center text-text-muted hover:text-accent hover:bg-accent/10 rounded-md transition-all"
+            className="w-5 h-5 c-icon-btn hover:text-accent hover:bg-accent/10"
             onClick={openAddMenu}
             title="Add element"
           >

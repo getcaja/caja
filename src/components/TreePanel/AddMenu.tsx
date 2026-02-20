@@ -24,36 +24,36 @@ export function AddMenu({ x, y, onAdd, onClose }: AddMenuProps) {
 
   return (
     <div
-      className="fixed bg-surface-2 border border-border-accent rounded-lg shadow-2xl z-[9999] py-1.5 min-w-[120px]"
+      className="fixed c-menu-popup min-w-[120px]"
       style={{ left: x, top: y }}
       onClick={(e) => e.stopPropagation()}
     >
       <button
-        className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-text-secondary hover:bg-surface-3/60 hover:text-text-primary transition-colors"
+        className="c-menu-item"
         onClick={() => onAdd('box')}
       >
         <Square size={12} /> Frame
       </button>
       <button
-        className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-text-secondary hover:bg-surface-3/60 hover:text-text-primary transition-colors"
+        className="c-menu-item"
         onClick={() => onAdd('text')}
       >
         <Type size={12} /> Text
       </button>
       <button
-        className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-text-secondary hover:bg-surface-3/60 hover:text-text-primary transition-colors"
+        className="c-menu-item"
         onClick={() => onAdd('image')}
       >
         <ImageIcon size={12} /> Image
       </button>
       <button
-        className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-text-secondary hover:bg-surface-3/60 hover:text-text-primary transition-colors"
+        className="c-menu-item"
         onClick={() => onAdd('button')}
       >
         <RectangleHorizontal size={12} /> Button
       </button>
       <button
-        className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-text-secondary hover:bg-surface-3/60 hover:text-text-primary transition-colors"
+        className="c-menu-item"
         onClick={() => onAdd('input')}
       >
         <TextCursorInput size={12} /> Input

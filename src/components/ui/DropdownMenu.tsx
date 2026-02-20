@@ -56,5 +56,5 @@ export function DropdownMenuItem({
 }
 
 export const DropdownMenuSeparator = () => (
-  <RadixDropdown.Separator className="border-t border-border/60 my-1" />
+  <RadixDropdown.Separator className="border-t border-border my-1" />
 )

@@ -41,5 +41,5 @@ export function ContextMenuItem({
 }
 
 export const ContextMenuSeparator = () => (
-  <RadixContextMenu.Separator className="border-t border-border/60 my-1" />
+  <RadixContextMenu.Separator className="border-t border-border my-1" />
 )

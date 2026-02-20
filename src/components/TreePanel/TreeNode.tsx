@@ -252,7 +252,7 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
           {addTargetId && (
             <button
               ref={addBtnRef}
-              className="w-4 h-4 flex items-center justify-center text-[10px] text-text-muted hover:text-accent hover:bg-accent/10 rounded transition-all"
+              className="w-4 h-4 c-icon-btn text-[10px] hover:text-accent hover:bg-accent/10"
               onClick={(e) => {
                 e.stopPropagation()
                 openAddMenu()
@@ -264,7 +264,7 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
           )}
           {!isRoot && (
             <button
-              className="w-4 h-4 flex items-center justify-center text-[10px] text-text-muted hover:text-destructive hover:bg-destructive/10 rounded transition-all"
+              className="w-4 h-4 c-icon-btn text-[10px] hover:text-destructive hover:bg-destructive/10"
               onClick={(e) => {
                 e.stopPropagation()
                 removeFrame(frame.id)
@@ -290,13 +290,13 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
       {/* Right-click context menu (fixed position) */}
       {contextMenu && (
         <div
-          className="fixed bg-surface-2 border border-border-accent rounded-lg shadow-2xl z-[9999] py-1.5 min-w-[160px]"
+          className="fixed c-menu-popup min-w-[160px]"
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={(e) => e.stopPropagation()}
         >
           {!isRoot && (
             <button
-              className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-text-secondary hover:bg-surface-3/60 hover:text-text-primary transition-colors"
+              className="c-menu-item"
               onClick={() => { wrapInFrame(frame.id); setContextMenu(null) }}
             >
               <WrapText size={12} /> Wrap Selection
@@ -305,31 +305,31 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
           {addTargetId && (
             <>
               <button
-                className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-text-secondary hover:bg-surface-3/60 hover:text-text-primary transition-colors"
+                className="c-menu-item"
                 onClick={() => { addChild(addTargetId, 'box'); setContextMenu(null) }}
               >
                 <SquarePlus size={12} /> Add Frame
               </button>
               <button
-                className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-text-secondary hover:bg-surface-3/60 hover:text-text-primary transition-colors"
+                className="c-menu-item"
                 onClick={() => { addChild(addTargetId, 'text'); setContextMenu(null) }}
               >
                 <Type size={12} /> Add Text
               </button>
               <button
-                className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-text-secondary hover:bg-surface-3/60 hover:text-text-primary transition-colors"
+                className="c-menu-item"
                 onClick={() => { addChild(addTargetId, 'image'); setContextMenu(null) }}
               >
                 <ImageIcon size={12} /> Add Image
               </button>
               <button
-                className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-text-secondary hover:bg-surface-3/60 hover:text-text-primary transition-colors"
+                className="c-menu-item"
                 onClick={() => { addChild(addTargetId, 'button'); setContextMenu(null) }}
               >
                 <RectangleHorizontal size={12} /> Add Button
               </button>
               <button
-                className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-text-secondary hover:bg-surface-3/60 hover:text-text-primary transition-colors"
+                className="c-menu-item"
                 onClick={() => { addChild(addTargetId, 'input'); setContextMenu(null) }}
               >
                 <TextCursorInput size={12} /> Add Input
@@ -338,15 +338,15 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
           )}
           {!isRoot && (
             <>
-              <div className="border-t border-border/60 my-1" />
+              <div className="border-t border-border my-1" />
               <button
-                className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-text-secondary hover:bg-surface-3/60 hover:text-text-primary transition-colors"
+                className="c-menu-item"
                 onClick={() => { duplicateFrame(frame.id); setContextMenu(null) }}
               >
                 <Copy size={12} /> Duplicate
               </button>
               <button
-                className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-destructive hover:bg-destructive/10 transition-colors"
+                className="c-menu-item-destructive"
                 onClick={() => { removeFrame(frame.id); setContextMenu(null) }}
               >
                 <Trash2 size={12} /> Delete

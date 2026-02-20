@@ -114,6 +114,9 @@ export function frameToClasses(frame: Frame): string {
   // Overflow
   if (frame.overflow !== 'visible') cls.push(`overflow-${frame.overflow}`)
 
+  // Opacity
+  if (frame.opacity < 100) cls.push(`opacity-[${frame.opacity / 100}]`)
+
   // Manual classes (user-added)
   if (frame.tailwindClasses) cls.push(frame.tailwindClasses)
 

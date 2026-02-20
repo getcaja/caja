@@ -39,6 +39,7 @@ interface BaseElement {
   border: Border
   borderRadius: number
   overflow: 'visible' | 'hidden' | 'scroll'
+  opacity: number // 0–100
 
   // Advanced
   tailwindClasses: string

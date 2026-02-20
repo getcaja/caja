@@ -58,6 +58,9 @@ export function frameToPreviewStyle(frame: Frame): React.CSSProperties {
   // Border radius — dynamic value
   if (frame.borderRadius > 0) style.borderRadius = frame.borderRadius
 
+  // Opacity — dynamic value
+  if (frame.opacity < 100) style.opacity = frame.opacity / 100
+
   // Button — variant-based defaults (applied after user overrides so we only fill gaps)
   if (frame.type === 'button') {
     const hasBg = !!frame.bg

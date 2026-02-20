@@ -279,19 +279,19 @@ function App() {
         <TitleBar />
         {/* Main panels */}
         <div className="flex-1 flex overflow-hidden">
-          <div style={{ width: leftWidth }} className="shrink-0">
+          <div style={{ width: leftWidth }} className="shrink-0 border-r border-border">
             <TreePanel />
           </div>
           <div
-            className="w-[3px] shrink-0 cursor-col-resize bg-transparent hover:bg-accent/40 transition-colors"
+            className="w-[3px] shrink-0 cursor-col-resize bg-transparent hover:bg-accent/40 transition-colors -ml-[2px] z-10"
             onMouseDown={(e) => startDrag('left', e)}
           />
           <Canvas />
           <div
-            className="w-[3px] shrink-0 cursor-col-resize bg-transparent hover:bg-accent/40 transition-colors"
+            className="w-[3px] shrink-0 cursor-col-resize bg-transparent hover:bg-accent/40 transition-colors -mr-[2px] z-10"
             onMouseDown={(e) => startDrag('right', e)}
           />
-          <div style={{ width: rightWidth }} className="shrink-0">
+          <div style={{ width: rightWidth }} className="shrink-0 border-l border-border">
             <RightPanel />
           </div>
         </div>

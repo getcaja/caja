@@ -6,7 +6,7 @@ export function Canvas() {
   const hasChildren = root.children.length > 0
 
   return (
-    <div id="caja-canvas" className="flex-1 overflow-auto bg-surface-0">
+    <div id="caja-canvas" className="flex-1 flex flex-col overflow-auto bg-surface-0 relative">
       <FrameRenderer frame={root} rootMinHeight />
       {!hasChildren && (
         <div

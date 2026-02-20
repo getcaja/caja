@@ -22,7 +22,7 @@ export const toolSchemas = {
 
   update_frame: {
     name: 'update_frame',
-    description: 'Update properties of an existing frame. Can set any property: bg, direction, justify, align, gap, wrap, content, fontSize, fontWeight, color, textAlign, borderRadius, overflow, grow, shrink, tailwindClasses.',
+    description: 'Update properties of an existing frame. Settable: bg, direction, justify, align, gap, wrap, content, fontSize, fontWeight, color, textAlign, borderRadius, overflow, grow, shrink, tailwindClasses, opacity.',
     inputSchema: {
       type: 'object' as const,
       properties: {
