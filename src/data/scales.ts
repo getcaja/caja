@@ -66,3 +66,98 @@ export const OPACITY_SCALE: ScaleOption[] = [
   { token: '95', value: 95 },
   { token: '100', value: 100 },
 ]
+
+export const SPACING_SCALE: ScaleOption[] = [
+  { token: '0', value: 0 },
+  { token: '0.5', value: 2 },
+  { token: '1', value: 4 },
+  { token: '1.5', value: 6 },
+  { token: '2', value: 8 },
+  { token: '2.5', value: 10 },
+  { token: '3', value: 12 },
+  { token: '3.5', value: 14 },
+  { token: '4', value: 16 },
+  { token: '5', value: 20 },
+  { token: '6', value: 24 },
+  { token: '7', value: 28 },
+  { token: '8', value: 32 },
+  { token: '9', value: 36 },
+  { token: '10', value: 40 },
+  { token: '11', value: 44 },
+  { token: '12', value: 48 },
+  { token: '14', value: 56 },
+  { token: '16', value: 64 },
+  { token: '20', value: 80 },
+  { token: '24', value: 96 },
+  { token: '28', value: 112 },
+  { token: '32', value: 128 },
+  { token: '36', value: 144 },
+  { token: '40', value: 160 },
+  { token: '44', value: 176 },
+  { token: '48', value: 192 },
+  { token: '52', value: 208 },
+  { token: '56', value: 224 },
+  { token: '60', value: 240 },
+  { token: '64', value: 256 },
+  { token: '72', value: 288 },
+  { token: '80', value: 320 },
+  { token: '96', value: 384 },
+]
+
+export const LINE_HEIGHT_SCALE: ScaleOption[] = [
+  { token: 'none', value: 1 },
+  { token: 'tight', value: 1.25 },
+  { token: 'snug', value: 1.375 },
+  { token: 'normal', value: 1.5 },
+  { token: 'relaxed', value: 1.625 },
+  { token: 'loose', value: 2 },
+]
+
+export const LETTER_SPACING_SCALE: ScaleOption[] = [
+  { token: 'tighter', value: -0.8 },
+  { token: 'tight', value: -0.4 },
+  { token: 'normal', value: 0 },
+  { token: 'wide', value: 0.4 },
+  { token: 'wider', value: 0.8 },
+  { token: 'widest', value: 1.6 },
+]
+
+export const BORDER_WIDTH_SCALE: ScaleOption[] = [
+  { token: '0', value: 0 },
+  { token: '', value: 1 },
+  { token: '2', value: 2 },
+  { token: '4', value: 4 },
+  { token: '8', value: 8 },
+]
+
+export const BORDER_RADIUS_SCALE: ScaleOption[] = [
+  { token: 'none', value: 0 },
+  { token: 'sm', value: 2 },
+  { token: 'DEFAULT', value: 4 },
+  { token: 'md', value: 6 },
+  { token: 'lg', value: 8 },
+  { token: 'xl', value: 12 },
+  { token: '2xl', value: 16 },
+  { token: '3xl', value: 24 },
+  { token: 'full', value: 9999 },
+]
+
+export const MARGIN_SCALE: ScaleOption[] = [
+  { token: 'auto', value: 0 },
+  ...SPACING_SCALE,
+]
+
+export const SIZE_CONSTRAINT_SCALE: ScaleOption[] = [
+  ...SPACING_SCALE,
+  { token: 'xs', value: 320 },
+  { token: 'sm', value: 384 },
+  { token: 'md', value: 448 },
+  { token: 'lg', value: 512 },
+  { token: 'xl', value: 576 },
+  { token: '2xl', value: 672 },
+  { token: '3xl', value: 768 },
+  { token: '4xl', value: 896 },
+  { token: '5xl', value: 1024 },
+  { token: '6xl', value: 1152 },
+  { token: '7xl', value: 1280 },
+]

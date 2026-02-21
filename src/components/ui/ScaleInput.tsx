@@ -1,6 +1,13 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Diamond, Unlink, Check } from 'lucide-react'
 import type { ScaleOption } from '../../data/scales'
+import type { DesignValue } from '../../types/frame'
+
+function formatTokenLabel(prefix: string | undefined, token: string): string {
+  if (!prefix) return token
+  if (token === '' || token === 'DEFAULT') return prefix
+  return `${prefix}-${token}`
+}
 
 export function ScaleInput({
   scale,
@@ -9,16 +16,23 @@ export function ScaleInput({
   label,
   min = 0,
   unit = 'px',
+  classPrefix,
+  defaultValue,
 }: {
   scale: ScaleOption[]
-  value: number
-  onChange: (v: number) => void
+  value: DesignValue<number>
+  onChange: (v: DesignValue<number>) => void
   label?: string
   min?: number
   unit?: string
+  classPrefix?: string
+  defaultValue?: number
 }) {
-  const [token, setToken] = useState<string | null>(null)
-  const [draft, setDraft] = useState(String(value))
+  // Token is derived from value — no local state
+  const token = value.mode === 'token' ? value.token : null
+  const numericValue = value.value
+
+  const [draft, setDraft] = useState(token ? '' : String(numericValue))
   const [showDropdown, setShowDropdown] = useState(false)
   const [selectedIdx, setSelectedIdx] = useState(-1)
   const [focused, setFocused] = useState(false)
@@ -26,20 +40,12 @@ export function ScaleInput({
   const dropdownRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Sync draft when value changes externally — but never auto-assign token
+  // Sync draft when value changes externally
   useEffect(() => {
     if (!focused) {
-      setDraft(token ? '' : String(value))
+      setDraft(token ? '' : String(numericValue))
     }
-    // If value changed and no longer matches the active token, clear it
-    if (token) {
-      const m = scale.find((s) => s.token === token)
-      if (m && m.value !== value) {
-        setToken(null)
-        if (!focused) setDraft(String(value))
-      }
-    }
-  }, [value, scale, focused, token])
+  }, [numericValue, token, focused])
 
   // Scroll selected item into view
   useEffect(() => {
@@ -66,8 +72,7 @@ export function ScaleInput({
 
   const selectToken = useCallback(
     (opt: ScaleOption) => {
-      setToken(opt.token)
-      onChange(opt.value)
+      onChange({ mode: 'token', token: opt.token, value: opt.value })
       setDraft('')
       closeDropdown()
       requestAnimationFrame(() => inputRef.current?.focus())
@@ -76,27 +81,33 @@ export function ScaleInput({
   )
 
   const removeToken = useCallback(() => {
-    setToken(null)
-    setDraft(String(value))
+    onChange({ mode: 'custom', value: numericValue })
+    setDraft(String(numericValue))
     closeDropdown()
     requestAnimationFrame(() => {
       inputRef.current?.focus()
       inputRef.current?.select()
     })
-  }, [value, closeDropdown])
+  }, [numericValue, onChange, closeDropdown])
+
+  const resetValue = defaultValue ?? min
 
   const commitDraft = useCallback(() => {
-    if (draft === '') return
+    if (draft === '') {
+      if (token) return
+      onChange({ mode: 'custom', value: resetValue })
+      setDraft(String(resetValue))
+      return
+    }
     const n = Number(draft)
     if (isNaN(n)) {
-      setDraft(token ? '' : String(value))
+      setDraft(token ? '' : String(numericValue))
       return
     }
     const clamped = Math.max(min, n)
-    setToken(null)
-    onChange(clamped)
+    onChange({ mode: 'custom', value: clamped })
     setDraft(String(clamped))
-  }, [draft, value, min, onChange, token])
+  }, [draft, numericValue, min, onChange, token, resetValue])
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -150,40 +161,40 @@ export function ScaleInput({
 
     if (e.key === 'Enter') {
       e.preventDefault()
-      if (draft) commitDraft()
+      commitDraft()
       inputRef.current?.blur()
     } else if (e.key === 'Escape') {
       e.preventDefault()
-      setDraft(token ? '' : String(value))
+      setDraft(token ? '' : String(numericValue))
       inputRef.current?.blur()
     } else if (e.key === 'ArrowUp' && !token) {
       e.preventDefault()
-      const n = Math.max(min, value + 1)
-      onChange(n)
+      const n = Math.max(min, numericValue + 1)
+      onChange({ mode: 'custom', value: n })
       setDraft(String(n))
     } else if (e.key === 'ArrowDown' && !token) {
       e.preventDefault()
-      const n = Math.max(min, value - 1)
-      onChange(n)
+      const n = Math.max(min, numericValue - 1)
+      onChange({ mode: 'custom', value: n })
       setDraft(String(n))
     }
   }
 
   const handleFocus = () => {
     setFocused(true)
-    if (!token) setDraft(String(value))
+    if (!token) setDraft(String(numericValue))
   }
 
   const handleBlur = () => {
     setFocused(false)
-    if (draft) commitDraft()
+    commitDraft()
     setShowDropdown(false)
   }
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex items-center gap-1.5 min-w-0 flex-1">
       {label && <span className="c-label">{label}</span>}
-      <div ref={containerRef} className="relative w-full">
+      <div ref={containerRef} className="relative flex-1 min-w-0">
         <div
           className="c-scale-input flex items-center gap-1 pr-1 overflow-hidden cursor-text"
           onClick={() => inputRef.current?.focus()}
@@ -199,7 +210,7 @@ export function ScaleInput({
               }}
               className="flex items-center bg-surface-3 text-text-primary rounded px-1.5 text-[11px] leading-[18px] font-medium shrink-0 cursor-pointer hover:bg-surface-3/80"
             >
-              {token}
+              {formatTokenLabel(classPrefix, token)}
             </button>
           )}
 
@@ -258,12 +269,11 @@ export function ScaleInput({
                 }`}
               >
                 <span className="flex items-center gap-1.5">
-                  <span className="font-medium">{opt.token}</span>
+                  <span className="font-medium">{formatTokenLabel(classPrefix, opt.token)}</span>
                   {opt.token === token && <Check size={10} />}
                 </span>
                 <span className="text-text-muted">
-                  {opt.value}
-                  {unit}
+                  {opt.token === 'auto' ? 'auto' : `${opt.value}${unit}`}
                 </span>
               </button>
             ))}

@@ -1,35 +1,19 @@
-import { useState, useEffect } from 'react'
-import type { SizeValue } from '../../types/frame'
+import type { SizeValue, DesignValue } from '../../types/frame'
 import { ToggleGroup } from './ToggleGroup'
+import { ScaleInput } from './ScaleInput'
+import { SPACING_SCALE } from '../../data/scales'
 
 export function InlineSizeControl({
   value,
   onChange,
   label,
+  classPrefix,
 }: {
   value: SizeValue
   onChange: (v: Partial<SizeValue>) => void
   label: string
+  classPrefix?: string
 }) {
-  const [draft, setDraft] = useState(String(value.value))
-  const [focused, setFocused] = useState(false)
-
-  useEffect(() => {
-    if (!focused) setDraft(String(value.value))
-  }, [value.value, focused])
-
-  const commit = () => {
-    setFocused(false)
-    const n = Number(draft)
-    if (draft === '' || isNaN(n)) {
-      setDraft(String(value.value))
-      return
-    }
-    const clamped = Math.max(0, n)
-    onChange({ value: clamped })
-    setDraft(String(clamped))
-  }
-
   return (
     <div className="flex items-center gap-1.5">
       <span className="c-label">{label}</span>
@@ -45,20 +29,15 @@ export function InlineSizeControl({
         className="flex-1"
       />
       {value.mode === 'fixed' && (
-        <input
-          type="text"
-          inputMode="numeric"
-          value={focused ? draft : String(value.value)}
-          onFocus={() => { setFocused(true); setDraft(String(value.value)) }}
-          onBlur={commit}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') commit()
-            if (e.key === 'ArrowUp') { e.preventDefault(); const v = value.value + 1; onChange({ value: v }); setDraft(String(v)) }
-            if (e.key === 'ArrowDown') { e.preventDefault(); const v = Math.max(0, value.value - 1); onChange({ value: v }); setDraft(String(v)) }
-          }}
-          className="w-14 c-input px-1.5 py-0.5"
-        />
+        <div className="w-20 min-w-0">
+          <ScaleInput
+            scale={SPACING_SCALE}
+            value={value.value}
+            onChange={(v) => onChange({ value: v })}
+            min={0}
+            classPrefix={classPrefix}
+          />
+        </div>
       )}
     </div>
   )

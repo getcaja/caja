@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useLayoutEffect } from 'react'
 import { ChevronDown, ImageIcon } from 'lucide-react'
-import type { Frame, Spacing } from '../../types/frame'
+import type { Frame, Spacing, DesignValue } from '../../types/frame'
 import { frameToClasses } from '../../utils/frameToClasses'
 import { useFrameStore } from '../../store/frameStore'
 import './FrameRenderer.css'
@@ -14,7 +14,15 @@ interface FrameRendererProps {
 const LABEL_MIN_SIZE = 14
 
 function hasSpacing(s: Spacing) {
-  return s.top > 0 || s.right > 0 || s.bottom > 0 || s.left > 0
+  return s.top.value > 0 || s.right.value > 0 || s.bottom.value > 0 || s.left.value > 0
+}
+
+function isAutoToken(dv: DesignValue<number>): boolean {
+  return dv.mode === 'token' && dv.token === 'auto'
+}
+
+function hasMargin(s: Spacing) {
+  return hasSpacing(s) || isAutoToken(s.top) || isAutoToken(s.right) || isAutoToken(s.bottom) || isAutoToken(s.left)
 }
 
 function PadLabel({ value, axis }: { value: number; axis: 'h' | 'v' }) {
@@ -22,47 +30,99 @@ function PadLabel({ value, axis }: { value: number; axis: 'h' | 'v' }) {
   return <span className="overlay-label">{value}</span>
 }
 
-function SpacingOverlay({ padding, margin, showValues }: { padding: Spacing; margin: Spacing; showValues: boolean }) {
+function SpacingOverlay({ padding, margin, showValues, elementRef }: {
+  padding: Spacing; margin: Spacing; showValues: boolean
+  elementRef: React.RefObject<HTMLDivElement | null>
+}) {
   const showPad = hasSpacing(padding)
-  const showMar = hasSpacing(margin)
+  const showMar = hasMargin(margin)
+
+  // Measure computed auto margins from DOM (browser resolves `auto` to actual px)
+  const [autoMargins, setAutoMargins] = useState({ top: 0, right: 0, bottom: 0, left: 0 })
+  const hasAuto = isAutoToken(margin.top) || isAutoToken(margin.right) || isAutoToken(margin.bottom) || isAutoToken(margin.left)
+
+  useLayoutEffect(() => {
+    if (!hasAuto || !elementRef.current) return
+    const el = elementRef.current
+    const parent = el.parentElement
+    if (!parent) return
+
+    const elRect = el.getBoundingClientRect()
+    const parentRect = parent.getBoundingClientRect()
+    const pcs = getComputedStyle(parent)
+    const cs = getComputedStyle(el)
+
+    // Cross-axis has no siblings → getBoundingClientRect is accurate
+    // Main-axis has siblings → use getComputedStyle instead
+    const isFlex = pcs.display.includes('flex')
+    const isCol = isFlex && pcs.flexDirection.startsWith('column')
+    const hIsCross = !isFlex || isCol // block or flex-col: horizontal is cross-axis
+
+    // Parent content box edges
+    const cl = parentRect.left + (parseFloat(pcs.borderLeftWidth) || 0) + (parseFloat(pcs.paddingLeft) || 0)
+    const cr = parentRect.right - (parseFloat(pcs.borderRightWidth) || 0) - (parseFloat(pcs.paddingRight) || 0)
+    const ct = parentRect.top + (parseFloat(pcs.borderTopWidth) || 0) + (parseFloat(pcs.paddingTop) || 0)
+    const cb = parentRect.bottom - (parseFloat(pcs.borderBottomWidth) || 0) - (parseFloat(pcs.paddingBottom) || 0)
+
+    const next = {
+      top: Math.round(hIsCross ? (parseFloat(cs.marginTop) || 0) : Math.max(0, elRect.top - ct)),
+      right: Math.round(hIsCross ? Math.max(0, cr - elRect.right) : (parseFloat(cs.marginRight) || 0)),
+      bottom: Math.round(hIsCross ? (parseFloat(cs.marginBottom) || 0) : Math.max(0, cb - elRect.bottom)),
+      left: Math.round(hIsCross ? Math.max(0, elRect.left - cl) : (parseFloat(cs.marginLeft) || 0)),
+    }
+    setAutoMargins(prev => {
+      if (prev.top === next.top && prev.right === next.right && prev.bottom === next.bottom && prev.left === next.left) return prev
+      return next
+    })
+  })
+
   if (!showPad && !showMar) return null
+
+  const pt = padding.top.value
+  const pr = padding.right.value
+  const pb = padding.bottom.value
+  const pl = padding.left.value
+  const mt = isAutoToken(margin.top) ? autoMargins.top : margin.top.value
+  const mr = isAutoToken(margin.right) ? autoMargins.right : margin.right.value
+  const mb = isAutoToken(margin.bottom) ? autoMargins.bottom : margin.bottom.value
+  const ml = isAutoToken(margin.left) ? autoMargins.left : margin.left.value
 
   return (
     <>
       {/* Padding strips — picture-frame: top/bottom full width, left/right fill between */}
-      {padding.top > 0 && (
-        <div className="overlay-strip overlay-pad" style={{ top: 0, left: 0, right: 0, height: padding.top }}>
-          {showValues && <PadLabel value={padding.top} axis="v" />}
+      {pt > 0 && (
+        <div className="overlay-strip overlay-pad" style={{ top: 0, left: 0, right: 0, height: pt }}>
+          {showValues && <PadLabel value={pt} axis="v" />}
         </div>
       )}
-      {padding.bottom > 0 && (
-        <div className="overlay-strip overlay-pad" style={{ bottom: 0, left: 0, right: 0, height: padding.bottom }}>
-          {showValues && <PadLabel value={padding.bottom} axis="v" />}
+      {pb > 0 && (
+        <div className="overlay-strip overlay-pad" style={{ bottom: 0, left: 0, right: 0, height: pb }}>
+          {showValues && <PadLabel value={pb} axis="v" />}
         </div>
       )}
-      {padding.left > 0 && (
-        <div className="overlay-strip overlay-pad" style={{ top: padding.top, bottom: padding.bottom, left: 0, width: padding.left }}>
-          {showValues && <PadLabel value={padding.left} axis="h" />}
+      {pl > 0 && (
+        <div className="overlay-strip overlay-pad" style={{ top: pt, bottom: pb, left: 0, width: pl }}>
+          {showValues && <PadLabel value={pl} axis="h" />}
         </div>
       )}
-      {padding.right > 0 && (
-        <div className="overlay-strip overlay-pad" style={{ top: padding.top, bottom: padding.bottom, right: 0, width: padding.right }}>
-          {showValues && <PadLabel value={padding.right} axis="h" />}
+      {pr > 0 && (
+        <div className="overlay-strip overlay-pad" style={{ top: pt, bottom: pb, right: 0, width: pr }}>
+          {showValues && <PadLabel value={pr} axis="h" />}
         </div>
       )}
 
       {/* Margin strips — top/bottom include corners, left/right fill middle */}
-      {margin.top > 0 && (
-        <div className="overlay-strip overlay-margin" style={{ top: -margin.top, left: -margin.left, right: -margin.right, height: margin.top }} />
+      {mt > 0 && (
+        <div className="overlay-strip overlay-margin" style={{ top: -mt, left: -ml, right: -mr, height: mt }} />
       )}
-      {margin.bottom > 0 && (
-        <div className="overlay-strip overlay-margin" style={{ bottom: -margin.bottom, left: -margin.left, right: -margin.right, height: margin.bottom }} />
+      {mb > 0 && (
+        <div className="overlay-strip overlay-margin" style={{ bottom: -mb, left: -ml, right: -mr, height: mb }} />
       )}
-      {margin.left > 0 && (
-        <div className="overlay-strip overlay-margin" style={{ top: 0, bottom: 0, left: -margin.left, width: margin.left }} />
+      {ml > 0 && (
+        <div className="overlay-strip overlay-margin" style={{ top: 0, bottom: 0, left: -ml, width: ml }} />
       )}
-      {margin.right > 0 && (
-        <div className="overlay-strip overlay-margin" style={{ top: 0, bottom: 0, right: -margin.right, width: margin.right }} />
+      {mr > 0 && (
+        <div className="overlay-strip overlay-margin" style={{ top: 0, bottom: 0, right: -mr, width: mr }} />
       )}
     </>
   )
@@ -180,7 +240,7 @@ export function FrameRenderer({ frame, rootMinHeight }: FrameRendererProps) {
   const isTextarea = frame.type === 'textarea'
   const isSelect = frame.type === 'select'
   const hasFixedSize = frame.width.mode === 'fixed' || frame.height.mode === 'fixed'
-  const isEmpty = isBox && frame.children.length === 0 && !hasFixedSize && !frame.bg
+  const isEmpty = isBox && frame.children.length === 0 && !hasFixedSize && !frame.bg.value
 
   // Tailwind classes (source of truth for export & display)
   const tailwind = frameToClasses(frame)
@@ -242,10 +302,10 @@ export function FrameRenderer({ frame, rootMinHeight }: FrameRendererProps) {
     >
       {isSelected && <div className="frame-selection" />}
       {isSelected && showSpacingOverlays && (
-        <SpacingOverlay padding={frame.padding} margin={frame.margin} showValues={showOverlayValues} />
+        <SpacingOverlay padding={frame.padding} margin={frame.margin} showValues={showOverlayValues} elementRef={containerRef} />
       )}
-      {isSelected && showSpacingOverlays && isBox && frame.gap > 0 && (
-        <GapOverlay containerRef={containerRef} gap={frame.gap} showValues={showOverlayValues} />
+      {isSelected && showSpacingOverlays && isBox && frame.gap.value > 0 && (
+        <GapOverlay containerRef={containerRef} gap={frame.gap.value} showValues={showOverlayValues} />
       )}
 
       {isText && (

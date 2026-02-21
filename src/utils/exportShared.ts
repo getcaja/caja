@@ -48,7 +48,8 @@ export function detectLabelPairs(children: Frame[]): Map<string, LabelAssociatio
       current.tag === 'label' &&
       INPUT_TYPES.includes(next.type)
     ) {
-      let baseId = slugify(current.content)
+      // Prefer the input's explicit htmlId for the label-input association
+      let baseId = next.htmlId || slugify(current.content)
       if (!baseId) baseId = next.name
 
       let finalId = baseId
@@ -68,13 +69,11 @@ export function detectLabelPairs(children: Frame[]): Map<string, LabelAssociatio
   return associations
 }
 
-const AUTO_NAME_RE = /^frame-\d+$/
-
-/** Build class string: only prepend frame.name if it's user-customized */
+/** Build class string: Tailwind classes + user-defined className */
 export function buildClassString(frame: Frame): string {
   const classes = frameToClasses(frame)
-  if (frame.name && !AUTO_NAME_RE.test(frame.name)) {
-    return [frame.name, classes].filter(Boolean).join(' ')
+  if (frame.className) {
+    return [frame.className, classes].filter(Boolean).join(' ')
   }
   return classes
 }

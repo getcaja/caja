@@ -1,26 +1,35 @@
+// Design token system — a value can be a raw custom value or a reference to a named token
+export type DesignValue<T> =
+  | { mode: 'custom'; value: T }
+  | { mode: 'token'; token: string; value: T }
+
+export function resolveValue<T>(dv: DesignValue<T>): T {
+  return dv.value
+}
+
 export interface SizeValue {
   mode: 'default' | 'hug' | 'fill' | 'fixed'
-  value: number // only used when mode is 'fixed', in px
+  value: DesignValue<number> // only used when mode is 'fixed', in px
 }
 
 export interface Spacing {
-  top: number
-  right: number
-  bottom: number
-  left: number
+  top: DesignValue<number>
+  right: DesignValue<number>
+  bottom: DesignValue<number>
+  left: DesignValue<number>
 }
 
 export interface Border {
-  width: number
-  color: string
+  width: DesignValue<number>
+  color: DesignValue<string>
   style: 'none' | 'solid' | 'dashed' | 'dotted'
 }
 
 export interface BorderRadius {
-  topLeft: number
-  topRight: number
-  bottomRight: number
-  bottomLeft: number
+  topLeft: DesignValue<number>
+  topRight: DesignValue<number>
+  bottomRight: DesignValue<number>
+  bottomLeft: DesignValue<number>
 }
 
 export type ElementType = 'box' | 'text' | 'image' | 'button' | 'input' | 'textarea' | 'select'
@@ -30,6 +39,10 @@ interface BaseElement {
   id: string
   type: ElementType
   name: string
+
+  // HTML export attributes
+  className: string // user-defined CSS class(es) for export
+  htmlId: string    // user-defined id attribute for export
 
   // Sizing
   width: SizeValue
@@ -42,20 +55,20 @@ interface BaseElement {
   margin: Spacing
 
   // Size constraints
-  minWidth: number
-  maxWidth: number
-  minHeight: number
-  maxHeight: number
+  minWidth: DesignValue<number>
+  maxWidth: DesignValue<number>
+  minHeight: DesignValue<number>
+  maxHeight: DesignValue<number>
 
   // Flex child
   alignSelf: 'auto' | 'start' | 'center' | 'end' | 'stretch'
 
   // Visuals
-  bg: string
+  bg: DesignValue<string>
   border: Border
   borderRadius: BorderRadius
   overflow: 'visible' | 'hidden' | 'scroll'
-  opacity: number // 0–100
+  opacity: DesignValue<number> // 0–100
   boxShadow: 'none' | 'sm' | 'base' | 'md' | 'lg' | 'xl' | '2xl'
   cursor: 'auto' | 'default' | 'pointer' | 'text' | 'not-allowed' | 'grab'
 
@@ -75,7 +88,7 @@ export interface BoxElement extends BaseElement {
   direction: 'row' | 'column'
   justify: 'start' | 'center' | 'end' | 'between' | 'around'
   align: 'start' | 'center' | 'end' | 'stretch'
-  gap: number
+  gap: DesignValue<number>
   wrap: boolean
 
   // Structure
@@ -89,14 +102,14 @@ export interface TextElement extends BaseElement {
 
   // Text content
   content: string
-  fontSize: number
+  fontSize: DesignValue<number>
   fontWeight: 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900
-  lineHeight: number // multiplier, e.g. 1.5
-  color: string
+  lineHeight: DesignValue<number> // multiplier, e.g. 1.5
+  color: DesignValue<string>
   textAlign: 'left' | 'center' | 'right'
   fontStyle: 'normal' | 'italic'
   textDecoration: 'none' | 'underline' | 'line-through'
-  letterSpacing: number
+  letterSpacing: DesignValue<number>
   textTransform: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
   whiteSpace: 'normal' | 'nowrap' | 'pre-wrap'
 

@@ -1,6 +1,13 @@
 import type { Frame } from '../types/frame'
 import { buildClassString, detectLabelPairs, escapeAttr, escapeText, type LabelAssociation } from './exportShared'
 
+/** Build the id attribute string from htmlId or label association */
+function resolveIdAttr(frame: Frame, assoc?: LabelAssociation): string {
+  if (frame.htmlId) return ` id="${escapeAttr(frame.htmlId)}"`
+  if (assoc?.role === 'input') return ` id="${assoc.id}"`
+  return ''
+}
+
 export function exportToJSX(
   frame: Frame,
   indent = 0,
@@ -15,18 +22,21 @@ export function exportToJSX(
     const hrefAttr = tag === 'a' && frame.href ? ` href="${escapeAttr(frame.href)}"` : ''
     const assoc = associations?.get(frame.id)
     const htmlForAttr = assoc?.role === 'label' ? ` htmlFor="${assoc.id}"` : ''
-    return `${pad}<${tag}${hrefAttr}${htmlForAttr} className="${classes}">${content}</${tag}>\n`
+    const idAttr = resolveIdAttr(frame, assoc)
+    return `${pad}<${tag}${idAttr}${hrefAttr}${htmlForAttr} className="${classes}">${content}</${tag}>\n`
   }
 
   if (frame.type === 'image') {
     const srcAttr = frame.src ? ` src="${escapeAttr(frame.src)}"` : ''
     const altAttr = ` alt="${escapeAttr(frame.alt || '')}"`
-    return `${pad}<img${srcAttr}${altAttr} className="${classes}" />\n`
+    const idAttr = resolveIdAttr(frame)
+    return `${pad}<img${idAttr}${srcAttr}${altAttr} className="${classes}" />\n`
   }
 
   if (frame.type === 'button') {
     const label = escapeText(frame.label)
-    return `${pad}<button type="button" className="${classes}">${label}</button>\n`
+    const idAttr = resolveIdAttr(frame)
+    return `${pad}<button${idAttr} type="button" className="${classes}">${label}</button>\n`
   }
 
   if (frame.type === 'input') {
@@ -34,8 +44,8 @@ export function exportToJSX(
     const placeholderAttr = frame.placeholder ? ` placeholder="${escapeAttr(frame.placeholder)}"` : ''
     const disabledAttr = frame.disabled ? ' disabled' : ''
     const assoc = associations?.get(frame.id)
-    const idAttr = assoc?.role === 'input' ? ` id="${assoc.id}"` : ''
-    return `${pad}<input${typeAttr}${placeholderAttr}${disabledAttr}${idAttr} className="${classes}" />\n`
+    const idAttr = resolveIdAttr(frame, assoc)
+    return `${pad}<input${idAttr}${typeAttr}${placeholderAttr}${disabledAttr} className="${classes}" />\n`
   }
 
   if (frame.type === 'textarea') {
@@ -43,15 +53,15 @@ export function exportToJSX(
     const rowsAttr = ` rows={${frame.rows}}`
     const disabledAttr = frame.disabled ? ' disabled' : ''
     const assoc = associations?.get(frame.id)
-    const idAttr = assoc?.role === 'input' ? ` id="${assoc.id}"` : ''
-    return `${pad}<textarea${placeholderAttr}${rowsAttr}${disabledAttr}${idAttr} className="${classes}" />\n`
+    const idAttr = resolveIdAttr(frame, assoc)
+    return `${pad}<textarea${idAttr}${placeholderAttr}${rowsAttr}${disabledAttr} className="${classes}" />\n`
   }
 
   if (frame.type === 'select') {
     const disabledAttr = frame.disabled ? ' disabled' : ''
     const assoc = associations?.get(frame.id)
-    const idAttr = assoc?.role === 'input' ? ` id="${assoc.id}"` : ''
-    let result = `${pad}<select${disabledAttr}${idAttr} className="${classes}">\n`
+    const idAttr = resolveIdAttr(frame, assoc)
+    let result = `${pad}<select${idAttr}${disabledAttr} className="${classes}">\n`
     for (const opt of frame.options) {
       result += `${pad}  <option value="${escapeAttr(opt.value)}">${escapeText(opt.label)}</option>\n`
     }
@@ -61,6 +71,7 @@ export function exportToJSX(
 
   // Box
   const tag = frame.tag || 'div'
+  const idAttr = resolveIdAttr(frame)
   const childAssociations = detectLabelPairs(frame.children)
   const mergedAssociations = associations
     ? new Map([...associations, ...childAssociations])
@@ -69,12 +80,12 @@ export function exportToJSX(
   const hasChildren = frame.children.length > 0
 
   if (hasChildren) {
-    let result = `${pad}<${tag} className="${classes}">\n`
+    let result = `${pad}<${tag}${idAttr} className="${classes}">\n`
     for (const child of frame.children) {
       result += exportToJSX(child, indent + 1, mergedAssociations)
     }
     result += `${pad}</${tag}>\n`
     return result
   }
-  return `${pad}<${tag} className="${classes}" />\n`
+  return `${pad}<${tag}${idAttr} className="${classes}" />\n`
 }

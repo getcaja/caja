@@ -1,10 +1,11 @@
 import type { BoxElement } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { Section } from '../ui/Section'
-import { NumberInput } from '../ui/NumberInput'
+import { ScaleInput } from '../ui/ScaleInput'
 import { ToggleGroup } from '../ui/ToggleGroup'
 import { Switch } from '../ui/Switch'
 import { Select } from '../ui/Select'
+import { SPACING_SCALE } from '../../data/scales'
 import { BOX_TAG_OPTIONS } from './constants'
 
 export function LayoutSection({ frame }: { frame: BoxElement }) {
@@ -68,15 +69,24 @@ export function LayoutSection({ frame }: { frame: BoxElement }) {
               (isRow ? justifyValues : alignValues).map((colVal, ci) => {
                 const j = isRow ? colVal : rowVal
                 const a = isRow ? rowVal : colVal
-                const isActive = !isSpaceBetween && currentJ === j && currentA === a
+                const isActive = isSpaceBetween
+                  ? currentA === a
+                  : currentJ === j && currentA === a
                 return (
                   <button
                     key={`${ri}-${ci}`}
-                    className={`w-[14px] h-[14px] rounded-sm ${
-                      isActive ? 'bg-text-primary' : 'bg-surface-3 hover:bg-border-accent'
-                    }`}
-                    onClick={() => updateFrame(frame.id, { justify: j, align: a })}
-                  />
+                    className="w-[14px] h-[14px] rounded-sm flex items-center justify-center hover:bg-surface-2"
+                    onClick={() => {
+                      if (isSpaceBetween) updateFrame(frame.id, { align: a })
+                      else updateFrame(frame.id, { justify: j, align: a })
+                    }}
+                  >
+                    {isActive ? (
+                      <div className={`rounded-full ${isRow ? 'w-[2px] h-[8px]' : 'w-[8px] h-[2px]'} bg-text-primary`} />
+                    ) : (
+                      <div className="w-[3px] h-[3px] rounded-full bg-surface-3" />
+                    )}
+                  </button>
                 )
               })
             )}
@@ -111,7 +121,14 @@ export function LayoutSection({ frame }: { frame: BoxElement }) {
 
         <div className="flex gap-2 items-center">
           <div className="flex-1">
-            <NumberInput value={frame.gap} onChange={(v) => updateFrame(frame.id, { gap: v })} min={0} label="Gap" />
+            <ScaleInput
+              scale={SPACING_SCALE}
+              value={frame.gap}
+              onChange={(v) => updateFrame(frame.id, { gap: v })}
+              min={0}
+              label="Gap"
+              classPrefix="gap"
+            />
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-text-muted text-[12px]">Wrap</span>

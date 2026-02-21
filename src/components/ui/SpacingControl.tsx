@@ -1,74 +1,61 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Scan } from 'lucide-react'
-import type { Spacing } from '../../types/frame'
-import { NumberInput } from './NumberInput'
+import type { Spacing, DesignValue } from '../../types/frame'
+import type { ScaleOption } from '../../data/scales'
+import { ScaleInput } from './ScaleInput'
+import { SPACING_SCALE } from '../../data/scales'
+
+function dvSame(a: DesignValue<number>, b: DesignValue<number>): boolean {
+  return a.mode === b.mode && a.value === b.value && a.token === b.token
+}
 
 export function SpacingControl({
   value,
   onChange,
   label,
+  classPrefix,
+  scale = SPACING_SCALE,
 }: {
   value: Spacing
   onChange: (v: Partial<Spacing>) => void
   label: string
+  classPrefix: string
+  scale?: ScaleOption[]
 }) {
-  const isUniform = value.top === value.right && value.right === value.bottom && value.bottom === value.left
-  const [uniform, setUniform] = useState(isUniform)
+  const isHV = dvSame(value.top, value.bottom) && dvSame(value.left, value.right)
+  const [perSide, setPerSide] = useState(!isHV)
 
-  const [draft, setDraft] = useState(String(value.top))
-  const [focused, setFocused] = useState(false)
-
-  useEffect(() => {
-    if (!focused) setDraft(String(value.top))
-  }, [value.top, focused])
-
-  const commit = () => {
-    setFocused(false)
-    const n = Number(draft)
-    if (draft === '' || isNaN(n)) {
-      setDraft(String(value.top))
-      return
-    }
-    const clamped = Math.max(0, n)
-    onChange({ top: clamped, right: clamped, bottom: clamped, left: clamped })
-    setDraft(String(clamped))
-  }
-
-  if (uniform) {
+  if (!perSide) {
     return (
-      <div className="flex items-center gap-1.5">
-        <span className="c-label">{label}</span>
-        <input
-          type="text"
-          inputMode="numeric"
-          value={focused ? draft : String(value.top)}
-          onFocus={() => { setFocused(true); setDraft(String(value.top)) }}
-          onBlur={commit}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') commit()
-            if (e.key === 'ArrowUp') {
-              e.preventDefault()
-              const v = value.top + 1
-              onChange({ top: v, right: v, bottom: v, left: v })
-              setDraft(String(v))
-            }
-            if (e.key === 'ArrowDown') {
-              e.preventDefault()
-              const v = Math.max(0, value.top - 1)
-              onChange({ top: v, right: v, bottom: v, left: v })
-              setDraft(String(v))
-            }
-          }}
-          className="flex-1 c-input"
-        />
-        <button
-          className="w-5 h-5 flex items-center justify-center text-text-muted hover:text-accent hover:bg-accent/10 rounded transition-all shrink-0"
-          onClick={() => setUniform(false)}
-          title="Per side"
-        >
-          <Scan size={12} />
-        </button>
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center justify-between">
+          <span className="text-text-muted text-[12px]">{label}</span>
+          <button
+            className="w-5 h-5 flex items-center justify-center text-text-muted hover:text-accent hover:bg-accent/10 rounded transition-all shrink-0"
+            onClick={() => setPerSide(true)}
+            title="Per side"
+          >
+            <Scan size={12} />
+          </button>
+        </div>
+        <div className="grid grid-cols-[auto_1fr_auto_1fr] gap-1 items-center">
+          <span className="text-text-muted text-[11px]">H</span>
+          <ScaleInput
+            scale={scale}
+            value={value.left}
+            onChange={(v) => onChange({ left: v, right: { ...v } })}
+            min={0}
+            classPrefix={`${classPrefix}x`}
+          />
+          <span className="text-text-muted text-[11px]">V</span>
+          <ScaleInput
+            scale={scale}
+            value={value.top}
+            onChange={(v) => onChange({ top: v, bottom: { ...v } })}
+            min={0}
+            classPrefix={`${classPrefix}y`}
+          />
+        </div>
       </div>
     )
   }
@@ -80,18 +67,18 @@ export function SpacingControl({
         <button
           className="text-[12px] text-text-muted hover:text-accent transition-colors"
           onClick={() => {
-            setUniform(true)
-            onChange({ top: value.top, right: value.top, bottom: value.top, left: value.top })
+            setPerSide(false)
+            onChange({ right: { ...value.left }, bottom: { ...value.top } })
           }}
         >
-          Uniform
+          H / V
         </button>
       </div>
       <div className="grid grid-cols-2 gap-1">
-        <NumberInput value={value.top} onChange={(v) => onChange({ top: v })} min={0} label="T" compact />
-        <NumberInput value={value.right} onChange={(v) => onChange({ right: v })} min={0} label="R" compact />
-        <NumberInput value={value.bottom} onChange={(v) => onChange({ bottom: v })} min={0} label="B" compact />
-        <NumberInput value={value.left} onChange={(v) => onChange({ left: v })} min={0} label="L" compact />
+        <ScaleInput scale={scale} value={value.top} onChange={(v) => onChange({ top: v })} min={0} label="Top" classPrefix={`${classPrefix}t`} />
+        <ScaleInput scale={scale} value={value.right} onChange={(v) => onChange({ right: v })} min={0} label="Right" classPrefix={`${classPrefix}r`} />
+        <ScaleInput scale={scale} value={value.bottom} onChange={(v) => onChange({ bottom: v })} min={0} label="Bottom" classPrefix={`${classPrefix}b`} />
+        <ScaleInput scale={scale} value={value.left} onChange={(v) => onChange({ left: v })} min={0} label="Left" classPrefix={`${classPrefix}l`} />
       </div>
     </div>
   )

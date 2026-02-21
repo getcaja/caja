@@ -22,7 +22,7 @@ export const toolSchemas = {
 
   update_frame: {
     name: 'update_frame',
-    description: 'Update properties of an existing frame. Settable: bg, direction, justify, align, gap, wrap, content, fontSize, fontWeight, fontStyle, textDecoration, letterSpacing, textTransform, whiteSpace, color, textAlign, borderRadius, overflow, grow, shrink, alignSelf, minWidth, maxWidth, minHeight, maxHeight, boxShadow, cursor, tailwindClasses, opacity, tag, options, rows.',
+    description: 'Update properties of an existing frame. Settable: bg, direction, justify, align, gap, wrap, content, fontSize, fontWeight, fontStyle, textDecoration, letterSpacing, textTransform, whiteSpace, color, textAlign, borderRadius, overflow, grow, shrink, alignSelf, minWidth, maxWidth, minHeight, maxHeight, boxShadow, cursor, tailwindClasses, opacity, tag, options, rows, className, htmlId. className sets CSS classes for export (space-separated). htmlId sets the id attribute for export. Numeric and color fields accept either a raw value (number/string) or a DesignValue object: { mode: "custom", value: N } or { mode: "token", token: "4", value: 16 }. Raw values are auto-wrapped.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -39,7 +39,7 @@ export const toolSchemas = {
 
   update_spacing: {
     name: 'update_spacing',
-    description: 'Update padding or margin of a frame. Values: { top, right, bottom, left } in pixels.',
+    description: 'Update padding or margin of a frame. Values: { top, right, bottom, left }. Each side accepts a number (pixels) or a DesignValue object: { mode: "token", token: "4", value: 16 }.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -62,7 +62,7 @@ export const toolSchemas = {
 
   update_size: {
     name: 'update_size',
-    description: 'Update width or height of a frame. Mode can be: default, hug, fill, or fixed (with a pixel value).',
+    description: 'Update width or height of a frame. Mode can be: default, hug, fill, or fixed. Value accepts a number (pixels) or a DesignValue object: { mode: "token", token: "64", value: 256 }.',
     inputSchema: {
       type: 'object' as const,
       properties: {

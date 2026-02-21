@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Frame, BoxElement, BoxTag, TextElement, ImageElement, ButtonElement, InputElement, TextareaElement, SelectElement, Spacing, SizeValue, BorderRadius } from '../types/frame'
+import type { Frame, BoxElement, BoxTag, TextElement, ImageElement, ButtonElement, InputElement, TextareaElement, SelectElement, Spacing, SizeValue, BorderRadius, Border, DesignValue } from '../types/frame'
 
 // The internal root ID — never exposed to the user
 const INTERNAL_ROOT_ID = '__root__'
@@ -29,39 +29,83 @@ function nextName(prefix: string, root: Frame): string {
   return `${prefix}-${i}`
 }
 
-const defaultSpacing: Spacing = { top: 0, right: 0, bottom: 0, left: 0 }
-const defaultBorder = { width: 0, color: '', style: 'none' as const }
-const defaultBorderRadius: BorderRadius = { topLeft: 0, topRight: 0, bottomRight: 0, bottomLeft: 0 }
+// --- DesignValue helpers ---
+function dvNum(v: number): DesignValue<number> {
+  return { mode: 'custom', value: v }
+}
+function dvStr(v: string): DesignValue<string> {
+  return { mode: 'custom', value: v }
+}
+
+function zeroSpacing(): Spacing {
+  return { top: dvNum(0), right: dvNum(0), bottom: dvNum(0), left: dvNum(0) }
+}
+
+function uniformSpacing(v: number): Spacing {
+  return { top: dvNum(v), right: dvNum(v), bottom: dvNum(v), left: dvNum(v) }
+}
+
+function zeroBorderRadius(): BorderRadius {
+  return { topLeft: dvNum(0), topRight: dvNum(0), bottomRight: dvNum(0), bottomLeft: dvNum(0) }
+}
+
+function uniformBorderRadius(v: number): BorderRadius {
+  return { topLeft: dvNum(v), topRight: dvNum(v), bottomRight: dvNum(v), bottomLeft: dvNum(v) }
+}
+
+const defaultBorder: Border = { width: dvNum(0), color: dvStr(''), style: 'none' }
+
+function cloneDV<T>(dv: DesignValue<T>): DesignValue<T> {
+  return { ...dv }
+}
+
+function cloneSpacing(s: Spacing): Spacing {
+  return { top: cloneDV(s.top), right: cloneDV(s.right), bottom: cloneDV(s.bottom), left: cloneDV(s.left) }
+}
+
+function cloneBorderRadius(br: BorderRadius): BorderRadius {
+  return { topLeft: cloneDV(br.topLeft), topRight: cloneDV(br.topRight), bottomRight: cloneDV(br.bottomRight), bottomLeft: cloneDV(br.bottomLeft) }
+}
+
+function cloneBorder(b: Border): Border {
+  return { width: cloneDV(b.width), color: cloneDV(b.color), style: b.style }
+}
+
+function cloneSizeValue(sv: SizeValue): SizeValue {
+  return { mode: sv.mode, value: cloneDV(sv.value) }
+}
 
 function createInternalRoot(children: Frame[] = []): BoxElement {
   return {
     id: INTERNAL_ROOT_ID,
     type: 'box',
     name: '__root__',
+    className: '',
+    htmlId: '',
     tag: 'div',
     direction: 'column',
     justify: 'start',
     align: 'stretch',
-    gap: 0,
+    gap: dvNum(0),
     wrap: false,
-    padding: { ...defaultSpacing },
-    margin: { ...defaultSpacing },
-    width: { mode: 'fill', value: 0 },
-    height: { mode: 'fill', value: 0 },
+    padding: zeroSpacing(),
+    margin: zeroSpacing(),
+    width: { mode: 'fill', value: dvNum(0) },
+    height: { mode: 'fill', value: dvNum(0) },
     grow: 1,
     shrink: 1,
     overflow: 'visible',
-    opacity: 100,
-    bg: '#ffffff',
-    border: { ...defaultBorder },
-    borderRadius: { ...defaultBorderRadius },
+    opacity: dvNum(100),
+    bg: dvStr('#ffffff'),
+    border: { ...defaultBorder, width: dvNum(0), color: dvStr('') },
+    borderRadius: zeroBorderRadius(),
     tailwindClasses: '',
     boxShadow: 'none',
     cursor: 'auto',
-    minWidth: 0,
-    maxWidth: 0,
-    minHeight: 0,
-    maxHeight: 0,
+    minWidth: dvNum(0),
+    maxWidth: dvNum(0),
+    minHeight: dvNum(0),
+    maxHeight: dvNum(0),
     alignSelf: 'auto',
     children,
   }
@@ -73,30 +117,32 @@ export function createBox(overrides?: Partial<BoxElement>): BoxElement {
     id,
     type: 'box',
     name: overrides?.name || `frame-${id.split('-')[1]}`,
+    className: '',
+    htmlId: '',
     tag: overrides?.tag || 'div',
     direction: 'column',
     justify: 'start',
     align: 'stretch',
-    gap: 0,
+    gap: dvNum(0),
     wrap: false,
-    padding: { ...defaultSpacing },
-    margin: { ...defaultSpacing },
-    width: { mode: 'default', value: 0 },
-    height: { mode: 'default', value: 0 },
+    padding: zeroSpacing(),
+    margin: zeroSpacing(),
+    width: { mode: 'default', value: dvNum(0) },
+    height: { mode: 'default', value: dvNum(0) },
     grow: 0,
     shrink: 1,
     overflow: 'visible',
-    opacity: 100,
-    bg: '',
-    border: { ...defaultBorder },
-    borderRadius: { ...defaultBorderRadius },
+    opacity: dvNum(100),
+    bg: dvStr(''),
+    border: { ...defaultBorder, width: dvNum(0), color: dvStr('') },
+    borderRadius: zeroBorderRadius(),
     tailwindClasses: '',
     boxShadow: 'none',
     cursor: 'auto',
-    minWidth: 0,
-    maxWidth: 0,
-    minHeight: 0,
-    maxHeight: 0,
+    minWidth: dvNum(0),
+    maxWidth: dvNum(0),
+    minHeight: dvNum(0),
+    maxHeight: dvNum(0),
     alignSelf: 'auto',
     children: [],
     ...overrides,
@@ -109,37 +155,39 @@ export function createText(overrides?: Partial<TextElement>): TextElement {
     id,
     type: 'text',
     name: overrides?.name || `text-${id.split('-')[1]}`,
+    className: '',
+    htmlId: '',
     content: 'Text',
-    fontSize: 14,
+    fontSize: dvNum(14),
     fontWeight: 400,
-    lineHeight: 1.5,
-    color: '#000000',
+    lineHeight: dvNum(1.5),
+    color: dvStr('#000000'),
     textAlign: 'left',
     fontStyle: 'normal',
     textDecoration: 'none',
-    letterSpacing: 0,
+    letterSpacing: dvNum(0),
     textTransform: 'none',
     whiteSpace: 'normal',
     tag: 'p',
     href: '',
-    padding: { ...defaultSpacing },
-    margin: { ...defaultSpacing },
-    width: { mode: 'default', value: 0 },
-    height: { mode: 'default', value: 0 },
+    padding: zeroSpacing(),
+    margin: zeroSpacing(),
+    width: { mode: 'default', value: dvNum(0) },
+    height: { mode: 'default', value: dvNum(0) },
     grow: 0,
     shrink: 1,
     overflow: 'visible',
-    opacity: 100,
-    bg: '',
-    border: { ...defaultBorder },
-    borderRadius: { ...defaultBorderRadius },
+    opacity: dvNum(100),
+    bg: dvStr(''),
+    border: { ...defaultBorder, width: dvNum(0), color: dvStr('') },
+    borderRadius: zeroBorderRadius(),
     tailwindClasses: '',
     boxShadow: 'none',
     cursor: 'auto',
-    minWidth: 0,
-    maxWidth: 0,
-    minHeight: 0,
-    maxHeight: 0,
+    minWidth: dvNum(0),
+    maxWidth: dvNum(0),
+    minHeight: dvNum(0),
+    maxHeight: dvNum(0),
     alignSelf: 'auto',
     ...overrides,
   }
@@ -151,33 +199,35 @@ export function createImage(overrides?: Partial<ImageElement>): ImageElement {
     id,
     type: 'image',
     name: overrides?.name || `image-${id.split('-')[1]}`,
+    className: '',
+    htmlId: '',
     src: '',
     alt: '',
     objectFit: 'cover',
-    padding: { ...defaultSpacing },
-    margin: { ...defaultSpacing },
-    width: { mode: 'fixed', value: 200 },
-    height: { mode: 'fixed', value: 150 },
+    padding: zeroSpacing(),
+    margin: zeroSpacing(),
+    width: { mode: 'fixed', value: dvNum(200) },
+    height: { mode: 'fixed', value: dvNum(150) },
     grow: 0,
     shrink: 1,
     overflow: 'visible',
-    opacity: 100,
-    bg: '',
-    border: { ...defaultBorder },
-    borderRadius: { ...defaultBorderRadius },
+    opacity: dvNum(100),
+    bg: dvStr(''),
+    border: { ...defaultBorder, width: dvNum(0), color: dvStr('') },
+    borderRadius: zeroBorderRadius(),
     tailwindClasses: '',
     boxShadow: 'none',
     cursor: 'auto',
-    minWidth: 0,
-    maxWidth: 0,
-    minHeight: 0,
-    maxHeight: 0,
+    minWidth: dvNum(0),
+    maxWidth: dvNum(0),
+    minHeight: dvNum(0),
+    maxHeight: dvNum(0),
     alignSelf: 'auto',
     ...overrides,
   }
 }
 
-const buttonPadding: Spacing = { top: 8, right: 16, bottom: 8, left: 16 }
+const buttonPadding: Spacing = { top: dvNum(8), right: dvNum(16), bottom: dvNum(8), left: dvNum(16) }
 
 export function createButton(overrides?: Partial<ButtonElement>): ButtonElement {
   const id = generateId()
@@ -185,33 +235,35 @@ export function createButton(overrides?: Partial<ButtonElement>): ButtonElement 
     id,
     type: 'button',
     name: overrides?.name || `button-${id.split('-')[1]}`,
+    className: '',
+    htmlId: '',
     label: 'Button',
     variant: 'filled',
-    padding: { ...buttonPadding },
-    margin: { ...defaultSpacing },
-    width: { mode: 'hug', value: 0 },
-    height: { mode: 'hug', value: 0 },
+    padding: cloneSpacing(buttonPadding),
+    margin: zeroSpacing(),
+    width: { mode: 'hug', value: dvNum(0) },
+    height: { mode: 'hug', value: dvNum(0) },
     grow: 0,
     shrink: 1,
     overflow: 'visible',
-    opacity: 100,
-    bg: '#18181b',
-    border: { ...defaultBorder },
-    borderRadius: { topLeft: 6, topRight: 6, bottomRight: 6, bottomLeft: 6 },
+    opacity: dvNum(100),
+    bg: dvStr('#18181b'),
+    border: { ...defaultBorder, width: dvNum(0), color: dvStr('') },
+    borderRadius: uniformBorderRadius(6),
     tailwindClasses: '',
     boxShadow: 'none',
     cursor: 'auto',
-    minWidth: 0,
-    maxWidth: 0,
-    minHeight: 0,
-    maxHeight: 0,
+    minWidth: dvNum(0),
+    maxWidth: dvNum(0),
+    minHeight: dvNum(0),
+    maxHeight: dvNum(0),
     alignSelf: 'auto',
     ...overrides,
   }
 }
 
-const formBorder = { width: 1, color: '#d1d5db', style: 'solid' as const }
-const formPadding: Spacing = { top: 8, right: 12, bottom: 8, left: 12 }
+const formBorder: Border = { width: dvNum(1), color: dvStr('#d1d5db'), style: 'solid' }
+const formPadding: Spacing = { top: dvNum(8), right: dvNum(12), bottom: dvNum(8), left: dvNum(12) }
 
 export function createInput(overrides?: Partial<InputElement>): InputElement {
   const id = generateId()
@@ -219,27 +271,29 @@ export function createInput(overrides?: Partial<InputElement>): InputElement {
     id,
     type: 'input',
     name: overrides?.name || `input-${id.split('-')[1]}`,
+    className: '',
+    htmlId: '',
     placeholder: 'Placeholder...',
     inputType: 'text',
     disabled: false,
-    padding: { ...formPadding },
-    margin: { ...defaultSpacing },
-    width: { mode: 'fill', value: 0 },
-    height: { mode: 'hug', value: 0 },
+    padding: cloneSpacing(formPadding),
+    margin: zeroSpacing(),
+    width: { mode: 'fill', value: dvNum(0) },
+    height: { mode: 'hug', value: dvNum(0) },
     grow: 0,
     shrink: 1,
     overflow: 'visible',
-    opacity: 100,
-    bg: '#ffffff',
-    border: { ...formBorder },
-    borderRadius: { topLeft: 6, topRight: 6, bottomRight: 6, bottomLeft: 6 },
+    opacity: dvNum(100),
+    bg: dvStr('#ffffff'),
+    border: cloneBorder(formBorder),
+    borderRadius: uniformBorderRadius(6),
     tailwindClasses: '',
     boxShadow: 'none',
     cursor: 'auto',
-    minWidth: 0,
-    maxWidth: 0,
-    minHeight: 0,
-    maxHeight: 0,
+    minWidth: dvNum(0),
+    maxWidth: dvNum(0),
+    minHeight: dvNum(0),
+    maxHeight: dvNum(0),
     alignSelf: 'auto',
     ...overrides,
   }
@@ -251,27 +305,29 @@ export function createTextarea(overrides?: Partial<TextareaElement>): TextareaEl
     id,
     type: 'textarea',
     name: overrides?.name || `textarea-${id.split('-')[1]}`,
+    className: '',
+    htmlId: '',
     placeholder: 'Placeholder...',
     rows: 3,
     disabled: false,
-    padding: { ...formPadding },
-    margin: { ...defaultSpacing },
-    width: { mode: 'fill', value: 0 },
-    height: { mode: 'hug', value: 0 },
+    padding: cloneSpacing(formPadding),
+    margin: zeroSpacing(),
+    width: { mode: 'fill', value: dvNum(0) },
+    height: { mode: 'hug', value: dvNum(0) },
     grow: 0,
     shrink: 1,
     overflow: 'visible',
-    opacity: 100,
-    bg: '#ffffff',
-    border: { ...formBorder },
-    borderRadius: { topLeft: 6, topRight: 6, bottomRight: 6, bottomLeft: 6 },
+    opacity: dvNum(100),
+    bg: dvStr('#ffffff'),
+    border: cloneBorder(formBorder),
+    borderRadius: uniformBorderRadius(6),
     tailwindClasses: '',
     boxShadow: 'none',
     cursor: 'auto',
-    minWidth: 0,
-    maxWidth: 0,
-    minHeight: 0,
-    maxHeight: 0,
+    minWidth: dvNum(0),
+    maxWidth: dvNum(0),
+    minHeight: dvNum(0),
+    maxHeight: dvNum(0),
     alignSelf: 'auto',
     ...overrides,
   }
@@ -283,26 +339,28 @@ export function createSelect(overrides?: Partial<SelectElement>): SelectElement 
     id,
     type: 'select',
     name: overrides?.name || `select-${id.split('-')[1]}`,
+    className: '',
+    htmlId: '',
     options: [{ value: 'option-1', label: 'Option 1' }],
     disabled: false,
-    padding: { ...formPadding },
-    margin: { ...defaultSpacing },
-    width: { mode: 'fill', value: 0 },
-    height: { mode: 'hug', value: 0 },
+    padding: cloneSpacing(formPadding),
+    margin: zeroSpacing(),
+    width: { mode: 'fill', value: dvNum(0) },
+    height: { mode: 'hug', value: dvNum(0) },
     grow: 0,
     shrink: 1,
     overflow: 'visible',
-    opacity: 100,
-    bg: '#ffffff',
-    border: { ...formBorder },
-    borderRadius: { topLeft: 6, topRight: 6, bottomRight: 6, bottomLeft: 6 },
+    opacity: dvNum(100),
+    bg: dvStr('#ffffff'),
+    border: cloneBorder(formBorder),
+    borderRadius: uniformBorderRadius(6),
     tailwindClasses: '',
     boxShadow: 'none',
     cursor: 'auto',
-    minWidth: 0,
-    maxWidth: 0,
-    minHeight: 0,
-    maxHeight: 0,
+    minWidth: dvNum(0),
+    maxWidth: dvNum(0),
+    minHeight: dvNum(0),
+    maxHeight: dvNum(0),
     alignSelf: 'auto',
     ...overrides,
   }
@@ -312,15 +370,24 @@ export function createSelect(overrides?: Partial<SelectElement>): SelectElement 
 function cloneTree(frame: Frame): Frame {
   const base = {
     ...frame,
-    padding: { ...frame.padding },
-    margin: { ...frame.margin },
-    width: { ...frame.width },
-    height: { ...frame.height },
-    border: { ...frame.border },
-    borderRadius: { ...frame.borderRadius },
+    padding: cloneSpacing(frame.padding),
+    margin: cloneSpacing(frame.margin),
+    width: cloneSizeValue(frame.width),
+    height: cloneSizeValue(frame.height),
+    border: cloneBorder(frame.border),
+    borderRadius: cloneBorderRadius(frame.borderRadius),
+    bg: cloneDV(frame.bg),
+    opacity: cloneDV(frame.opacity),
+    minWidth: cloneDV(frame.minWidth),
+    maxWidth: cloneDV(frame.maxWidth),
+    minHeight: cloneDV(frame.minHeight),
+    maxHeight: cloneDV(frame.maxHeight),
   }
   if (frame.type === 'box') {
-    return { ...base, type: 'box', children: frame.children.map(cloneTree) } as BoxElement
+    return { ...base, type: 'box', gap: cloneDV(frame.gap), children: frame.children.map(cloneTree) } as BoxElement
+  }
+  if (frame.type === 'text') {
+    return { ...base, type: 'text', fontSize: cloneDV(frame.fontSize), lineHeight: cloneDV(frame.lineHeight), color: cloneDV(frame.color), letterSpacing: cloneDV(frame.letterSpacing) } as TextElement
   }
   return base as Frame
 }
@@ -339,15 +406,7 @@ function withChildren(frame: Frame, children: Frame[]): Frame {
 // Find and update a frame in the tree by id
 function updateInTree(root: Frame, id: string, updater: (f: Frame) => Frame): Frame {
   if (root.id === id) {
-    return updater({
-      ...root,
-      padding: { ...root.padding },
-      margin: { ...root.margin },
-      width: { ...root.width },
-      height: { ...root.height },
-      border: { ...root.border },
-      borderRadius: { ...root.borderRadius },
-    })
+    return updater(cloneTree(root))
   }
   return withChildren(
     root,
@@ -424,16 +483,11 @@ function findInTree(root: Frame, id: string): Frame | null {
 // Deep clone with new IDs (for duplication)
 function cloneWithNewIds(frame: Frame): Frame {
   const newId = generateId()
+  const cloned = cloneTree(frame)
   const base = {
-    ...frame,
+    ...cloned,
     id: newId,
     name: frame.name,
-    padding: { ...frame.padding },
-    margin: { ...frame.margin },
-    width: { ...frame.width },
-    height: { ...frame.height },
-    border: { ...frame.border },
-    borderRadius: { ...frame.borderRadius },
   }
   if (frame.type === 'box') {
     return { ...base, type: 'box', children: frame.children.map(cloneWithNewIds) } as BoxElement
@@ -505,16 +559,63 @@ function maxIdInTree(frame: Frame): number {
   return Math.max(isNaN(num) ? 0 : num, ...childMax, 0)
 }
 
-// Migrate 'auto' → 'default' for old saved data
-function migrateSizeValue(raw: SizeValue | undefined): SizeValue {
-  if (!raw) return { mode: 'default', value: 0 }
-  if ((raw.mode as string) === 'auto') return { ...raw, mode: 'default' }
-  return raw
+// --- Migration helpers ---
+function migrateDVNum(raw: unknown, fallback: number): DesignValue<number> {
+  if (raw !== null && raw !== undefined && typeof raw === 'object' && 'mode' in raw) return raw as DesignValue<number>
+  if (typeof raw === 'number') return { mode: 'custom', value: raw }
+  return { mode: 'custom', value: fallback }
+}
+
+function migrateDVStr(raw: unknown, fallback: string): DesignValue<string> {
+  if (raw !== null && raw !== undefined && typeof raw === 'object' && 'mode' in raw) return raw as DesignValue<string>
+  if (typeof raw === 'string') return { mode: 'custom', value: raw }
+  return { mode: 'custom', value: fallback }
+}
+
+function migrateSpacing(raw: unknown): Spacing {
+  if (!raw || typeof raw !== 'object') return zeroSpacing()
+  const r = raw as Record<string, unknown>
+  return {
+    top: migrateDVNum(r.top, 0),
+    right: migrateDVNum(r.right, 0),
+    bottom: migrateDVNum(r.bottom, 0),
+    left: migrateDVNum(r.left, 0),
+  }
+}
+
+function migrateBorderRadius(raw: unknown): BorderRadius {
+  if (typeof raw === 'number') {
+    return uniformBorderRadius(raw)
+  }
+  if (!raw || typeof raw !== 'object') return zeroBorderRadius()
+  const r = raw as Record<string, unknown>
+  return {
+    topLeft: migrateDVNum(r.topLeft, 0),
+    topRight: migrateDVNum(r.topRight, 0),
+    bottomRight: migrateDVNum(r.bottomRight, 0),
+    bottomLeft: migrateDVNum(r.bottomLeft, 0),
+  }
+}
+
+function migrateBorder(raw: unknown): Border {
+  if (!raw || typeof raw !== 'object') return { width: dvNum(0), color: dvStr(''), style: 'none' }
+  const r = raw as Record<string, unknown>
+  return {
+    width: migrateDVNum(r.width, 0),
+    color: migrateDVStr(r.color, ''),
+    style: (r.style as Border['style']) || 'none',
+  }
+}
+
+function migrateSizeValue(raw: unknown): SizeValue {
+  if (!raw || typeof raw !== 'object') return { mode: 'default', value: dvNum(0) }
+  const r = raw as Record<string, unknown>
+  const mode = (r.mode as string) === 'auto' ? 'default' : (r.mode as SizeValue['mode']) || 'default'
+  return { mode, value: migrateDVNum(r.value, 0) }
 }
 
 // Migrate old format data to current schema
 function migrateFrame(raw: Record<string, unknown>): Frame {
-  const zero: Spacing = { top: 0, right: 0, bottom: 0, left: 0 }
   const children = (raw.children as Record<string, unknown>[] | undefined) ?? []
 
   // Sanitize corrupted IDs (e.g. "frame-NaN" from previous bug)
@@ -524,26 +625,26 @@ function migrateFrame(raw: Record<string, unknown>): Frame {
   const base = {
     id,
     name: (raw.name as string && !(raw.name as string).includes('NaN')) ? (raw.name as string) : `frame-${id.split('-')[1]}`,
-    padding: (raw.padding as Spacing) || { ...zero },
-    margin: (raw.margin as Spacing) || { ...zero },
-    width: migrateSizeValue(raw.width as SizeValue | undefined),
-    height: migrateSizeValue(raw.height as SizeValue | undefined),
+    className: (raw.className as string) || '',
+    htmlId: (raw.htmlId as string) || '',
+    padding: migrateSpacing(raw.padding),
+    margin: migrateSpacing(raw.margin),
+    width: migrateSizeValue(raw.width),
+    height: migrateSizeValue(raw.height),
     grow: (raw.grow as number) ?? 0,
     shrink: (raw.shrink as number) ?? 1,
     overflow: (raw.overflow as Frame['overflow']) || 'visible',
-    opacity: (raw.opacity as number) ?? 100,
-    bg: (raw.bg as string) || '',
-    border: (raw.border as Frame['border']) || { width: 0, color: '', style: 'none' as const },
-    borderRadius: typeof raw.borderRadius === 'number'
-      ? { topLeft: raw.borderRadius, topRight: raw.borderRadius, bottomRight: raw.borderRadius, bottomLeft: raw.borderRadius }
-      : (raw.borderRadius as BorderRadius) ?? { ...defaultBorderRadius },
+    opacity: migrateDVNum(raw.opacity, 100),
+    bg: migrateDVStr(raw.bg, ''),
+    border: migrateBorder(raw.border),
+    borderRadius: migrateBorderRadius(raw.borderRadius),
     tailwindClasses: (raw.tailwindClasses as string) || '',
     boxShadow: (raw.boxShadow as Frame['boxShadow']) || 'none',
     cursor: (raw.cursor as Frame['cursor']) || 'auto',
-    minWidth: (raw.minWidth as number) ?? 0,
-    maxWidth: (raw.maxWidth as number) ?? 0,
-    minHeight: (raw.minHeight as number) ?? 0,
-    maxHeight: (raw.maxHeight as number) ?? 0,
+    minWidth: migrateDVNum(raw.minWidth, 0),
+    maxWidth: migrateDVNum(raw.maxWidth, 0),
+    minHeight: migrateDVNum(raw.minHeight, 0),
+    maxHeight: migrateDVNum(raw.maxHeight, 0),
     alignSelf: (raw.alignSelf as Frame['alignSelf']) || 'auto',
   }
 
@@ -552,14 +653,14 @@ function migrateFrame(raw: Record<string, unknown>): Frame {
       ...base,
       type: 'text',
       content: (raw.content as string) || 'Text',
-      fontSize: (raw.fontSize as number) ?? 14,
+      fontSize: migrateDVNum(raw.fontSize, 14),
       fontWeight: (raw.fontWeight as TextElement['fontWeight']) ?? 400,
-      lineHeight: (raw.lineHeight as number) ?? 1.5,
-      color: (raw.color as string) || '#000000',
+      lineHeight: migrateDVNum(raw.lineHeight, 1.5),
+      color: migrateDVStr(raw.color, '#000000'),
       textAlign: (raw.textAlign as TextElement['textAlign']) || 'left',
       fontStyle: (raw.fontStyle as TextElement['fontStyle']) || 'normal',
       textDecoration: (raw.textDecoration as TextElement['textDecoration']) || 'none',
-      letterSpacing: (raw.letterSpacing as number) ?? 0,
+      letterSpacing: migrateDVNum(raw.letterSpacing, 0),
       textTransform: (raw.textTransform as TextElement['textTransform']) || 'none',
       whiteSpace: (raw.whiteSpace as TextElement['whiteSpace']) || 'normal',
       tag: (raw.tag as TextElement['tag']) || 'p',
@@ -622,7 +723,7 @@ function migrateFrame(raw: Record<string, unknown>): Frame {
     direction: (raw.direction as BoxElement['direction']) || 'column',
     justify: (raw.justify as BoxElement['justify']) || 'start',
     align: (raw.align as BoxElement['align']) || 'stretch',
-    gap: (raw.gap as number) ?? 0,
+    gap: migrateDVNum(raw.gap, 0),
     wrap: (raw.wrap as boolean) ?? false,
     children: children.map(migrateFrame),
   } as BoxElement

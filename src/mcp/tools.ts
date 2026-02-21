@@ -2,7 +2,7 @@
 // This is the single entry point for both the built-in chat and the external MCP server.
 
 import { useFrameStore } from '../store/frameStore'
-import type { Frame, Spacing, SizeValue, SelectOption } from '../types/frame'
+import type { Frame, Spacing, SizeValue, SelectOption, DesignValue, Border, BorderRadius } from '../types/frame'
 import type { ToolName } from './schema'
 
 interface ToolResult {
@@ -35,6 +35,64 @@ function frameSnapshot(frame: Frame): Record<string, unknown> {
     return { ...rest, childCount: children.length, childIds: children.map((c) => c.id) }
   }
   return { ...frame }
+}
+
+// --- Sanitization helpers for MCP inputs ---
+// Wrap raw number/string values into DesignValue objects for backwards compatibility
+
+function sanitizeDVNum(raw: unknown): DesignValue<number> | undefined {
+  if (raw === undefined || raw === null) return undefined
+  if (typeof raw === 'number') return { mode: 'custom', value: raw }
+  if (typeof raw === 'object' && raw !== null && 'mode' in raw) return raw as DesignValue<number>
+  return undefined
+}
+
+function sanitizeDVStr(raw: unknown): DesignValue<string> | undefined {
+  if (raw === undefined || raw === null) return undefined
+  if (typeof raw === 'string') return { mode: 'custom', value: raw }
+  if (typeof raw === 'object' && raw !== null && 'mode' in raw) return raw as DesignValue<string>
+  return undefined
+}
+
+function sanitizeSpacingValues(values: Record<string, unknown>): Partial<Spacing> {
+  const result: Partial<Spacing> = {}
+  if ('top' in values) { const v = sanitizeDVNum(values.top); if (v) result.top = v }
+  if ('right' in values) { const v = sanitizeDVNum(values.right); if (v) result.right = v }
+  if ('bottom' in values) { const v = sanitizeDVNum(values.bottom); if (v) result.bottom = v }
+  if ('left' in values) { const v = sanitizeDVNum(values.left); if (v) result.left = v }
+  return result
+}
+
+function sanitizeBorderRadius(raw: unknown): BorderRadius | undefined {
+  if (raw === undefined || raw === null) return undefined
+  if (typeof raw === 'number') {
+    const dv: DesignValue<number> = { mode: 'custom', value: raw }
+    return { topLeft: dv, topRight: { ...dv }, bottomRight: { ...dv }, bottomLeft: { ...dv } }
+  }
+  if (typeof raw === 'object' && raw !== null) {
+    const r = raw as Record<string, unknown>
+    // Check if it's already migrated (has DesignValue sub-fields)
+    if (r.topLeft !== undefined && typeof r.topLeft === 'object') return raw as BorderRadius
+    // Old format: { topLeft: number, ... }
+    return {
+      topLeft: sanitizeDVNum(r.topLeft) || { mode: 'custom', value: 0 },
+      topRight: sanitizeDVNum(r.topRight) || { mode: 'custom', value: 0 },
+      bottomRight: sanitizeDVNum(r.bottomRight) || { mode: 'custom', value: 0 },
+      bottomLeft: sanitizeDVNum(r.bottomLeft) || { mode: 'custom', value: 0 },
+    }
+  }
+  return undefined
+}
+
+function sanitizeBorder(raw: unknown, existing: Border): Border | undefined {
+  if (raw === undefined || raw === null) return undefined
+  if (typeof raw !== 'object') return undefined
+  const r = raw as Record<string, unknown>
+  return {
+    width: sanitizeDVNum(r.width) || existing.width,
+    color: sanitizeDVStr(r.color) || existing.color,
+    style: (r.style as Border['style']) || existing.style,
+  }
 }
 
 type ToolHandler = (params: ToolParams) => ToolResult | Promise<ToolResult>
@@ -80,7 +138,6 @@ const handlers: Record<string, ToolHandler> = {
     if ('options' in sanitized) {
       const raw = sanitized.options
       if (typeof raw === 'string') {
-        // Coerce newline-separated string → SelectOption[]
         sanitized.options = raw.split('\n').filter(Boolean).map((line: string) => {
           const trimmed = line.trim()
           return { value: trimmed.toLowerCase().replace(/\s+/g, '-'), label: trimmed } as SelectOption
@@ -90,10 +147,32 @@ const handlers: Record<string, ToolHandler> = {
       }
     }
 
-    // borderRadius: coerce number → uniform object
-    if ('borderRadius' in sanitized && typeof sanitized.borderRadius === 'number') {
-      const v = sanitized.borderRadius as number
-      sanitized.borderRadius = { topLeft: v, topRight: v, bottomRight: v, bottomLeft: v }
+    // DesignValue<number> fields — coerce number → DesignValue
+    for (const key of ['fontSize', 'lineHeight', 'letterSpacing', 'gap', 'opacity', 'minWidth', 'maxWidth', 'minHeight', 'maxHeight'] as const) {
+      if (key in sanitized) {
+        const v = sanitizeDVNum(sanitized[key])
+        if (v) sanitized[key] = v
+      }
+    }
+
+    // DesignValue<string> fields — coerce string → DesignValue
+    for (const key of ['bg', 'color'] as const) {
+      if (key in sanitized) {
+        const v = sanitizeDVStr(sanitized[key])
+        if (v) sanitized[key] = v
+      }
+    }
+
+    // borderRadius: coerce number → uniform DV object
+    if ('borderRadius' in sanitized) {
+      const v = sanitizeBorderRadius(sanitized.borderRadius)
+      if (v) sanitized.borderRadius = v
+    }
+
+    // border: coerce primitive fields
+    if ('border' in sanitized) {
+      const v = sanitizeBorder(sanitized.border, frame.border)
+      if (v) sanitized.border = v
     }
 
     store.updateFrame(id, sanitized as Partial<Frame>)
@@ -105,13 +184,15 @@ const handlers: Record<string, ToolHandler> = {
     const { id, field, values } = params as {
       id: string
       field: 'padding' | 'margin'
-      values: Partial<Spacing>
+      values: Record<string, unknown>
     }
     const store = getStore()
     const frame = findInTree(store.root, id)
     if (!frame) return { success: false, error: `Frame ${id} not found` }
 
-    store.updateSpacing(id, field, values)
+    // Sanitize each side: number → DesignValue<number>
+    const sanitized = sanitizeSpacingValues(values)
+    store.updateSpacing(id, field, sanitized)
     const updated = findInTree(getStore().root, id)
     return { success: true, data: updated ? { [field]: updated[field] } : undefined }
   },
@@ -120,13 +201,21 @@ const handlers: Record<string, ToolHandler> = {
     const { id, dimension, size } = params as {
       id: string
       dimension: 'width' | 'height'
-      size: Partial<SizeValue>
+      size: Record<string, unknown>
     }
     const store = getStore()
     const frame = findInTree(store.root, id)
     if (!frame) return { success: false, error: `Frame ${id} not found` }
 
-    store.updateSize(id, dimension, size)
+    // Sanitize value: number → DesignValue<number>
+    const sanitized: Partial<SizeValue> = {}
+    if ('mode' in size) sanitized.mode = size.mode as SizeValue['mode']
+    if ('value' in size) {
+      const v = sanitizeDVNum(size.value)
+      if (v) sanitized.value = v
+    }
+
+    store.updateSize(id, dimension, sanitized)
     const updated = findInTree(getStore().root, id)
     return { success: true, data: updated ? { [dimension]: updated[dimension] } : undefined }
   },

@@ -1,6 +1,15 @@
 import type { Frame } from '../types/frame'
 import { buildClassString, detectLabelPairs, escapeAttr, escapeText, type LabelAssociation } from './exportShared'
 
+/** Build the id attribute string from htmlId or label association */
+function resolveIdAttr(frame: Frame, assoc?: LabelAssociation): string {
+  // User-defined htmlId takes precedence
+  if (frame.htmlId) return ` id="${escapeAttr(frame.htmlId)}"`
+  // Label-input association for accessibility
+  if (assoc?.role === 'input') return ` id="${assoc.id}"`
+  return ''
+}
+
 export function exportToHTML(
   frame: Frame,
   indent = 0,
@@ -16,18 +25,21 @@ export function exportToHTML(
     const hrefAttr = tag === 'a' && frame.href ? ` href="${escapeAttr(frame.href)}"` : ''
     const assoc = associations?.get(frame.id)
     const forAttr = assoc?.role === 'label' ? ` for="${assoc.id}"` : ''
-    return `${pad}<${tag}${hrefAttr}${forAttr}${classAttr}>${content}</${tag}>\n`
+    const idAttr = resolveIdAttr(frame, assoc)
+    return `${pad}<${tag}${idAttr}${hrefAttr}${forAttr}${classAttr}>${content}</${tag}>\n`
   }
 
   if (frame.type === 'image') {
     const srcAttr = frame.src ? ` src="${escapeAttr(frame.src)}"` : ''
     const altAttr = ` alt="${escapeAttr(frame.alt || '')}"`
-    return `${pad}<img${srcAttr}${altAttr}${classAttr}>\n`
+    const idAttr = resolveIdAttr(frame)
+    return `${pad}<img${idAttr}${srcAttr}${altAttr}${classAttr}>\n`
   }
 
   if (frame.type === 'button') {
     const label = escapeText(frame.label)
-    return `${pad}<button type="button"${classAttr}>${label}</button>\n`
+    const idAttr = resolveIdAttr(frame)
+    return `${pad}<button${idAttr} type="button"${classAttr}>${label}</button>\n`
   }
 
   if (frame.type === 'input') {
@@ -35,8 +47,8 @@ export function exportToHTML(
     const placeholderAttr = frame.placeholder ? ` placeholder="${escapeAttr(frame.placeholder)}"` : ''
     const disabledAttr = frame.disabled ? ' disabled' : ''
     const assoc = associations?.get(frame.id)
-    const idAttr = assoc?.role === 'input' ? ` id="${assoc.id}"` : ''
-    return `${pad}<input${typeAttr}${placeholderAttr}${disabledAttr}${idAttr}${classAttr}>\n`
+    const idAttr = resolveIdAttr(frame, assoc)
+    return `${pad}<input${idAttr}${typeAttr}${placeholderAttr}${disabledAttr}${classAttr}>\n`
   }
 
   if (frame.type === 'textarea') {
@@ -44,15 +56,15 @@ export function exportToHTML(
     const rowsAttr = ` rows="${frame.rows}"`
     const disabledAttr = frame.disabled ? ' disabled' : ''
     const assoc = associations?.get(frame.id)
-    const idAttr = assoc?.role === 'input' ? ` id="${assoc.id}"` : ''
-    return `${pad}<textarea${placeholderAttr}${rowsAttr}${disabledAttr}${idAttr}${classAttr}></textarea>\n`
+    const idAttr = resolveIdAttr(frame, assoc)
+    return `${pad}<textarea${idAttr}${placeholderAttr}${rowsAttr}${disabledAttr}${classAttr}></textarea>\n`
   }
 
   if (frame.type === 'select') {
     const disabledAttr = frame.disabled ? ' disabled' : ''
     const assoc = associations?.get(frame.id)
-    const idAttr = assoc?.role === 'input' ? ` id="${assoc.id}"` : ''
-    let result = `${pad}<select${disabledAttr}${idAttr}${classAttr}>\n`
+    const idAttr = resolveIdAttr(frame, assoc)
+    let result = `${pad}<select${idAttr}${disabledAttr}${classAttr}>\n`
     for (const opt of frame.options) {
       result += `${pad}  <option value="${escapeAttr(opt.value)}">${escapeText(opt.label)}</option>\n`
     }
@@ -62,6 +74,7 @@ export function exportToHTML(
 
   // Box
   const tag = frame.tag || 'div'
+  const idAttr = resolveIdAttr(frame)
   const childAssociations = detectLabelPairs(frame.children)
   const mergedAssociations = associations
     ? new Map([...associations, ...childAssociations])
@@ -70,14 +83,14 @@ export function exportToHTML(
   const hasChildren = frame.children.length > 0
 
   if (hasChildren) {
-    let result = `${pad}<${tag}${classAttr}>\n`
+    let result = `${pad}<${tag}${idAttr}${classAttr}>\n`
     for (const child of frame.children) {
       result += exportToHTML(child, indent + 1, mergedAssociations)
     }
     result += `${pad}</${tag}>\n`
     return result
   }
-  return `${pad}<${tag}${classAttr}></${tag}>\n`
+  return `${pad}<${tag}${idAttr}${classAttr}></${tag}>\n`
 }
 
 export function exportToHTMLDocument(frames: Frame[]): string {

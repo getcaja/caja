@@ -2,8 +2,10 @@ import type { Frame } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { Section } from '../ui/Section'
 import { NumberInput } from '../ui/NumberInput'
+import { ScaleInput } from '../ui/ScaleInput'
 import { InlineSizeControl } from '../ui/InlineSizeControl'
 import { ToggleGroup } from '../ui/ToggleGroup'
+import { SIZE_CONSTRAINT_SCALE } from '../../data/scales'
 import { ALIGN_SELF_OPTIONS } from './constants'
 
 export function SizeSection({ frame }: { frame: Frame }) {
@@ -17,11 +19,13 @@ export function SizeSection({ frame }: { frame: Frame }) {
           value={frame.width}
           onChange={(v) => updateSize(frame.id, 'width', v)}
           label="Width"
+          classPrefix="w"
         />
         <InlineSizeControl
           value={frame.height}
           onChange={(v) => updateSize(frame.id, 'height', v)}
           label="Height"
+          classPrefix="h"
         />
         <div className="flex gap-2">
           <NumberInput
@@ -38,31 +42,39 @@ export function SizeSection({ frame }: { frame: Frame }) {
           />
         </div>
         <div className="flex gap-2">
-          <NumberInput
+          <ScaleInput
+            scale={SIZE_CONSTRAINT_SCALE}
             value={frame.minWidth}
             onChange={(v) => updateFrame(frame.id, { minWidth: v })}
             min={0}
             label="Min W"
+            classPrefix="min-w"
           />
-          <NumberInput
+          <ScaleInput
+            scale={SIZE_CONSTRAINT_SCALE}
             value={frame.maxWidth}
             onChange={(v) => updateFrame(frame.id, { maxWidth: v })}
             min={0}
             label="Max W"
+            classPrefix="max-w"
           />
         </div>
         <div className="flex gap-2">
-          <NumberInput
+          <ScaleInput
+            scale={SIZE_CONSTRAINT_SCALE}
             value={frame.minHeight}
             onChange={(v) => updateFrame(frame.id, { minHeight: v })}
             min={0}
             label="Min H"
+            classPrefix="min-h"
           />
-          <NumberInput
+          <ScaleInput
+            scale={SIZE_CONSTRAINT_SCALE}
             value={frame.maxHeight}
             onChange={(v) => updateFrame(frame.id, { maxHeight: v })}
             min={0}
             label="Max H"
+            classPrefix="max-h"
           />
         </div>
         <div className="flex items-center gap-1.5">

@@ -1,4 +1,4 @@
-import type { Frame, Spacing, BorderRadius } from '../types/frame'
+import type { Frame, Spacing, BorderRadius, Border, DesignValue } from '../types/frame'
 
 const weightMap: Record<number, string> = {
   100: 'font-thin',
@@ -12,37 +12,91 @@ const weightMap: Record<number, string> = {
   900: 'font-black',
 }
 
+// --- DesignValue class helpers ---
+
+function dvClass(prefix: string, dv: DesignValue<number>, unit = 'px'): string {
+  if (dv.mode === 'token') return `${prefix}-${dv.token}`
+  return `${prefix}-[${dv.value}${unit}]`
+}
+
+function dvColorClass(prefix: string, dv: DesignValue<string>): string {
+  if (dv.mode === 'token') return `${prefix}-${dv.token}`
+  return `${prefix}-[${dv.value}]`
+}
+
+// Check if two DesignValues are equal (same mode, token, and value)
+function dvEqual(a: DesignValue<number>, b: DesignValue<number>): boolean {
+  if (a.mode !== b.mode) return false
+  if (a.value !== b.value) return false
+  if (a.mode === 'token' && b.mode === 'token' && a.token !== b.token) return false
+  return true
+}
+
+function dvIsZero(dv: DesignValue<number>): boolean {
+  return dv.mode === 'custom' && dv.value === 0
+}
+
 function spacingClasses(prefix: string, s: Spacing): string[] {
-  if (s.top === 0 && s.right === 0 && s.bottom === 0 && s.left === 0) return []
+  if (dvIsZero(s.top) && dvIsZero(s.right) && dvIsZero(s.bottom) && dvIsZero(s.left)) return []
   // Uniform
-  if (s.top === s.right && s.right === s.bottom && s.bottom === s.left) {
-    return [`${prefix}-[${s.top}px]`]
+  if (dvEqual(s.top, s.right) && dvEqual(s.right, s.bottom) && dvEqual(s.bottom, s.left)) {
+    return [dvClass(prefix, s.top)]
   }
   // Symmetric
   const cls: string[] = []
-  if (s.top === s.bottom && s.left === s.right) {
-    if (s.top > 0) cls.push(`${prefix}y-[${s.top}px]`)
-    if (s.left > 0) cls.push(`${prefix}x-[${s.left}px]`)
+  if (dvEqual(s.top, s.bottom) && dvEqual(s.left, s.right)) {
+    if (!dvIsZero(s.top)) cls.push(dvClass(`${prefix}y`, s.top))
+    if (!dvIsZero(s.left)) cls.push(dvClass(`${prefix}x`, s.left))
     return cls
   }
   // Per-side
-  if (s.top > 0) cls.push(`${prefix}t-[${s.top}px]`)
-  if (s.right > 0) cls.push(`${prefix}r-[${s.right}px]`)
-  if (s.bottom > 0) cls.push(`${prefix}b-[${s.bottom}px]`)
-  if (s.left > 0) cls.push(`${prefix}l-[${s.left}px]`)
+  if (!dvIsZero(s.top)) cls.push(dvClass(`${prefix}t`, s.top))
+  if (!dvIsZero(s.right)) cls.push(dvClass(`${prefix}r`, s.right))
+  if (!dvIsZero(s.bottom)) cls.push(dvClass(`${prefix}b`, s.bottom))
+  if (!dvIsZero(s.left)) cls.push(dvClass(`${prefix}l`, s.left))
   return cls
 }
 
+function borderRadiusClass(prefix: string, dv: DesignValue<number>): string {
+  if (dv.mode === 'token') {
+    if (dv.token === 'DEFAULT') return prefix // rounded, rounded-tl, etc.
+    return `${prefix}-${dv.token}`
+  }
+  return `${prefix}-[${dv.value}px]`
+}
+
 function borderRadiusClasses(br: BorderRadius): string[] {
-  const allEqual = br.topLeft === br.topRight && br.topRight === br.bottomRight && br.bottomRight === br.bottomLeft
+  const allEqual = dvEqual(br.topLeft, br.topRight) && dvEqual(br.topRight, br.bottomRight) && dvEqual(br.bottomRight, br.bottomLeft)
   if (allEqual) {
-    return br.topLeft > 0 ? [`rounded-[${br.topLeft}px]`] : []
+    return !dvIsZero(br.topLeft) ? [borderRadiusClass('rounded', br.topLeft)] : []
   }
   const cls: string[] = []
-  if (br.topLeft > 0) cls.push(`rounded-tl-[${br.topLeft}px]`)
-  if (br.topRight > 0) cls.push(`rounded-tr-[${br.topRight}px]`)
-  if (br.bottomRight > 0) cls.push(`rounded-br-[${br.bottomRight}px]`)
-  if (br.bottomLeft > 0) cls.push(`rounded-bl-[${br.bottomLeft}px]`)
+  if (!dvIsZero(br.topLeft)) cls.push(borderRadiusClass('rounded-tl', br.topLeft))
+  if (!dvIsZero(br.topRight)) cls.push(borderRadiusClass('rounded-tr', br.topRight))
+  if (!dvIsZero(br.bottomRight)) cls.push(borderRadiusClass('rounded-br', br.bottomRight))
+  if (!dvIsZero(br.bottomLeft)) cls.push(borderRadiusClass('rounded-bl', br.bottomLeft))
+  return cls
+}
+
+function borderClasses(border: Border): string[] {
+  if (dvIsZero(border.width) || border.style === 'none') return []
+  const cls: string[] = []
+
+  // Border width
+  if (border.width.mode === 'token') {
+    // token "" = class `border` (1px), token "2" = `border-2`, etc.
+    cls.push(border.width.token === '' ? 'border' : `border-${border.width.token}`)
+  } else {
+    cls.push(border.width.value === 1 ? 'border' : `border-[${border.width.value}px]`)
+  }
+
+  if (border.style !== 'solid') cls.push(`border-${border.style}`)
+
+  // Border color
+  if (border.color.value) {
+    cls.push(dvColorClass('border', border.color))
+  }
+
   return cls
 }
 
@@ -80,21 +134,41 @@ export function frameToClasses(frame: Frame): string {
     const alignMap = { start: 'items-start', center: 'items-center', end: 'items-end', stretch: 'items-stretch' }
     cls.push(alignMap[frame.align])
 
-    if (frame.gap > 0) cls.push(`gap-[${frame.gap}px]`)
+    if (!dvIsZero(frame.gap)) cls.push(dvClass('gap', frame.gap))
     if (frame.wrap) cls.push('flex-wrap')
   }
 
   // Text
   if (frame.type === 'text') {
-    cls.push(`text-[${frame.fontSize}px]`)
+    // fontSize + lineHeight combined syntax
+    if (frame.fontSize.mode === 'token') {
+      // lineHeight modifier syntax: text-6xl/relaxed or text-6xl/[1.1]
+      if (frame.lineHeight.mode === 'token') {
+        cls.push(`text-${frame.fontSize.token}/${frame.lineHeight.token}`)
+      } else {
+        cls.push(`text-${frame.fontSize.token}/[${frame.lineHeight.value}]`)
+      }
+    } else {
+      cls.push(`text-[${frame.fontSize.value}px]`)
+      if (frame.lineHeight.mode === 'token') {
+        cls.push(`leading-${frame.lineHeight.token}`)
+      } else {
+        cls.push(`leading-[${frame.lineHeight.value}]`)
+      }
+    }
     if (frame.fontWeight !== 400) cls.push(weightMap[frame.fontWeight] || `font-[${frame.fontWeight}]`)
-    cls.push(`leading-[${frame.lineHeight}]`)
-    if (frame.color) cls.push(`text-[${frame.color}]`)
+    if (frame.color.value) cls.push(dvColorClass('text', frame.color))
     if (frame.textAlign !== 'left') cls.push(`text-${frame.textAlign}`)
     if (frame.fontStyle === 'italic') cls.push('italic')
     if (frame.textDecoration === 'underline') cls.push('underline')
     else if (frame.textDecoration === 'line-through') cls.push('line-through')
-    if (frame.letterSpacing !== 0) cls.push(`tracking-[${frame.letterSpacing}px]`)
+    if (!dvIsZero(frame.letterSpacing)) {
+      if (frame.letterSpacing.mode === 'token') {
+        cls.push(`tracking-${frame.letterSpacing.token}`)
+      } else {
+        cls.push(`tracking-[${frame.letterSpacing.value}px]`)
+      }
+    }
     if (frame.textTransform !== 'none') cls.push(frame.textTransform)
     if (frame.whiteSpace !== 'normal') cls.push(`whitespace-${frame.whiteSpace}`)
   }
@@ -109,7 +183,7 @@ export function frameToClasses(frame: Frame): string {
   if (frame.type === 'button') {
     cls.push('inline-flex', 'items-center', 'justify-center', 'text-[14px]', 'font-medium', 'cursor-default')
     if (frame.variant === 'filled') {
-      if (!frame.bg) cls.push('bg-[#18181b]')
+      if (!frame.bg.value) cls.push('bg-[#18181b]')
       cls.push('text-white')
     } else if (frame.variant === 'outline') {
       if (frame.border.style === 'none') cls.push('border', 'border-[#d1d5db]')
@@ -140,17 +214,17 @@ export function frameToClasses(frame: Frame): string {
   // Size
   if (frame.width.mode === 'hug') cls.push('w-fit')
   else if (frame.width.mode === 'fill') cls.push('w-full')
-  else if (frame.width.mode === 'fixed') cls.push(`w-[${frame.width.value}px]`)
+  else if (frame.width.mode === 'fixed') cls.push(dvClass('w', frame.width.value))
 
   if (frame.height.mode === 'hug') cls.push('h-fit')
   else if (frame.height.mode === 'fill') cls.push('h-full')
-  else if (frame.height.mode === 'fixed') cls.push(`h-[${frame.height.value}px]`)
+  else if (frame.height.mode === 'fixed') cls.push(dvClass('h', frame.height.value))
 
   // Size constraints
-  if (frame.minWidth > 0) cls.push(`min-w-[${frame.minWidth}px]`)
-  if (frame.maxWidth > 0) cls.push(`max-w-[${frame.maxWidth}px]`)
-  if (frame.minHeight > 0) cls.push(`min-h-[${frame.minHeight}px]`)
-  if (frame.maxHeight > 0) cls.push(`max-h-[${frame.maxHeight}px]`)
+  if (!dvIsZero(frame.minWidth)) cls.push(dvClass('min-w', frame.minWidth))
+  if (!dvIsZero(frame.maxWidth)) cls.push(dvClass('max-w', frame.maxWidth))
+  if (!dvIsZero(frame.minHeight)) cls.push(dvClass('min-h', frame.minHeight))
+  if (!dvIsZero(frame.maxHeight)) cls.push(dvClass('max-h', frame.maxHeight))
 
   // Flex grow/shrink
   if (frame.grow === 1) cls.push('grow')
@@ -167,14 +241,10 @@ export function frameToClasses(frame: Frame): string {
   cls.push(...spacingClasses('m', frame.margin))
 
   // Background
-  if (frame.bg) cls.push(`bg-[${frame.bg}]`)
+  if (frame.bg.value) cls.push(dvColorClass('bg', frame.bg))
 
   // Border
-  if (frame.border.width > 0 && frame.border.style !== 'none') {
-    cls.push(frame.border.width === 1 ? 'border' : `border-[${frame.border.width}px]`)
-    if (frame.border.style !== 'solid') cls.push(`border-${frame.border.style}`)
-    if (frame.border.color) cls.push(`border-[${frame.border.color}]`)
-  }
+  cls.push(...borderClasses(frame.border))
 
   // Border radius
   cls.push(...borderRadiusClasses(frame.borderRadius))
@@ -183,7 +253,13 @@ export function frameToClasses(frame: Frame): string {
   if (frame.overflow !== 'visible') cls.push(`overflow-${frame.overflow}`)
 
   // Opacity
-  if (frame.opacity < 100) cls.push(`opacity-[${frame.opacity / 100}]`)
+  if (frame.opacity.mode === 'token' || frame.opacity.value < 100) {
+    if (frame.opacity.mode === 'token') {
+      cls.push(`opacity-${frame.opacity.token}`)
+    } else {
+      cls.push(`opacity-[${frame.opacity.value / 100}]`)
+    }
+  }
 
   // Box shadow
   if (frame.boxShadow !== 'none' && shadowMap[frame.boxShadow]) {

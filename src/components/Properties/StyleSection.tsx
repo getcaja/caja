@@ -1,12 +1,13 @@
-import type { Frame } from '../../types/frame'
+import type { Frame, DesignValue } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { Section } from '../ui/Section'
-import { NumberInput } from '../ui/NumberInput'
+import { ScaleInput } from '../ui/ScaleInput'
 import { ColorInput } from '../ui/ColorInput'
 import { FillInput } from '../ui/FillInput'
 import { ToggleGroup } from '../ui/ToggleGroup'
 import { Select } from '../ui/Select'
 import { BorderRadiusControl } from '../ui/BorderRadiusControl'
+import { BORDER_WIDTH_SCALE } from '../../data/scales'
 import { OVERFLOW_OPTIONS, BOX_SHADOW_OPTIONS, CURSOR_OPTIONS } from './constants'
 
 export function StyleSection({ frame }: { frame: Frame }) {
@@ -22,6 +23,7 @@ export function StyleSection({ frame }: { frame: Frame }) {
           onColorChange={(v) => updateFrame(frame.id, { bg: v })}
           onOpacityChange={(v) => updateFrame(frame.id, { opacity: v })}
           label="Fill"
+          colorClassPrefix="bg"
         />
 
         {frame.type === 'text' && (
@@ -29,6 +31,7 @@ export function StyleSection({ frame }: { frame: Frame }) {
             value={frame.color}
             onChange={(v) => updateFrame(frame.id, { color: v })}
             label="Color"
+            classPrefix="text"
           />
         )}
 
@@ -46,23 +49,34 @@ export function StyleSection({ frame }: { frame: Frame }) {
               className="flex-1"
               onChange={(style) =>
                 updateFrame(frame.id, {
-                  border: { ...frame.border, style, width: style === 'none' ? 0 : Math.max(frame.border.width, 1) },
+                  border: {
+                    ...frame.border,
+                    style,
+                    width: style === 'none'
+                      ? { mode: 'custom', value: 0 }
+                      : frame.border.width.value < 1
+                        ? { mode: 'custom', value: 1 }
+                        : frame.border.width,
+                  },
                 })
               }
             />
           </div>
           {frame.border.style !== 'none' && (
             <>
-              <NumberInput
+              <ScaleInput
+                scale={BORDER_WIDTH_SCALE}
                 value={frame.border.width}
                 onChange={(v) => updateFrame(frame.id, { border: { ...frame.border, width: v } })}
                 min={1}
                 label="Width"
+                classPrefix="border"
               />
               <ColorInput
                 value={frame.border.color}
                 onChange={(v) => updateFrame(frame.id, { border: { ...frame.border, color: v } })}
                 label="Color"
+                classPrefix="border"
               />
             </>
           )}

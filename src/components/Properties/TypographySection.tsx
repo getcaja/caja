@@ -2,11 +2,10 @@ import { Italic, Underline, Strikethrough } from 'lucide-react'
 import type { TextElement } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { Section } from '../ui/Section'
-import { NumberInput } from '../ui/NumberInput'
 import { ScaleInput } from '../ui/ScaleInput'
 import { ToggleGroup } from '../ui/ToggleGroup'
 import { Select } from '../ui/Select'
-import { FONT_SIZE_SCALE } from '../../data/scales'
+import { FONT_SIZE_SCALE, LINE_HEIGHT_SCALE, LETTER_SPACING_SCALE } from '../../data/scales'
 import { FONT_WEIGHT_OPTIONS, TEXT_TRANSFORM_OPTIONS, WHITE_SPACE_OPTIONS } from './constants'
 
 export function TypographySection({ frame }: { frame: TextElement }) {
@@ -21,12 +20,16 @@ export function TypographySection({ frame }: { frame: TextElement }) {
           onChange={(v) => updateFrame(frame.id, { fontSize: v })}
           min={1}
           label="Size"
+          classPrefix="text"
         />
-        <NumberInput
+        <ScaleInput
+          scale={LINE_HEIGHT_SCALE}
           value={frame.lineHeight}
           onChange={(v) => updateFrame(frame.id, { lineHeight: v })}
           min={0.5}
           label="Leading"
+          unit=""
+          classPrefix="leading"
         />
 
         <div className="flex items-center gap-1.5">
@@ -92,11 +95,14 @@ export function TypographySection({ frame }: { frame: TextElement }) {
           </div>
         </div>
 
-        <NumberInput
+        <ScaleInput
+          scale={LETTER_SPACING_SCALE}
           value={frame.letterSpacing}
           onChange={(v) => updateFrame(frame.id, { letterSpacing: v })}
           min={-10}
           label="Tracking"
+          unit="px"
+          classPrefix="tracking"
         />
 
         <div className="flex items-center gap-1.5">
