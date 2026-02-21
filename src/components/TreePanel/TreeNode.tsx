@@ -3,7 +3,7 @@ import type { Frame } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { AddMenu } from './AddMenu'
 import { useTreeDnd, type DropPosition } from './TreeDndContext'
-import { ChevronRight, ChevronDown, Square, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse, Plus, X, Copy, Trash2, WrapText, SquarePlus } from 'lucide-react'
+import { ChevronRight, ChevronDown, Square, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse, Plus, X, Copy, Trash2, Group, SquarePlus, Eye, EyeOff } from 'lucide-react'
 
 interface TreeNodeProps {
   frame: Frame
@@ -32,6 +32,7 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
   const duplicateFrame = useFrameStore((s) => s.duplicateFrame)
   const wrapInFrame = useFrameStore((s) => s.wrapInFrame)
   const renameFrame = useFrameStore((s) => s.renameFrame)
+  const toggleHidden = useFrameStore((s) => s.toggleHidden)
   const moveFrame = useFrameStore((s) => s.moveFrame)
 
   const { dragId, overId, overPosition, startDrag, setOver, endDrag } = useTreeDnd()
@@ -160,11 +161,11 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
         draggable={!editing && !isRoot}
         className={`flex items-center gap-1.5 py-1 px-1 rounded-md cursor-pointer group transition-all ${
           isSelected
-            ? 'bg-accent/15 text-text-primary'
+            ? 'tree-node-selected text-text-primary'
             : isOver && overPosition === 'inside'
-              ? 'bg-accent/10 outline outline-1 outline-accent/40'
-              : 'hover:bg-surface-2/60 text-text-secondary'
-        } ${isDragging ? 'opacity-40' : ''}`}
+              ? 'bg-[var(--color-focus)]/10 outline outline-1 outline-[var(--color-focus)]/40'
+              : 'hover:bg-[var(--color-focus)]/8 text-text-secondary hover:text-text-primary'
+        } ${isDragging ? 'opacity-40' : ''} ${frame.hidden ? 'opacity-40' : ''}`}
         style={{ paddingLeft: depth * 16 + 4 }}
         onClick={() => select(frame.id)}
         onMouseEnter={() => hover(frame.id)}
@@ -250,8 +251,8 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
         )}
 
         {/* Actions on hover */}
-        <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
-          {addTargetId && (
+        <div className={`${frame.hidden ? 'flex' : 'hidden group-hover:flex'} items-center gap-0.5 shrink-0`}>
+          {addTargetId && !frame.hidden && (
             <button
               ref={addBtnRef}
               className="w-4 h-4 c-icon-btn text-[10px] hover:text-accent hover:bg-accent/10"
@@ -264,16 +265,28 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
               <Plus size={12} />
             </button>
           )}
-          {!isRoot && (
+          {!isRoot && !frame.hidden && (
             <button
-              className="w-4 h-4 c-icon-btn text-[10px] hover:text-destructive hover:bg-destructive/10"
+              className="w-4 h-4 c-icon-btn text-[10px] hover:text-text-secondary hover:bg-surface-2/60"
               onClick={(e) => {
                 e.stopPropagation()
-                removeFrame(frame.id)
+                duplicateFrame(frame.id)
               }}
-              title="Delete"
+              title="Duplicate"
             >
-              <X size={12} />
+              <Copy size={10} />
+            </button>
+          )}
+          {!isRoot && (
+            <button
+              className={`w-4 h-4 c-icon-btn text-[10px] ${frame.hidden ? 'text-text-muted' : 'hover:text-text-secondary hover:bg-surface-2/60'}`}
+              onClick={(e) => {
+                e.stopPropagation()
+                toggleHidden(frame.id)
+              }}
+              title={frame.hidden ? 'Show' : 'Hide'}
+            >
+              {frame.hidden ? <EyeOff size={10} /> : <Eye size={10} />}
             </button>
           )}
         </div>
@@ -297,15 +310,24 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
           onClick={(e) => e.stopPropagation()}
         >
           {!isRoot && (
-            <button
-              className="c-menu-item"
-              onClick={() => { wrapInFrame(frame.id); setContextMenu(null) }}
-            >
-              <WrapText size={12} /> Wrap Selection
-            </button>
+            <>
+              <button
+                className="c-menu-item"
+                onClick={() => { wrapInFrame(frame.id); setContextMenu(null) }}
+              >
+                <Copy size={12} /> Duplicate
+              </button>
+              <button
+                className="c-menu-item"
+                onClick={() => { wrapInFrame(frame.id); setContextMenu(null) }}
+              >
+                <Group size={12} /> Wrap in Frame
+              </button>
+            </>
           )}
           {addTargetId && (
             <>
+              <div className="border-t border-border my-1" />
               <button
                 className="c-menu-item"
                 onClick={() => { addChild(addTargetId, 'box'); setContextMenu(null) }}
@@ -355,12 +377,6 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
               <div className="border-t border-border my-1" />
               <button
                 className="c-menu-item"
-                onClick={() => { duplicateFrame(frame.id); setContextMenu(null) }}
-              >
-                <Copy size={12} /> Duplicate
-              </button>
-              <button
-                className="c-menu-item-destructive"
                 onClick={() => { removeFrame(frame.id); setContextMenu(null) }}
               >
                 <Trash2 size={12} /> Delete

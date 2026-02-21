@@ -17,10 +17,14 @@
   min-width: 40px;
 }
 
-/* Hovered (overrides empty outline) */
-.frame-node.is-hovered {
-  outline: 1px solid rgba(13, 153, 255, 0.4);
-  outline-offset: -1px;
+/* ── Hover border (overlay, same pattern as selection) ── */
+
+.frame-hover {
+  position: absolute;
+  inset: 0;
+  border: 1px solid #3B82F6;
+  pointer-events: none;
+  z-index: 10;
 }
 
 /* Root frame with fill height: grow with content */
@@ -34,7 +38,7 @@
 .frame-selection {
   position: absolute;
   inset: 0;
-  border: 2px solid #0D99FF;
+  border: 2px solid #2563EB;
   pointer-events: none;
   z-index: 10;
 }
@@ -83,6 +87,12 @@
 .overlay-label.is-gap {
   color: #fff;
   text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Text selection highlight ── */
+
+.frame-node ::selection {
+  background: rgba(37, 99, 235, 0.35);
 }
 
 /* ── Text editing (contentEditable) ── */

@@ -218,6 +218,9 @@ function GapOverlay({ containerRef, gap, showValues }: {
 }
 
 export function FrameRenderer({ frame, rootMinHeight }: FrameRendererProps) {
+  // Hidden frames are not rendered in the canvas at all
+  if (frame.hidden) return null
+
   const selectedId = useFrameStore((s) => s.selectedId)
   const hoveredId = useFrameStore((s) => s.hoveredId)
   const select = useFrameStore((s) => s.select)
@@ -248,7 +251,6 @@ export function FrameRenderer({ frame, rootMinHeight }: FrameRendererProps) {
   // Compose editor state classes
   const stateClasses = [
     'frame-node',
-    isHovered && 'is-hovered',
     isEmpty && 'is-empty',
     editingText && 'is-editing',
     rootMinHeight && frame.height.mode === 'fill' && 'is-root-fill',
@@ -294,13 +296,13 @@ export function FrameRenderer({ frame, rootMinHeight }: FrameRendererProps) {
           setEditingText(true)
         }
       }}
-      onMouseEnter={(e) => {
+      onMouseOver={(e) => {
         e.stopPropagation()
         hover(frame.id)
       }}
-      onMouseLeave={() => hover(null)}
     >
       {isSelected && <div className="frame-selection" />}
+      {isHovered && <div className="frame-hover" />}
       {isSelected && showSpacingOverlays && (
         <SpacingOverlay padding={frame.padding} margin={frame.margin} showValues={showOverlayValues} elementRef={containerRef} />
       )}

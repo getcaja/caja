@@ -173,6 +173,13 @@ input[type=number] {
   box-shadow: none !important;
 }
 
+/* Tree node selected state */
+.tree-node-selected {
+  background: color-mix(in srgb, var(--color-focus) 15%, transparent);
+  outline: 1px solid color-mix(in srgb, var(--color-focus) 50%, transparent);
+  outline-offset: -1px;
+}
+
 /* ScaleInput — reset the inner input */
 .c-scale-input input {
   border: none;

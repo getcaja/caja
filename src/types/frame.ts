@@ -39,6 +39,7 @@ interface BaseElement {
   id: string
   type: ElementType
   name: string
+  hidden: boolean
 
   // HTML export attributes
   className: string // user-defined CSS class(es) for export

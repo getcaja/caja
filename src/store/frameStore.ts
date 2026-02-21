@@ -80,6 +80,7 @@ function createInternalRoot(children: Frame[] = []): BoxElement {
     id: INTERNAL_ROOT_ID,
     type: 'box',
     name: '__root__',
+    hidden: false,
     className: '',
     htmlId: '',
     tag: 'div',
@@ -117,6 +118,7 @@ export function createBox(overrides?: Partial<BoxElement>): BoxElement {
     id,
     type: 'box',
     name: overrides?.name || `frame-${id.split('-')[1]}`,
+    hidden: false,
     className: '',
     htmlId: '',
     tag: overrides?.tag || 'div',
@@ -155,6 +157,7 @@ export function createText(overrides?: Partial<TextElement>): TextElement {
     id,
     type: 'text',
     name: overrides?.name || `text-${id.split('-')[1]}`,
+    hidden: false,
     className: '',
     htmlId: '',
     content: 'Text',
@@ -199,6 +202,7 @@ export function createImage(overrides?: Partial<ImageElement>): ImageElement {
     id,
     type: 'image',
     name: overrides?.name || `image-${id.split('-')[1]}`,
+    hidden: false,
     className: '',
     htmlId: '',
     src: '',
@@ -235,6 +239,7 @@ export function createButton(overrides?: Partial<ButtonElement>): ButtonElement 
     id,
     type: 'button',
     name: overrides?.name || `button-${id.split('-')[1]}`,
+    hidden: false,
     className: '',
     htmlId: '',
     label: 'Button',
@@ -271,6 +276,7 @@ export function createInput(overrides?: Partial<InputElement>): InputElement {
     id,
     type: 'input',
     name: overrides?.name || `input-${id.split('-')[1]}`,
+    hidden: false,
     className: '',
     htmlId: '',
     placeholder: 'Placeholder...',
@@ -305,6 +311,7 @@ export function createTextarea(overrides?: Partial<TextareaElement>): TextareaEl
     id,
     type: 'textarea',
     name: overrides?.name || `textarea-${id.split('-')[1]}`,
+    hidden: false,
     className: '',
     htmlId: '',
     placeholder: 'Placeholder...',
@@ -339,6 +346,7 @@ export function createSelect(overrides?: Partial<SelectElement>): SelectElement 
     id,
     type: 'select',
     name: overrides?.name || `select-${id.split('-')[1]}`,
+    hidden: false,
     className: '',
     htmlId: '',
     options: [{ value: 'option-1', label: 'Option 1' }],
@@ -625,6 +633,7 @@ function migrateFrame(raw: Record<string, unknown>): Frame {
   const base = {
     id,
     name: (raw.name as string && !(raw.name as string).includes('NaN')) ? (raw.name as string) : `frame-${id.split('-')[1]}`,
+    hidden: (raw.hidden as boolean) ?? false,
     className: (raw.className as string) || '',
     htmlId: (raw.htmlId as string) || '',
     padding: migrateSpacing(raw.padding),
@@ -760,6 +769,7 @@ interface FrameStore {
   select: (id: string | null) => void
   hover: (id: string | null) => void
   toggleCollapse: (id: string) => void
+  toggleHidden: (id: string) => void
 
   addChild: (parentId: string, type: 'box' | 'text' | 'image' | 'button' | 'input' | 'textarea' | 'select', overrides?: Partial<Frame>) => void
   removeFrame: (id: string) => void
@@ -840,6 +850,17 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
       if (next.has(id)) next.delete(id)
       else next.add(id)
       return { collapsedIds: next }
+    }),
+
+  toggleHidden: (id) =>
+    set((state) => {
+      const frame = findInTree(state.root, id)
+      if (!frame) return {}
+      const history = pushHistory(state)
+      return {
+        root: updateInTree(state.root, id, (f) => ({ ...f, hidden: !f.hidden })) as BoxElement,
+        ...history,
+      }
     }),
 
   addChild: (parentId, type, overrides) =>
