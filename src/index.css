@@ -64,34 +64,7 @@ html, body, #root {
   background: var(--color-text-muted);
 }
 
-/* ═══════════════════════════════════════════════
-   Canvas reset — neutralise browser chrome so
-   frameToPreviewStyle() only handles user values.
-   ═══════════════════════════════════════════════ */
-#caja-canvas {
-  color: #1c1917;
-}
-#caja-canvas input,
-#caja-canvas textarea,
-#caja-canvas select,
-#caja-canvas button {
-  -webkit-appearance: none;
-  appearance: none;
-  background-color: transparent;
-  border: none;
-  outline: none;
-  font: inherit;
-  color: inherit;
-  padding: 0;
-  margin: 0;
-  resize: none;
-}
-#caja-canvas select {
-  padding-right: 28px;
-}
-/* Hide number spinners (canvas + UI) */
-#caja-canvas input[type=number]::-webkit-inner-spin-button,
-#caja-canvas input[type=number]::-webkit-outer-spin-button,
+/* Hide number spinners */
 input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button {
   -webkit-appearance: none;

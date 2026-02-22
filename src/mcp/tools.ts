@@ -1,7 +1,7 @@
 // Tool executor — maps MCP tool calls to frameStore actions
 // This is the single entry point for both the built-in chat and the external MCP server.
 
-import { useFrameStore } from '../store/frameStore'
+import { useFrameStore, findInTree } from '../store/frameStore'
 import type { Frame, Spacing, SizeValue, DesignValue, Border, BorderRadius } from '../types/frame'
 import type { ToolName } from './schema'
 import { parseTailwindClasses } from '../utils/parseTailwindClasses'
@@ -23,17 +23,6 @@ type ToolParams = Record<string, unknown>
 
 function getStore() {
   return useFrameStore.getState()
-}
-
-function findInTree(root: Frame, id: string): Frame | null {
-  if (root.id === id) return root
-  if (root.type === 'box') {
-    for (const child of root.children) {
-      const found = findInTree(child, id)
-      if (found) return found
-    }
-  }
-  return null
 }
 
 // Compact snapshot for mutation responses — only essential fields
@@ -466,7 +455,8 @@ const handlers: Record<string, ToolHandler> = {
 
   async screenshot() {
     const { toPng } = await import('html-to-image')
-    const el = document.getElementById('caja-canvas')
+    const iframeWin = getStore().iframeWindow
+    const el = iframeWin?.document.getElementById('caja-root')
     if (!el) return { success: false, error: 'Canvas element not found' }
 
     // Temporarily deselect to remove editor outlines
@@ -475,24 +465,17 @@ const handlers: Record<string, ToolHandler> = {
     store.select(null)
     store.hover(null)
 
-    // Read the full scroll dimensions before modifying layout
-    const fullHeight = el.scrollHeight
-    const fullWidth = el.offsetWidth
-
-    // Break out of flex layout so the element renders at full content height
-    const saved = el.style.cssText
-    el.style.cssText = `position:absolute;top:0;left:0;width:${fullWidth}px;height:${fullHeight}px;overflow:visible;z-index:-1;`
-
     // Wait for React re-render + layout reflow
     await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 100)))
+
+    const fullWidth = el.scrollWidth
+    const fullHeight = el.scrollHeight
 
     try {
       const dataUrl = await toPng(el, { cacheBust: true, width: fullWidth, height: fullHeight })
       const base64 = dataUrl.replace(/^data:image\/png;base64,/, '')
       return { success: true, data: { image: base64, mimeType: 'image/png' } }
     } finally {
-      // Restore
-      el.style.cssText = saved
       if (prevSelected) store.select(prevSelected)
     }
   },

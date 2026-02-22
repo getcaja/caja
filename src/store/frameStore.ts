@@ -41,10 +41,6 @@ function zeroSpacing(): Spacing {
   return { top: dvNum(0), right: dvNum(0), bottom: dvNum(0), left: dvNum(0) }
 }
 
-function uniformSpacing(v: number): Spacing {
-  return { top: dvNum(v), right: dvNum(v), bottom: dvNum(v), left: dvNum(v) }
-}
-
 function zeroBorderRadius(): BorderRadius {
   return { topLeft: dvNum(0), topRight: dvNum(0), bottomRight: dvNum(0), bottomLeft: dvNum(0) }
 }
@@ -274,9 +270,6 @@ export function createButton(overrides?: Partial<ButtonElement>): ButtonElement 
   }
 }
 
-const formBorder: Border = { width: dvNum(1), color: dvStr('#d1d5db'), style: 'solid' }
-const formPadding: Spacing = { top: dvNum(8), right: dvNum(12), bottom: dvNum(8), left: dvNum(12) }
-
 export function createInput(overrides?: Partial<InputElement>): InputElement {
   const id = generateId()
   return {
@@ -290,7 +283,7 @@ export function createInput(overrides?: Partial<InputElement>): InputElement {
     inputType: 'text',
     disabled: false,
     ...defaultTextStyles(),
-    padding: cloneSpacing(formPadding),
+    padding: zeroSpacing(),
     margin: zeroSpacing(),
     width: { mode: 'fill', value: dvNum(0) },
     height: { mode: 'hug', value: dvNum(0) },
@@ -298,9 +291,9 @@ export function createInput(overrides?: Partial<InputElement>): InputElement {
     shrink: dvNum(1),
     overflow: 'visible',
     opacity: dvNum(100),
-    bg: dvStr('#ffffff'),
-    border: cloneBorder(formBorder),
-    borderRadius: uniformBorderRadius(6),
+    bg: dvStr(''),
+    border: { ...defaultBorder, width: dvNum(0), color: dvStr('') },
+    borderRadius: zeroBorderRadius(),
     tailwindClasses: '',
     boxShadow: 'none',
     cursor: 'auto',
@@ -326,7 +319,7 @@ export function createTextarea(overrides?: Partial<TextareaElement>): TextareaEl
     rows: 3,
     disabled: false,
     ...defaultTextStyles(),
-    padding: cloneSpacing(formPadding),
+    padding: zeroSpacing(),
     margin: zeroSpacing(),
     width: { mode: 'fill', value: dvNum(0) },
     height: { mode: 'hug', value: dvNum(0) },
@@ -334,9 +327,9 @@ export function createTextarea(overrides?: Partial<TextareaElement>): TextareaEl
     shrink: dvNum(1),
     overflow: 'visible',
     opacity: dvNum(100),
-    bg: dvStr('#ffffff'),
-    border: cloneBorder(formBorder),
-    borderRadius: uniformBorderRadius(6),
+    bg: dvStr(''),
+    border: { ...defaultBorder, width: dvNum(0), color: dvStr('') },
+    borderRadius: zeroBorderRadius(),
     tailwindClasses: '',
     boxShadow: 'none',
     cursor: 'auto',
@@ -374,7 +367,7 @@ export function createSelect(overrides?: Partial<SelectElement>): SelectElement 
     options: [{ value: 'option-1', label: 'Option 1' }],
     disabled: false,
     ...defaultTextStyles(),
-    padding: cloneSpacing(formPadding),
+    padding: zeroSpacing(),
     margin: zeroSpacing(),
     width: { mode: 'fill', value: dvNum(0) },
     height: { mode: 'hug', value: dvNum(0) },
@@ -382,9 +375,9 @@ export function createSelect(overrides?: Partial<SelectElement>): SelectElement 
     shrink: dvNum(1),
     overflow: 'visible',
     opacity: dvNum(100),
-    bg: dvStr('#ffffff'),
-    border: cloneBorder(formBorder),
-    borderRadius: uniformBorderRadius(6),
+    bg: dvStr(''),
+    border: { ...defaultBorder, width: dvNum(0), color: dvStr('') },
+    borderRadius: zeroBorderRadius(),
     tailwindClasses: '',
     boxShadow: 'none',
     cursor: 'auto',
@@ -505,8 +498,8 @@ function moveInTree(root: Frame, frameId: string, newParentId: string, index: nu
   return insert(result)
 }
 
-// Find a frame by id
-function findInTree(root: Frame, id: string): Frame | null {
+// Find a frame by id — exported for reuse across mcp, components, etc.
+export function findInTree(root: Frame, id: string): Frame | null {
   if (root.id === id) return root
   for (const child of getChildren(root)) {
     const found = findInTree(child, id)
@@ -805,6 +798,8 @@ interface FrameStore {
   showOverlayValues: boolean
   previewMode: boolean
   canvasWidth: number | null
+  iframeWindow: Window | null
+  canvasZoom: number
   mcpConnected: boolean
 
   past: BoxElement[]
@@ -846,6 +841,8 @@ interface FrameStore {
   togglePreviewMode: () => void
   setPreviewMode: (value: boolean) => void
   setCanvasWidth: (width: number | null) => void
+  setIframeWindow: (win: Window | null) => void
+  setCanvasZoom: (zoom: number) => void
   expandToFrame: (id: string) => void
 }
 
@@ -900,6 +897,8 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   showOverlayValues: initialViewPrefs.showOverlayValues,
   previewMode: initialViewPrefs.previewMode,
   canvasWidth: initialViewPrefs.canvasWidth,
+  iframeWindow: null,
+  canvasZoom: 1,
   mcpConnected: false,
   past: [],
   future: [],
@@ -1173,6 +1172,8 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
     saveViewPrefs({ showSpacingOverlays: s.showSpacingOverlays, showOverlayValues: s.showOverlayValues, previewMode: s.previewMode, canvasWidth: width })
     return { canvasWidth: width }
   }),
+  setIframeWindow: (win) => set({ iframeWindow: win }),
+  setCanvasZoom: (zoom) => set({ canvasZoom: zoom }),
 
   expandToFrame: (id) => set((state) => {
     const ancestors: string[] = []

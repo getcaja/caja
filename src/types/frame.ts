@@ -3,10 +3,6 @@ export type DesignValue<T> =
   | { mode: 'custom'; value: T }
   | { mode: 'token'; token: string; value: T }
 
-export function resolveValue<T>(dv: DesignValue<T>): T {
-  return dv.value
-}
-
 export interface SizeValue {
   mode: 'default' | 'hug' | 'fill' | 'fixed'
   value: DesignValue<number> // only used when mode is 'fixed', in px

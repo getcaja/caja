@@ -27,12 +27,6 @@
   z-index: 10;
 }
 
-/* Root frame with fill height: grow with content */
-.frame-node.is-root-fill {
-  min-height: 100%;
-  height: auto;
-}
-
 /* ── Selection border ── */
 
 .frame-selection {
@@ -129,17 +123,6 @@
 .frame-form-control {
   pointer-events: none;
   width: 100%;
-}
-
-/* ── Select chevron icon ── */
-
-.frame-select-chevron {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #9ca3af;
-  pointer-events: none;
 }
 
 /* ── Preview mode — disable editor chrome, enable interactivity ── */

@@ -9,7 +9,7 @@ import { saveFile, saveFileAs, openFile } from './lib/fileOps'
 
 import { startMcpBridge, stopMcpBridge } from './mcp/bridge'
 import { TitleBar } from './components/TitleBar/TitleBar'
-import { GoogleFontsLoader } from './components/Canvas/GoogleFontsLoader'
+import { ZOOM_LEVELS } from './components/Canvas/ZoomBar'
 
 const LEFT_MIN = 150
 const LEFT_MAX = 400
@@ -63,6 +63,7 @@ function App() {
   const filePath = useFrameStore((s) => s.filePath)
   const dirty = useFrameStore((s) => s.dirty)
   const previewMode = useFrameStore((s) => s.previewMode)
+  const iframeWindow = useFrameStore((s) => s.iframeWindow)
 
   // Update window title with file name
   useEffect(() => {
@@ -133,14 +134,6 @@ function App() {
       listen<string>('menu-event', (e) => {
         switch (e.payload) {
           case 'new':
-            useFrameStore.setState({
-              root: useFrameStore.getState().root.children.length ? useFrameStore.getState().root : useFrameStore.getState().root,
-              filePath: null,
-              dirty: false,
-              selectedId: null,
-              past: [],
-              future: [],
-            })
             localStorage.removeItem('caja-state')
             location.reload()
             break
@@ -247,11 +240,32 @@ function App() {
         e.preventDefault()
         useFrameStore.getState().togglePreviewMode()
       }
+      // Zoom: Cmd+= / Cmd+- / Cmd+0
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && (e.key === '=' || e.key === '+')) {
+        e.preventDefault()
+        const { canvasZoom, setCanvasZoom } = useFrameStore.getState()
+        const idx = ZOOM_LEVELS.indexOf(canvasZoom)
+        if (idx < ZOOM_LEVELS.length - 1) setCanvasZoom(ZOOM_LEVELS[idx + 1])
+      }
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === '-') {
+        e.preventDefault()
+        const { canvasZoom, setCanvasZoom } = useFrameStore.getState()
+        const idx = ZOOM_LEVELS.indexOf(canvasZoom)
+        if (idx > 0) setCanvasZoom(ZOOM_LEVELS[idx - 1])
+      }
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === '0') {
+        e.preventDefault()
+        useFrameStore.getState().setCanvasZoom(1)
+      }
     }
 
     window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [undo, redo, removeFrame, removeSelected, reorderFrame, selectedId, handleSave, handleSaveAs, handleOpen])
+    iframeWindow?.addEventListener('keydown', handler)
+    return () => {
+      window.removeEventListener('keydown', handler)
+      iframeWindow?.removeEventListener('keydown', handler)
+    }
+  }, [undo, redo, removeFrame, removeSelected, reorderFrame, selectedId, handleSave, handleSaveAs, handleOpen, iframeWindow])
 
   // Resize drag handlers
   const onMouseMove = useCallback((e: MouseEvent) => {
@@ -319,9 +333,6 @@ function App() {
             </>
           )}
         </div>
-
-        {/* [Experimental] Google Fonts — injects <link> + <style> into head */}
-        <GoogleFontsLoader />
 
         {/* Export modal */}
         <ExportModal open={showExport} onOpenChange={setShowExport} />

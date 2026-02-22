@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import type { Frame } from '../../types/frame'
-import { useFrameStore } from '../../store/frameStore'
+import { useFrameStore, findInTree } from '../../store/frameStore'
 import { AddMenu } from './AddMenu'
 import { useTreeDnd, type DropPosition } from './TreeDndContext'
 import { ChevronRight, ChevronDown, Square, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse, Plus, X, Copy, Trash2, Group, SquarePlus, Eye, EyeOff, Link } from 'lucide-react'
@@ -106,7 +106,7 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
     if (!dragId || dragId === frame.id) return
     const root = useFrameStore.getState().root
     if (root) {
-      const dragNode = findNode(root, dragId)
+      const dragNode = findInTree(root, dragId)
       if (dragNode && isDescendant(dragNode, frame.id)) return
     }
     e.dataTransfer.dropEffect = 'move'
@@ -333,7 +333,7 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
             <>
               <button
                 className="c-menu-item"
-                onClick={() => { wrapInFrame(frame.id); setContextMenu(null) }}
+                onClick={() => { duplicateFrame(frame.id); setContextMenu(null) }}
               >
                 <Copy size={12} /> Duplicate
               </button>
@@ -428,15 +428,4 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
         ))}
     </div>
   )
-}
-
-function findNode(root: Frame, id: string): Frame | null {
-  if (root.id === id) return root
-  if (root.type === 'box') {
-    for (const child of root.children) {
-      const found = findNode(child, id)
-      if (found) return found
-    }
-  }
-  return null
 }

@@ -1,20 +1,8 @@
 // Resource readers for MCP — expose Caja state as read-only resources
 
-import { useFrameStore } from '../store/frameStore'
+import { useFrameStore, findInTree } from '../store/frameStore'
 import { exportToJSX } from '../utils/exportTailwind'
 import { exportToHTML } from '../utils/exportHtml'
-import type { Frame } from '../types/frame'
-
-function findInTree(root: Frame, id: string): Frame | null {
-  if (root.id === id) return root
-  if (root.type === 'box') {
-    for (const child of root.children) {
-      const found = findInTree(child, id)
-      if (found) return found
-    }
-  }
-  return null
-}
 
 export interface Resource {
   uri: string

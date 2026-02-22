@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useLayoutEffect, Fragment } from 'react'
-import { ChevronDown, ImageIcon } from 'lucide-react'
+import { ImageIcon } from 'lucide-react'
 import type { Frame, Spacing, DesignValue } from '../../types/frame'
 import { frameToClasses } from '../../utils/frameToClasses'
 import { useFrameStore } from '../../store/frameStore'
@@ -7,8 +7,6 @@ import './FrameRenderer.css'
 
 interface FrameRendererProps {
   frame: Frame
-  /** When true, use min-height instead of height so root grows with content */
-  rootMinHeight?: boolean
 }
 
 const LABEL_MIN_SIZE = 14
@@ -225,7 +223,7 @@ function renderMultiline(text: string) {
   ))
 }
 
-export function FrameRenderer({ frame, rootMinHeight }: FrameRendererProps) {
+export function FrameRenderer({ frame }: FrameRendererProps) {
   // Hidden frames are not rendered in the canvas at all
   if (frame.hidden) return null
 
@@ -267,7 +265,6 @@ export function FrameRenderer({ frame, rootMinHeight }: FrameRendererProps) {
     !previewMode && 'frame-node',
     !previewMode && isEmpty && 'is-empty',
     editingText && 'is-editing',
-    rootMinHeight && frame.height.mode === 'fill' && 'is-root-fill',
     previewCursor,
   ].filter(Boolean).join(' ')
 
@@ -387,14 +384,11 @@ export function FrameRenderer({ frame, rootMinHeight }: FrameRendererProps) {
         />
       )}
       {isSelect && (
-        <>
-          <select className="frame-form-control" disabled={!previewMode && frame.disabled}>
-            {frame.options.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-          <ChevronDown size={14} className="frame-select-chevron" />
-        </>
+        <select className="frame-form-control" disabled={!previewMode && frame.disabled}>
+          {frame.options.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
       )}
       {isBox && frame.children.map((child) => (
         <FrameRenderer key={child.id} frame={child} />
