@@ -39,7 +39,7 @@ export function TreePanel() {
     setShowAdd(true)
   }
 
-  const handleAdd = (type: 'box' | 'text' | 'image' | 'button' | 'input' | 'textarea' | 'select') => {
+  const handleAdd = (type: 'box' | 'text' | 'image' | 'button' | 'input' | 'textarea' | 'select' | 'link') => {
     addChild(getTargetParentId(), type)
     setShowAdd(false)
   }

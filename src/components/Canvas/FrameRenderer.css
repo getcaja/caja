@@ -2,7 +2,7 @@
 
 .frame-node {
   position: relative;
-  cursor: pointer;
+  cursor: default;
 }
 
 .frame-node.is-editing {
@@ -140,4 +140,14 @@
   transform: translateY(-50%);
   color: #9ca3af;
   pointer-events: none;
+}
+
+/* ── Preview mode — disable editor chrome, enable interactivity ── */
+
+.preview-mode .frame-form-control {
+  pointer-events: auto;
+}
+
+.preview-mode .frame-btn-label {
+  pointer-events: auto;
 }

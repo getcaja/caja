@@ -9,6 +9,7 @@ import { saveFile, saveFileAs, openFile } from './lib/fileOps'
 
 import { startMcpBridge, stopMcpBridge } from './mcp/bridge'
 import { TitleBar } from './components/TitleBar/TitleBar'
+import { GoogleFontsLoader } from './components/Canvas/GoogleFontsLoader'
 
 const LEFT_MIN = 150
 const LEFT_MAX = 400
@@ -56,10 +57,12 @@ function App() {
   const undo = useFrameStore((s) => s.undo)
   const redo = useFrameStore((s) => s.redo)
   const removeFrame = useFrameStore((s) => s.removeFrame)
+  const removeSelected = useFrameStore((s) => s.removeSelected)
   const reorderFrame = useFrameStore((s) => s.reorderFrame)
   const selectedId = useFrameStore((s) => s.selectedId)
   const filePath = useFrameStore((s) => s.filePath)
   const dirty = useFrameStore((s) => s.dirty)
+  const previewMode = useFrameStore((s) => s.previewMode)
 
   // Update window title with file name
   useEffect(() => {
@@ -185,13 +188,19 @@ function App() {
         e.preventDefault()
         redo()
       }
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId && selectedId !== '__root__') {
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        const { selectedIds } = useFrameStore.getState()
+        if (!selectedId && selectedIds.size === 0) return
         const tag = (e.target as HTMLElement).tagName
         if (tag === 'INPUT' || tag === 'TEXTAREA') return
         const isEditable = (e.target as HTMLElement).isContentEditable
         if (isEditable) return
         e.preventDefault()
-        removeFrame(selectedId)
+        if (selectedIds.size > 1) {
+          removeSelected()
+        } else if (selectedId && selectedId !== '__root__') {
+          removeFrame(selectedId)
+        }
       }
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && selectedId && selectedId !== '__root__') {
         const tag = (e.target as HTMLElement).tagName
@@ -233,11 +242,16 @@ function App() {
           }).catch(() => {})
         }
       }
+      // Preview mode toggle
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'p') {
+        e.preventDefault()
+        useFrameStore.getState().togglePreviewMode()
+      }
     }
 
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [undo, redo, removeFrame, reorderFrame, selectedId, handleSave, handleSaveAs, handleOpen])
+  }, [undo, redo, removeFrame, removeSelected, reorderFrame, selectedId, handleSave, handleSaveAs, handleOpen])
 
   // Resize drag handlers
   const onMouseMove = useCallback((e: MouseEvent) => {
@@ -279,22 +293,35 @@ function App() {
         <TitleBar />
         {/* Main panels */}
         <div className="flex-1 flex overflow-hidden">
-          <div style={{ width: leftWidth }} className="shrink-0 border-r border-border">
-            <TreePanel />
+          {!previewMode && (
+            <>
+              <div style={{ width: leftWidth }} className="shrink-0 border-r border-border">
+                <TreePanel />
+              </div>
+              <div
+                className="w-[3px] shrink-0 cursor-col-resize bg-transparent hover:bg-accent/40 transition-colors -ml-[2px] z-10"
+                onMouseDown={(e) => startDrag('left', e)}
+              />
+            </>
+          )}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <Canvas />
           </div>
-          <div
-            className="w-[3px] shrink-0 cursor-col-resize bg-transparent hover:bg-accent/40 transition-colors -ml-[2px] z-10"
-            onMouseDown={(e) => startDrag('left', e)}
-          />
-          <Canvas />
-          <div
-            className="w-[3px] shrink-0 cursor-col-resize bg-transparent hover:bg-accent/40 transition-colors -mr-[2px] z-10"
-            onMouseDown={(e) => startDrag('right', e)}
-          />
-          <div style={{ width: rightWidth }} className="shrink-0 border-l border-border">
-            <RightPanel />
-          </div>
+          {!previewMode && (
+            <>
+              <div
+                className="w-[3px] shrink-0 cursor-col-resize bg-transparent hover:bg-accent/40 transition-colors -mr-[2px] z-10"
+                onMouseDown={(e) => startDrag('right', e)}
+              />
+              <div style={{ width: rightWidth }} className="shrink-0 border-l border-border">
+                <RightPanel />
+              </div>
+            </>
+          )}
         </div>
+
+        {/* [Experimental] Google Fonts — injects <link> + <style> into head */}
+        <GoogleFontsLoader />
 
         {/* Export modal */}
         <ExportModal open={showExport} onOpenChange={setShowExport} />

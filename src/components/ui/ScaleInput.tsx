@@ -31,21 +31,25 @@ export function ScaleInput({
   // Token is derived from value — no local state
   const token = value.mode === 'token' ? value.token : null
   const numericValue = value.value
+  const resetValue = defaultValue ?? min
+  const isUnset = value.mode === 'custom' && value.value === resetValue
 
-  const [draft, setDraft] = useState(token ? '' : String(numericValue))
+  const [draft, setDraft] = useState(token ? '' : (isUnset ? '' : String(numericValue)))
   const [showDropdown, setShowDropdown] = useState(false)
   const [selectedIdx, setSelectedIdx] = useState(-1)
   const [focused, setFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const originalRef = useRef<DesignValue<number> | null>(null)
 
   // Sync draft when value changes externally
   useEffect(() => {
     if (!focused) {
-      setDraft(token ? '' : String(numericValue))
+      const unset = value.mode === 'custom' && value.value === resetValue
+      setDraft(token ? '' : (unset ? '' : String(numericValue)))
     }
-  }, [numericValue, token, focused])
+  }, [numericValue, token, focused, value.mode, resetValue])
 
   // Scroll selected item into view
   useEffect(() => {
@@ -61,9 +65,13 @@ export function ScaleInput({
   }, [token, scale])
 
   const closeDropdown = useCallback(() => {
+    if (originalRef.current) {
+      onChange(originalRef.current)
+      originalRef.current = null
+    }
     setShowDropdown(false)
     setSelectedIdx(-1)
-  }, [])
+  }, [onChange])
 
   const toggleDropdown = useCallback(() => {
     if (showDropdown) closeDropdown()
@@ -72,6 +80,7 @@ export function ScaleInput({
 
   const selectToken = useCallback(
     (opt: ScaleOption) => {
+      originalRef.current = null // committed — don't revert
       onChange({ mode: 'token', token: opt.token, value: opt.value })
       setDraft('')
       closeDropdown()
@@ -90,13 +99,11 @@ export function ScaleInput({
     })
   }, [numericValue, onChange, closeDropdown])
 
-  const resetValue = defaultValue ?? min
-
   const commitDraft = useCallback(() => {
     if (draft === '') {
       if (token) return
       onChange({ mode: 'custom', value: resetValue })
-      setDraft(String(resetValue))
+      setDraft('')
       return
     }
     const n = Number(draft)
@@ -105,9 +112,15 @@ export function ScaleInput({
       return
     }
     const clamped = Math.max(min, n)
-    onChange({ mode: 'custom', value: clamped })
-    setDraft(String(clamped))
-  }, [draft, numericValue, min, onChange, token, resetValue])
+    const match = scale.find(s => s.value === clamped)
+    if (match) {
+      onChange({ mode: 'token', token: match.token, value: clamped })
+      setDraft('')
+    } else {
+      onChange({ mode: 'custom', value: clamped })
+      setDraft(String(clamped))
+    }
+  }, [draft, numericValue, min, onChange, token, resetValue, scale])
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -121,17 +134,28 @@ export function ScaleInput({
     return () => document.removeEventListener('mousedown', handleClick)
   }, [showDropdown, closeDropdown])
 
-  // Keyboard — dropdown navigation
+  // Keyboard — dropdown navigation with live preview
+  const previewAtIndex = useCallback((idx: number) => {
+    if (idx < 0 || idx >= scale.length) return
+    const opt = scale[idx]
+    if (!originalRef.current) originalRef.current = value
+    onChange({ mode: 'token', token: opt.token, value: opt.value })
+  }, [scale, value, onChange])
+
   const handleDropdownKeyDown = useCallback((e: React.KeyboardEvent): boolean => {
     const maxIdx = scale.length - 1
     if (e.key === 'ArrowDown') {
       e.preventDefault()
-      setSelectedIdx((i) => Math.min(i + 1, maxIdx))
+      const next = Math.min(selectedIdx + 1, maxIdx)
+      setSelectedIdx(next)
+      previewAtIndex(next)
       return true
     }
     if (e.key === 'ArrowUp') {
       e.preventDefault()
-      setSelectedIdx((i) => Math.max(i - 1, 0))
+      const next = Math.max(selectedIdx - 1, 0)
+      setSelectedIdx(next)
+      previewAtIndex(next)
       return true
     }
     if (e.key === 'Enter') {
@@ -147,7 +171,7 @@ export function ScaleInput({
       return true
     }
     return false
-  }, [scale, selectedIdx, selectToken, closeDropdown])
+  }, [scale, selectedIdx, selectToken, closeDropdown, previewAtIndex])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (showDropdown && handleDropdownKeyDown(e)) return
@@ -165,24 +189,36 @@ export function ScaleInput({
       inputRef.current?.blur()
     } else if (e.key === 'Escape') {
       e.preventDefault()
-      setDraft(token ? '' : String(numericValue))
+      setDraft(token ? '' : (value.mode === 'custom' && value.value === resetValue ? '' : String(numericValue)))
       inputRef.current?.blur()
     } else if (e.key === 'ArrowUp' && !token) {
       e.preventDefault()
       const n = Math.max(min, numericValue + 1)
-      onChange({ mode: 'custom', value: n })
-      setDraft(String(n))
+      const match = scale.find(s => s.value === n)
+      if (match) {
+        onChange({ mode: 'token', token: match.token, value: n })
+        setDraft('')
+      } else {
+        onChange({ mode: 'custom', value: n })
+        setDraft(String(n))
+      }
     } else if (e.key === 'ArrowDown' && !token) {
       e.preventDefault()
       const n = Math.max(min, numericValue - 1)
-      onChange({ mode: 'custom', value: n })
-      setDraft(String(n))
+      const match = scale.find(s => s.value === n)
+      if (match) {
+        onChange({ mode: 'token', token: match.token, value: n })
+        setDraft('')
+      } else {
+        onChange({ mode: 'custom', value: n })
+        setDraft(String(n))
+      }
     }
   }
 
   const handleFocus = () => {
     setFocused(true)
-    if (!token) setDraft(String(numericValue))
+    if (!token) setDraft(value.mode === 'custom' && value.value === resetValue ? '' : String(numericValue))
   }
 
   const handleBlur = () => {
@@ -223,7 +259,7 @@ export function ScaleInput({
             onKeyDown={handleKeyDown}
             onFocus={handleFocus}
             onBlur={handleBlur}
-            placeholder={token ? '' : undefined}
+            placeholder={token ? '' : (isUnset ? String(resetValue) : undefined)}
             className="flex-1 min-w-[20px] text-[12px] text-text-primary"
           />
 
@@ -253,6 +289,12 @@ export function ScaleInput({
           <div
             ref={dropdownRef}
             className="absolute left-0 right-0 top-full mt-1 z-50 bg-surface-2 border border-border-accent rounded-lg shadow-2xl overflow-y-auto max-h-[200px] py-1"
+            onMouseLeave={() => {
+              if (originalRef.current) {
+                onChange(originalRef.current)
+                originalRef.current = null
+              }
+            }}
           >
             {scale.map((opt, i) => (
               <button
@@ -261,7 +303,11 @@ export function ScaleInput({
                   e.preventDefault()
                   selectToken(opt)
                 }}
-                onMouseEnter={() => setSelectedIdx(i)}
+                onMouseEnter={() => {
+                  setSelectedIdx(i)
+                  if (!originalRef.current) originalRef.current = value
+                  onChange({ mode: 'token', token: opt.token, value: opt.value })
+                }}
                 className={`w-full text-left px-3 py-1.5 text-[12px] flex items-center justify-between cursor-pointer ${
                   i === selectedIdx
                     ? 'bg-surface-3/60 text-text-primary'

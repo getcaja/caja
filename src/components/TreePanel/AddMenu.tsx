@@ -1,10 +1,10 @@
 import { useEffect, useCallback } from 'react'
-import { Square, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ChevronDown } from 'lucide-react'
+import { Square, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ChevronDown, Link } from 'lucide-react'
 
 interface AddMenuProps {
   x: number
   y: number
-  onAdd: (type: 'box' | 'text' | 'image' | 'button' | 'input' | 'textarea' | 'select') => void
+  onAdd: (type: 'box' | 'text' | 'image' | 'button' | 'input' | 'textarea' | 'select' | 'link') => void
   onClose: () => void
 }
 
@@ -39,6 +39,12 @@ export function AddMenu({ x, y, onAdd, onClose }: AddMenuProps) {
         onClick={() => onAdd('text')}
       >
         <Type size={12} /> Text
+      </button>
+      <button
+        className="c-menu-item"
+        onClick={() => onAdd('link')}
+      >
+        <Link size={12} /> Link
       </button>
       <button
         className="c-menu-item"

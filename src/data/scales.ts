@@ -8,6 +8,28 @@ export interface ColorScaleOption {
   value: string
 }
 
+export const FONT_WEIGHT_SCALE: ScaleOption[] = [
+  { token: 'thin', value: 100 },
+  { token: 'extralight', value: 200 },
+  { token: 'light', value: 300 },
+  { token: 'normal', value: 400 },
+  { token: 'medium', value: 500 },
+  { token: 'semibold', value: 600 },
+  { token: 'bold', value: 700 },
+  { token: 'extrabold', value: 800 },
+  { token: 'black', value: 900 },
+]
+
+export const GROW_SCALE: ScaleOption[] = [
+  { token: '0', value: 0 },
+  { token: 'DEFAULT', value: 1 },
+]
+
+export const SHRINK_SCALE: ScaleOption[] = [
+  { token: 'DEFAULT', value: 1 },
+  { token: '0', value: 0 },
+]
+
 export const FONT_SIZE_SCALE: ScaleOption[] = [
   { token: 'xs', value: 12 },
   { token: 'sm', value: 14 },
@@ -112,6 +134,32 @@ export const LINE_HEIGHT_SCALE: ScaleOption[] = [
   { token: 'relaxed', value: 1.625 },
   { token: 'loose', value: 2 },
 ]
+
+// Default lineHeight token for each fontSize token (typographic conventions)
+export const FONT_SIZE_DEFAULT_LEADING: Record<string, string> = {
+  'xs': 'normal',
+  'sm': 'normal',
+  'base': 'normal',
+  'lg': 'normal',
+  'xl': 'snug',
+  '2xl': 'snug',
+  '3xl': 'tight',
+  '4xl': 'tight',
+  '5xl': 'none',
+  '6xl': 'none',
+  '7xl': 'none',
+  '8xl': 'none',
+  '9xl': 'none',
+}
+
+// Helper to get the DesignValue for a compound default
+export function getCompoundLineHeight(fontSizeToken: string): { mode: 'token'; token: string; value: number } | null {
+  const lhToken = FONT_SIZE_DEFAULT_LEADING[fontSizeToken]
+  if (!lhToken) return null
+  const entry = LINE_HEIGHT_SCALE.find(s => s.token === lhToken)
+  if (!entry) return null
+  return { mode: 'token', token: entry.token, value: entry.value }
+}
 
 export const LETTER_SPACING_SCALE: ScaleOption[] = [
   { token: 'tighter', value: -0.8 },

@@ -1,5 +1,6 @@
 import type { Frame } from '../types/frame'
 import { buildClassString, detectLabelPairs, escapeAttr, escapeText, type LabelAssociation } from './exportShared'
+import { collectGoogleFonts, toGoogleFontUrl, toGoogleFontStyleRule } from './googleFonts'
 
 /** Build the id attribute string from htmlId or label association */
 function resolveIdAttr(frame: Frame, assoc?: LabelAssociation): string {
@@ -37,9 +38,9 @@ export function exportToHTML(
   }
 
   if (frame.type === 'button') {
-    const label = escapeText(frame.label)
+    const content = escapeText(frame.content)
     const idAttr = resolveIdAttr(frame)
-    return `${pad}<button${idAttr} type="button"${classAttr}>${label}</button>\n`
+    return `${pad}<button${idAttr} type="button"${classAttr}>${content}</button>\n`
   }
 
   if (frame.type === 'input') {
@@ -96,13 +97,23 @@ export function exportToHTML(
 export function exportToHTMLDocument(frames: Frame[]): string {
   const body = frames.map((f) => exportToHTML(f, 2)).join('\n')
 
+  // [Experimental] Google Fonts — collect all used fonts and generate <link> + <style>
+  const googleFonts = collectGoogleFonts(frames)
+  const fontLinks = googleFonts
+    .map((f) => `  <link href="${toGoogleFontUrl(f)}" rel="stylesheet">`)
+    .join('\n')
+  const fontStyles = googleFonts.length
+    ? `  <style>\n${googleFonts.map((f) => `    ${toGoogleFontStyleRule(f)}`).join('\n')}\n  </style>`
+    : ''
+  const fontBlock = [fontLinks, fontStyles].filter(Boolean).join('\n')
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Caja Export</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+${fontBlock ? fontBlock + '\n' : ''}  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body>
 ${body}</body>

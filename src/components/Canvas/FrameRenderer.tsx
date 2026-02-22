@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useLayoutEffect } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect, Fragment } from 'react'
 import { ChevronDown, ImageIcon } from 'lucide-react'
 import type { Frame, Spacing, DesignValue } from '../../types/frame'
 import { frameToClasses } from '../../utils/frameToClasses'
@@ -217,6 +217,14 @@ function GapOverlay({ containerRef, gap, showValues }: {
   )
 }
 
+function renderMultiline(text: string) {
+  if (!text.includes('\n')) return text
+  const lines = text.split('\n')
+  return lines.map((line, i) => (
+    <Fragment key={i}>{line}{i < lines.length - 1 && <br />}</Fragment>
+  ))
+}
+
 export function FrameRenderer({ frame, rootMinHeight }: FrameRendererProps) {
   // Hidden frames are not rendered in the canvas at all
   if (frame.hidden) return null
@@ -226,15 +234,17 @@ export function FrameRenderer({ frame, rootMinHeight }: FrameRendererProps) {
   const select = useFrameStore((s) => s.select)
   const hover = useFrameStore((s) => s.hover)
   const updateFrame = useFrameStore((s) => s.updateFrame)
+  const expandToFrame = useFrameStore((s) => s.expandToFrame)
   const showSpacingOverlays = useFrameStore((s) => s.showSpacingOverlays)
   const showOverlayValues = useFrameStore((s) => s.showOverlayValues)
+  const previewMode = useFrameStore((s) => s.previewMode)
 
   const [editingText, setEditingText] = useState(false)
   const textRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const isSelected = selectedId === frame.id
-  const isHovered = hoveredId === frame.id && !isSelected
+  const isSelected = !previewMode && selectedId === frame.id
+  const isHovered = !previewMode && hoveredId === frame.id && selectedId !== frame.id
   const isBox = frame.type === 'box'
   const isText = frame.type === 'text'
   const isImage = frame.type === 'image'
@@ -248,12 +258,17 @@ export function FrameRenderer({ frame, rootMinHeight }: FrameRendererProps) {
   // Tailwind classes (source of truth for export & display)
   const tailwind = frameToClasses(frame)
 
+  // In preview mode, infer cursor from semantic tag
+  const previewCursor = previewMode && 'tag' in frame && (frame.tag === 'a' || frame.tag === 'button' || frame.type === 'button')
+    ? 'cursor-pointer' : ''
+
   // Compose editor state classes
   const stateClasses = [
-    'frame-node',
-    isEmpty && 'is-empty',
+    !previewMode && 'frame-node',
+    !previewMode && isEmpty && 'is-empty',
     editingText && 'is-editing',
     rootMinHeight && frame.height.mode === 'fill' && 'is-root-fill',
+    previewCursor,
   ].filter(Boolean).join(' ')
 
   useEffect(() => {
@@ -286,20 +301,25 @@ export function FrameRenderer({ frame, rootMinHeight }: FrameRendererProps) {
       ref={containerRef}
       data-frame-id={frame.id}
       className={`${tailwind} ${stateClasses}`}
-      onClick={(e) => {
-        e.stopPropagation()
-        if (!editingText) select(frame.id)
-      }}
-      onDoubleClick={(e) => {
-        if (isText) {
+      {...(!previewMode ? {
+        onClick: (e: React.MouseEvent) => {
           e.stopPropagation()
-          setEditingText(true)
-        }
-      }}
-      onMouseOver={(e) => {
-        e.stopPropagation()
-        hover(frame.id)
-      }}
+          if (!editingText) {
+            expandToFrame(frame.id)
+            select(frame.id)
+          }
+        },
+        onDoubleClick: (e: React.MouseEvent) => {
+          if (isText) {
+            e.stopPropagation()
+            setEditingText(true)
+          }
+        },
+        onMouseOver: (e: React.MouseEvent) => {
+          e.stopPropagation()
+          hover(frame.id)
+        },
+      } : {})}
     >
       {isSelected && <div className="frame-selection" />}
       {isHovered && <div className="frame-hover" />}
@@ -328,7 +348,7 @@ export function FrameRenderer({ frame, rootMinHeight }: FrameRendererProps) {
             {frame.content}
           </div>
         ) : (
-          frame.content
+          renderMultiline(frame.content)
         )
       )}
       {isImage && (
@@ -346,7 +366,7 @@ export function FrameRenderer({ frame, rootMinHeight }: FrameRendererProps) {
         )
       )}
       {isButton && (
-        <span className="frame-btn-label">{frame.label}</span>
+        <span className="frame-btn-label">{renderMultiline(frame.content)}</span>
       )}
       {isInput && (
         <input
@@ -354,7 +374,7 @@ export function FrameRenderer({ frame, rootMinHeight }: FrameRendererProps) {
           type={frame.inputType}
           placeholder={frame.placeholder}
           disabled={frame.disabled}
-          readOnly
+          readOnly={!previewMode}
         />
       )}
       {isTextarea && (
@@ -363,12 +383,12 @@ export function FrameRenderer({ frame, rootMinHeight }: FrameRendererProps) {
           placeholder={frame.placeholder}
           rows={frame.rows}
           disabled={frame.disabled}
-          readOnly
+          readOnly={!previewMode}
         />
       )}
       {isSelect && (
         <>
-          <select className="frame-form-control" disabled={frame.disabled}>
+          <select className="frame-form-control" disabled={!previewMode && frame.disabled}>
             {frame.options.map((opt) => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}

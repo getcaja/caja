@@ -1,4 +1,5 @@
 import type { Frame, Spacing, BorderRadius, Border, DesignValue } from '../types/frame'
+import { toGoogleFontClass } from './googleFonts'
 
 const weightMap: Record<number, string> = {
   100: 'font-thin',
@@ -125,21 +126,25 @@ export function frameToClasses(frame: Frame): string {
 
   // Box layout
   if (frame.type === 'box') {
-    cls.push('flex')
-    cls.push(frame.direction === 'row' ? 'flex-row' : 'flex-col')
+    if (frame.display === 'flex' || frame.display === 'inline-flex') {
+      cls.push(frame.display === 'inline-flex' ? 'inline-flex' : 'flex')
+      cls.push(frame.direction === 'row' ? 'flex-row' : 'flex-col')
 
-    const justifyMap = { start: '', center: 'justify-center', end: 'justify-end', between: 'justify-between', around: 'justify-around' }
-    if (justifyMap[frame.justify]) cls.push(justifyMap[frame.justify])
+      const justifyMap = { start: '', center: 'justify-center', end: 'justify-end', between: 'justify-between', around: 'justify-around' }
+      if (justifyMap[frame.justify]) cls.push(justifyMap[frame.justify])
 
-    const alignMap = { start: 'items-start', center: 'items-center', end: 'items-end', stretch: 'items-stretch' }
-    cls.push(alignMap[frame.align])
+      const alignMap = { start: 'items-start', center: 'items-center', end: 'items-end', stretch: 'items-stretch' }
+      cls.push(alignMap[frame.align])
 
-    if (!dvIsZero(frame.gap)) cls.push(dvClass('gap', frame.gap))
-    if (frame.wrap) cls.push('flex-wrap')
+      if (!dvIsZero(frame.gap)) cls.push(dvClass('gap', frame.gap))
+      if (frame.wrap) cls.push('flex-wrap')
+    } else {
+      cls.push(frame.display) // 'block', 'inline-block', 'inline'
+    }
   }
 
-  // Text
-  if (frame.type === 'text') {
+  // Text styles (text, button, input, textarea, select — anything with TextStyles)
+  if (frame.type !== 'box' && frame.type !== 'image') {
     // fontSize + lineHeight combined syntax
     if (frame.fontSize.mode === 'token') {
       // lineHeight modifier syntax: text-6xl/relaxed or text-6xl/[1.1]
@@ -156,7 +161,13 @@ export function frameToClasses(frame: Frame): string {
         cls.push(`leading-[${frame.lineHeight.value}]`)
       }
     }
-    if (frame.fontWeight !== 400) cls.push(weightMap[frame.fontWeight] || `font-[${frame.fontWeight}]`)
+    if (frame.fontWeight.value !== 400) {
+      if (frame.fontWeight.mode === 'token') {
+        cls.push(`font-${frame.fontWeight.token}`)
+      } else {
+        cls.push(weightMap[frame.fontWeight.value] || `font-[${frame.fontWeight.value}]`)
+      }
+    }
     if (frame.color.value) cls.push(dvColorClass('text', frame.color))
     if (frame.textAlign !== 'left') cls.push(`text-${frame.textAlign}`)
     if (frame.fontStyle === 'italic') cls.push('italic')
@@ -171,44 +182,14 @@ export function frameToClasses(frame: Frame): string {
     }
     if (frame.textTransform !== 'none') cls.push(frame.textTransform)
     if (frame.whiteSpace !== 'normal') cls.push(`whitespace-${frame.whiteSpace}`)
+    // [Experimental] Google Fonts — utility class injected by GoogleFontsLoader
+    if (frame.fontFamily) cls.push(toGoogleFontClass(frame.fontFamily))
   }
 
   // Image
   if (frame.type === 'image') {
     const fitMap = { cover: 'object-cover', contain: 'object-contain', fill: 'object-fill', none: 'object-none' }
     cls.push(fitMap[frame.objectFit])
-  }
-
-  // Button
-  if (frame.type === 'button') {
-    cls.push('inline-flex', 'items-center', 'justify-center', 'text-[14px]', 'font-medium', 'cursor-default')
-    if (frame.variant === 'filled') {
-      if (!frame.bg.value) cls.push('bg-[#18181b]')
-      cls.push('text-white')
-    } else if (frame.variant === 'outline') {
-      if (frame.border.style === 'none') cls.push('border', 'border-[#d1d5db]')
-      cls.push('text-[#18181b]')
-    } else {
-      cls.push('text-[#6b7280]')
-    }
-  }
-
-  // Input
-  if (frame.type === 'input') {
-    cls.push('inline-flex', 'items-center', 'text-[14px]')
-    if (frame.disabled) cls.push('opacity-50')
-  }
-
-  // Textarea
-  if (frame.type === 'textarea') {
-    cls.push('block', 'text-[14px]')
-    if (frame.disabled) cls.push('opacity-50')
-  }
-
-  // Select
-  if (frame.type === 'select') {
-    cls.push('block', 'text-[14px]')
-    if (frame.disabled) cls.push('opacity-50')
   }
 
   // Size
@@ -227,9 +208,11 @@ export function frameToClasses(frame: Frame): string {
   if (!dvIsZero(frame.maxHeight)) cls.push(dvClass('max-h', frame.maxHeight))
 
   // Flex grow/shrink
-  if (frame.grow === 1) cls.push('grow')
-  else if (frame.grow > 1) cls.push(`grow-[${frame.grow}]`)
-  if (frame.shrink === 0) cls.push('shrink-0')
+  const growVal = frame.grow.value
+  if (growVal === 1) cls.push('grow')
+  else if (growVal > 1) cls.push(`grow-[${growVal}]`)
+  const shrinkVal = frame.shrink.value
+  if (shrinkVal === 0) cls.push('shrink-0')
 
   // Align self
   if (frame.alignSelf !== 'auto' && selfMap[frame.alignSelf]) {

@@ -28,17 +28,6 @@ export const TEXT_TAG_OPTIONS = [
   { value: 'label', label: 'label — Label' },
 ]
 
-export const FONT_WEIGHT_OPTIONS = [
-  { value: '100', label: '100 — Thin' },
-  { value: '200', label: '200 — Extra Light' },
-  { value: '300', label: '300 — Light' },
-  { value: '400', label: '400 — Normal' },
-  { value: '500', label: '500 — Medium' },
-  { value: '600', label: '600 — Semi Bold' },
-  { value: '700', label: '700 — Bold' },
-  { value: '800', label: '800 — Extra Bold' },
-  { value: '900', label: '900 — Black' },
-]
 
 export const INPUT_TYPE_OPTIONS = [
   { value: 'text', label: 'Text' },
@@ -54,13 +43,13 @@ export const OVERFLOW_OPTIONS = [
 ]
 
 export const BOX_SHADOW_OPTIONS = [
-  { value: 'none', label: 'None' },
-  { value: 'sm', label: 'SM' },
-  { value: 'base', label: 'Base' },
-  { value: 'md', label: 'MD' },
-  { value: 'lg', label: 'LG' },
-  { value: 'xl', label: 'XL' },
-  { value: '2xl', label: '2XL' },
+  { value: 'none', label: 'none' },
+  { value: 'sm', label: 'shadow-sm' },
+  { value: 'base', label: 'shadow' },
+  { value: 'md', label: 'shadow-md' },
+  { value: 'lg', label: 'shadow-lg' },
+  { value: 'xl', label: 'shadow-xl' },
+  { value: '2xl', label: 'shadow-2xl' },
 ]
 
 export const CURSOR_OPTIONS = [
@@ -102,6 +91,7 @@ export const TYPE_BADGE_STYLES: Record<string, string> = {
   input: 'bg-sky-900/30 text-sky-400',
   textarea: 'bg-sky-900/30 text-sky-400',
   select: 'bg-sky-900/30 text-sky-400',
+  link: 'bg-indigo-900/30 text-indigo-400',
 }
 
 export const TYPE_BADGE_LABELS: Record<string, string> = {
@@ -113,8 +103,11 @@ export const TYPE_BADGE_LABELS: Record<string, string> = {
   input: 'Input',
   textarea: 'Textarea',
   select: 'Select',
+  link: 'Link',
 }
 
-export function getBadgeKey(type: ElementType, isRoot: boolean): string {
-  return isRoot ? 'root' : type
+export function getBadgeKey(type: ElementType, isRoot: boolean, tag?: string): string {
+  if (isRoot) return 'root'
+  if (type === 'text' && tag === 'a') return 'link'
+  return type
 }

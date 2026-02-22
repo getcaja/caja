@@ -34,9 +34,9 @@ export function exportToJSX(
   }
 
   if (frame.type === 'button') {
-    const label = escapeText(frame.label)
+    const content = escapeText(frame.content)
     const idAttr = resolveIdAttr(frame)
-    return `${pad}<button${idAttr} type="button" className="${classes}">${label}</button>\n`
+    return `${pad}<button${idAttr} type="button" className="${classes}">${content}</button>\n`
   }
 
   if (frame.type === 'input') {

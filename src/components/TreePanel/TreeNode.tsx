@@ -3,7 +3,7 @@ import type { Frame } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { AddMenu } from './AddMenu'
 import { useTreeDnd, type DropPosition } from './TreeDndContext'
-import { ChevronRight, ChevronDown, Square, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse, Plus, X, Copy, Trash2, Group, SquarePlus, Eye, EyeOff } from 'lucide-react'
+import { ChevronRight, ChevronDown, Square, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse, Plus, X, Copy, Trash2, Group, SquarePlus, Eye, EyeOff, Link } from 'lucide-react'
 
 interface TreeNodeProps {
   frame: Frame
@@ -23,8 +23,11 @@ function isDescendant(frame: Frame, targetId: string): boolean {
 
 export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = false }: TreeNodeProps) {
   const selectedId = useFrameStore((s) => s.selectedId)
+  const selectedIds = useFrameStore((s) => s.selectedIds)
   const collapsedIds = useFrameStore((s) => s.collapsedIds)
   const select = useFrameStore((s) => s.select)
+  const selectMulti = useFrameStore((s) => s.selectMulti)
+  const removeSelected = useFrameStore((s) => s.removeSelected)
   const hover = useFrameStore((s) => s.hover)
   const toggleCollapse = useFrameStore((s) => s.toggleCollapse)
   const addChild = useFrameStore((s) => s.addChild)
@@ -45,7 +48,16 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
   const addBtnRef = useRef<HTMLButtonElement>(null)
   const rowRef = useRef<HTMLDivElement>(null)
 
-  const isSelected = selectedId === frame.id
+  const isSelected = selectedId === frame.id || selectedIds.has(frame.id)
+
+  useEffect(() => {
+    if (isSelected && rowRef.current) {
+      requestAnimationFrame(() => {
+        rowRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      })
+    }
+  }, [isSelected])
+
   const isBox = frame.type === 'box'
   const hasChildren = isBox && frame.children.length > 0
   const isCollapsed = collapsedIds.has(frame.id)
@@ -167,7 +179,13 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
               : 'hover:bg-[var(--color-focus)]/8 text-text-secondary hover:text-text-primary'
         } ${isDragging ? 'opacity-40' : ''} ${frame.hidden ? 'opacity-40' : ''}`}
         style={{ paddingLeft: depth * 16 + 4 }}
-        onClick={() => select(frame.id)}
+        onClick={(e) => {
+          if ((e.metaKey || e.ctrlKey) && !isRoot) {
+            selectMulti(frame.id)
+          } else {
+            select(frame.id)
+          }
+        }}
         onMouseEnter={() => hover(frame.id)}
         onMouseLeave={() => hover(null)}
         onDoubleClick={() => {
@@ -203,13 +221,15 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
         {/* Type icon */}
         <span className={`shrink-0 ${
           isRoot ? 'text-blue-400'
+          : frame.type === 'text' && 'tag' in frame && frame.tag === 'a' ? 'text-indigo-400'
           : frame.type === 'text' ? 'text-emerald-400'
           : frame.type === 'image' ? 'text-violet-400'
           : frame.type === 'button' ? 'text-amber-400'
           : frame.type === 'input' || frame.type === 'textarea' || frame.type === 'select' ? 'text-sky-400'
           : 'text-text-muted'
         }`}>
-          {frame.type === 'text' ? <Type size={12} />
+          {frame.type === 'text' && 'tag' in frame && frame.tag === 'a' ? <Link size={12} />
+            : frame.type === 'text' ? <Type size={12} />
             : frame.type === 'image' ? <ImageIcon size={12} />
             : frame.type === 'button' ? <RectangleHorizontal size={12} />
             : frame.type === 'input' ? <TextCursorInput size={12} />
@@ -342,6 +362,12 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
               </button>
               <button
                 className="c-menu-item"
+                onClick={() => { addChild(addTargetId, 'link'); setContextMenu(null) }}
+              >
+                <Link size={12} /> Add Link
+              </button>
+              <button
+                className="c-menu-item"
                 onClick={() => { addChild(addTargetId, 'image'); setContextMenu(null) }}
               >
                 <ImageIcon size={12} /> Add Image
@@ -375,12 +401,21 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
           {!isRoot && (
             <>
               <div className="border-t border-border my-1" />
-              <button
-                className="c-menu-item"
-                onClick={() => { removeFrame(frame.id); setContextMenu(null) }}
-              >
-                <Trash2 size={12} /> Delete
-              </button>
+              {selectedIds.size > 1 ? (
+                <button
+                  className="c-menu-item text-destructive"
+                  onClick={() => { removeSelected(); setContextMenu(null) }}
+                >
+                  <Trash2 size={12} /> Delete {selectedIds.size} elements
+                </button>
+              ) : (
+                <button
+                  className="c-menu-item"
+                  onClick={() => { removeFrame(frame.id); setContextMenu(null) }}
+                >
+                  <Trash2 size={12} /> Delete
+                </button>
+              )}
             </>
           )}
         </div>

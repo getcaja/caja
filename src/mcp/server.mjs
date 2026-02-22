@@ -65,25 +65,27 @@ server.tool(
   'Add a new frame (box) or text element as a child of the given parent.',
   {
     parent_id: z.string().describe('ID of the parent box to add into'),
-    element_type: z.enum(['box', 'text']).describe('Type of element to add'),
+    element_type: z.enum(['box', 'text', 'image', 'button', 'input', 'textarea', 'select']).describe('Type of element to add'),
     properties: z.record(z.string(), z.unknown()).optional().describe('Optional initial properties. Can include "id" to assign a custom ID (useful in batch_update).'),
+    classes: z.string().optional().describe('Tailwind classes to apply. Example: "flex gap-4 p-8 bg-blue-500 rounded-lg". Parsed into frame properties. Explicit properties override parsed classes.'),
   },
-  async ({ parent_id, element_type, properties }) => {
-    const result = await callTool('add_frame', { parent_id, element_type, properties })
-    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
+  async ({ parent_id, element_type, properties, classes }) => {
+    const result = await callTool('add_frame', { parent_id, element_type, properties, classes })
+    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
   }
 )
 
 server.tool(
   'update_frame',
-  'Update properties of an existing frame. Settable: bg, direction, justify, align, gap, wrap, content, fontSize, fontWeight, fontStyle, textDecoration, color, textAlign, borderRadius, overflow, grow, shrink, tailwindClasses.',
+  'Update properties of an existing frame. Settable: bg, display, direction, justify, align, gap, wrap, content, fontSize, fontWeight, fontStyle, textDecoration, letterSpacing, textTransform, whiteSpace, color, textAlign, borderRadius, overflow, grow, shrink, alignSelf, minWidth, maxWidth, minHeight, maxHeight, boxShadow, cursor, tailwindClasses, opacity, tag, options, className, htmlId. display: "flex"|"inline-flex"|"block"|"inline-block"|"inline".',
   {
     id: z.string().describe('ID of the frame to update'),
-    properties: z.record(z.string(), z.unknown()).describe('Properties to set (partial update)'),
+    properties: z.record(z.string(), z.unknown()).optional().describe('Properties to set (partial update)'),
+    classes: z.string().optional().describe('Tailwind classes to apply. Example: "flex gap-4 p-8 bg-blue-500 rounded-lg". Parsed into frame properties. Explicit properties override parsed classes.'),
   },
-  async ({ id, properties }) => {
-    const result = await callTool('update_frame', { id, properties })
-    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
+  async ({ id, properties, classes }) => {
+    const result = await callTool('update_frame', { id, properties, classes })
+    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
   }
 )
 
@@ -102,7 +104,7 @@ server.tool(
   },
   async ({ id, field, values }) => {
     const result = await callTool('update_spacing', { id, field, values })
-    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
+    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
   }
 )
 
@@ -119,7 +121,7 @@ server.tool(
   },
   async ({ id, dimension, size }) => {
     const result = await callTool('update_size', { id, dimension, size })
-    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
+    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
   }
 )
 
@@ -131,7 +133,7 @@ server.tool(
   },
   async ({ id }) => {
     const result = await callTool('remove_frame', { id })
-    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
+    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
   }
 )
 
@@ -145,7 +147,7 @@ server.tool(
   },
   async ({ id, new_parent_id, index }) => {
     const result = await callTool('move_frame', { id, new_parent_id, index })
-    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
+    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
   }
 )
 
@@ -157,7 +159,7 @@ server.tool(
   },
   async ({ id }) => {
     const result = await callTool('wrap_frame', { id })
-    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
+    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
   }
 )
 
@@ -169,7 +171,7 @@ server.tool(
   },
   async ({ id }) => {
     const result = await callTool('duplicate_frame', { id })
-    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
+    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
   }
 )
 
@@ -182,7 +184,7 @@ server.tool(
   },
   async ({ id, name }) => {
     const result = await callTool('rename_frame', { id, name })
-    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
+    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
   }
 )
 
@@ -194,17 +196,19 @@ server.tool(
   },
   async ({ id }) => {
     const result = await callTool('select_frame', { id })
-    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
+    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
   }
 )
 
 server.tool(
   'get_tree',
-  'Read the full frame tree. Returns the complete layout structure as JSON.',
-  {},
-  async () => {
-    const result = await callTool('get_tree', {})
-    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
+  'Read the full frame tree. Returns the complete layout structure as JSON. Use summary=true for a lightweight tree (~5KB vs 241KB) with only id, type, name, content, display, and children — ideal for LLM context.',
+  {
+    summary: z.boolean().optional().describe('When true, return a compact tree with only structural info (id, type, name, content, display, childCount). Default false.'),
+  },
+  async ({ summary }) => {
+    const result = await callTool('get_tree', { summary })
+    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
   }
 )
 
@@ -214,7 +218,7 @@ server.tool(
   {},
   async () => {
     const result = await callTool('get_selected', {})
-    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
+    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
   }
 )
 
@@ -233,22 +237,22 @@ server.tool(
         }],
       }
     }
-    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
+    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
   }
 )
 
 server.tool(
   'batch_update',
-  'Execute multiple operations in a single undo step. Use for coherent multi-frame changes.',
+  'Execute multiple operations in a single undo step. Supports variable substitution: "$prev" = previous op\'s result ID, "$0"/"$1"/"$N" = Nth op\'s result ID (zero-indexed). Example: [add_frame(...), add_frame({ parent_id: "$prev" })].',
   {
     operations: z.array(z.object({
       tool: z.string().describe('Tool name (e.g. "add_frame", "update_frame")'),
-      params: z.record(z.string(), z.unknown()).describe('Tool parameters'),
+      params: z.record(z.string(), z.unknown()).describe('Tool parameters. String values "$prev" and "$N" are replaced with result IDs from earlier operations.'),
     })).describe('Array of tool calls to execute sequentially'),
   },
   async ({ operations }) => {
     const result = await callTool('batch_update', { operations })
-    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
+    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
   }
 )
 

@@ -1,14 +1,13 @@
 import { Italic, Underline, Strikethrough } from 'lucide-react'
-import type { TextElement } from '../../types/frame'
+import type { TextStyles } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { Section } from '../ui/Section'
 import { ScaleInput } from '../ui/ScaleInput'
 import { ToggleGroup } from '../ui/ToggleGroup'
-import { Select } from '../ui/Select'
-import { FONT_SIZE_SCALE, LINE_HEIGHT_SCALE, LETTER_SPACING_SCALE } from '../../data/scales'
-import { FONT_WEIGHT_OPTIONS, TEXT_TRANSFORM_OPTIONS, WHITE_SPACE_OPTIONS } from './constants'
+import { FONT_SIZE_SCALE, FONT_WEIGHT_SCALE, LINE_HEIGHT_SCALE, LETTER_SPACING_SCALE, getCompoundLineHeight } from '../../data/scales'
+import { TEXT_TRANSFORM_OPTIONS, WHITE_SPACE_OPTIONS } from './constants'
 
-export function TypographySection({ frame }: { frame: TextElement }) {
+export function TypographySection({ frame }: { frame: TextStyles & { id: string } }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
 
   return (
@@ -17,7 +16,14 @@ export function TypographySection({ frame }: { frame: TextElement }) {
         <ScaleInput
           scale={FONT_SIZE_SCALE}
           value={frame.fontSize}
-          onChange={(v) => updateFrame(frame.id, { fontSize: v })}
+          onChange={(v) => {
+            const updates: Record<string, unknown> = { fontSize: v }
+            if (v.mode === 'token') {
+              const defaultLH = getCompoundLineHeight(v.token)
+              if (defaultLH) updates.lineHeight = defaultLH
+            }
+            updateFrame(frame.id, updates)
+          }}
           min={1}
           label="Size"
           classPrefix="text"
@@ -32,15 +38,14 @@ export function TypographySection({ frame }: { frame: TextElement }) {
           classPrefix="leading"
         />
 
-        <div className="flex items-center gap-1.5">
-          <span className="c-label">Weight</span>
-          <Select
-            value={String(frame.fontWeight)}
-            options={FONT_WEIGHT_OPTIONS}
-            onChange={(v) => updateFrame(frame.id, { fontWeight: Number(v) as TextElement['fontWeight'] })}
-            className="flex-1"
-          />
-        </div>
+        <ScaleInput
+          scale={FONT_WEIGHT_SCALE}
+          value={frame.fontWeight}
+          onChange={(v) => updateFrame(frame.id, { fontWeight: v })}
+          label="Weight"
+          classPrefix="font"
+          defaultValue={400}
+        />
 
         <div className="flex items-center gap-1.5">
           <span className="c-label">Align</span>
@@ -51,7 +56,7 @@ export function TypographySection({ frame }: { frame: TextElement }) {
               { value: 'center', label: 'Center' },
               { value: 'right', label: 'Right' },
             ]}
-            onChange={(v) => updateFrame(frame.id, { textAlign: v as TextElement['textAlign'] })}
+            onChange={(v) => updateFrame(frame.id, { textAlign: v as TextStyles['textAlign'] })}
             className="flex-1"
           />
         </div>
@@ -100,6 +105,7 @@ export function TypographySection({ frame }: { frame: TextElement }) {
           value={frame.letterSpacing}
           onChange={(v) => updateFrame(frame.id, { letterSpacing: v })}
           min={-10}
+          defaultValue={0}
           label="Tracking"
           unit="px"
           classPrefix="tracking"
@@ -110,7 +116,7 @@ export function TypographySection({ frame }: { frame: TextElement }) {
           <ToggleGroup
             value={frame.textTransform}
             options={TEXT_TRANSFORM_OPTIONS}
-            onChange={(v) => updateFrame(frame.id, { textTransform: v as TextElement['textTransform'] })}
+            onChange={(v) => updateFrame(frame.id, { textTransform: v as TextStyles['textTransform'] })}
             className="flex-1"
           />
         </div>
@@ -120,7 +126,7 @@ export function TypographySection({ frame }: { frame: TextElement }) {
           <ToggleGroup
             value={frame.whiteSpace}
             options={WHITE_SPACE_OPTIONS}
-            onChange={(v) => updateFrame(frame.id, { whiteSpace: v as TextElement['whiteSpace'] })}
+            onChange={(v) => updateFrame(frame.id, { whiteSpace: v as TextStyles['whiteSpace'] })}
             className="flex-1"
           />
         </div>

@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Frame, BoxElement, BoxTag, TextElement, ImageElement, ButtonElement, InputElement, TextareaElement, SelectElement, Spacing, SizeValue, BorderRadius, Border, DesignValue } from '../types/frame'
+import type { Frame, BoxElement, BoxTag, BoxDisplay, TextElement, ImageElement, ButtonElement, InputElement, TextareaElement, SelectElement, TextStyles, Spacing, SizeValue, BorderRadius, Border, DesignValue } from '../types/frame'
 
 // The internal root ID — never exposed to the user
 const INTERNAL_ROOT_ID = '__root__'
@@ -55,6 +55,22 @@ function uniformBorderRadius(v: number): BorderRadius {
 
 const defaultBorder: Border = { width: dvNum(0), color: dvStr(''), style: 'none' }
 
+function defaultTextStyles(): TextStyles {
+  return {
+    fontSize: { mode: 'token', token: 'sm', value: 14 },
+    fontWeight: { mode: 'token', token: 'normal', value: 400 },
+    lineHeight: { mode: 'token', token: 'normal', value: 1.5 },
+    color: dvStr('#000000'),
+    textAlign: 'left',
+    fontStyle: 'normal',
+    textDecoration: 'none',
+    letterSpacing: dvNum(0),
+    textTransform: 'none',
+    whiteSpace: 'normal',
+    fontFamily: '', // [Experimental] Google Fonts — empty = inherit/system
+  }
+}
+
 function cloneDV<T>(dv: DesignValue<T>): DesignValue<T> {
   return { ...dv }
 }
@@ -83,7 +99,8 @@ function createInternalRoot(children: Frame[] = []): BoxElement {
     hidden: false,
     className: '',
     htmlId: '',
-    tag: 'div',
+    tag: 'body',
+    display: 'flex',
     direction: 'column',
     justify: 'start',
     align: 'stretch',
@@ -93,8 +110,8 @@ function createInternalRoot(children: Frame[] = []): BoxElement {
     margin: zeroSpacing(),
     width: { mode: 'fill', value: dvNum(0) },
     height: { mode: 'fill', value: dvNum(0) },
-    grow: 1,
-    shrink: 1,
+    grow: dvNum(1),
+    shrink: dvNum(1),
     overflow: 'visible',
     opacity: dvNum(100),
     bg: dvStr('#ffffff'),
@@ -122,6 +139,7 @@ export function createBox(overrides?: Partial<BoxElement>): BoxElement {
     className: '',
     htmlId: '',
     tag: overrides?.tag || 'div',
+    display: 'flex',
     direction: 'column',
     justify: 'start',
     align: 'stretch',
@@ -131,8 +149,8 @@ export function createBox(overrides?: Partial<BoxElement>): BoxElement {
     margin: zeroSpacing(),
     width: { mode: 'default', value: dvNum(0) },
     height: { mode: 'default', value: dvNum(0) },
-    grow: 0,
-    shrink: 1,
+    grow: dvNum(0),
+    shrink: dvNum(1),
     overflow: 'visible',
     opacity: dvNum(100),
     bg: dvStr(''),
@@ -161,24 +179,15 @@ export function createText(overrides?: Partial<TextElement>): TextElement {
     className: '',
     htmlId: '',
     content: 'Text',
-    fontSize: dvNum(14),
-    fontWeight: 400,
-    lineHeight: dvNum(1.5),
-    color: dvStr('#000000'),
-    textAlign: 'left',
-    fontStyle: 'normal',
-    textDecoration: 'none',
-    letterSpacing: dvNum(0),
-    textTransform: 'none',
-    whiteSpace: 'normal',
+    ...defaultTextStyles(),
     tag: 'p',
     href: '',
     padding: zeroSpacing(),
     margin: zeroSpacing(),
     width: { mode: 'default', value: dvNum(0) },
     height: { mode: 'default', value: dvNum(0) },
-    grow: 0,
-    shrink: 1,
+    grow: dvNum(0),
+    shrink: dvNum(1),
     overflow: 'visible',
     opacity: dvNum(100),
     bg: dvStr(''),
@@ -212,8 +221,8 @@ export function createImage(overrides?: Partial<ImageElement>): ImageElement {
     margin: zeroSpacing(),
     width: { mode: 'fixed', value: dvNum(200) },
     height: { mode: 'fixed', value: dvNum(150) },
-    grow: 0,
-    shrink: 1,
+    grow: dvNum(0),
+    shrink: dvNum(1),
     overflow: 'visible',
     opacity: dvNum(100),
     bg: dvStr(''),
@@ -231,8 +240,6 @@ export function createImage(overrides?: Partial<ImageElement>): ImageElement {
   }
 }
 
-const buttonPadding: Spacing = { top: dvNum(8), right: dvNum(16), bottom: dvNum(8), left: dvNum(16) }
-
 export function createButton(overrides?: Partial<ButtonElement>): ButtonElement {
   const id = generateId()
   return {
@@ -242,19 +249,19 @@ export function createButton(overrides?: Partial<ButtonElement>): ButtonElement 
     hidden: false,
     className: '',
     htmlId: '',
-    label: 'Button',
-    variant: 'filled',
-    padding: cloneSpacing(buttonPadding),
+    content: 'Button',
+    ...defaultTextStyles(),
+    padding: zeroSpacing(),
     margin: zeroSpacing(),
-    width: { mode: 'hug', value: dvNum(0) },
-    height: { mode: 'hug', value: dvNum(0) },
-    grow: 0,
-    shrink: 1,
+    width: { mode: 'default', value: dvNum(0) },
+    height: { mode: 'default', value: dvNum(0) },
+    grow: dvNum(0),
+    shrink: dvNum(1),
     overflow: 'visible',
     opacity: dvNum(100),
-    bg: dvStr('#18181b'),
+    bg: dvStr(''),
     border: { ...defaultBorder, width: dvNum(0), color: dvStr('') },
-    borderRadius: uniformBorderRadius(6),
+    borderRadius: zeroBorderRadius(),
     tailwindClasses: '',
     boxShadow: 'none',
     cursor: 'auto',
@@ -282,12 +289,13 @@ export function createInput(overrides?: Partial<InputElement>): InputElement {
     placeholder: 'Placeholder...',
     inputType: 'text',
     disabled: false,
+    ...defaultTextStyles(),
     padding: cloneSpacing(formPadding),
     margin: zeroSpacing(),
     width: { mode: 'fill', value: dvNum(0) },
     height: { mode: 'hug', value: dvNum(0) },
-    grow: 0,
-    shrink: 1,
+    grow: dvNum(0),
+    shrink: dvNum(1),
     overflow: 'visible',
     opacity: dvNum(100),
     bg: dvStr('#ffffff'),
@@ -317,12 +325,13 @@ export function createTextarea(overrides?: Partial<TextareaElement>): TextareaEl
     placeholder: 'Placeholder...',
     rows: 3,
     disabled: false,
+    ...defaultTextStyles(),
     padding: cloneSpacing(formPadding),
     margin: zeroSpacing(),
     width: { mode: 'fill', value: dvNum(0) },
     height: { mode: 'hug', value: dvNum(0) },
-    grow: 0,
-    shrink: 1,
+    grow: dvNum(0),
+    shrink: dvNum(1),
     overflow: 'visible',
     opacity: dvNum(100),
     bg: dvStr('#ffffff'),
@@ -340,6 +349,19 @@ export function createTextarea(overrides?: Partial<TextareaElement>): TextareaEl
   }
 }
 
+export function createLink(overrides?: Partial<TextElement>): TextElement {
+  const id = generateId()
+  return {
+    ...createText({ name: `link-${id.split('-')[1]}`, ...overrides }),
+    id,
+    tag: 'a',
+    href: overrides?.href || '#',
+    content: overrides?.content || 'Link',
+    color: dvStr('#2563eb'),
+    ...overrides,
+  }
+}
+
 export function createSelect(overrides?: Partial<SelectElement>): SelectElement {
   const id = generateId()
   return {
@@ -351,12 +373,13 @@ export function createSelect(overrides?: Partial<SelectElement>): SelectElement 
     htmlId: '',
     options: [{ value: 'option-1', label: 'Option 1' }],
     disabled: false,
+    ...defaultTextStyles(),
     padding: cloneSpacing(formPadding),
     margin: zeroSpacing(),
     width: { mode: 'fill', value: dvNum(0) },
     height: { mode: 'hug', value: dvNum(0) },
-    grow: 0,
-    shrink: 1,
+    grow: dvNum(0),
+    shrink: dvNum(1),
     overflow: 'visible',
     opacity: dvNum(100),
     bg: dvStr('#ffffff'),
@@ -382,6 +405,8 @@ function cloneTree(frame: Frame): Frame {
     margin: cloneSpacing(frame.margin),
     width: cloneSizeValue(frame.width),
     height: cloneSizeValue(frame.height),
+    grow: cloneDV(frame.grow),
+    shrink: cloneDV(frame.shrink),
     border: cloneBorder(frame.border),
     borderRadius: cloneBorderRadius(frame.borderRadius),
     bg: cloneDV(frame.bg),
@@ -394,8 +419,10 @@ function cloneTree(frame: Frame): Frame {
   if (frame.type === 'box') {
     return { ...base, type: 'box', gap: cloneDV(frame.gap), children: frame.children.map(cloneTree) } as BoxElement
   }
-  if (frame.type === 'text') {
-    return { ...base, type: 'text', fontSize: cloneDV(frame.fontSize), lineHeight: cloneDV(frame.lineHeight), color: cloneDV(frame.color), letterSpacing: cloneDV(frame.letterSpacing) } as TextElement
+  // Clone TextStyles DV fields for all text-capable types
+  if (frame.type !== 'box' && frame.type !== 'image') {
+    const textClones = { fontSize: cloneDV(frame.fontSize), fontWeight: cloneDV(frame.fontWeight), lineHeight: cloneDV(frame.lineHeight), color: cloneDV(frame.color), letterSpacing: cloneDV(frame.letterSpacing) }
+    return { ...base, ...textClones } as Frame
   }
   return base as Frame
 }
@@ -622,6 +649,22 @@ function migrateSizeValue(raw: unknown): SizeValue {
   return { mode, value: migrateDVNum(r.value, 0) }
 }
 
+function migrateTextStyles(raw: Record<string, unknown>): TextStyles {
+  return {
+    fontSize: migrateDVNum(raw.fontSize, 14),
+    fontWeight: migrateDVNum(raw.fontWeight, 400),
+    lineHeight: migrateDVNum(raw.lineHeight, 1.5),
+    color: migrateDVStr(raw.color, '#000000'),
+    textAlign: (raw.textAlign as TextStyles['textAlign']) || 'left',
+    fontStyle: (raw.fontStyle as TextStyles['fontStyle']) || 'normal',
+    textDecoration: (raw.textDecoration as TextStyles['textDecoration']) || 'none',
+    letterSpacing: migrateDVNum(raw.letterSpacing, 0),
+    textTransform: (raw.textTransform as TextStyles['textTransform']) || 'none',
+    whiteSpace: (raw.whiteSpace as TextStyles['whiteSpace']) || 'normal',
+    fontFamily: (raw.fontFamily as string) || '', // [Experimental] Google Fonts
+  }
+}
+
 // Migrate old format data to current schema
 function migrateFrame(raw: Record<string, unknown>): Frame {
   const children = (raw.children as Record<string, unknown>[] | undefined) ?? []
@@ -640,8 +683,8 @@ function migrateFrame(raw: Record<string, unknown>): Frame {
     margin: migrateSpacing(raw.margin),
     width: migrateSizeValue(raw.width),
     height: migrateSizeValue(raw.height),
-    grow: (raw.grow as number) ?? 0,
-    shrink: (raw.shrink as number) ?? 1,
+    grow: migrateDVNum(raw.grow, 0),
+    shrink: migrateDVNum(raw.shrink, 1),
     overflow: (raw.overflow as Frame['overflow']) || 'visible',
     opacity: migrateDVNum(raw.opacity, 100),
     bg: migrateDVStr(raw.bg, ''),
@@ -662,16 +705,7 @@ function migrateFrame(raw: Record<string, unknown>): Frame {
       ...base,
       type: 'text',
       content: (raw.content as string) || 'Text',
-      fontSize: migrateDVNum(raw.fontSize, 14),
-      fontWeight: (raw.fontWeight as TextElement['fontWeight']) ?? 400,
-      lineHeight: migrateDVNum(raw.lineHeight, 1.5),
-      color: migrateDVStr(raw.color, '#000000'),
-      textAlign: (raw.textAlign as TextElement['textAlign']) || 'left',
-      fontStyle: (raw.fontStyle as TextElement['fontStyle']) || 'normal',
-      textDecoration: (raw.textDecoration as TextElement['textDecoration']) || 'none',
-      letterSpacing: migrateDVNum(raw.letterSpacing, 0),
-      textTransform: (raw.textTransform as TextElement['textTransform']) || 'none',
-      whiteSpace: (raw.whiteSpace as TextElement['whiteSpace']) || 'normal',
+      ...migrateTextStyles(raw),
       tag: (raw.tag as TextElement['tag']) || 'p',
       href: (raw.href as string) || '',
     } as TextElement
@@ -691,8 +725,8 @@ function migrateFrame(raw: Record<string, unknown>): Frame {
     return {
       ...base,
       type: 'button',
-      label: (raw.label as string) || 'Button',
-      variant: (raw.variant as ButtonElement['variant']) || 'filled',
+      content: (raw.content as string) || (raw.label as string) || 'Button',
+      ...migrateTextStyles(raw),
     } as ButtonElement
   }
 
@@ -703,6 +737,7 @@ function migrateFrame(raw: Record<string, unknown>): Frame {
       placeholder: (raw.placeholder as string) || 'Placeholder...',
       inputType: (raw.inputType as InputElement['inputType']) || 'text',
       disabled: (raw.disabled as boolean) ?? false,
+      ...migrateTextStyles(raw),
     } as InputElement
   }
 
@@ -713,6 +748,7 @@ function migrateFrame(raw: Record<string, unknown>): Frame {
       placeholder: (raw.placeholder as string) || 'Placeholder...',
       rows: (raw.rows as number) ?? 3,
       disabled: (raw.disabled as boolean) ?? false,
+      ...migrateTextStyles(raw),
     } as TextareaElement
   }
 
@@ -722,6 +758,7 @@ function migrateFrame(raw: Record<string, unknown>): Frame {
       type: 'select',
       options: (raw.options as SelectElement['options']) || [{ value: 'option-1', label: 'Option 1' }],
       disabled: (raw.disabled as boolean) ?? false,
+      ...migrateTextStyles(raw),
     } as SelectElement
   }
 
@@ -729,6 +766,7 @@ function migrateFrame(raw: Record<string, unknown>): Frame {
     ...base,
     type: 'box',
     tag: (raw.tag as BoxTag) || 'div',
+    display: (raw.display as BoxDisplay) || 'flex',
     direction: (raw.direction as BoxElement['direction']) || 'column',
     justify: (raw.justify as BoxElement['justify']) || 'start',
     align: (raw.align as BoxElement['align']) || 'stretch',
@@ -743,7 +781,10 @@ function migrateFrame(raw: Record<string, unknown>): Frame {
 export function migrateToInternalRoot(saved: Record<string, unknown>): BoxElement {
   const migrated = migrateFrame(saved)
   if (migrated.id === INTERNAL_ROOT_ID && migrated.type === 'box') {
-    // Already has internal root
+    // Already has internal root — ensure tag is 'body'
+    if ((migrated as BoxElement).tag !== 'body') {
+      (migrated as BoxElement).tag = 'body'
+    }
     return migrated as BoxElement
   }
   // Old format: user's root becomes a child of the internal root
@@ -755,23 +796,28 @@ const MAX_HISTORY = 50
 interface FrameStore {
   root: BoxElement
   selectedId: string | null
+  selectedIds: Set<string>
   hoveredId: string | null
   collapsedIds: Set<string>
   filePath: string | null
   dirty: boolean
   showSpacingOverlays: boolean
   showOverlayValues: boolean
+  previewMode: boolean
+  canvasWidth: number | null
   mcpConnected: boolean
 
   past: BoxElement[]
   future: BoxElement[]
 
   select: (id: string | null) => void
+  selectMulti: (id: string) => void
+  removeSelected: () => void
   hover: (id: string | null) => void
   toggleCollapse: (id: string) => void
   toggleHidden: (id: string) => void
 
-  addChild: (parentId: string, type: 'box' | 'text' | 'image' | 'button' | 'input' | 'textarea' | 'select', overrides?: Partial<Frame>) => void
+  addChild: (parentId: string, type: 'box' | 'text' | 'image' | 'button' | 'input' | 'textarea' | 'select' | 'link', overrides?: Partial<Frame>) => void
   removeFrame: (id: string) => void
   duplicateFrame: (id: string) => void
   wrapInFrame: (id: string) => void
@@ -797,6 +843,10 @@ interface FrameStore {
   toggleOverlayValues: () => void
   setSpacingOverlays: (value: boolean) => void
   setOverlayValues: (value: boolean) => void
+  togglePreviewMode: () => void
+  setPreviewMode: (value: boolean) => void
+  setCanvasWidth: (width: number | null) => void
+  expandToFrame: (id: string) => void
 }
 
 const VIEW_PREFS_KEY = 'caja-view-prefs'
@@ -804,14 +854,24 @@ const VIEW_PREFS_KEY = 'caja-view-prefs'
 interface ViewPrefs {
   showSpacingOverlays: boolean
   showOverlayValues: boolean
+  previewMode: boolean
+  canvasWidth: number | null
 }
 
 function loadViewPrefs(): ViewPrefs {
   try {
     const raw = localStorage.getItem(VIEW_PREFS_KEY)
-    if (raw) return JSON.parse(raw)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      return {
+        showSpacingOverlays: parsed.showSpacingOverlays ?? true,
+        showOverlayValues: parsed.showOverlayValues ?? false,
+        previewMode: parsed.previewMode ?? false,
+        canvasWidth: parsed.canvasWidth ?? null,
+      }
+    }
   } catch { /* ignore */ }
-  return { showSpacingOverlays: true, showOverlayValues: false }
+  return { showSpacingOverlays: true, showOverlayValues: false, previewMode: false, canvasWidth: null }
 }
 
 function saveViewPrefs(prefs: ViewPrefs) {
@@ -831,17 +891,46 @@ function pushHistory(state: { root: BoxElement; past: BoxElement[]; future: BoxE
 export const useFrameStore = create<FrameStore>((set, get) => ({
   root: createInternalRoot(),
   selectedId: null,
+  selectedIds: new Set<string>(),
   hoveredId: null,
   collapsedIds: new Set(),
   filePath: null,
   dirty: false,
   showSpacingOverlays: initialViewPrefs.showSpacingOverlays,
   showOverlayValues: initialViewPrefs.showOverlayValues,
+  previewMode: initialViewPrefs.previewMode,
+  canvasWidth: initialViewPrefs.canvasWidth,
   mcpConnected: false,
   past: [],
   future: [],
 
-  select: (id) => set({ selectedId: id }),
+  select: (id) => set({ selectedId: id, selectedIds: new Set(id ? [id] : []) }),
+
+  selectMulti: (id) => set((state) => {
+    const next = new Set(state.selectedIds)
+    if (next.has(id)) {
+      next.delete(id)
+      const newPrimary = next.size > 0 ? [...next][next.size - 1] : null
+      return { selectedIds: next, selectedId: state.selectedId === id ? newPrimary : state.selectedId }
+    } else {
+      next.add(id)
+      return { selectedIds: next, selectedId: id }
+    }
+  }),
+
+  removeSelected: () => set((state) => {
+    const ids = new Set(state.selectedIds)
+    if (state.selectedId) ids.add(state.selectedId)
+    if (ids.size === 0) return {}
+    const history = pushHistory(state)
+    let root = state.root
+    for (const id of ids) {
+      if (id === INTERNAL_ROOT_ID) continue
+      root = removeFromTree(root, id) as BoxElement
+    }
+    return { root, selectedId: null, selectedIds: new Set(), ...history }
+  }),
+
   hover: (id) => set({ hoveredId: id }),
 
   toggleCollapse: (id) =>
@@ -865,7 +954,7 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
 
   addChild: (parentId, type, overrides) =>
     set((state) => {
-      const prefixMap = { text: 'text', image: 'image', button: 'button', input: 'input', textarea: 'textarea', select: 'select', box: 'frame' } as const
+      const prefixMap = { text: 'text', image: 'image', button: 'button', input: 'input', textarea: 'textarea', select: 'select', link: 'link', box: 'frame' } as const
       const prefix = prefixMap[type]
       const name = overrides?.name || nextName(prefix, state.root)
       const child =
@@ -875,11 +964,13 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
         : type === 'input' ? createInput({ name, ...overrides } as Partial<InputElement>)
         : type === 'textarea' ? createTextarea({ name, ...overrides } as Partial<TextareaElement>)
         : type === 'select' ? createSelect({ name, ...overrides } as Partial<SelectElement>)
+        : type === 'link' ? createLink({ name, ...overrides } as Partial<TextElement>)
         : createBox({ name, ...overrides } as Partial<BoxElement>)
       const history = pushHistory(state)
       return {
         root: addChildInTree(state.root, parentId, child) as BoxElement,
         selectedId: child.id,
+        selectedIds: new Set([child.id]),
         ...history,
       }
     }),
@@ -888,9 +979,12 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
     set((state) => {
       if (id === INTERNAL_ROOT_ID) return {} // never remove internal root
       const history = pushHistory(state)
+      const nextIds = new Set(state.selectedIds)
+      nextIds.delete(id)
       return {
         root: removeFromTree(state.root, id) as BoxElement,
         selectedId: state.selectedId === id ? null : state.selectedId,
+        selectedIds: nextIds,
         ...history,
       }
     }),
@@ -1043,28 +1137,60 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
 
   loadFromFile: (root, filePath) => {
     nextId = maxIdInTree(root) + 1
-    set({ root, filePath, dirty: false, selectedId: null, past: [], future: [] })
+    set({ root, filePath, dirty: false, selectedId: null, selectedIds: new Set(), past: [], future: [] })
   },
 
   setFilePath: (path) => set({ filePath: path }),
   markClean: () => set({ dirty: false }),
   toggleSpacingOverlays: () => set((s) => {
     const next = !s.showSpacingOverlays
-    saveViewPrefs({ showSpacingOverlays: next, showOverlayValues: s.showOverlayValues })
+    saveViewPrefs({ showSpacingOverlays: next, showOverlayValues: s.showOverlayValues, previewMode: s.previewMode, canvasWidth: s.canvasWidth })
     return { showSpacingOverlays: next }
   }),
   toggleOverlayValues: () => set((s) => {
     const next = !s.showOverlayValues
-    saveViewPrefs({ showSpacingOverlays: s.showSpacingOverlays, showOverlayValues: next })
+    saveViewPrefs({ showSpacingOverlays: s.showSpacingOverlays, showOverlayValues: next, previewMode: s.previewMode, canvasWidth: s.canvasWidth })
     return { showOverlayValues: next }
   }),
   setSpacingOverlays: (value) => set((s) => {
-    saveViewPrefs({ showSpacingOverlays: value, showOverlayValues: s.showOverlayValues })
+    saveViewPrefs({ showSpacingOverlays: value, showOverlayValues: s.showOverlayValues, previewMode: s.previewMode, canvasWidth: s.canvasWidth })
     return { showSpacingOverlays: value }
   }),
   setOverlayValues: (value) => set((s) => {
-    saveViewPrefs({ showSpacingOverlays: s.showSpacingOverlays, showOverlayValues: value })
+    saveViewPrefs({ showSpacingOverlays: s.showSpacingOverlays, showOverlayValues: value, previewMode: s.previewMode, canvasWidth: s.canvasWidth })
     return { showOverlayValues: value }
+  }),
+  togglePreviewMode: () => set((s) => {
+    const next = !s.previewMode
+    saveViewPrefs({ showSpacingOverlays: s.showSpacingOverlays, showOverlayValues: s.showOverlayValues, previewMode: next, canvasWidth: s.canvasWidth })
+    return { previewMode: next, ...(next ? { selectedId: null, hoveredId: null } : {}) }
+  }),
+  setPreviewMode: (value) => set((s) => {
+    saveViewPrefs({ showSpacingOverlays: s.showSpacingOverlays, showOverlayValues: s.showOverlayValues, previewMode: value, canvasWidth: s.canvasWidth })
+    return { previewMode: value, ...(value ? { selectedId: null, hoveredId: null } : {}) }
+  }),
+  setCanvasWidth: (width) => set((s) => {
+    saveViewPrefs({ showSpacingOverlays: s.showSpacingOverlays, showOverlayValues: s.showOverlayValues, previewMode: s.previewMode, canvasWidth: width })
+    return { canvasWidth: width }
+  }),
+
+  expandToFrame: (id) => set((state) => {
+    const ancestors: string[] = []
+    let current = findParent(state.root, id)
+    while (current) {
+      ancestors.push(current.id)
+      current = findParent(state.root, current.id)
+    }
+    if (ancestors.length === 0) return {}
+    const next = new Set(state.collapsedIds)
+    let changed = false
+    for (const aid of ancestors) {
+      if (next.has(aid)) {
+        next.delete(aid)
+        changed = true
+      }
+    }
+    return changed ? { collapsedIds: next } : {}
   }),
 }))
 

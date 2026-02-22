@@ -26,7 +26,7 @@ export function StyleSection({ frame }: { frame: Frame }) {
           colorClassPrefix="bg"
         />
 
-        {frame.type === 'text' && (
+        {frame.type !== 'box' && frame.type !== 'image' && (
           <ColorInput
             value={frame.color}
             onChange={(v) => updateFrame(frame.id, { color: v })}

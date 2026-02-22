@@ -97,8 +97,9 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
 
-  const computedClasses = frameToClasses(frame).split(' ').filter(Boolean)
   const manualClasses = frame.tailwindClasses.split(' ').filter(Boolean)
+  const manualSet = useMemo(() => new Set(manualClasses), [manualClasses.join(' ')])
+  const computedClasses = frameToClasses(frame).split(' ').filter(Boolean).filter((c) => !manualSet.has(c))
   const allText = [...computedClasses, ...manualClasses].join(' ')
 
   const existingSet = useMemo(

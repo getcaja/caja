@@ -154,6 +154,14 @@ input[type=number] {
     @apply flex items-center justify-center rounded text-text-muted;
   }
 
+  /* --- Placeholder color --- */
+  .c-input::placeholder,
+  .c-scale-input input::placeholder,
+  .c-textarea::placeholder {
+    color: var(--color-text-muted);
+    opacity: 0.5;
+  }
+
   /* --- Class pills (Advanced section) --- */
   .c-pill {
     @apply inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] font-mono leading-none select-none;

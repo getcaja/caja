@@ -1,11 +1,10 @@
 import type { Frame } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { Section } from '../ui/Section'
-import { NumberInput } from '../ui/NumberInput'
 import { ScaleInput } from '../ui/ScaleInput'
 import { InlineSizeControl } from '../ui/InlineSizeControl'
 import { ToggleGroup } from '../ui/ToggleGroup'
-import { SIZE_CONSTRAINT_SCALE } from '../../data/scales'
+import { SIZE_CONSTRAINT_SCALE, GROW_SCALE, SHRINK_SCALE } from '../../data/scales'
 import { ALIGN_SELF_OPTIONS } from './constants'
 
 export function SizeSection({ frame }: { frame: Frame }) {
@@ -28,17 +27,23 @@ export function SizeSection({ frame }: { frame: Frame }) {
           classPrefix="h"
         />
         <div className="flex gap-2">
-          <NumberInput
+          <ScaleInput
+            scale={GROW_SCALE}
             value={frame.grow}
             onChange={(v) => updateFrame(frame.id, { grow: v })}
             min={0}
             label="Grow"
+            classPrefix="grow"
+            defaultValue={0}
           />
-          <NumberInput
+          <ScaleInput
+            scale={SHRINK_SCALE}
             value={frame.shrink}
             onChange={(v) => updateFrame(frame.id, { shrink: v })}
             min={0}
             label="Shrink"
+            classPrefix="shrink"
+            defaultValue={1}
           />
         </div>
         <div className="flex gap-2">

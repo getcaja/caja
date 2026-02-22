@@ -9,11 +9,15 @@ export const toolSchemas = {
       type: 'object' as const,
       properties: {
         parent_id: { type: 'string', description: 'ID of the parent box to add into' },
-        element_type: { type: 'string', enum: ['box', 'text', 'image', 'button', 'input', 'textarea', 'select'], description: 'Type of element to add' },
+        element_type: { type: 'string', enum: ['box', 'text', 'image', 'button', 'input', 'textarea', 'select', 'link'], description: 'Type of element to add' },
         properties: {
           type: 'object',
           description: 'Optional initial properties to set on the new element. Can include "id" to assign a custom ID (useful in batch_update to reference the frame in subsequent operations).',
           additionalProperties: true,
+        },
+        classes: {
+          type: 'string',
+          description: 'Tailwind classes to apply. Example: "flex gap-4 p-8 bg-blue-500 rounded-lg". Parsed into frame properties. Explicit properties override parsed classes.',
         },
       },
       required: ['parent_id', 'element_type'],
@@ -22,7 +26,7 @@ export const toolSchemas = {
 
   update_frame: {
     name: 'update_frame',
-    description: 'Update properties of an existing frame. Settable: bg, direction, justify, align, gap, wrap, content, fontSize, fontWeight, fontStyle, textDecoration, letterSpacing, textTransform, whiteSpace, color, textAlign, borderRadius, overflow, grow, shrink, alignSelf, minWidth, maxWidth, minHeight, maxHeight, boxShadow, cursor, tailwindClasses, opacity, tag, options, rows, className, htmlId. className sets CSS classes for export (space-separated). htmlId sets the id attribute for export. Numeric and color fields accept either a raw value (number/string) or a DesignValue object: { mode: "custom", value: N } or { mode: "token", token: "4", value: 16 }. Raw values are auto-wrapped.',
+    description: 'Update properties of an existing frame. Settable properties by category:\n\nBooleans: wrap, disabled, hidden.\nEnums: display ("flex"|"inline-flex"|"block"|"inline-block"|"inline"), direction ("row"|"column"), justify, align, overflow, boxShadow, cursor, fontStyle, textDecoration, textAlign, textTransform, whiteSpace, alignSelf, objectFit, inputType, border.style.\nScale (DesignValue<number>): gap, fontSize, fontWeight, lineHeight, letterSpacing, opacity, grow, shrink, minWidth, maxWidth, minHeight, maxHeight, padding.*, margin.*, border.width, borderRadius.*.\nColors (DesignValue<string>): bg, color, border.color.\nText: content, placeholder, src, alt, href, className, htmlId, tailwindClasses, tag, options, rows.\n[Experimental] fontFamily: Google Font name string (e.g. "Playfair Display", "Roboto Mono"). Loads the font automatically.\n\nNumeric and color fields accept either a raw value (number/string) or a DesignValue object: { mode: "custom", value: N } or { mode: "token", token: "4", value: 16 }. Raw values are auto-wrapped with token matching.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -32,8 +36,12 @@ export const toolSchemas = {
           description: 'Properties to set (partial update)',
           additionalProperties: true,
         },
+        classes: {
+          type: 'string',
+          description: 'Tailwind classes to apply. Example: "flex gap-4 p-8 bg-blue-500 rounded-lg". Parsed into frame properties. Explicit properties override parsed classes.',
+        },
       },
-      required: ['id', 'properties'],
+      required: ['id'],
     },
   },
 
@@ -158,10 +166,12 @@ export const toolSchemas = {
 
   get_tree: {
     name: 'get_tree',
-    description: 'Read the full frame tree. Returns the complete layout structure as JSON.',
+    description: 'Read the full frame tree. Returns the complete layout structure as JSON. Use summary=true for a lightweight tree (~5KB vs 241KB) with only id, type, name, content, display, and children — ideal for LLM context.',
     inputSchema: {
       type: 'object' as const,
-      properties: {},
+      properties: {
+        summary: { type: 'boolean', description: 'When true, return a compact tree with only structural info (id, type, name, content, display, childCount). Default false.' },
+      },
     },
   },
 
@@ -185,13 +195,13 @@ export const toolSchemas = {
 
   batch_update: {
     name: 'batch_update',
-    description: 'Execute multiple operations in a single undo step. Use this to make coherent multi-frame changes (e.g., building a card layout) that can be undone together.',
+    description: 'Execute multiple operations in a single undo step. Use for coherent multi-frame changes. Supports variable substitution: use "$prev" to reference the previous operation\'s result ID, or "$0", "$1", "$N" for the Nth operation\'s result ID (zero-indexed). This lets you create a frame and immediately use it as a parent: [add_frame(...), add_frame({ parent_id: "$prev" })].',
     inputSchema: {
       type: 'object' as const,
       properties: {
         operations: {
           type: 'array',
-          description: 'Array of tool calls to execute sequentially',
+          description: 'Array of tool calls to execute sequentially. String values "$prev" and "$N" are replaced with result IDs from earlier operations.',
           items: {
             type: 'object',
             properties: {

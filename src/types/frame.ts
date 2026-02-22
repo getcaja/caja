@@ -48,8 +48,8 @@ interface BaseElement {
   // Sizing
   width: SizeValue
   height: SizeValue
-  grow: number
-  shrink: number
+  grow: DesignValue<number>
+  shrink: DesignValue<number>
 
   // Spacing
   padding: Spacing
@@ -77,7 +77,9 @@ interface BaseElement {
   tailwindClasses: string
 }
 
-export type BoxTag = 'div' | 'section' | 'nav' | 'header' | 'footer' | 'main' | 'article' | 'aside' | 'ul' | 'ol' | 'li' | 'form'
+export type BoxTag = 'body' | 'div' | 'section' | 'nav' | 'header' | 'footer' | 'main' | 'article' | 'aside' | 'ul' | 'ol' | 'li' | 'form'
+
+export type BoxDisplay = 'flex' | 'inline-flex' | 'block' | 'inline-block' | 'inline'
 
 export interface BoxElement extends BaseElement {
   type: 'box'
@@ -85,7 +87,10 @@ export interface BoxElement extends BaseElement {
   // Semantic tag
   tag: BoxTag
 
-  // Layout (box is a flex container)
+  // Display mode
+  display: BoxDisplay
+
+  // Layout (only applies when display is flex or inline-flex)
   direction: 'row' | 'column'
   justify: 'start' | 'center' | 'end' | 'between' | 'around'
   align: 'start' | 'center' | 'end' | 'stretch'
@@ -96,15 +101,10 @@ export interface BoxElement extends BaseElement {
   children: Frame[]
 }
 
-export type TextTag = 'p' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'span' | 'a' | 'label'
-
-export interface TextElement extends BaseElement {
-  type: 'text'
-
-  // Text content
-  content: string
+// Shared text styling — used by text, button, input, textarea, select
+export interface TextStyles {
   fontSize: DesignValue<number>
-  fontWeight: 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900
+  fontWeight: DesignValue<number>
   lineHeight: DesignValue<number> // multiplier, e.g. 1.5
   color: DesignValue<string>
   textAlign: 'left' | 'center' | 'right'
@@ -113,6 +113,16 @@ export interface TextElement extends BaseElement {
   letterSpacing: DesignValue<number>
   textTransform: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
   whiteSpace: 'normal' | 'nowrap' | 'pre-wrap'
+  // [Experimental] Google Fonts — set via MCP, no UI yet
+  fontFamily: string
+}
+
+export type TextTag = 'p' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'span' | 'a' | 'label'
+
+export interface TextElement extends BaseElement, TextStyles {
+  type: 'text'
+
+  content: string
 
   // Semantic tag
   tag: TextTag
@@ -127,18 +137,15 @@ export interface ImageElement extends BaseElement {
   objectFit: 'cover' | 'contain' | 'fill' | 'none'
 }
 
-export type ButtonVariant = 'filled' | 'outline' | 'ghost'
-
-export interface ButtonElement extends BaseElement {
+export interface ButtonElement extends BaseElement, TextStyles {
   type: 'button'
 
-  label: string
-  variant: ButtonVariant
+  content: string
 }
 
 export type InputType = 'text' | 'email' | 'password' | 'number'
 
-export interface InputElement extends BaseElement {
+export interface InputElement extends BaseElement, TextStyles {
   type: 'input'
 
   placeholder: string
@@ -146,7 +153,7 @@ export interface InputElement extends BaseElement {
   disabled: boolean
 }
 
-export interface TextareaElement extends BaseElement {
+export interface TextareaElement extends BaseElement, TextStyles {
   type: 'textarea'
 
   placeholder: string
@@ -159,7 +166,7 @@ export interface SelectOption {
   label: string
 }
 
-export interface SelectElement extends BaseElement {
+export interface SelectElement extends BaseElement, TextStyles {
   type: 'select'
 
   options: SelectOption[]
