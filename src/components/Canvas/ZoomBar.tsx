@@ -10,7 +10,7 @@ export function ZoomBar() {
   const idx = ZOOM_LEVELS.indexOf(canvasZoom)
 
   return (
-    <div className="absolute bottom-3 left-3 z-40 flex items-center gap-0.5 bg-surface-1 border border-border rounded-lg px-1 py-1 shadow-xl">
+    <div className="flex items-center gap-0.5 bg-surface-1 border border-border rounded-lg px-1 py-1">
       <button
         onClick={() => idx > 0 && setCanvasZoom(ZOOM_LEVELS[idx - 1])}
         disabled={idx <= 0}

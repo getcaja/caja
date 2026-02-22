@@ -801,6 +801,8 @@ interface FrameStore {
   iframeWindow: Window | null
   canvasZoom: number
   mcpConnected: boolean
+  canvasDragId: string | null
+  canvasDragOver: { parentId: string; index: number } | null
 
   past: BoxElement[]
   future: BoxElement[]
@@ -843,6 +845,8 @@ interface FrameStore {
   setCanvasWidth: (width: number | null) => void
   setIframeWindow: (win: Window | null) => void
   setCanvasZoom: (zoom: number) => void
+  setCanvasDrag: (id: string | null) => void
+  setCanvasDragOver: (over: { parentId: string; index: number } | null) => void
   expandToFrame: (id: string) => void
 }
 
@@ -900,6 +904,8 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   iframeWindow: null,
   canvasZoom: 1,
   mcpConnected: false,
+  canvasDragId: null,
+  canvasDragOver: null,
   past: [],
   future: [],
 
@@ -1174,6 +1180,8 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   }),
   setIframeWindow: (win) => set({ iframeWindow: win }),
   setCanvasZoom: (zoom) => set({ canvasZoom: zoom }),
+  setCanvasDrag: (id) => set({ canvasDragId: id }),
+  setCanvasDragOver: (over) => set({ canvasDragOver: over }),
 
   expandToFrame: (id) => set((state) => {
     const ancestors: string[] = []

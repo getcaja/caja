@@ -26,9 +26,13 @@ export function Canvas() {
           <span className="text-text-muted text-[12px]">Add an element to start</span>
         </div>
       )}
-      {!previewMode && <ResponsiveBar />}
-      {!previewMode && <ZoomBar />}
-      {!previewMode && <InsertBar />}
+      {!previewMode && (
+        <div className="absolute bottom-3 inset-x-3 z-40 flex items-center justify-between pointer-events-none">
+          <div className="pointer-events-auto"><ResponsiveBar /></div>
+          <div className="pointer-events-auto"><InsertBar /></div>
+          <div className="pointer-events-auto"><ZoomBar /></div>
+        </div>
+      )}
     </div>
   )
 }

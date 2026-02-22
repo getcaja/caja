@@ -125,6 +125,52 @@
   width: 100%;
 }
 
+/* ── Canvas drag & drop ── */
+
+.frame-drag-handle {
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  background: #2563EB;
+  color: #fff;
+  border-radius: 0 0 4px 0;
+  cursor: grab;
+  pointer-events: auto;
+}
+
+.frame-drag-handle:active {
+  cursor: grabbing;
+}
+
+.frame-node.is-dragging {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.frame-drop-indicator {
+  flex-shrink: 0;
+  background: #2563EB;
+  border-radius: 1px;
+  pointer-events: none;
+  z-index: 15;
+}
+
+.frame-drop-indicator.is-column {
+  width: 100%;
+  height: 2px;
+}
+
+.frame-drop-indicator.is-row {
+  width: 2px;
+  align-self: stretch;
+}
+
 /* ── Preview mode — disable editor chrome, enable interactivity ── */
 
 .preview-mode .frame-form-control {

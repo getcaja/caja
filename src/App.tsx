@@ -173,11 +173,12 @@ function App() {
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+      const key = e.key.toLowerCase()
+      if ((e.metaKey || e.ctrlKey) && key === 'z' && !e.shiftKey) {
         e.preventDefault()
         undo()
       }
-      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && e.shiftKey) {
+      if ((e.metaKey || e.ctrlKey) && key === 'z' && e.shiftKey) {
         e.preventDefault()
         redo()
       }
@@ -267,8 +268,18 @@ function App() {
     }
   }, [undo, redo, removeFrame, removeSelected, reorderFrame, selectedId, handleSave, handleSaveAs, handleOpen, iframeWindow])
 
-  // Resize drag handlers
-  const onMouseMove = useCallback((e: MouseEvent) => {
+  // Resize drag handlers — pointer events + capture for reliable tracking
+  const startDrag = (side: 'left' | 'right', e: React.PointerEvent) => {
+    e.preventDefault()
+    dragging.current = side
+    startX.current = e.clientX
+    startWidth.current = side === 'left' ? leftWidth : rightWidth
+    const target = e.currentTarget as HTMLElement
+    target.setPointerCapture(e.pointerId)
+    document.body.style.cursor = 'col-resize'
+  }
+
+  const onResizeMove = useCallback((e: React.PointerEvent) => {
     if (!dragging.current) return
     const delta = e.clientX - startX.current
     if (dragging.current === 'left') {
@@ -278,32 +289,14 @@ function App() {
     }
   }, [])
 
-  const onMouseUp = useCallback(() => {
+  const onResizeUp = useCallback(() => {
     dragging.current = null
     document.body.style.cursor = ''
-    document.body.style.userSelect = ''
   }, [])
-
-  useEffect(() => {
-    window.addEventListener('mousemove', onMouseMove)
-    window.addEventListener('mouseup', onMouseUp)
-    return () => {
-      window.removeEventListener('mousemove', onMouseMove)
-      window.removeEventListener('mouseup', onMouseUp)
-    }
-  }, [onMouseMove, onMouseUp])
-
-  const startDrag = (side: 'left' | 'right', e: React.MouseEvent) => {
-    dragging.current = side
-    startX.current = e.clientX
-    startWidth.current = side === 'left' ? leftWidth : rightWidth
-    document.body.style.cursor = 'col-resize'
-    document.body.style.userSelect = 'none'
-  }
 
   return (
     <TooltipProvider>
-      <div className="h-full flex flex-col bg-surface-0">
+      <div className="h-full flex flex-col bg-surface-0 select-none">
         <TitleBar />
         {/* Main panels */}
         <div className="flex-1 flex overflow-hidden">
@@ -313,8 +306,10 @@ function App() {
                 <TreePanel />
               </div>
               <div
-                className="w-[3px] shrink-0 cursor-col-resize bg-transparent hover:bg-accent/40 transition-colors -ml-[2px] z-10"
-                onMouseDown={(e) => startDrag('left', e)}
+                className="w-[7px] shrink-0 cursor-col-resize bg-transparent hover:bg-accent/40 transition-colors -ml-[4px] z-10"
+                onPointerDown={(e) => startDrag('left', e)}
+                onPointerMove={onResizeMove}
+                onPointerUp={onResizeUp}
               />
             </>
           )}
@@ -324,8 +319,10 @@ function App() {
           {!previewMode && (
             <>
               <div
-                className="w-[3px] shrink-0 cursor-col-resize bg-transparent hover:bg-accent/40 transition-colors -mr-[2px] z-10"
-                onMouseDown={(e) => startDrag('right', e)}
+                className="w-[7px] shrink-0 cursor-col-resize bg-transparent hover:bg-accent/40 transition-colors -mr-[4px] z-10"
+                onPointerDown={(e) => startDrag('right', e)}
+                onPointerMove={onResizeMove}
+                onPointerUp={onResizeUp}
               />
               <div style={{ width: rightWidth }} className="shrink-0 border-l border-border">
                 <RightPanel />

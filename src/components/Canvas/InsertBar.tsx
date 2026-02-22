@@ -56,7 +56,7 @@ export function InsertBar() {
   }
 
   return (
-    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-40 flex items-center gap-0.5 bg-surface-1 border border-border rounded-lg px-1 py-1 shadow-xl">
+    <div className="flex items-center gap-0.5 bg-surface-1 border border-border rounded-lg px-1 py-1">
       <Tooltip content="Select" side="top" sideOffset={8}>
         <div className="w-7 h-7 flex items-center justify-center rounded-md text-text-secondary">
           <MousePointer2 size={14} />
