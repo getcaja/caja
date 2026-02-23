@@ -161,7 +161,7 @@ input[type=number] {
   outline-offset: -1px;
 }
 
-/* ScaleInput — reset the inner input */
+/* TokenInput — reset the inner input */
 .c-scale-input input {
   border: none;
   outline: none;

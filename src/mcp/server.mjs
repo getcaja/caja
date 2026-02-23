@@ -78,7 +78,7 @@ server.tool(
 
 server.tool(
   'update_frame',
-  'Update properties of an existing frame. Settable: bg, display, direction, justify, align, gap, wrap, content, fontSize, fontWeight, fontStyle, textDecoration, letterSpacing, textTransform, whiteSpace, color, textAlign, borderRadius, overflow, grow, shrink, alignSelf, minWidth, maxWidth, minHeight, maxHeight, boxShadow, cursor, tailwindClasses, opacity, tag, options, className, htmlId. display: "flex"|"inline-flex"|"block"|"inline-block"|"inline".',
+  'Update properties of an existing frame. Settable: bg, display, direction, justify, align, gap, wrap, content, fontSize, fontWeight, fontStyle, textDecoration, letterSpacing, textTransform, whiteSpace, color, textAlign, borderRadius, overflow, grow, shrink, alignSelf, minWidth, maxWidth, minHeight, maxHeight, boxShadow, cursor, tailwindClasses, opacity, tag, options, className, htmlId, position, zIndex, bgImage, bgSize, bgPosition, bgRepeat, gridCols, gridRows, colSpan, rowSpan, rotate, scaleVal, translateX, translateY, transition, duration, ease, blur, backdropBlur. display: "flex"|"inline-flex"|"block"|"inline-block"|"inline"|"grid".',
   {
     id: z.string().describe('ID of the frame to update'),
     properties: z.record(z.string(), z.unknown()).optional().describe('Properties to set (partial update)'),
@@ -92,10 +92,10 @@ server.tool(
 
 server.tool(
   'update_spacing',
-  'Update padding or margin of a frame. Values: { top, right, bottom, left } in pixels.',
+  'Update padding, margin, or inset of a frame. Values: { top, right, bottom, left } in pixels. Inset controls top/right/bottom/left offsets for positioned elements.',
   {
     id: z.string().describe('ID of the frame'),
-    field: z.enum(['padding', 'margin']).describe('Which spacing to update'),
+    field: z.enum(['padding', 'margin', 'inset']).describe('Which spacing to update'),
     values: z.object({
       top: z.number().optional(),
       right: z.number().optional(),

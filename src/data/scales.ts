@@ -179,3 +179,113 @@ export const SIZE_CONSTRAINT_SCALE: ScaleOption[] = [
   { token: '6xl', value: 1152 },
   { token: '7xl', value: 1280 },
 ]
+
+export const Z_INDEX_SCALE: ScaleOption[] = [
+  { token: '0', value: 0 },
+  { token: '10', value: 10 },
+  { token: '20', value: 20 },
+  { token: '30', value: 30 },
+  { token: '40', value: 40 },
+  { token: '50', value: 50 },
+]
+
+export const GRID_COLS_SCALE: ScaleOption[] = [
+  { token: '0', value: 0 },
+  { token: '1', value: 1 },
+  { token: '2', value: 2 },
+  { token: '3', value: 3 },
+  { token: '4', value: 4 },
+  { token: '5', value: 5 },
+  { token: '6', value: 6 },
+  { token: '7', value: 7 },
+  { token: '8', value: 8 },
+  { token: '9', value: 9 },
+  { token: '10', value: 10 },
+  { token: '11', value: 11 },
+  { token: '12', value: 12 },
+]
+
+export const GRID_ROWS_SCALE: ScaleOption[] = [
+  { token: '0', value: 0 },
+  { token: '1', value: 1 },
+  { token: '2', value: 2 },
+  { token: '3', value: 3 },
+  { token: '4', value: 4 },
+  { token: '5', value: 5 },
+  { token: '6', value: 6 },
+]
+
+export const COL_SPAN_SCALE: ScaleOption[] = [
+  { token: '0', value: 0 },
+  { token: '1', value: 1 },
+  { token: '2', value: 2 },
+  { token: '3', value: 3 },
+  { token: '4', value: 4 },
+  { token: '5', value: 5 },
+  { token: '6', value: 6 },
+  { token: '7', value: 7 },
+  { token: '8', value: 8 },
+  { token: '9', value: 9 },
+  { token: '10', value: 10 },
+  { token: '11', value: 11 },
+  { token: '12', value: 12 },
+  { token: 'full', value: 9999 },
+]
+
+export const ROW_SPAN_SCALE: ScaleOption[] = [
+  { token: '0', value: 0 },
+  { token: '1', value: 1 },
+  { token: '2', value: 2 },
+  { token: '3', value: 3 },
+  { token: '4', value: 4 },
+  { token: '5', value: 5 },
+  { token: '6', value: 6 },
+  { token: 'full', value: 9999 },
+]
+
+export const ROTATE_SCALE: ScaleOption[] = [
+  { token: '0', value: 0 },
+  { token: '1', value: 1 },
+  { token: '2', value: 2 },
+  { token: '3', value: 3 },
+  { token: '6', value: 6 },
+  { token: '12', value: 12 },
+  { token: '45', value: 45 },
+  { token: '90', value: 90 },
+  { token: '180', value: 180 },
+]
+
+export const SCALE_SCALE: ScaleOption[] = [
+  { token: '0', value: 0 },
+  { token: '50', value: 50 },
+  { token: '75', value: 75 },
+  { token: '90', value: 90 },
+  { token: '95', value: 95 },
+  { token: '100', value: 100 },
+  { token: '105', value: 105 },
+  { token: '110', value: 110 },
+  { token: '125', value: 125 },
+  { token: '150', value: 150 },
+]
+
+export const DURATION_SCALE: ScaleOption[] = [
+  { token: '75', value: 75 },
+  { token: '100', value: 100 },
+  { token: '150', value: 150 },
+  { token: '200', value: 200 },
+  { token: '300', value: 300 },
+  { token: '500', value: 500 },
+  { token: '700', value: 700 },
+  { token: '1000', value: 1000 },
+]
+
+export const BLUR_SCALE: ScaleOption[] = [
+  { token: '0', value: 0 },
+  { token: 'sm', value: 4 },
+  { token: 'DEFAULT', value: 8 },
+  { token: 'md', value: 12 },
+  { token: 'lg', value: 16 },
+  { token: 'xl', value: 24 },
+  { token: '2xl', value: 40 },
+  { token: '3xl', value: 64 },
+]

@@ -1,17 +1,16 @@
 import type { BoxElement } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { Section } from '../ui/Section'
-import { ScaleInput } from '../ui/ScaleInput'
+import { TokenInput } from '../ui/TokenInput'
 import { ToggleGroup } from '../ui/ToggleGroup'
 import { Switch } from '../ui/Switch'
-import { Select } from '../ui/Select'
-import { SPACING_SCALE } from '../../data/scales'
-import { BOX_TAG_OPTIONS } from './constants'
+import { SPACING_SCALE, GRID_COLS_SCALE, GRID_ROWS_SCALE } from '../../data/scales'
 
 export function LayoutSection({ frame, isRoot }: { frame: BoxElement; isRoot?: boolean }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
 
   const isFlex = frame.display === 'flex' || frame.display === 'inline-flex'
+  const isGrid = frame.display === 'grid'
   const isRow = frame.direction === 'row'
   const isSpaceBetween = frame.justify === 'between' || frame.justify === 'around'
   const justifyValues: ('start' | 'center' | 'end')[] = ['start', 'center', 'end']
@@ -22,31 +21,19 @@ export function LayoutSection({ frame, isRoot }: { frame: BoxElement; isRoot?: b
   return (
     <Section title="Layout">
       <div className="flex flex-col gap-2.5">
-        {!isRoot && (
-          <div className="flex items-center gap-1.5">
-            <span className="c-label">Tag</span>
-            <Select
-              value={frame.tag || 'div'}
-              options={BOX_TAG_OPTIONS}
-              onChange={(v) => updateFrame(frame.id, { tag: v as BoxElement['tag'] })}
-              className="flex-1"
-            />
-          </div>
-        )}
-        <div className="flex items-center gap-1.5">
-          <span className="c-label">Display</span>
-          <ToggleGroup
-            value={frame.display}
-            options={[
-              { value: 'block', label: 'Block' },
-              { value: 'flex', label: 'Flex' },
-              { value: 'inline-flex', label: 'Inline Flex' },
-              { value: 'inline-block', label: 'Inline Block' },
-            ]}
-            onChange={(v) => updateFrame(frame.id, { display: v as BoxElement['display'] })}
-            className="flex-1"
-          />
-        </div>
+        <TokenInput
+          value={frame.display}
+          options={[
+            { value: 'block', label: 'Block' },
+            { value: 'flex', label: 'Flex' },
+            { value: 'grid', label: 'Grid' },
+            { value: 'inline-flex', label: 'Inline Flex' },
+            { value: 'inline-block', label: 'Inline Block' },
+          ]}
+          onChange={(v) => updateFrame(frame.id, { display: v as BoxElement['display'] })}
+          label="Display"
+          initialValue="block"
+        />
 
         {isFlex && (
           <>
@@ -127,7 +114,7 @@ export function LayoutSection({ frame, isRoot }: { frame: BoxElement; isRoot?: b
 
             <div className="flex gap-2 items-center">
               <div className="flex-1">
-                <ScaleInput
+                <TokenInput
                   scale={SPACING_SCALE}
                   value={frame.gap}
                   onChange={(v) => updateFrame(frame.id, { gap: v })}
@@ -141,6 +128,39 @@ export function LayoutSection({ frame, isRoot }: { frame: BoxElement; isRoot?: b
                 <Switch checked={frame.wrap} onCheckedChange={(v) => updateFrame(frame.id, { wrap: v })} />
               </div>
             </div>
+          </>
+        )}
+
+        {isGrid && (
+          <>
+            <div className="flex gap-2">
+              <TokenInput
+                scale={GRID_COLS_SCALE}
+                value={frame.gridCols}
+                onChange={(v) => updateFrame(frame.id, { gridCols: v })}
+                min={0}
+                label="Columns"
+                classPrefix="grid-cols"
+                defaultValue={0}
+              />
+              <TokenInput
+                scale={GRID_ROWS_SCALE}
+                value={frame.gridRows}
+                onChange={(v) => updateFrame(frame.id, { gridRows: v })}
+                min={0}
+                label="Rows"
+                classPrefix="grid-rows"
+                defaultValue={0}
+              />
+            </div>
+            <TokenInput
+              scale={SPACING_SCALE}
+              value={frame.gap}
+              onChange={(v) => updateFrame(frame.id, { gap: v })}
+              min={0}
+              label="Gap"
+              classPrefix="gap"
+            />
           </>
         )}
       </div>

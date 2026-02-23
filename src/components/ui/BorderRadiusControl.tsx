@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Scan } from 'lucide-react'
 import type { BorderRadius, DesignValue } from '../../types/frame'
-import { ScaleInput } from './ScaleInput'
+import { TokenInput } from './TokenInput'
 import { BORDER_RADIUS_SCALE } from '../../data/scales'
 
 export function BorderRadiusControl({
@@ -23,7 +23,7 @@ export function BorderRadiusControl({
     return (
       <div className="flex items-center gap-1.5">
         <span className="c-label">Radius</span>
-        <ScaleInput
+        <TokenInput
           scale={BORDER_RADIUS_SCALE}
           value={value.topLeft}
           onChange={(v) => onChange({ topLeft: v, topRight: v, bottomRight: v, bottomLeft: v })}
@@ -57,10 +57,10 @@ export function BorderRadiusControl({
         </button>
       </div>
       <div className="grid grid-cols-2 gap-1">
-        <ScaleInput scale={BORDER_RADIUS_SCALE} value={value.topLeft} onChange={(v) => onChange({ topLeft: v })} min={0} label="TL" classPrefix="rounded-tl" />
-        <ScaleInput scale={BORDER_RADIUS_SCALE} value={value.topRight} onChange={(v) => onChange({ topRight: v })} min={0} label="TR" classPrefix="rounded-tr" />
-        <ScaleInput scale={BORDER_RADIUS_SCALE} value={value.bottomLeft} onChange={(v) => onChange({ bottomLeft: v })} min={0} label="BL" classPrefix="rounded-bl" />
-        <ScaleInput scale={BORDER_RADIUS_SCALE} value={value.bottomRight} onChange={(v) => onChange({ bottomRight: v })} min={0} label="BR" classPrefix="rounded-br" />
+        <TokenInput scale={BORDER_RADIUS_SCALE} value={value.topLeft} onChange={(v) => onChange({ topLeft: v })} min={0} label="TL" classPrefix="rounded-tl" />
+        <TokenInput scale={BORDER_RADIUS_SCALE} value={value.topRight} onChange={(v) => onChange({ topRight: v })} min={0} label="TR" classPrefix="rounded-tr" />
+        <TokenInput scale={BORDER_RADIUS_SCALE} value={value.bottomLeft} onChange={(v) => onChange({ bottomLeft: v })} min={0} label="BL" classPrefix="rounded-bl" />
+        <TokenInput scale={BORDER_RADIUS_SCALE} value={value.bottomRight} onChange={(v) => onChange({ bottomRight: v })} min={0} label="BR" classPrefix="rounded-br" />
       </div>
     </div>
   )

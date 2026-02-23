@@ -7,6 +7,8 @@ import {
   BORDER_WIDTH_SCALE, BORDER_RADIUS_SCALE, SIZE_CONSTRAINT_SCALE, OPACITY_SCALE,
   GROW_SCALE, SHRINK_SCALE,
   FONT_SIZE_DEFAULT_LEADING,
+  Z_INDEX_SCALE, GRID_COLS_SCALE, GRID_ROWS_SCALE, COL_SPAN_SCALE, ROW_SPAN_SCALE,
+  ROTATE_SCALE, SCALE_SCALE, DURATION_SCALE, BLUR_SCALE,
 } from '../data/scales'
 import { COLOR_GRID, SPECIAL_COLORS } from '../data/colors'
 
@@ -29,6 +31,15 @@ const OPACITY_TOKENS = buildTokenMap(OPACITY_SCALE)
 const FONT_WEIGHT_TOKENS = buildTokenMap(FONT_WEIGHT_SCALE)
 const GROW_TOKENS = buildTokenMap(GROW_SCALE)
 const SHRINK_TOKENS = buildTokenMap(SHRINK_SCALE)
+const Z_INDEX_TOKENS = buildTokenMap(Z_INDEX_SCALE)
+const GRID_COLS_TOKENS = buildTokenMap(GRID_COLS_SCALE)
+const GRID_ROWS_TOKENS = buildTokenMap(GRID_ROWS_SCALE)
+const COL_SPAN_TOKENS = buildTokenMap(COL_SPAN_SCALE)
+const ROW_SPAN_TOKENS = buildTokenMap(ROW_SPAN_SCALE)
+const ROTATE_TOKENS = buildTokenMap(ROTATE_SCALE)
+const SCALE_TOKENS = buildTokenMap(SCALE_SCALE)
+const DURATION_TOKENS = buildTokenMap(DURATION_SCALE)
+const BLUR_TOKENS = buildTokenMap(BLUR_SCALE)
 
 // Color token → hex
 const COLOR_TOKEN_MAP = new Map<string, string>()
@@ -78,6 +89,7 @@ type Props = Record<string, unknown>
 function matchLayout(cls: string, props: Props): boolean {
   if (cls === 'flex') { props.display = 'flex'; props.direction = 'row'; return true }
   if (cls === 'inline-flex') { props.display = 'inline-flex'; props.direction = 'row'; return true }
+  if (cls === 'grid') { props.display = 'grid'; return true }
   if (cls === 'block') { props.display = 'block'; return true }
   if (cls === 'inline-block') { props.display = 'inline-block'; return true }
   if (cls === 'inline') { props.display = 'inline'; return true }
@@ -100,6 +112,28 @@ function matchLayout(cls: string, props: Props): boolean {
   if (cls.startsWith('gap-')) {
     const dv = parseNumericDV(cls.slice(4), SPACING_TOKENS)
     if (dv) { props.gap = dv; return true }
+  }
+
+  // Grid columns/rows
+  if (cls.startsWith('grid-cols-')) {
+    const dv = parseNumericDV(cls.slice(10), GRID_COLS_TOKENS)
+    if (dv) { props.gridCols = dv; return true }
+  }
+  if (cls.startsWith('grid-rows-')) {
+    const dv = parseNumericDV(cls.slice(10), GRID_ROWS_TOKENS)
+    if (dv) { props.gridRows = dv; return true }
+  }
+
+  // Col/row span
+  if (cls === 'col-span-full') { props.colSpan = dvNum('full', 9999); return true }
+  if (cls.startsWith('col-span-')) {
+    const dv = parseNumericDV(cls.slice(9), COL_SPAN_TOKENS)
+    if (dv) { props.colSpan = dv; return true }
+  }
+  if (cls === 'row-span-full') { props.rowSpan = dvNum('full', 9999); return true }
+  if (cls.startsWith('row-span-')) {
+    const dv = parseNumericDV(cls.slice(9), ROW_SPAN_TOKENS)
+    if (dv) { props.rowSpan = dv; return true }
   }
 
   return false
@@ -301,7 +335,15 @@ function matchVisual(
 ): boolean {
   // bg-
   if (cls.startsWith('bg-')) {
-    const cdv = parseColorDV(cls.slice(3))
+    const rest = cls.slice(3)
+    // bg-[url('...')] → bgImage
+    const urlMatch = rest.match(/^\[url\(['"]?(.+?)['"]?\)\]$/)
+    if (urlMatch) { props.bgImage = urlMatch[1]; return true }
+    // Skip bg-cover/contain/repeat/position — handled by matchBgImage
+    if (['cover', 'contain', 'no-repeat', 'repeat', 'repeat-x', 'repeat-y', 'center', 'top', 'bottom', 'left', 'right', 'left-top', 'right-top', 'left-bottom', 'right-bottom'].includes(rest)) {
+      return false
+    }
+    const cdv = parseColorDV(rest)
     if (cdv) { props.bg = cdv; return true }
     return false
   }
@@ -378,6 +420,153 @@ function matchVisual(
   return false
 }
 
+function matchPosition(cls: string, props: Props): boolean {
+  // Position
+  const positions = ['static', 'relative', 'absolute', 'fixed', 'sticky']
+  if (positions.includes(cls)) { props.position = cls; return true }
+
+  // z-index
+  if (cls.startsWith('z-')) {
+    const dv = parseNumericDV(cls.slice(2), Z_INDEX_TOKENS)
+    if (dv) { props.zIndex = dv; return true }
+  }
+
+  // Inset
+  if (cls === 'inset-auto') { props._insetAll = 'auto'; return true }
+  if (cls.startsWith('inset-x-')) {
+    const rest = cls.slice(8)
+    if (rest === 'auto') { props._insetLeft = 'auto'; props._insetRight = 'auto'; return true }
+    const dv = parseNumericDV(rest, SPACING_TOKENS)
+    if (dv) { props._insetLeft = dv; props._insetRight = { ...dv }; return true }
+  }
+  if (cls.startsWith('inset-y-')) {
+    const rest = cls.slice(8)
+    if (rest === 'auto') { props._insetTop = 'auto'; props._insetBottom = 'auto'; return true }
+    const dv = parseNumericDV(rest, SPACING_TOKENS)
+    if (dv) { props._insetTop = dv; props._insetBottom = { ...dv }; return true }
+  }
+  if (cls.startsWith('inset-') && !cls.startsWith('inset-x-') && !cls.startsWith('inset-y-')) {
+    const dv = parseNumericDV(cls.slice(6), SPACING_TOKENS)
+    if (dv) { props._insetAll = dv; return true }
+  }
+  // Per-side inset: top-4, right-auto, etc.
+  const insetSides: [string, string][] = [['top-', '_insetTop'], ['right-', '_insetRight'], ['bottom-', '_insetBottom'], ['left-', '_insetLeft']]
+  for (const [prefix, key] of insetSides) {
+    if (cls.startsWith(prefix)) {
+      const rest = cls.slice(prefix.length)
+      if (rest === 'auto') { props[key] = 'auto'; return true }
+      const dv = parseNumericDV(rest, SPACING_TOKENS)
+      if (dv) { props[key] = dv; return true }
+    }
+  }
+
+  return false
+}
+
+function matchTransform(cls: string, props: Props): boolean {
+  // Negative prefix handling
+  const isNeg = cls.startsWith('-')
+  const base = isNeg ? cls.slice(1) : cls
+
+  // Rotate
+  if (base.startsWith('rotate-')) {
+    const dv = parseNumericDV(base.slice(7), ROTATE_TOKENS)
+    if (dv) {
+      if (isNeg) dv.value = -dv.value
+      props.rotate = dv
+      return true
+    }
+  }
+
+  // Scale
+  if (base.startsWith('scale-')) {
+    const dv = parseNumericDV(base.slice(6), SCALE_TOKENS)
+    if (dv) { props.scaleVal = dv; return true }
+  }
+
+  // Translate
+  if (base.startsWith('translate-x-')) {
+    const dv = parseNumericDV(base.slice(12), SPACING_TOKENS)
+    if (dv) {
+      if (isNeg) dv.value = -dv.value
+      props.translateX = dv
+      return true
+    }
+  }
+  if (base.startsWith('translate-y-')) {
+    const dv = parseNumericDV(base.slice(12), SPACING_TOKENS)
+    if (dv) {
+      if (isNeg) dv.value = -dv.value
+      props.translateY = dv
+      return true
+    }
+  }
+
+  return false
+}
+
+function matchTransition(cls: string, props: Props): boolean {
+  const transitionTypes = ['all', 'colors', 'opacity', 'shadow', 'transform']
+  if (cls === 'transition') { props.transition = 'all'; return true }
+  if (cls.startsWith('transition-')) {
+    const val = cls.slice(11)
+    if (transitionTypes.includes(val)) { props.transition = val; return true }
+  }
+
+  if (cls.startsWith('duration-')) {
+    const dv = parseNumericDV(cls.slice(9), DURATION_TOKENS)
+    if (dv) { props.duration = dv; return true }
+  }
+
+  const easeMap: Record<string, string> = {
+    'ease-linear': 'linear', 'ease-in': 'in', 'ease-out': 'out', 'ease-in-out': 'in-out',
+  }
+  if (easeMap[cls]) { props.ease = easeMap[cls]; return true }
+
+  return false
+}
+
+function matchFilter(cls: string, props: Props): boolean {
+  // Blur
+  if (cls === 'blur') { props.blur = dvNum('DEFAULT', 8); return true }
+  if (cls.startsWith('blur-')) {
+    const dv = parseNumericDV(cls.slice(5), BLUR_TOKENS)
+    if (dv) { props.blur = dv; return true }
+  }
+
+  // Backdrop blur
+  if (cls === 'backdrop-blur') { props.backdropBlur = dvNum('DEFAULT', 8); return true }
+  if (cls.startsWith('backdrop-blur-')) {
+    const dv = parseNumericDV(cls.slice(14), BLUR_TOKENS)
+    if (dv) { props.backdropBlur = dv; return true }
+  }
+
+  return false
+}
+
+function matchBgImage(cls: string, props: Props): boolean {
+  // bg-[url('...')] — handled in matchVisual via bg- prefix, skip here
+  // bg-cover, bg-contain
+  if (cls === 'bg-cover') { props.bgSize = 'cover'; return true }
+  if (cls === 'bg-contain') { props.bgSize = 'contain'; return true }
+
+  // bg-no-repeat, bg-repeat-x, bg-repeat-y
+  if (cls === 'bg-no-repeat') { props.bgRepeat = 'no-repeat'; return true }
+  if (cls === 'bg-repeat-x') { props.bgRepeat = 'repeat-x'; return true }
+  if (cls === 'bg-repeat-y') { props.bgRepeat = 'repeat-y'; return true }
+  if (cls === 'bg-repeat') { props.bgRepeat = 'repeat'; return true }
+
+  // bg-position: bg-center, bg-top, bg-left-top, etc.
+  const bgPosMap: Record<string, string> = {
+    'bg-center': 'center', 'bg-top': 'top', 'bg-bottom': 'bottom', 'bg-left': 'left', 'bg-right': 'right',
+    'bg-left-top': 'top-left', 'bg-right-top': 'top-right',
+    'bg-left-bottom': 'bottom-left', 'bg-right-bottom': 'bottom-right',
+  }
+  if (bgPosMap[cls]) { props.bgPosition = bgPosMap[cls]; return true }
+
+  return false
+}
+
 function matchMisc(cls: string, props: Props): boolean {
   if (cls.startsWith('cursor-')) {
     const val = cls.slice(7)
@@ -419,6 +608,11 @@ export function parseTailwindClasses(classes: string): ParsedTailwindResult {
     if (matchSizing(cls, props)) continue
     if (matchText(cls, props)) continue
     if (matchVisual(cls, props, border, borderRadius)) continue
+    if (matchPosition(cls, props)) continue
+    if (matchTransform(cls, props)) continue
+    if (matchTransition(cls, props)) continue
+    if (matchFilter(cls, props)) continue
+    if (matchBgImage(cls, props)) continue
     if (matchMisc(cls, props)) continue
 
     unrecognized.push(cls)
@@ -464,6 +658,27 @@ export function parseTailwindClasses(classes: string): ParsedTailwindResult {
       bottomRight: borderRadius.corners.bottomRight || { ...base },
       bottomLeft: borderRadius.corners.bottomLeft || { ...base },
     }
+  }
+
+  // Assemble inset if any sides were set
+  const hasInset = '_insetAll' in props || '_insetTop' in props || '_insetRight' in props || '_insetBottom' in props || '_insetLeft' in props
+  if (hasInset) {
+    const zero: DesignValue<number> = { mode: 'custom', value: 0 }
+    const autoDV: DesignValue<number> = { mode: 'token', token: 'auto', value: 0 }
+    const resolveInsetSide = (side: unknown, all: unknown): DesignValue<number> => {
+      if (side === 'auto') return { ...autoDV }
+      if (side && typeof side === 'object') return side as DesignValue<number>
+      if (all === 'auto') return { ...autoDV }
+      if (all && typeof all === 'object') return { ...(all as DesignValue<number>) }
+      return zero
+    }
+    props.inset = {
+      top: resolveInsetSide(props._insetTop, props._insetAll),
+      right: resolveInsetSide(props._insetRight, props._insetAll),
+      bottom: resolveInsetSide(props._insetBottom, props._insetAll),
+      left: resolveInsetSide(props._insetLeft, props._insetAll),
+    }
+    delete props._insetAll; delete props._insetTop; delete props._insetRight; delete props._insetBottom; delete props._insetLeft
   }
 
   return {

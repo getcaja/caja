@@ -43,13 +43,13 @@ export const OVERFLOW_OPTIONS = [
 ]
 
 export const BOX_SHADOW_OPTIONS = [
-  { value: 'none', label: 'none' },
-  { value: 'sm', label: 'shadow-sm' },
-  { value: 'base', label: 'shadow' },
-  { value: 'md', label: 'shadow-md' },
-  { value: 'lg', label: 'shadow-lg' },
-  { value: 'xl', label: 'shadow-xl' },
-  { value: '2xl', label: 'shadow-2xl' },
+  { value: 'none', label: 'None' },
+  { value: 'sm', label: 'Small' },
+  { value: 'base', label: 'Default', token: '' },
+  { value: 'md', label: 'Medium' },
+  { value: 'lg', label: 'Large' },
+  { value: 'xl', label: 'Extra Large' },
+  { value: '2xl', label: '2XL' },
 ]
 
 export const CURSOR_OPTIONS = [

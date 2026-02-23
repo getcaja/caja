@@ -11,6 +11,8 @@ import {
   SPACING_SCALE, FONT_SIZE_SCALE, FONT_WEIGHT_SCALE, LINE_HEIGHT_SCALE, LETTER_SPACING_SCALE,
   BORDER_WIDTH_SCALE, BORDER_RADIUS_SCALE, SIZE_CONSTRAINT_SCALE, OPACITY_SCALE,
   GROW_SCALE, SHRINK_SCALE,
+  Z_INDEX_SCALE, GRID_COLS_SCALE, GRID_ROWS_SCALE, COL_SPAN_SCALE, ROW_SPAN_SCALE,
+  ROTATE_SCALE, SCALE_SCALE, DURATION_SCALE, BLUR_SCALE,
 } from '../data/scales'
 import { COLOR_GRID, SPECIAL_COLORS } from '../data/colors'
 
@@ -73,6 +75,15 @@ const BORDER_WIDTH_LOOKUP = buildNumLookup(BORDER_WIDTH_SCALE)
 const BORDER_RADIUS_LOOKUP = buildNumLookup(BORDER_RADIUS_SCALE)
 const SIZE_CONSTRAINT_LOOKUP = buildNumLookup(SIZE_CONSTRAINT_SCALE)
 const OPACITY_LOOKUP = buildNumLookup(OPACITY_SCALE)
+const Z_INDEX_LOOKUP = buildNumLookup(Z_INDEX_SCALE)
+const GRID_COLS_LOOKUP = buildNumLookup(GRID_COLS_SCALE)
+const GRID_ROWS_LOOKUP = buildNumLookup(GRID_ROWS_SCALE)
+const COL_SPAN_LOOKUP = buildNumLookup(COL_SPAN_SCALE)
+const ROW_SPAN_LOOKUP = buildNumLookup(ROW_SPAN_SCALE)
+const ROTATE_LOOKUP = buildNumLookup(ROTATE_SCALE)
+const SCALE_LOOKUP = buildNumLookup(SCALE_SCALE)
+const DURATION_LOOKUP = buildNumLookup(DURATION_SCALE)
+const BLUR_LOOKUP = buildNumLookup(BLUR_SCALE)
 const COLOR_LOOKUP = buildColorLookup()
 
 // --- Sanitization helpers for MCP inputs ---
@@ -182,6 +193,18 @@ function sanitizeFrameProperties(props: Record<string, unknown>, existingFrame?:
     maxWidth: SIZE_CONSTRAINT_LOOKUP,
     minHeight: SIZE_CONSTRAINT_LOOKUP,
     maxHeight: SIZE_CONSTRAINT_LOOKUP,
+    zIndex: Z_INDEX_LOOKUP,
+    gridCols: GRID_COLS_LOOKUP,
+    gridRows: GRID_ROWS_LOOKUP,
+    colSpan: COL_SPAN_LOOKUP,
+    rowSpan: ROW_SPAN_LOOKUP,
+    rotate: ROTATE_LOOKUP,
+    scaleVal: SCALE_LOOKUP,
+    translateX: SPACING_LOOKUP,
+    translateY: SPACING_LOOKUP,
+    duration: DURATION_LOOKUP,
+    blur: BLUR_LOOKUP,
+    backdropBlur: BLUR_LOOKUP,
   }
   for (const key of Object.keys(numFieldLookup)) {
     if (key in sanitized) {
@@ -202,6 +225,11 @@ function sanitizeFrameProperties(props: Record<string, unknown>, existingFrame?:
   if ('borderRadius' in sanitized) {
     const v = sanitizeBorderRadius(sanitized.borderRadius)
     if (v) sanitized.borderRadius = v
+  }
+
+  // bgImage: pass through as trimmed string
+  if ('bgImage' in sanitized) {
+    sanitized.bgImage = typeof sanitized.bgImage === 'string' ? sanitized.bgImage.trim() : ''
   }
 
   // [Experimental] fontFamily: pass through as trimmed string
@@ -371,7 +399,7 @@ const handlers: Record<string, ToolHandler> = {
   update_spacing(params) {
     const { id, field, values } = params as {
       id: string
-      field: 'padding' | 'margin'
+      field: 'padding' | 'margin' | 'inset'
       values: Record<string, unknown>
     }
     const store = getStore()

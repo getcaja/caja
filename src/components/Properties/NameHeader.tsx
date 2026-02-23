@@ -1,13 +1,29 @@
 import { Eye, EyeOff } from 'lucide-react'
 import type { Frame } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
-import { TYPE_BADGE_STYLES, TYPE_BADGE_LABELS, getBadgeKey } from './constants'
+import { Select } from '../ui/Select'
+import { TYPE_BADGE_STYLES, TYPE_BADGE_LABELS, getBadgeKey, BOX_TAG_OPTIONS, TEXT_TAG_OPTIONS } from './constants'
+
+function getTagOptions(type: Frame['type']) {
+  if (type === 'box') return BOX_TAG_OPTIONS
+  if (type === 'text') return TEXT_TAG_OPTIONS
+  return null
+}
+
+function getTagDefault(type: Frame['type']) {
+  if (type === 'box') return 'div'
+  if (type === 'text') return 'p'
+  return ''
+}
 
 export function NameHeader({ frame, isRoot }: { frame: Frame; isRoot: boolean }) {
   const renameFrame = useFrameStore((s) => s.renameFrame)
   const updateFrame = useFrameStore((s) => s.updateFrame)
   const toggleHidden = useFrameStore((s) => s.toggleHidden)
   const key = getBadgeKey(frame.type, isRoot, 'tag' in frame ? (frame as { tag?: string }).tag : undefined)
+
+  const tagOptions = getTagOptions(frame.type)
+  const currentTag = ('tag' in frame ? (frame as { tag?: string }).tag : undefined) || getTagDefault(frame.type)
 
   return (
     <div className="-mx-3 px-3 border-b border-border pb-3 mb-3 flex flex-col gap-2">
@@ -37,26 +53,39 @@ export function NameHeader({ frame, isRoot }: { frame: Frame; isRoot: boolean })
         )}
       </div>
       {!isRoot && (
-        <div className="flex gap-1.5">
-          <div className="flex-1 min-w-0">
-            <input
-              type="text"
-              value={frame.className}
-              onChange={(e) => updateFrame(frame.id, { className: e.target.value })}
-              placeholder="class"
-              className="w-full c-input text-[11px]"
-            />
+        <>
+          {tagOptions && (
+            <div className="flex items-center gap-1.5">
+              <span className="c-label">Tag</span>
+              <Select
+                value={currentTag}
+                options={tagOptions}
+                onChange={(v) => updateFrame(frame.id, { tag: v })}
+                className="flex-1"
+              />
+            </div>
+          )}
+          <div className="flex gap-1.5">
+            <div className="flex-1 min-w-0">
+              <input
+                type="text"
+                value={frame.className}
+                onChange={(e) => updateFrame(frame.id, { className: e.target.value })}
+                placeholder="class"
+                className="w-full c-input text-[11px]"
+              />
+            </div>
+            <div className="w-[80px] shrink-0">
+              <input
+                type="text"
+                value={frame.htmlId}
+                onChange={(e) => updateFrame(frame.id, { htmlId: e.target.value })}
+                placeholder="id"
+                className="w-full c-input text-[11px]"
+              />
+            </div>
           </div>
-          <div className="w-[80px] shrink-0">
-            <input
-              type="text"
-              value={frame.htmlId}
-              onChange={(e) => updateFrame(frame.id, { htmlId: e.target.value })}
-              placeholder="id"
-              className="w-full c-input text-[11px]"
-            />
-          </div>
-        </div>
+        </>
       )}
     </div>
   )

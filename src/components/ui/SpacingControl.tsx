@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Scan } from 'lucide-react'
 import type { Spacing, DesignValue } from '../../types/frame'
 import type { ScaleOption } from '../../data/scales'
-import { ScaleInput } from './ScaleInput'
+import { TokenInput } from './TokenInput'
 import { SPACING_SCALE } from '../../data/scales'
 
 function dvSame(a: DesignValue<number>, b: DesignValue<number>): boolean {
@@ -40,7 +40,7 @@ export function SpacingControl({
         </div>
         <div className="grid grid-cols-[auto_1fr_auto_1fr] gap-1 items-center">
           <span className="text-text-muted text-[11px]">H</span>
-          <ScaleInput
+          <TokenInput
             scale={scale}
             value={value.left}
             onChange={(v) => onChange({ left: v, right: { ...v } })}
@@ -48,7 +48,7 @@ export function SpacingControl({
             classPrefix={`${classPrefix}x`}
           />
           <span className="text-text-muted text-[11px]">V</span>
-          <ScaleInput
+          <TokenInput
             scale={scale}
             value={value.top}
             onChange={(v) => onChange({ top: v, bottom: { ...v } })}
@@ -75,10 +75,10 @@ export function SpacingControl({
         </button>
       </div>
       <div className="grid grid-cols-2 gap-1">
-        <ScaleInput scale={scale} value={value.top} onChange={(v) => onChange({ top: v })} min={0} label="Top" classPrefix={`${classPrefix}t`} />
-        <ScaleInput scale={scale} value={value.right} onChange={(v) => onChange({ right: v })} min={0} label="Right" classPrefix={`${classPrefix}r`} />
-        <ScaleInput scale={scale} value={value.bottom} onChange={(v) => onChange({ bottom: v })} min={0} label="Bottom" classPrefix={`${classPrefix}b`} />
-        <ScaleInput scale={scale} value={value.left} onChange={(v) => onChange({ left: v })} min={0} label="Left" classPrefix={`${classPrefix}l`} />
+        <TokenInput scale={scale} value={value.top} onChange={(v) => onChange({ top: v })} min={0} label="Top" classPrefix={`${classPrefix}t`} />
+        <TokenInput scale={scale} value={value.right} onChange={(v) => onChange({ right: v })} min={0} label="Right" classPrefix={`${classPrefix}r`} />
+        <TokenInput scale={scale} value={value.bottom} onChange={(v) => onChange({ bottom: v })} min={0} label="Bottom" classPrefix={`${classPrefix}b`} />
+        <TokenInput scale={scale} value={value.left} onChange={(v) => onChange({ left: v })} min={0} label="Left" classPrefix={`${classPrefix}l`} />
       </div>
     </div>
   )

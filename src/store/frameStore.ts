@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Frame, BoxElement, BoxTag, BoxDisplay, TextElement, ImageElement, ButtonElement, InputElement, TextareaElement, SelectElement, TextStyles, Spacing, SizeValue, BorderRadius, Border, DesignValue } from '../types/frame'
+import type { Frame, BoxElement, BoxTag, BoxDisplay, TextElement, ImageElement, ButtonElement, InputElement, TextareaElement, SelectElement, TextStyles, Spacing, Inset, SizeValue, BorderRadius, Border, DesignValue } from '../types/frame'
 
 // The internal root ID — never exposed to the user
 const INTERNAL_ROOT_ID = '__root__'
@@ -41,6 +41,10 @@ function zeroSpacing(): Spacing {
   return { top: dvNum(0), right: dvNum(0), bottom: dvNum(0), left: dvNum(0) }
 }
 
+function zeroInset(): Inset {
+  return { top: dvNum(0), right: dvNum(0), bottom: dvNum(0), left: dvNum(0) }
+}
+
 function zeroBorderRadius(): BorderRadius {
   return { topLeft: dvNum(0), topRight: dvNum(0), bottomRight: dvNum(0), bottomLeft: dvNum(0) }
 }
@@ -50,6 +54,30 @@ function uniformBorderRadius(v: number): BorderRadius {
 }
 
 const defaultBorder: Border = { width: dvNum(0), color: dvStr(''), style: 'none' }
+
+// New CSS feature defaults — shared across all create functions
+function newFeatureDefaults() {
+  return {
+    position: 'static' as const,
+    zIndex: dvNum(0),
+    inset: zeroInset(),
+    bgImage: '',
+    bgSize: 'auto' as const,
+    bgPosition: 'center' as const,
+    bgRepeat: 'repeat' as const,
+    blur: dvNum(0),
+    backdropBlur: dvNum(0),
+    rotate: dvNum(0),
+    scaleVal: dvNum(100),
+    translateX: dvNum(0),
+    translateY: dvNum(0),
+    transition: 'none' as const,
+    duration: dvNum(0),
+    ease: 'linear' as const,
+    colSpan: dvNum(0),
+    rowSpan: dvNum(0),
+  }
+}
 
 function defaultTextStyles(): TextStyles {
   return {
@@ -102,6 +130,8 @@ function createInternalRoot(children: Frame[] = []): BoxElement {
     align: 'stretch',
     gap: dvNum(0),
     wrap: false,
+    gridCols: dvNum(0),
+    gridRows: dvNum(0),
     padding: zeroSpacing(),
     margin: zeroSpacing(),
     width: { mode: 'default', value: dvNum(0) },
@@ -121,6 +151,7 @@ function createInternalRoot(children: Frame[] = []): BoxElement {
     minHeight: dvNum(0),
     maxHeight: dvNum(0),
     alignSelf: 'auto',
+    ...newFeatureDefaults(),
     children,
   }
 }
@@ -141,6 +172,8 @@ export function createBox(overrides?: Partial<BoxElement>): BoxElement {
     align: 'stretch',
     gap: dvNum(0),
     wrap: false,
+    gridCols: dvNum(0),
+    gridRows: dvNum(0),
     padding: zeroSpacing(),
     margin: zeroSpacing(),
     width: { mode: 'default', value: dvNum(0) },
@@ -160,6 +193,7 @@ export function createBox(overrides?: Partial<BoxElement>): BoxElement {
     minHeight: dvNum(0),
     maxHeight: dvNum(0),
     alignSelf: 'auto',
+    ...newFeatureDefaults(),
     children: [],
     ...overrides,
   }
@@ -197,6 +231,7 @@ export function createText(overrides?: Partial<TextElement>): TextElement {
     minHeight: dvNum(0),
     maxHeight: dvNum(0),
     alignSelf: 'auto',
+    ...newFeatureDefaults(),
     ...overrides,
   }
 }
@@ -232,6 +267,7 @@ export function createImage(overrides?: Partial<ImageElement>): ImageElement {
     minHeight: dvNum(0),
     maxHeight: dvNum(0),
     alignSelf: 'auto',
+    ...newFeatureDefaults(),
     ...overrides,
   }
 }
@@ -266,6 +302,7 @@ export function createButton(overrides?: Partial<ButtonElement>): ButtonElement 
     minHeight: dvNum(0),
     maxHeight: dvNum(0),
     alignSelf: 'auto',
+    ...newFeatureDefaults(),
     ...overrides,
   }
 }
@@ -302,6 +339,7 @@ export function createInput(overrides?: Partial<InputElement>): InputElement {
     minHeight: dvNum(0),
     maxHeight: dvNum(0),
     alignSelf: 'auto',
+    ...newFeatureDefaults(),
     ...overrides,
   }
 }
@@ -338,6 +376,7 @@ export function createTextarea(overrides?: Partial<TextareaElement>): TextareaEl
     minHeight: dvNum(0),
     maxHeight: dvNum(0),
     alignSelf: 'auto',
+    ...newFeatureDefaults(),
     ...overrides,
   }
 }
@@ -386,6 +425,7 @@ export function createSelect(overrides?: Partial<SelectElement>): SelectElement 
     minHeight: dvNum(0),
     maxHeight: dvNum(0),
     alignSelf: 'auto',
+    ...newFeatureDefaults(),
     ...overrides,
   }
 }
@@ -396,6 +436,7 @@ function cloneTree(frame: Frame): Frame {
     ...frame,
     padding: cloneSpacing(frame.padding),
     margin: cloneSpacing(frame.margin),
+    inset: cloneSpacing(frame.inset),
     width: cloneSizeValue(frame.width),
     height: cloneSizeValue(frame.height),
     grow: cloneDV(frame.grow),
@@ -408,9 +449,19 @@ function cloneTree(frame: Frame): Frame {
     maxWidth: cloneDV(frame.maxWidth),
     minHeight: cloneDV(frame.minHeight),
     maxHeight: cloneDV(frame.maxHeight),
+    zIndex: cloneDV(frame.zIndex),
+    blur: cloneDV(frame.blur),
+    backdropBlur: cloneDV(frame.backdropBlur),
+    rotate: cloneDV(frame.rotate),
+    scaleVal: cloneDV(frame.scaleVal),
+    translateX: cloneDV(frame.translateX),
+    translateY: cloneDV(frame.translateY),
+    duration: cloneDV(frame.duration),
+    colSpan: cloneDV(frame.colSpan),
+    rowSpan: cloneDV(frame.rowSpan),
   }
   if (frame.type === 'box') {
-    return { ...base, type: 'box', gap: cloneDV(frame.gap), children: frame.children.map(cloneTree) } as BoxElement
+    return { ...base, type: 'box', gap: cloneDV(frame.gap), gridCols: cloneDV(frame.gridCols), gridRows: cloneDV(frame.gridRows), children: frame.children.map(cloneTree) } as BoxElement
   }
   // Clone TextStyles DV fields for all text-capable types
   if (frame.type !== 'box' && frame.type !== 'image') {
@@ -707,6 +758,25 @@ function migrateFrame(raw: Record<string, unknown>): Frame {
     minHeight: migrateDVNum(raw.minHeight, 0),
     maxHeight: migrateDVNum(raw.maxHeight, 0),
     alignSelf: (raw.alignSelf as Frame['alignSelf']) || 'auto',
+    // New CSS features (with safe defaults for old data)
+    position: (raw.position as Frame['position']) || 'static',
+    zIndex: migrateDVNum(raw.zIndex, 0),
+    inset: migrateSpacing(raw.inset),
+    bgImage: (raw.bgImage as string) || '',
+    bgSize: (raw.bgSize as Frame['bgSize']) || 'auto',
+    bgPosition: (raw.bgPosition as Frame['bgPosition']) || 'center',
+    bgRepeat: (raw.bgRepeat as Frame['bgRepeat']) || 'repeat',
+    blur: migrateDVNum(raw.blur, 0),
+    backdropBlur: migrateDVNum(raw.backdropBlur, 0),
+    rotate: migrateDVNum(raw.rotate, 0),
+    scaleVal: migrateDVNum(raw.scaleVal, 100),
+    translateX: migrateDVNum(raw.translateX, 0),
+    translateY: migrateDVNum(raw.translateY, 0),
+    transition: (raw.transition as Frame['transition']) || 'none',
+    duration: migrateDVNum(raw.duration, 0),
+    ease: (raw.ease as Frame['ease']) || 'linear',
+    colSpan: migrateDVNum(raw.colSpan, 0),
+    rowSpan: migrateDVNum(raw.rowSpan, 0),
   }
 
   if (raw.type === 'text') {
@@ -781,6 +851,8 @@ function migrateFrame(raw: Record<string, unknown>): Frame {
     align: (raw.align as BoxElement['align']) || 'stretch',
     gap: migrateDVNum(raw.gap, 0),
     wrap: (raw.wrap as boolean) ?? false,
+    gridCols: migrateDVNum(raw.gridCols, 0),
+    gridRows: migrateDVNum(raw.gridRows, 0),
     children: children.map(migrateFrame),
   } as BoxElement
 }
@@ -842,7 +914,7 @@ interface FrameStore {
   moveFrame: (frameId: string, newParentId: string, index: number) => void
   reorderFrame: (frameId: string, direction: 'up' | 'down') => void
   updateFrame: (id: string, updates: Partial<Frame>) => void
-  updateSpacing: (id: string, field: 'padding' | 'margin', values: Partial<Spacing>) => void
+  updateSpacing: (id: string, field: 'padding' | 'margin' | 'inset', values: Partial<Spacing>) => void
   updateSize: (id: string, dimension: 'width' | 'height', size: Partial<SizeValue>) => void
   updateBorderRadius: (id: string, values: Partial<BorderRadius>) => void
   renameFrame: (id: string, name: string) => void

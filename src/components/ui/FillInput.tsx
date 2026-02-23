@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Diamond, Unlink } from 'lucide-react'
 import { HexColorPicker } from 'react-colorful'
 import { Popover } from './Popover'
-import { ScaleInput } from './ScaleInput'
+import { TokenInput } from './TokenInput'
 import { ColorGridPicker } from './ColorGridPicker'
 import { OPACITY_SCALE } from '../../data/scales'
 import type { DesignValue } from '../../types/frame'
@@ -181,7 +181,7 @@ export function FillInput({
         </div>
       </div>
 
-      <ScaleInput
+      <TokenInput
         scale={OPACITY_SCALE}
         value={opacity}
         onChange={onOpacityChange}

@@ -15,6 +15,9 @@ export interface Spacing {
   left: DesignValue<number>
 }
 
+// Same shape as Spacing — 'auto' represented as { mode: 'token', token: 'auto', value: 0 }
+export type Inset = Spacing
+
 export interface Border {
   width: DesignValue<number>
   color: DesignValue<string>
@@ -60,14 +63,40 @@ interface BaseElement {
   // Flex child
   alignSelf: 'auto' | 'start' | 'center' | 'end' | 'stretch'
 
+  // Position
+  position: 'static' | 'relative' | 'absolute' | 'fixed' | 'sticky'
+  zIndex: DesignValue<number>
+  inset: Inset
+
   // Visuals
   bg: DesignValue<string>
+  bgImage: string
+  bgSize: 'auto' | 'cover' | 'contain'
+  bgPosition: 'center' | 'top' | 'bottom' | 'left' | 'right' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
+  bgRepeat: 'repeat' | 'no-repeat' | 'repeat-x' | 'repeat-y'
   border: Border
   borderRadius: BorderRadius
   overflow: 'visible' | 'hidden' | 'scroll'
   opacity: DesignValue<number> // 0–100
   boxShadow: 'none' | 'sm' | 'base' | 'md' | 'lg' | 'xl' | '2xl'
   cursor: 'auto' | 'default' | 'pointer' | 'text' | 'not-allowed' | 'grab'
+  blur: DesignValue<number>
+  backdropBlur: DesignValue<number>
+
+  // Transforms
+  rotate: DesignValue<number>      // degrees
+  scaleVal: DesignValue<number>    // percentage (100 = normal)
+  translateX: DesignValue<number>  // px
+  translateY: DesignValue<number>  // px
+
+  // Transitions
+  transition: 'none' | 'all' | 'colors' | 'opacity' | 'shadow' | 'transform'
+  duration: DesignValue<number>  // ms
+  ease: 'linear' | 'in' | 'out' | 'in-out'
+
+  // Grid child
+  colSpan: DesignValue<number>
+  rowSpan: DesignValue<number>
 
   // Advanced
   tailwindClasses: string
@@ -75,7 +104,7 @@ interface BaseElement {
 
 export type BoxTag = 'body' | 'div' | 'section' | 'nav' | 'header' | 'footer' | 'main' | 'article' | 'aside' | 'ul' | 'ol' | 'li' | 'form'
 
-export type BoxDisplay = 'flex' | 'inline-flex' | 'block' | 'inline-block' | 'inline'
+export type BoxDisplay = 'flex' | 'inline-flex' | 'block' | 'inline-block' | 'inline' | 'grid'
 
 export interface BoxElement extends BaseElement {
   type: 'box'
@@ -92,6 +121,10 @@ export interface BoxElement extends BaseElement {
   align: 'start' | 'center' | 'end' | 'stretch'
   gap: DesignValue<number>
   wrap: boolean
+
+  // Grid (only applies when display is grid)
+  gridCols: DesignValue<number>
+  gridRows: DesignValue<number>
 
   // Structure
   children: Frame[]

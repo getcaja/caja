@@ -2,7 +2,8 @@ use axum::{extract::State, routing::{get, post}, Json, Router};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tauri::menu::{CheckMenuItemBuilder, MenuBuilder, MenuItemBuilder, SubmenuBuilder};
+use tauri::image::Image;
+use tauri::menu::{AboutMetadata, CheckMenuItemBuilder, MenuBuilder, MenuItemBuilder, SubmenuBuilder};
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::{oneshot, Mutex};
 
@@ -198,8 +199,14 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![mcp_respond, set_menu_check])
         .setup(|app| {
             // ── Native Menu ──
+            let icon = Image::from_bytes(include_bytes!("../icons/128x128@2x.png"))
+                .expect("failed to load app icon");
+            let about = AboutMetadata {
+                icon: Some(icon),
+                ..Default::default()
+            };
             let app_menu = SubmenuBuilder::new(app, "Caja")
-                .about(None)
+                .about(Some(about))
                 .separator()
                 .services()
                 .separator()

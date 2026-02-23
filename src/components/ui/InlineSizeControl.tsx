@@ -1,6 +1,6 @@
 import type { SizeValue, DesignValue } from '../../types/frame'
 import { ToggleGroup } from './ToggleGroup'
-import { ScaleInput } from './ScaleInput'
+import { TokenInput } from './TokenInput'
 import { SPACING_SCALE } from '../../data/scales'
 
 export function InlineSizeControl({
@@ -30,7 +30,7 @@ export function InlineSizeControl({
       />
       {value.mode === 'fixed' && (
         <div className="w-20 min-w-0">
-          <ScaleInput
+          <TokenInput
             scale={SPACING_SCALE}
             value={value.value}
             onChange={(v) => onChange({ value: v })}

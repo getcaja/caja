@@ -2,7 +2,8 @@ import { Italic, Underline, Strikethrough } from 'lucide-react'
 import type { TextStyles } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { Section } from '../ui/Section'
-import { ScaleInput } from '../ui/ScaleInput'
+import { TokenInput } from '../ui/TokenInput'
+import { ColorInput } from '../ui/ColorInput'
 import { ToggleGroup } from '../ui/ToggleGroup'
 import { FONT_SIZE_SCALE, FONT_WEIGHT_SCALE, LINE_HEIGHT_SCALE, LETTER_SPACING_SCALE, getCompoundLineHeight } from '../../data/scales'
 import { TEXT_TRANSFORM_OPTIONS, WHITE_SPACE_OPTIONS } from './constants'
@@ -13,7 +14,14 @@ export function TypographySection({ frame }: { frame: TextStyles & { id: string 
   return (
     <Section title="Typography">
       <div className="flex flex-col gap-2.5">
-        <ScaleInput
+        <ColorInput
+          value={frame.color}
+          onChange={(v) => updateFrame(frame.id, { color: v })}
+          label="Color"
+          classPrefix="text"
+        />
+
+        <TokenInput
           scale={FONT_SIZE_SCALE}
           value={frame.fontSize}
           onChange={(v) => {
@@ -28,7 +36,7 @@ export function TypographySection({ frame }: { frame: TextStyles & { id: string 
           label="Size"
           classPrefix="text"
         />
-        <ScaleInput
+        <TokenInput
           scale={LINE_HEIGHT_SCALE}
           value={frame.lineHeight}
           onChange={(v) => updateFrame(frame.id, { lineHeight: v })}
@@ -38,7 +46,7 @@ export function TypographySection({ frame }: { frame: TextStyles & { id: string 
           classPrefix="leading"
         />
 
-        <ScaleInput
+        <TokenInput
           scale={FONT_WEIGHT_SCALE}
           value={frame.fontWeight}
           onChange={(v) => updateFrame(frame.id, { fontWeight: v })}
@@ -100,7 +108,7 @@ export function TypographySection({ frame }: { frame: TextStyles & { id: string 
           </div>
         </div>
 
-        <ScaleInput
+        <TokenInput
           scale={LETTER_SPACING_SCALE}
           value={frame.letterSpacing}
           onChange={(v) => updateFrame(frame.id, { letterSpacing: v })}

@@ -3,7 +3,6 @@ import { useFrameStore } from '../../store/frameStore'
 import { NameHeader } from './NameHeader'
 import { LayoutSection } from './LayoutSection'
 import { ContentSection } from './ContentSection'
-import { TypographySection } from './TypographySection'
 import { ImageSection } from './ImageSection'
 import { ButtonSection } from './ButtonSection'
 import { InputSection } from './InputSection'
@@ -11,7 +10,13 @@ import { TextareaSection } from './TextareaSection'
 import { SelectSection } from './SelectSection'
 import { SizeSection } from './SizeSection'
 import { SpacingSection } from './SpacingSection'
-import { StyleSection } from './StyleSection'
+import { TypographySection } from './TypographySection'
+import { FillSection } from './FillSection'
+import { BorderSection } from './BorderSection'
+import { EffectsSection } from './EffectsSection'
+import { PositionSection } from './PositionSection'
+import { TransformSection } from './TransformSection'
+import { TransitionSection } from './TransitionSection'
 import { AdvancedSection } from './AdvancedSection'
 
 export function Properties() {
@@ -54,10 +59,15 @@ export function Properties() {
       {selected.type === 'input' && <InputSection frame={selected} />}
       {selected.type === 'textarea' && <TextareaSection frame={selected} />}
       {selected.type === 'select' && <SelectSection frame={selected} />}
-      {selected.type !== 'box' && selected.type !== 'image' && <TypographySection frame={selected} />}
-      <StyleSection frame={selected} />
       <SizeSection frame={selected} />
       <SpacingSection frame={selected} />
+      {selected.type !== 'box' && selected.type !== 'image' && <TypographySection frame={selected} />}
+      <FillSection frame={selected} />
+      <BorderSection frame={selected} />
+      <EffectsSection frame={selected} />
+      <PositionSection frame={selected} />
+      <TransformSection frame={selected} />
+      <TransitionSection frame={selected} />
       <AdvancedSection frame={selected} />
     </div>
   )

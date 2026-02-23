@@ -1,4 +1,4 @@
-import type { Frame, Spacing, BorderRadius, Border, DesignValue } from '../types/frame'
+import type { Frame, Spacing, Inset, BorderRadius, Border, DesignValue } from '../types/frame'
 import { toGoogleFontClass } from './googleFonts'
 
 const weightMap: Record<number, string> = {
@@ -56,6 +56,66 @@ function spacingClasses(prefix: string, s: Spacing): string[] {
   if (!dvIsZero(s.bottom)) cls.push(dvClass(`${prefix}b`, s.bottom))
   if (!dvIsZero(s.left)) cls.push(dvClass(`${prefix}l`, s.left))
   return cls
+}
+
+function dvIsAuto(dv: DesignValue<number>): boolean {
+  return dv.mode === 'token' && dv.token === 'auto'
+}
+
+function insetClasses(inset: Inset): string[] {
+  const { top, right, bottom, left } = inset
+  const allZero = dvIsZero(top) && dvIsZero(right) && dvIsZero(bottom) && dvIsZero(left)
+  if (allZero) return []
+
+  // All 4 equal
+  if (dvEqual(top, right) && dvEqual(right, bottom) && dvEqual(bottom, left)) {
+    if (dvIsAuto(top)) return ['inset-auto']
+    return [dvClass('inset', top)]
+  }
+
+  // Symmetric (x & y)
+  if (dvEqual(top, bottom) && dvEqual(left, right)) {
+    const cls: string[] = []
+    if (!dvIsZero(top)) {
+      if (dvIsAuto(top)) cls.push('inset-y-auto')
+      else cls.push(dvClass('inset-y', top))
+    }
+    if (!dvIsZero(left)) {
+      if (dvIsAuto(left)) cls.push('inset-x-auto')
+      else cls.push(dvClass('inset-x', left))
+    }
+    return cls
+  }
+
+  // Per-side
+  const cls: string[] = []
+  const sides: [string, DesignValue<number>][] = [['top', top], ['right', right], ['bottom', bottom], ['left', left]]
+  for (const [side, dv] of sides) {
+    if (dvIsZero(dv)) continue
+    if (dvIsAuto(dv)) cls.push(`${side}-auto`)
+    else cls.push(dvClass(side, dv))
+  }
+  return cls
+}
+
+// Class helper for signed values (supports negative: -rotate-6, -translate-x-4)
+function dvClassSigned(prefix: string, dv: DesignValue<number>, unit = 'px'): string {
+  if (dv.value < 0) {
+    const abs: DesignValue<number> = dv.mode === 'token'
+      ? { mode: 'token', token: dv.token, value: -dv.value }
+      : { mode: 'custom', value: -dv.value }
+    return `-${dvClass(prefix, abs, unit)}`
+  }
+  return dvClass(prefix, dv, unit)
+}
+
+// Blur class helper — handles DEFAULT token → bare class name
+function blurClass(prefix: string, dv: DesignValue<number>): string {
+  if (dv.mode === 'token') {
+    if (dv.token === 'DEFAULT') return prefix // 'blur' or 'backdrop-blur'
+    return `${prefix}-${dv.token}`
+  }
+  return `${prefix}-[${dv.value}px]`
 }
 
 function borderRadiusClass(prefix: string, dv: DesignValue<number>): string {
@@ -124,6 +184,15 @@ const selfMap: Record<string, string> = {
 export function frameToClasses(frame: Frame): string {
   const cls: string[] = []
 
+  // Position
+  if (frame.position !== 'static') {
+    cls.push(frame.position)
+  }
+  if (frame.position !== 'static') {
+    if (!dvIsZero(frame.zIndex)) cls.push(dvClass('z', frame.zIndex, ''))
+    cls.push(...insetClasses(frame.inset))
+  }
+
   // Box layout
   if (frame.type === 'box') {
     if (frame.display === 'flex' || frame.display === 'inline-flex') {
@@ -138,6 +207,11 @@ export function frameToClasses(frame: Frame): string {
 
       if (!dvIsZero(frame.gap)) cls.push(dvClass('gap', frame.gap))
       if (frame.wrap) cls.push('flex-wrap')
+    } else if (frame.display === 'grid') {
+      cls.push('grid')
+      if (!dvIsZero(frame.gridCols)) cls.push(dvClass('grid-cols', frame.gridCols, ''))
+      if (!dvIsZero(frame.gridRows)) cls.push(dvClass('grid-rows', frame.gridRows, ''))
+      if (!dvIsZero(frame.gap)) cls.push(dvClass('gap', frame.gap))
     } else if (frame.display !== 'block') {
       cls.push(frame.display) // 'inline-block', 'inline'
     }
@@ -235,12 +309,38 @@ export function frameToClasses(frame: Frame): string {
     cls.push(selfMap[frame.alignSelf])
   }
 
+  // Grid child: colSpan / rowSpan
+  if (!dvIsZero(frame.colSpan)) {
+    if (frame.colSpan.mode === 'token' && frame.colSpan.token === 'full') cls.push('col-span-full')
+    else cls.push(dvClass('col-span', frame.colSpan, ''))
+  }
+  if (!dvIsZero(frame.rowSpan)) {
+    if (frame.rowSpan.mode === 'token' && frame.rowSpan.token === 'full') cls.push('row-span-full')
+    else cls.push(dvClass('row-span', frame.rowSpan, ''))
+  }
+
   // Spacing
   cls.push(...spacingClasses('p', frame.padding))
   cls.push(...spacingClasses('m', frame.margin))
 
   // Background
   if (frame.bg.value) cls.push(dvColorClass('bg', frame.bg))
+
+  // Background image
+  if (frame.bgImage) {
+    cls.push(`bg-[url('${frame.bgImage}')]`)
+    if (frame.bgSize !== 'auto') cls.push(`bg-${frame.bgSize}`)
+    if (frame.bgPosition !== 'center') {
+      // Tailwind v4 format: bg-left-top, not bg-top-left
+      const posMap: Record<string, string> = {
+        'top': 'bg-top', 'bottom': 'bg-bottom', 'left': 'bg-left', 'right': 'bg-right',
+        'top-left': 'bg-left-top', 'top-right': 'bg-right-top',
+        'bottom-left': 'bg-left-bottom', 'bottom-right': 'bg-right-bottom',
+      }
+      if (posMap[frame.bgPosition]) cls.push(posMap[frame.bgPosition])
+    }
+    if (frame.bgRepeat !== 'repeat') cls.push(`bg-${frame.bgRepeat}`)
+  }
 
   // Border
   cls.push(...borderClasses(frame.border))
@@ -263,6 +363,23 @@ export function frameToClasses(frame: Frame): string {
   // Box shadow
   if (frame.boxShadow !== 'none' && shadowMap[frame.boxShadow]) {
     cls.push(shadowMap[frame.boxShadow])
+  }
+
+  // Blur / Backdrop blur
+  if (!dvIsZero(frame.blur)) cls.push(blurClass('blur', frame.blur))
+  if (!dvIsZero(frame.backdropBlur)) cls.push(blurClass('backdrop-blur', frame.backdropBlur))
+
+  // Transforms
+  if (!dvIsZero(frame.rotate)) cls.push(dvClassSigned('rotate', frame.rotate, 'deg'))
+  if (frame.scaleVal.value !== 100) cls.push(dvClass('scale', frame.scaleVal, ''))
+  if (!dvIsZero(frame.translateX)) cls.push(dvClassSigned('translate-x', frame.translateX))
+  if (!dvIsZero(frame.translateY)) cls.push(dvClassSigned('translate-y', frame.translateY))
+
+  // Transitions
+  if (frame.transition !== 'none') {
+    cls.push(`transition-${frame.transition}`)
+    if (!dvIsZero(frame.duration)) cls.push(dvClass('duration', frame.duration, ''))
+    if (frame.ease !== 'linear') cls.push(`ease-${frame.ease}`)
   }
 
   // Cursor

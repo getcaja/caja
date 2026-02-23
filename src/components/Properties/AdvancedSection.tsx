@@ -201,7 +201,7 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
   }, [selectedIdx, showSuggestions])
 
   return (
-    <Section title="Classes">
+    <Section title="Classes" defaultCollapsed>
       <div className="flex flex-col gap-2">
         <div className="relative">
           <div

@@ -30,7 +30,7 @@ export const toolSchemas = {
 
   update_frame: {
     name: 'update_frame',
-    description: 'Update properties of an existing frame. Settable properties by category:\n\nBooleans: wrap, disabled, hidden.\nEnums: display ("flex"|"inline-flex"|"block"|"inline-block"|"inline"), direction ("row"|"column"), justify, align, overflow, boxShadow, cursor, fontStyle, textDecoration, textAlign, textTransform, whiteSpace, alignSelf, objectFit, inputType, border.style.\nScale (DesignValue<number>): gap, fontSize, fontWeight, lineHeight, letterSpacing, opacity, grow, shrink, minWidth, maxWidth, minHeight, maxHeight, padding.*, margin.*, border.width, borderRadius.*.\nColors (DesignValue<string>): bg, color, border.color.\nText: content, placeholder, src, alt, href, className, htmlId, tailwindClasses, tag, options, rows.\n[Experimental] fontFamily: Google Font name string (e.g. "Playfair Display", "Roboto Mono"). Loads the font automatically.\n\nNumeric and color fields accept either a raw value (number/string) or a DesignValue object: { mode: "custom", value: N } or { mode: "token", token: "4", value: 16 }. Raw values are auto-wrapped with token matching.',
+    description: 'Update properties of an existing frame. Settable properties by category:\n\nBooleans: wrap, disabled, hidden.\nEnums: display ("flex"|"inline-flex"|"block"|"inline-block"|"inline"|"grid"), direction ("row"|"column"), justify, align, overflow, boxShadow, cursor, fontStyle, textDecoration, textAlign, textTransform, whiteSpace, alignSelf, objectFit, inputType, border.style, position ("static"|"relative"|"absolute"|"fixed"|"sticky"), bgSize ("auto"|"cover"|"contain"), bgPosition ("center"|"top"|"bottom"|"left"|"right"|"top-left"|"top-right"|"bottom-left"|"bottom-right"), bgRepeat ("repeat"|"no-repeat"|"repeat-x"|"repeat-y"), transition ("none"|"all"|"colors"|"opacity"|"shadow"|"transform"), ease ("linear"|"in"|"out"|"in-out").\nScale (DesignValue<number>): gap, fontSize, fontWeight, lineHeight, letterSpacing, opacity, grow, shrink, minWidth, maxWidth, minHeight, maxHeight, padding.*, margin.*, inset.*, border.width, borderRadius.*, zIndex, gridCols, gridRows, colSpan, rowSpan, rotate, scaleVal, translateX, translateY, duration, blur, backdropBlur.\nColors (DesignValue<string>): bg, color, border.color.\nText: content, placeholder, src, alt, href, className, htmlId, tailwindClasses, tag, options, rows, bgImage.\n[Experimental] fontFamily: Google Font name string (e.g. "Playfair Display", "Roboto Mono"). Loads the font automatically.\n\nNumeric and color fields accept either a raw value (number/string) or a DesignValue object: { mode: "custom", value: N } or { mode: "token", token: "4", value: 16 }. Raw values are auto-wrapped with token matching.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -51,12 +51,12 @@ export const toolSchemas = {
 
   update_spacing: {
     name: 'update_spacing',
-    description: 'Update padding or margin of a frame. Values: { top, right, bottom, left }. Each side accepts a number (pixels) or a DesignValue object: { mode: "token", token: "4", value: 16 }.',
+    description: 'Update padding, margin, or inset of a frame. Values: { top, right, bottom, left }. Each side accepts a number (pixels) or a DesignValue object: { mode: "token", token: "4", value: 16 }. Inset controls top/right/bottom/left offsets for positioned elements.',
     inputSchema: {
       type: 'object' as const,
       properties: {
         id: { type: 'string', description: 'ID of the frame' },
-        field: { type: 'string', enum: ['padding', 'margin'], description: 'Which spacing to update' },
+        field: { type: 'string', enum: ['padding', 'margin', 'inset'], description: 'Which spacing to update' },
         values: {
           type: 'object',
           properties: {

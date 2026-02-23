@@ -91,38 +91,38 @@ function SpacingOverlay({ padding, margin, showValues, elementRef }: {
     <>
       {/* Padding strips — picture-frame: top/bottom full width, left/right fill between */}
       {pt > 0 && (
-        <div className="overlay-strip overlay-pad" style={{ top: 0, left: 0, right: 0, height: pt }}>
+        <span className="overlay-strip overlay-pad" style={{ top: 0, left: 0, right: 0, height: pt }}>
           {showValues && <PadLabel value={pt} axis="v" />}
-        </div>
+        </span>
       )}
       {pb > 0 && (
-        <div className="overlay-strip overlay-pad" style={{ bottom: 0, left: 0, right: 0, height: pb }}>
+        <span className="overlay-strip overlay-pad" style={{ bottom: 0, left: 0, right: 0, height: pb }}>
           {showValues && <PadLabel value={pb} axis="v" />}
-        </div>
+        </span>
       )}
       {pl > 0 && (
-        <div className="overlay-strip overlay-pad" style={{ top: pt, bottom: pb, left: 0, width: pl }}>
+        <span className="overlay-strip overlay-pad" style={{ top: pt, bottom: pb, left: 0, width: pl }}>
           {showValues && <PadLabel value={pl} axis="h" />}
-        </div>
+        </span>
       )}
       {pr > 0 && (
-        <div className="overlay-strip overlay-pad" style={{ top: pt, bottom: pb, right: 0, width: pr }}>
+        <span className="overlay-strip overlay-pad" style={{ top: pt, bottom: pb, right: 0, width: pr }}>
           {showValues && <PadLabel value={pr} axis="h" />}
-        </div>
+        </span>
       )}
 
       {/* Margin strips — top/bottom include corners, left/right fill middle */}
       {mt > 0 && (
-        <div className="overlay-strip overlay-margin" style={{ top: -mt, left: -ml, right: -mr, height: mt }} />
+        <span className="overlay-strip overlay-margin" style={{ top: -mt, left: -ml, right: -mr, height: mt }} />
       )}
       {mb > 0 && (
-        <div className="overlay-strip overlay-margin" style={{ bottom: -mb, left: -ml, right: -mr, height: mb }} />
+        <span className="overlay-strip overlay-margin" style={{ bottom: -mb, left: -ml, right: -mr, height: mb }} />
       )}
       {ml > 0 && (
-        <div className="overlay-strip overlay-margin" style={{ top: 0, bottom: 0, left: -ml, width: ml }} />
+        <span className="overlay-strip overlay-margin" style={{ top: 0, bottom: 0, left: -ml, width: ml }} />
       )}
       {mr > 0 && (
-        <div className="overlay-strip overlay-margin" style={{ top: 0, bottom: 0, right: -mr, width: mr }} />
+        <span className="overlay-strip overlay-margin" style={{ top: 0, bottom: 0, right: -mr, width: mr }} />
       )}
     </>
   )
@@ -203,7 +203,7 @@ function GapOverlay({ containerRef, gap, showValues }: {
   return (
     <>
       {strips.map((s, i) => (
-        <div
+        <span
           key={i}
           className="overlay-strip overlay-gap"
           style={{ left: s.left, top: s.top, width: s.width, height: s.height }}
@@ -211,7 +211,7 @@ function GapOverlay({ containerRef, gap, showValues }: {
           {showValues && s.width >= LABEL_MIN_SIZE && s.height >= LABEL_MIN_SIZE && (
             <span className="overlay-label is-gap">{gap}</span>
           )}
-        </div>
+        </span>
       ))}
     </>
   )
@@ -219,7 +219,7 @@ function GapOverlay({ containerRef, gap, showValues }: {
 
 function DropIndicator({ direction }: { direction: string }) {
   const isRow = direction === 'row' || direction === 'row-reverse'
-  return <div className={`frame-drop-indicator ${isRow ? 'is-row' : 'is-column'}`} />
+  return <span className={`frame-drop-indicator ${isRow ? 'is-row' : 'is-column'}`} />
 }
 
 function renderMultiline(text: string) {
@@ -230,10 +230,15 @@ function renderMultiline(text: string) {
   ))
 }
 
-/** Resolve the HTML tag for the canvas element to match export output */
+/** Resolve the HTML tag for the canvas element.
+ *  React 19 treats <body> as a singleton — can't nest it inside the iframe's
+ *  existing <body>. Use 'div' in the canvas; export still uses the real tag. */
 function resolveTag(frame: Frame): keyof React.JSX.IntrinsicElements {
   switch (frame.type) {
-    case 'box': return (frame.tag || 'div') as keyof React.JSX.IntrinsicElements
+    case 'box': {
+      const tag = frame.tag || 'div'
+      return (tag === 'body' ? 'div' : tag) as keyof React.JSX.IntrinsicElements
+    }
     case 'text': return (frame.tag || 'p') as keyof React.JSX.IntrinsicElements
     case 'button': return 'button'
     // void/form elements need a wrapper for editor chrome (overlays, handles)
@@ -374,13 +379,13 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
       } : {})}
     >
       {isSelected && (
-        <div className="frame-selection">
+        <span className="frame-selection">
           {showHandle && (
             <>
-              <div className="frame-drag-handle" onPointerDown={onHandlePointerDown}>
+              <span className="frame-drag-handle" onPointerDown={onHandlePointerDown}>
                 <GripVertical size={12} />
-              </div>
-              <div
+              </span>
+              <span
                 className="frame-snippet-btn"
                 onClick={(e) => {
                   e.stopPropagation()
@@ -394,12 +399,12 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
                 title="Save as snippet"
               >
                 <Code size={10} />
-              </div>
+              </span>
             </>
           )}
-        </div>
+        </span>
       )}
-      {isHovered && <div className="frame-hover" />}
+      {isHovered && <span className="frame-hover" />}
       {isSelected && showSpacingOverlays && (
         <SpacingOverlay padding={frame.padding} margin={frame.margin} showValues={showOverlayValues} elementRef={containerRef} />
       )}
@@ -437,9 +442,9 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
             draggable={false}
           />
         ) : (
-          <div className="frame-img-placeholder w-full h-full flex items-center justify-center text-text-muted/30">
+          <span className="frame-img-placeholder w-full h-full flex items-center justify-center text-text-muted/30">
             <ImageIcon size={16} />
-          </div>
+          </span>
         )
       )}
       {isButton && renderMultiline(frame.content)}

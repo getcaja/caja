@@ -1,0 +1,53 @@
+import type { Frame } from '../../types/frame'
+import { useFrameStore } from '../../store/frameStore'
+import { Section } from '../ui/Section'
+import { TokenInput } from '../ui/TokenInput'
+import { SPACING_SCALE, ROTATE_SCALE, SCALE_SCALE } from '../../data/scales'
+
+export function TransformSection({ frame }: { frame: Frame }) {
+  const updateFrame = useFrameStore((s) => s.updateFrame)
+
+  return (
+    <Section title="Transform" defaultCollapsed>
+      <div className="flex flex-col gap-2">
+        <div className="flex gap-2">
+          <TokenInput
+            scale={ROTATE_SCALE}
+            value={frame.rotate}
+            onChange={(v) => updateFrame(frame.id, { rotate: v })}
+            label="Rotate"
+            classPrefix="rotate"
+            defaultValue={0}
+          />
+          <TokenInput
+            scale={SCALE_SCALE}
+            value={frame.scaleVal}
+            onChange={(v) => updateFrame(frame.id, { scaleVal: v })}
+            min={0}
+            label="Scale"
+            classPrefix="scale"
+            defaultValue={100}
+          />
+        </div>
+        <div className="flex gap-2">
+          <TokenInput
+            scale={SPACING_SCALE}
+            value={frame.translateX}
+            onChange={(v) => updateFrame(frame.id, { translateX: v })}
+            label="Move X"
+            classPrefix="translate-x"
+            defaultValue={0}
+          />
+          <TokenInput
+            scale={SPACING_SCALE}
+            value={frame.translateY}
+            onChange={(v) => updateFrame(frame.id, { translateY: v })}
+            label="Move Y"
+            classPrefix="translate-y"
+            defaultValue={0}
+          />
+        </div>
+      </div>
+    </Section>
+  )
+}
