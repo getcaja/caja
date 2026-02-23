@@ -437,8 +437,8 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
             draggable={false}
           />
         ) : (
-          <div className="frame-img-placeholder w-full h-full flex items-center justify-center bg-surface-2/50 text-text-muted">
-            <ImageIcon size={24} />
+          <div className="frame-img-placeholder w-full h-full flex items-center justify-center text-text-muted/30">
+            <ImageIcon size={16} />
           </div>
         )
       )}

@@ -137,7 +137,7 @@ input[type=number] {
 
   /* --- Class pills (Advanced section) --- */
   .c-pill {
-    @apply inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] font-mono leading-none select-none;
+    @apply inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] leading-none select-none;
   }
 }
 

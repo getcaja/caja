@@ -44,7 +44,7 @@ export function NameHeader({ frame, isRoot }: { frame: Frame; isRoot: boolean })
               value={frame.className}
               onChange={(e) => updateFrame(frame.id, { className: e.target.value })}
               placeholder="class"
-              className="w-full c-input text-[11px] font-mono"
+              className="w-full c-input text-[11px]"
             />
           </div>
           <div className="w-[80px] shrink-0">
@@ -53,7 +53,7 @@ export function NameHeader({ frame, isRoot }: { frame: Frame; isRoot: boolean })
               value={frame.htmlId}
               onChange={(e) => updateFrame(frame.id, { htmlId: e.target.value })}
               placeholder="id"
-              className="w-full c-input text-[11px] font-mono"
+              className="w-full c-input text-[11px]"
             />
           </div>
         </div>

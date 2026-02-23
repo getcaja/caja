@@ -254,7 +254,7 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
                 if (suggestions.length > 0 && draft.length > 0) setShowSuggestions(true)
               }}
               placeholder={manualClasses.length === 0 && computedClasses.length === 0 ? 'Add classes...' : ''}
-              className="flex-1 min-w-[60px] bg-transparent text-[11px] font-mono text-text-primary placeholder:text-text-muted outline-none py-0.5"
+              className="flex-1 min-w-[60px] bg-transparent text-[11px] text-text-primary placeholder:text-text-muted outline-none py-0.5"
             />
           </div>
 
@@ -271,7 +271,7 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
                     selectSuggestion(cls)
                   }}
                   onMouseEnter={() => setSelectedIdx(i)}
-                  className={`w-full text-left px-3 py-1.5 text-[12px] font-mono cursor-pointer ${
+                  className={`w-full text-left px-3 py-1.5 text-[12px] cursor-pointer ${
                     i === selectedIdx
                       ? 'bg-surface-3/60 text-text-primary'
                       : 'text-text-secondary hover:bg-surface-3/60 hover:text-text-primary'

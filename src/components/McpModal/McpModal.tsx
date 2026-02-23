@@ -113,7 +113,7 @@ export function McpModal({ open, onOpenChange }: McpModalProps) {
               </span>
             </div>
           </div>
-          <span className="text-[11px] text-text-muted font-mono">localhost:3334</span>
+          <span className="text-[11px] text-text-muted">localhost:3334</span>
         </div>
 
         {/* Description */}
