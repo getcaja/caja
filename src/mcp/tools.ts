@@ -1,7 +1,8 @@
 // Tool executor — maps MCP tool calls to frameStore actions
 // This is the single entry point for both the built-in chat and the external MCP server.
 
-import { useFrameStore, findInTree } from '../store/frameStore'
+import { useFrameStore, findInTree, cloneWithNewIds } from '../store/frameStore'
+import { useSnippetStore } from '../store/snippetStore'
 import type { Frame, Spacing, SizeValue, DesignValue, Border, BorderRadius } from '../types/frame'
 import type { ToolName } from './schema'
 import { parseTailwindClasses } from '../utils/parseTailwindClasses'
@@ -218,10 +219,13 @@ function sanitizeFrameProperties(props: Record<string, unknown>, existingFrame?:
 }
 
 // --- Batch variable substitution ---
-// Replaces "$prev", "$0", "$1", etc. in string values with resolved IDs from earlier operations.
+// Replaces "$prev", "$0", "$1", etc. ONLY in known ID-reference fields to avoid
+// corrupting content text like "$0" (a price) into a frame ID.
+const ID_FIELDS = new Set(['parent_id', 'id', 'new_parent_id', 'snippet_id', 'frame_id'])
+
 function resolveRefs(params: Record<string, unknown>, resultIds: string[]): Record<string, unknown> {
-  const resolve = (val: unknown): unknown => {
-    if (typeof val === 'string') {
+  const resolve = (val: unknown, key?: string): unknown => {
+    if (typeof val === 'string' && key && ID_FIELDS.has(key)) {
       if (val === '$prev') {
         for (let i = resultIds.length - 1; i >= 0; i--) {
           if (resultIds[i]) return resultIds[i]
@@ -235,10 +239,10 @@ function resolveRefs(params: Record<string, unknown>, resultIds: string[]): Reco
       }
       return val
     }
-    if (Array.isArray(val)) return val.map(resolve)
+    if (Array.isArray(val)) return val.map((v) => resolve(v))
     if (val !== null && typeof val === 'object') {
       const out: Record<string, unknown> = {}
-      for (const [k, v] of Object.entries(val as Record<string, unknown>)) out[k] = resolve(v)
+      for (const [k, v] of Object.entries(val as Record<string, unknown>)) out[k] = resolve(v, k)
       return out
     }
     return val
@@ -253,7 +257,7 @@ function extractResultId(result: ToolResult): string {
   if (typeof d.id === 'string') return d.id               // add/update/move/rename
   if (typeof d.duplicate === 'string') return d.duplicate  // duplicate_frame
   if (typeof d.removed === 'string') return d.removed      // remove_frame
-  if (typeof d.wrapped === 'string') return d.wrapped      // wrap_frame
+  if (typeof d.wrapper === 'string') return d.wrapper      // wrap_frame (return wrapper, not wrapped)
   return ''
 }
 
@@ -273,11 +277,12 @@ type ToolHandler = (params: ToolParams) => ToolResult | Promise<ToolResult>
 
 const handlers: Record<string, ToolHandler> = {
   add_frame(params) {
-    const { parent_id, element_type, properties, classes } = params as {
+    const { parent_id, element_type, properties, classes, index } = params as {
       parent_id: string
       element_type: 'box' | 'text' | 'image' | 'button' | 'input' | 'textarea' | 'select' | 'link'
       properties?: Record<string, unknown>
       classes?: string
+      index?: number
     }
 
     const store = getStore()
@@ -298,16 +303,31 @@ const handlers: Record<string, ToolHandler> = {
       }
     }
 
-    // Sanitize properties before passing to addChild (no existing frame for border fallback)
+    // Sanitize properties before passing to store (no existing frame for border fallback)
     const sanitized = Object.keys(mergedProps).length > 0 ? sanitizeFrameProperties(mergedProps) : undefined
-    store.addChild(parent_id, element_type, sanitized as Partial<Frame>)
 
-    // The new child is the last child of the parent after addChild
-    const updatedParent = findInTree(getStore().root, parent_id)
-    if (updatedParent && updatedParent.type === 'box') {
-      const newChild = updatedParent.children[updatedParent.children.length - 1]
-      const finalChild = findInTree(getStore().root, newChild.id)
-      return { success: true, data: finalChild ? compactSnapshot(finalChild) : { id: newChild.id } }
+    if (index !== undefined) {
+      // Insert at specific position — use addChild then move to index
+      store.addChild(parent_id, element_type, sanitized as Partial<Frame>)
+      const updatedParent = findInTree(getStore().root, parent_id)
+      if (updatedParent && updatedParent.type === 'box') {
+        const newChild = updatedParent.children[updatedParent.children.length - 1]
+        // Move from end to requested index
+        if (index < updatedParent.children.length - 1) {
+          store.moveFrame(newChild.id, parent_id, index)
+        }
+        const finalChild = findInTree(getStore().root, newChild.id)
+        return { success: true, data: finalChild ? compactSnapshot(finalChild) : { id: newChild.id } }
+      }
+    } else {
+      store.addChild(parent_id, element_type, sanitized as Partial<Frame>)
+      // The new child is the last child of the parent after addChild
+      const updatedParent = findInTree(getStore().root, parent_id)
+      if (updatedParent && updatedParent.type === 'box') {
+        const newChild = updatedParent.children[updatedParent.children.length - 1]
+        const finalChild = findInTree(getStore().root, newChild.id)
+        return { success: true, data: finalChild ? compactSnapshot(finalChild) : { id: newChild.id } }
+      }
     }
 
     return { success: true }
@@ -417,7 +437,8 @@ const handlers: Record<string, ToolHandler> = {
     const { id } = params as { id: string }
     const store = getStore()
     store.wrapInFrame(id)
-    return { success: true, data: { wrapped: id } }
+    const wrapperId = getStore().selectedId
+    return { success: true, data: { wrapped: id, wrapper: wrapperId } }
   },
 
   duplicate_frame(params) {
@@ -425,8 +446,14 @@ const handlers: Record<string, ToolHandler> = {
     const store = getStore()
     store.duplicateFrame(id)
     // After duplicate, the selected ID is the new clone
-    const newId = getStore().selectedId
-    return { success: true, data: { original: id, duplicate: newId } }
+    const updated = getStore()
+    const newId = updated.selectedId
+    const idMap = updated._lastDuplicateMap || {}
+    return {
+      success: true,
+      data: { original: id, duplicate: newId, idMap },
+      hint: 'Use idMap to update cloned children directly: batch_update with update_frame for each idMap value. For repeated patterns, consider save_snippet + insert_snippet with overrides instead.',
+    }
   },
 
   rename_frame(params) {
@@ -503,10 +530,132 @@ const handlers: Record<string, ToolHandler> = {
     const allSuccess = results.every((r) => r.success)
     const ids = resultIds.filter(Boolean)
     if (allSuccess) {
-      return { success: true, data: { count: results.length, ids } }
+      const response: ToolResult = { success: true, data: { count: results.length, ids } }
+      // Nudge about snippets when building many similar structures
+      if (results.length >= 8) {
+        const addCount = operations.filter((op) => op.tool === 'add_frame').length
+        if (addCount >= 6) {
+          response.hint = 'Building a complex structure? Save it as a snippet with save_snippet, then reuse with insert_snippet + overrides to avoid rebuilding.'
+        }
+      }
+      return response
     }
     const failedIdx = results.findIndex((r) => !r.success)
     return { success: false, error: results[failedIdx]?.error, data: { failedAt: failedIdx, count: results.length } }
+  },
+
+  // --- Snippet tools ---
+
+  list_snippets(params) {
+    const { tag } = params as { tag?: string }
+    const snippetStore = useSnippetStore.getState()
+    let all = snippetStore.allSnippets()
+    if (tag) all = all.filter((s) => s.tags.includes(tag))
+    return {
+      success: true,
+      data: all.map(({ id, name, tags, meta, createdAt }) => ({ id, name, tags, meta, createdAt })),
+    }
+  },
+
+  insert_snippet(params) {
+    const { snippet_id, parent_id, index, overrides } = params as {
+      snippet_id: string
+      parent_id: string
+      index?: number
+      overrides?: Record<string, { properties?: Record<string, unknown>; classes?: string }>
+    }
+    const snippetStore = useSnippetStore.getState()
+    const snippet = snippetStore.getSnippet(snippet_id)
+    if (!snippet) return { success: false, error: `Snippet ${snippet_id} not found` }
+
+    const store = getStore()
+    const parent = findInTree(store.root, parent_id)
+    if (!parent || parent.type !== 'box') {
+      return { success: false, error: `Parent ${parent_id} not found or is not a box` }
+    }
+
+    if (index !== undefined) {
+      store.insertFrameAt(parent_id, snippet.frame, index)
+    } else {
+      // Default: append at end (most natural for MCP sequential building)
+      store.insertFrameAt(parent_id, snippet.frame, parent.children.length)
+    }
+    const newId = getStore().selectedId
+
+    // Apply overrides by matching frame names in the cloned tree
+    if (overrides && newId) {
+      const insertedRoot = findInTree(getStore().root, newId)
+      if (insertedRoot) {
+        const nameToId = new Map<string, string>()
+        const collectNames = (frame: Frame) => {
+          nameToId.set(frame.name, frame.id)
+          if (frame.type === 'box') frame.children.forEach(collectNames)
+        }
+        collectNames(insertedRoot)
+
+        for (const [name, patch] of Object.entries(overrides)) {
+          const frameId = nameToId.get(name)
+          if (!frameId) continue
+          const target = findInTree(getStore().root, frameId)
+          if (!target) continue
+
+          let mergedProps = patch.properties || {}
+          if (patch.classes) {
+            const parsed = parseTailwindClasses(patch.classes)
+            mergedProps = { ...parsed.properties, ...mergedProps }
+            if (parsed.tailwindClasses) {
+              const existing = (mergedProps.tailwindClasses as string) || ''
+              mergedProps.tailwindClasses = existing ? `${existing} ${parsed.tailwindClasses}` : parsed.tailwindClasses
+            }
+          }
+          if (Object.keys(mergedProps).length > 0) {
+            const sanitized = sanitizeFrameProperties(mergedProps, target)
+            getStore().updateFrame(frameId, sanitized as Partial<Frame>)
+          }
+        }
+      }
+    }
+
+    const result: ToolResult = { success: true, data: { id: newId, snippet: snippet.name } }
+    if (!overrides) {
+      result.hint = 'Tip: use overrides param to customize content by name without extra update_frame calls. Example: overrides: { "title": { properties: { content: "New title" } } }'
+    }
+    return result
+  },
+
+  save_snippet(params) {
+    const { frame_id, name, tags } = params as { frame_id: string; name: string; tags?: string[] }
+    const store = getStore()
+    const frame = findInTree(store.root, frame_id)
+    if (!frame) return { success: false, error: `Frame ${frame_id} not found` }
+
+    const snippetStore = useSnippetStore.getState()
+    const cloned = cloneWithNewIds(frame)
+    const snippet = snippetStore.saveSnippet(name, tags || [], cloned)
+
+    // Collect named slots for the hint
+    const slots: string[] = []
+    const walkSlots = (f: Frame) => {
+      slots.push(f.name)
+      if (f.type === 'box') f.children.forEach(walkSlots)
+    }
+    walkSlots(frame)
+
+    return {
+      success: true,
+      data: { id: snippet.id, name: snippet.name, slots },
+      hint: `Reuse with: insert_snippet({ snippet_id: "${snippet.id}", parent_id: "...", overrides: { "${slots[1] || slots[0]}": { properties: { content: "..." } } } }). Override any slot by name.`,
+    }
+  },
+
+  delete_snippet(params) {
+    const { snippet_id } = params as { snippet_id: string }
+    const snippetStore = useSnippetStore.getState()
+    const snippet = snippetStore.getSnippet(snippet_id)
+    if (!snippet) return { success: false, error: `Snippet ${snippet_id} not found` }
+
+    snippetStore.deleteSnippet(snippet_id)
+    return { success: true, data: { deleted: snippet_id } }
   },
 }
 

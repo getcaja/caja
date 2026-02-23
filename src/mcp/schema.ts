@@ -9,7 +9,7 @@ export const toolSchemas = {
       type: 'object' as const,
       properties: {
         parent_id: { type: 'string', description: 'ID of the parent box to add into' },
-        element_type: { type: 'string', enum: ['box', 'text', 'image', 'button', 'input', 'textarea', 'select', 'link'], description: 'Type of element to add' },
+        element_type: { type: 'string', enum: ['box', 'text', 'image', 'button', 'input', 'textarea', 'select', 'link'], description: 'Type of element to add. For images, set src in properties. Use placeholder services like https://placehold.co/600x400/e2e8f0/64748b?text=Hero+Image for mockups.' },
         properties: {
           type: 'object',
           description: 'Optional initial properties to set on the new element. Can include "id" to assign a custom ID (useful in batch_update to reference the frame in subsequent operations).',
@@ -18,6 +18,10 @@ export const toolSchemas = {
         classes: {
           type: 'string',
           description: 'Tailwind classes to apply. Example: "flex gap-4 p-8 bg-blue-500 rounded-lg". Parsed into frame properties. Explicit properties override parsed classes.',
+        },
+        index: {
+          type: 'number',
+          description: 'Position index within the parent. If omitted, appends at the end.',
         },
       },
       required: ['parent_id', 'element_type'],
@@ -213,6 +217,71 @@ export const toolSchemas = {
         },
       },
       required: ['operations'],
+    },
+  },
+  list_snippets: {
+    name: 'list_snippets',
+    description: 'List available snippets (reusable frame trees). Returns lightweight metadata without frame data. Filter by tag optionally.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        tag: { type: 'string', description: 'Optional tag to filter by (e.g. "layout", "form", "content")' },
+      },
+    },
+  },
+
+  insert_snippet: {
+    name: 'insert_snippet',
+    description: 'Insert a snippet into the tree. Clones the snippet frame with new IDs and adds it as a child of parent_id. Use overrides to customize cloned children by name (e.g. set content, classes) without extra update calls.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        snippet_id: { type: 'string', description: 'ID of the snippet to insert' },
+        parent_id: { type: 'string', description: 'ID of the parent box to insert into' },
+        index: { type: 'number', description: 'Position index within the parent. If omitted, appends at the end.' },
+        overrides: {
+          type: 'object',
+          description: 'Map of frame name → patch. Each patch can have "properties" (object) and/or "classes" (Tailwind string). Matches children by name in the cloned tree. Example: { "price": { "properties": { "content": "$49" } }, "cta": { "classes": "bg-violet-600" } }',
+          additionalProperties: {
+            type: 'object',
+            properties: {
+              properties: { type: 'object', additionalProperties: true },
+              classes: { type: 'string' },
+            },
+          },
+        },
+      },
+      required: ['snippet_id', 'parent_id'],
+    },
+  },
+
+  save_snippet: {
+    name: 'save_snippet',
+    description: 'Save an existing frame from the tree as a reusable snippet.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        frame_id: { type: 'string', description: 'ID of the frame to save as snippet' },
+        name: { type: 'string', description: 'Name for the snippet' },
+        tags: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Optional tags (e.g. ["layout", "form"])',
+        },
+      },
+      required: ['frame_id', 'name'],
+    },
+  },
+
+  delete_snippet: {
+    name: 'delete_snippet',
+    description: 'Delete a user-created snippet. Cannot delete built-in snippets.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        snippet_id: { type: 'string', description: 'ID of the snippet to delete' },
+      },
+      required: ['snippet_id'],
     },
   },
 } as const

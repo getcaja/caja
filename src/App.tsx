@@ -6,6 +6,7 @@ import { RightPanel } from './components/RightPanel/RightPanel'
 import { ExportModal } from './components/Export/ExportModal'
 import { TooltipProvider } from './components/ui/Tooltip'
 import { saveFile, saveFileAs, openFile } from './lib/fileOps'
+import { useSnippetStore, loadSnippetsFromStorage } from './store/snippetStore'
 
 import { startMcpBridge, stopMcpBridge } from './mcp/bridge'
 import { TitleBar } from './components/TitleBar/TitleBar'
@@ -79,7 +80,8 @@ function App() {
     if (!isTauri) return
     const root = useFrameStore.getState().root
     const currentPath = useFrameStore.getState().filePath
-    const path = await saveFile(root, currentPath)
+    const snippets = useSnippetStore.getState().getSnippetData()
+    const path = await saveFile(root, snippets, currentPath)
     if (path) {
       useFrameStore.getState().setFilePath(path)
       useFrameStore.getState().markClean()
@@ -89,7 +91,8 @@ function App() {
   const handleSaveAs = useCallback(async () => {
     if (!isTauri) return
     const root = useFrameStore.getState().root
-    const path = await saveFileAs(root)
+    const snippets = useSnippetStore.getState().getSnippetData()
+    const path = await saveFileAs(root, snippets)
     if (path) {
       useFrameStore.getState().setFilePath(path)
       useFrameStore.getState().markClean()
@@ -103,11 +106,13 @@ function App() {
       const { migrateToInternalRoot } = await import('./store/frameStore')
       const root = migrateToInternalRoot(result.data.root as Record<string, unknown>)
       useFrameStore.getState().loadFromFile(root, result.path)
+      useSnippetStore.getState().loadSnippets(result.data.snippets as import('./store/snippetStore').SnippetData | undefined)
     }
   }, [])
 
   useEffect(() => {
     loadFromStorage()
+    loadSnippetsFromStorage()
     startMcpBridge()
 
     // Sync initial view prefs to native menu check states
@@ -135,6 +140,7 @@ function App() {
         switch (e.payload) {
           case 'new':
             localStorage.removeItem('caja-state')
+            localStorage.removeItem('caja-snippets-state')
             location.reload()
             break
           case 'open':

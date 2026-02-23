@@ -65,12 +65,13 @@ server.tool(
   'Add a new frame (box) or text element as a child of the given parent.',
   {
     parent_id: z.string().describe('ID of the parent box to add into'),
-    element_type: z.enum(['box', 'text', 'image', 'button', 'input', 'textarea', 'select']).describe('Type of element to add'),
+    element_type: z.enum(['box', 'text', 'image', 'button', 'input', 'textarea', 'select', 'link']).describe('Type of element to add. For images, set src in properties. Use placeholder services like https://placehold.co/600x400 for mockups.'),
     properties: z.record(z.string(), z.unknown()).optional().describe('Optional initial properties. Can include "id" to assign a custom ID (useful in batch_update).'),
     classes: z.string().optional().describe('Tailwind classes to apply. Example: "flex gap-4 p-8 bg-blue-500 rounded-lg". Parsed into frame properties. Explicit properties override parsed classes.'),
+    index: z.number().optional().describe('Position index within the parent. If omitted, appends at the end.'),
   },
-  async ({ parent_id, element_type, properties, classes }) => {
-    const result = await callTool('add_frame', { parent_id, element_type, properties, classes })
+  async ({ parent_id, element_type, properties, classes, index }) => {
+    const result = await callTool('add_frame', { parent_id, element_type, properties, classes, index })
     return { content: [{ type: 'text', text: JSON.stringify(result) }] }
   }
 )
@@ -252,6 +253,64 @@ server.tool(
   },
   async ({ operations }) => {
     const result = await callTool('batch_update', { operations })
+    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
+  }
+)
+
+// ── Snippet tools ──
+
+server.tool(
+  'list_snippets',
+  'List available snippets (reusable frame patterns). Returns lightweight metadata. Filter by tag optionally.',
+  {
+    tag: z.string().optional().describe('Optional tag to filter by (e.g. "layout", "form", "card")'),
+  },
+  async ({ tag }) => {
+    const result = await callTool('list_snippets', { tag })
+    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
+  }
+)
+
+server.tool(
+  'insert_snippet',
+  'Insert a snippet into the tree. Clones with new IDs and adds as child of parent_id. Use overrides to customize cloned children by name without extra update calls.',
+  {
+    snippet_id: z.string().describe('ID of the snippet to insert'),
+    parent_id: z.string().describe('ID of the parent box to insert into'),
+    index: z.number().optional().describe('Position index within the parent. If omitted, appends at the end.'),
+    overrides: z.record(z.string(), z.object({
+      properties: z.record(z.string(), z.unknown()).optional(),
+      classes: z.string().optional(),
+    })).optional().describe('Map of frame name → patch. Matches children by name in the cloned tree. Example: { "price": { "properties": { "content": "$49" } }, "cta": { "classes": "bg-violet-600" } }'),
+  },
+  async ({ snippet_id, parent_id, index, overrides }) => {
+    const result = await callTool('insert_snippet', { snippet_id, parent_id, index, overrides })
+    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
+  }
+)
+
+server.tool(
+  'save_snippet',
+  'Save an existing frame from the tree as a reusable snippet/pattern. Name children meaningfully before saving — names become override slots.',
+  {
+    frame_id: z.string().describe('ID of the frame to save as snippet'),
+    name: z.string().describe('Name for the snippet'),
+    tags: z.array(z.string()).optional().describe('Optional tags (e.g. ["layout", "card"])'),
+  },
+  async ({ frame_id, name, tags }) => {
+    const result = await callTool('save_snippet', { frame_id, name, tags })
+    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
+  }
+)
+
+server.tool(
+  'delete_snippet',
+  'Delete a user-created snippet.',
+  {
+    snippet_id: z.string().describe('ID of the snippet to delete'),
+  },
+  async ({ snippet_id }) => {
+    const result = await callTool('delete_snippet', { snippet_id })
     return { content: [{ type: 'text', text: JSON.stringify(result) }] }
   }
 )

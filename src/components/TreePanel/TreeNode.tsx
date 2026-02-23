@@ -1,9 +1,10 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import type { Frame } from '../../types/frame'
 import { useFrameStore, findInTree } from '../../store/frameStore'
+import { useSnippetStore } from '../../store/snippetStore'
 import { AddMenu } from './AddMenu'
 import { useTreeDnd, type DropPosition } from './TreeDndContext'
-import { ChevronRight, ChevronDown, Square, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse, Plus, X, Copy, Trash2, Group, SquarePlus, Eye, EyeOff, Link } from 'lucide-react'
+import { ChevronRight, ChevronDown, Square, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse, Plus, X, Copy, Trash2, Group, SquarePlus, Eye, EyeOff, Link, Bookmark } from 'lucide-react'
 
 interface TreeNodeProps {
   frame: Frame
@@ -342,6 +343,20 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
                 onClick={() => { wrapInFrame(frame.id); setContextMenu(null) }}
               >
                 <Group size={12} /> Wrap in Frame
+              </button>
+              <button
+                className="c-menu-item"
+                onClick={() => {
+                  const store = useFrameStore.getState()
+                  const f = findInTree(store.root, frame.id)
+                  if (f) {
+                    useSnippetStore.getState().saveSnippet(f.name || 'Snippet', [], f)
+                    store.setTreePanelTab('snippets')
+                  }
+                  setContextMenu(null)
+                }}
+              >
+                <Bookmark size={12} /> Save as Snippet
               </button>
             </>
           )}

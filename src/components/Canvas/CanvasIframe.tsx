@@ -10,11 +10,12 @@
  * - FrameRenderer.css injected into iframe head
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { useFrameStore } from '../../store/frameStore'
 import { FrameRenderer } from './FrameRenderer'
 import { GoogleFontsLoader } from './GoogleFontsLoader'
+import { resolveCanvasDrop } from '../../utils/canvasDrop'
 // Raw CSS string — injected into iframe <style>, not the parent document
 import frameRendererCSS from './FrameRenderer.css?raw'
 
@@ -100,6 +101,7 @@ export function CanvasIframe() {
   const canvasWidth = useFrameStore((s) => s.canvasWidth)
   const canvasZoom = useFrameStore((s) => s.canvasZoom)
   const previewMode = useFrameStore((s) => s.previewMode)
+  const isSnippetDrag = useFrameStore((s) => s.snippetDragFrame !== null)
 
   useEffect(() => {
     const iframe = iframeRef.current
@@ -168,6 +170,52 @@ export function CanvasIframe() {
     return () => ro.disconnect()
   }, [])
 
+  // --- Snippet → canvas drag handlers (HTML5 DnD, cross-iframe) ---
+  // The iframe swallows drag events, so we render a transparent overlay on top
+  // of the iframe during snippet drags. The overlay captures dragover/drop,
+  // then we use iframeDoc.elementFromPoint() to resolve the drop target.
+
+  const onOverlayDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+
+    const iframe = iframeRef.current
+    if (!iframe) return
+    const iframeDoc = iframe.contentDocument
+    if (!iframeDoc) return
+
+    const store = useFrameStore.getState()
+    // Set canvasDragId lazily on first dragover — suppresses hover highlights in canvas
+    if (!store.canvasDragId) store.setCanvasDrag('__snippet__')
+
+    const rect = iframe.getBoundingClientRect()
+    const borderLeft = iframe.clientLeft
+    const borderTop = iframe.clientTop
+    const iframeX = (e.clientX - rect.left - borderLeft) / store.canvasZoom
+    const iframeY = (e.clientY - rect.top - borderTop) / store.canvasZoom
+
+    const result = resolveCanvasDrop(iframeDoc, iframeX, iframeY, '__snippet__', store.root)
+    store.setCanvasDragOver(result)
+  }, [])
+
+  const onOverlayDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    const { snippetDragFrame, canvasDragOver, insertFrameAt, setCanvasDrag, setCanvasDragOver, setSnippetDragFrame } = useFrameStore.getState()
+    if (!snippetDragFrame || !canvasDragOver) return
+    insertFrameAt(canvasDragOver.parentId, snippetDragFrame, canvasDragOver.index)
+    setCanvasDrag(null)
+    setCanvasDragOver(null)
+    setSnippetDragFrame(null)
+  }, [])
+
+  const onOverlayDragLeave = useCallback((e: React.DragEvent) => {
+    // Only clear if leaving the overlay entirely
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return
+    const store = useFrameStore.getState()
+    store.setCanvasDragOver(null)
+    store.setCanvasDrag(null)
+  }, [])
+
   // Compute wrapper + iframe styles based on mode
   let wrapperStyle: React.CSSProperties
   let iframeStyle: React.CSSProperties
@@ -214,8 +262,16 @@ export function CanvasIframe() {
   }
 
   return (
-    <div ref={wrapperRef} style={wrapperStyle}>
+    <div ref={wrapperRef} style={{ ...wrapperStyle, position: 'relative' }}>
       <iframe ref={iframeRef} title="Caja Canvas" style={iframeStyle} />
+      {isSnippetDrag && (
+        <div
+          style={{ position: 'absolute', inset: 0, zIndex: 10 }}
+          onDragOver={onOverlayDragOver}
+          onDrop={onOverlayDrop}
+          onDragLeave={onOverlayDragLeave}
+        />
+      )}
     </div>
   )
 }

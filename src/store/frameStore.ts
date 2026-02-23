@@ -53,17 +53,17 @@ const defaultBorder: Border = { width: dvNum(0), color: dvStr(''), style: 'none'
 
 function defaultTextStyles(): TextStyles {
   return {
-    fontSize: { mode: 'token', token: 'sm', value: 14 },
-    fontWeight: { mode: 'token', token: 'normal', value: 400 },
-    lineHeight: { mode: 'token', token: 'normal', value: 1.5 },
-    color: dvStr('#000000'),
+    fontSize: dvNum(0),       // 0 = inherit from parent/body
+    fontWeight: dvNum(400),   // 400 = normal, no class emitted
+    lineHeight: dvNum(0),     // 0 = inherit
+    color: dvStr(''),         // empty = inherit
     textAlign: 'left',
     fontStyle: 'normal',
     textDecoration: 'none',
     letterSpacing: dvNum(0),
     textTransform: 'none',
     whiteSpace: 'normal',
-    fontFamily: '', // [Experimental] Google Fonts — empty = inherit/system
+    fontFamily: '',
   }
 }
 
@@ -96,7 +96,7 @@ function createInternalRoot(children: Frame[] = []): BoxElement {
     className: '',
     htmlId: '',
     tag: 'body',
-    display: 'flex',
+    display: 'block',
     direction: 'column',
     justify: 'start',
     align: 'stretch',
@@ -106,11 +106,11 @@ function createInternalRoot(children: Frame[] = []): BoxElement {
     margin: zeroSpacing(),
     width: { mode: 'fill', value: dvNum(0) },
     height: { mode: 'fill', value: dvNum(0) },
-    grow: dvNum(1),
+    grow: dvNum(0),
     shrink: dvNum(1),
     overflow: 'visible',
     opacity: dvNum(100),
-    bg: dvStr('#ffffff'),
+    bg: dvStr(''),
     border: { ...defaultBorder, width: dvNum(0), color: dvStr('') },
     borderRadius: zeroBorderRadius(),
     tailwindClasses: '',
@@ -135,7 +135,7 @@ export function createBox(overrides?: Partial<BoxElement>): BoxElement {
     className: '',
     htmlId: '',
     tag: overrides?.tag || 'div',
-    display: 'flex',
+    display: 'block',
     direction: 'column',
     justify: 'start',
     align: 'stretch',
@@ -442,6 +442,19 @@ function updateInTree(root: Frame, id: string, updater: (f: Frame) => Frame): Fr
   )
 }
 
+// Insert a child frame at a specific index
+function insertChildInTree(root: Frame, parentId: string, child: Frame, index: number): Frame {
+  if (root.id === parentId && root.type === 'box') {
+    const children = [...root.children]
+    children.splice(index, 0, child)
+    return { ...root, children }
+  }
+  return withChildren(
+    root,
+    getChildren(root).map((c) => insertChildInTree(c, parentId, child, index))
+  )
+}
+
 // Add a child frame to a parent by id
 function addChildInTree(root: Frame, parentId: string, child: Frame): Frame {
   if (root.id === parentId && root.type === 'box') {
@@ -508,9 +521,11 @@ export function findInTree(root: Frame, id: string): Frame | null {
   return null
 }
 
-// Deep clone with new IDs (for duplication)
-function cloneWithNewIds(frame: Frame): Frame {
+// Deep clone with new IDs (for duplication) — exported for snippet insertion
+// Optional idMap accumulator: records oldId → newId for every cloned frame.
+export function cloneWithNewIds(frame: Frame, idMap?: Record<string, string>): Frame {
   const newId = generateId()
+  if (idMap) idMap[frame.id] = newId
   const cloned = cloneTree(frame)
   const base = {
     ...cloned,
@@ -518,7 +533,7 @@ function cloneWithNewIds(frame: Frame): Frame {
     name: frame.name,
   }
   if (frame.type === 'box') {
-    return { ...base, type: 'box', children: frame.children.map(cloneWithNewIds) } as BoxElement
+    return { ...base, type: 'box', children: frame.children.map((c) => cloneWithNewIds(c, idMap)) } as BoxElement
   }
   return base as Frame
 }
@@ -535,11 +550,12 @@ function findParent(root: Frame, id: string): BoxElement | null {
 }
 
 // Duplicate a frame next to itself
-function duplicateInTree(root: Frame, id: string): { tree: Frame; newId: string } | null {
+function duplicateInTree(root: Frame, id: string): { tree: Frame; newId: string; idMap: Record<string, string> } | null {
   const target = findInTree(root, id)
   if (!target) return null
   if (target.id === INTERNAL_ROOT_ID) return null // can't duplicate internal root
-  const clone = cloneWithNewIds(target)
+  const idMap: Record<string, string> = {}
+  const clone = cloneWithNewIds(target, idMap)
   const parent = findParent(root, id)
   if (!parent) return null
 
@@ -554,7 +570,7 @@ function duplicateInTree(root: Frame, id: string): { tree: Frame; newId: string 
     return withChildren(node, getChildren(node).map(insert))
   }
 
-  return { tree: insert(root), newId: clone.id }
+  return { tree: insert(root), newId: clone.id, idMap }
 }
 
 // Wrap a frame in a new parent frame
@@ -803,6 +819,9 @@ interface FrameStore {
   mcpConnected: boolean
   canvasDragId: string | null
   canvasDragOver: { parentId: string; index: number } | null
+  snippetDragFrame: Frame | null
+  treePanelTab: 'elements' | 'snippets'
+  _lastDuplicateMap: Record<string, string> | null
 
   past: BoxElement[]
   future: BoxElement[]
@@ -814,6 +833,8 @@ interface FrameStore {
   toggleCollapse: (id: string) => void
   toggleHidden: (id: string) => void
 
+  insertFrame: (parentId: string, frame: Frame) => void
+  insertFrameAt: (parentId: string, frame: Frame, index: number) => void
   addChild: (parentId: string, type: 'box' | 'text' | 'image' | 'button' | 'input' | 'textarea' | 'select' | 'link', overrides?: Partial<Frame>) => void
   removeFrame: (id: string) => void
   duplicateFrame: (id: string) => void
@@ -847,6 +868,8 @@ interface FrameStore {
   setCanvasZoom: (zoom: number) => void
   setCanvasDrag: (id: string | null) => void
   setCanvasDragOver: (over: { parentId: string; index: number } | null) => void
+  setSnippetDragFrame: (frame: Frame | null) => void
+  setTreePanelTab: (tab: 'elements' | 'snippets') => void
   expandToFrame: (id: string) => void
 }
 
@@ -906,6 +929,9 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   mcpConnected: false,
   canvasDragId: null,
   canvasDragOver: null,
+  snippetDragFrame: null,
+  treePanelTab: 'elements',
+  _lastDuplicateMap: null,
   past: [],
   future: [],
 
@@ -957,6 +983,35 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
       }
     }),
 
+  insertFrame: (parentId, frame) =>
+    set((state) => {
+      const parent = findInTree(state.root, parentId)
+      if (!parent || parent.type !== 'box') return {}
+      const cloned = cloneWithNewIds(frame)
+      const history = pushHistory(state)
+      // Insert at beginning so new snippets appear first
+      return {
+        root: insertChildInTree(state.root, parentId, cloned, 0) as BoxElement,
+        selectedId: cloned.id,
+        selectedIds: new Set([cloned.id]),
+        ...history,
+      }
+    }),
+
+  insertFrameAt: (parentId, frame, index) =>
+    set((state) => {
+      const parent = findInTree(state.root, parentId)
+      if (!parent || parent.type !== 'box') return {}
+      const cloned = cloneWithNewIds(frame)
+      const history = pushHistory(state)
+      return {
+        root: insertChildInTree(state.root, parentId, cloned, index) as BoxElement,
+        selectedId: cloned.id,
+        selectedIds: new Set([cloned.id]),
+        ...history,
+      }
+    }),
+
   addChild: (parentId, type, overrides) =>
     set((state) => {
       const prefixMap = { text: 'text', image: 'image', button: 'button', input: 'input', textarea: 'textarea', select: 'select', link: 'link', box: 'frame' } as const
@@ -999,7 +1054,7 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
       const result = duplicateInTree(state.root, id)
       if (!result) return {}
       const history = pushHistory(state)
-      return { root: result.tree as BoxElement, selectedId: result.newId, ...history }
+      return { root: result.tree as BoxElement, selectedId: result.newId, _lastDuplicateMap: result.idMap, ...history }
     }),
 
   wrapInFrame: (id) =>
@@ -1182,6 +1237,8 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   setCanvasZoom: (zoom) => set({ canvasZoom: zoom }),
   setCanvasDrag: (id) => set({ canvasDragId: id }),
   setCanvasDragOver: (over) => set({ canvasDragOver: over }),
+  setSnippetDragFrame: (frame) => set({ snippetDragFrame: frame }),
+  setTreePanelTab: (tab) => set({ treePanelTab: tab }),
 
   expandToFrame: (id) => set((state) => {
     const ancestors: string[] = []

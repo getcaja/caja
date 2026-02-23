@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect, useLayoutEffect, useCallback, Fragment } from 'react'
-import { ImageIcon, GripVertical } from 'lucide-react'
+import { ImageIcon, GripVertical, Code } from 'lucide-react'
 import type { Frame, Spacing, DesignValue, BoxElement } from '../../types/frame'
 import { frameToClasses } from '../../utils/frameToClasses'
 import { useFrameStore, findInTree } from '../../store/frameStore'
+import { useSnippetStore } from '../../store/snippetStore'
+import { resolveCanvasDrop } from '../../utils/canvasDrop'
 import './FrameRenderer.css'
 
 interface FrameRendererProps {
@@ -30,7 +32,7 @@ function PadLabel({ value, axis }: { value: number; axis: 'h' | 'v' }) {
 
 function SpacingOverlay({ padding, margin, showValues, elementRef }: {
   padding: Spacing; margin: Spacing; showValues: boolean
-  elementRef: React.RefObject<HTMLDivElement | null>
+  elementRef: React.RefObject<HTMLElement | null>
 }) {
   const showPad = hasSpacing(padding)
   const showMar = hasMargin(margin)
@@ -134,7 +136,7 @@ interface GapStrip {
 }
 
 function GapOverlay({ containerRef, gap, showValues }: {
-  containerRef: React.RefObject<HTMLDivElement | null>
+  containerRef: React.RefObject<HTMLElement | null>
   gap: number
   showValues: boolean
 }) {
@@ -215,12 +217,6 @@ function GapOverlay({ containerRef, gap, showValues }: {
   )
 }
 
-function isDescendant(root: Frame, ancestorId: string, descendantId: string): boolean {
-  const ancestor = findInTree(root, ancestorId)
-  if (!ancestor) return false
-  return ancestor.type === 'box' && findInTree(ancestor, descendantId) !== null && ancestorId !== descendantId
-}
-
 function DropIndicator({ direction }: { direction: string }) {
   const isRow = direction === 'row' || direction === 'row-reverse'
   return <div className={`frame-drop-indicator ${isRow ? 'is-row' : 'is-column'}`} />
@@ -232,6 +228,17 @@ function renderMultiline(text: string) {
   return lines.map((line, i) => (
     <Fragment key={i}>{line}{i < lines.length - 1 && <br />}</Fragment>
   ))
+}
+
+/** Resolve the HTML tag for the canvas element to match export output */
+function resolveTag(frame: Frame): keyof React.JSX.IntrinsicElements {
+  switch (frame.type) {
+    case 'box': return (frame.tag || 'div') as keyof React.JSX.IntrinsicElements
+    case 'text': return (frame.tag || 'p') as keyof React.JSX.IntrinsicElements
+    case 'button': return 'button'
+    // void/form elements need a wrapper for editor chrome (overlays, handles)
+    default: return 'div'
+  }
 }
 
 export function FrameRenderer({ frame }: FrameRendererProps) {
@@ -251,8 +258,9 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
   const canvasDragOver = useFrameStore((s) => s.canvasDragOver)
 
   const [editingText, setEditingText] = useState(false)
-  const textRef = useRef<HTMLDivElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
+  const textRef = useRef<HTMLSpanElement>(null)
+  const containerRef = useRef<HTMLElement>(null)
+  const Tag = resolveTag(frame)
 
   const isSelected = !previewMode && selectedId === frame.id
   const isHovered = !previewMode && hoveredId === frame.id && selectedId !== frame.id
@@ -275,109 +283,12 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
     e.preventDefault()
     e.stopPropagation()
     const doc = e.currentTarget.ownerDocument
-    const store = useFrameStore.getState()
-    store.setCanvasDrag(frame.id)
-
-    const EDGE_ZONE = 12
-
-    // Compute insertion index among sibling DOM elements based on cursor position
-    function indexAmongSiblings(parentEl: HTMLElement, parentDir: string, cx: number, cy: number): number {
-      const siblings = Array.from(parentEl.children).filter(
-        c => (c as HTMLElement).hasAttribute('data-frame-id')
-      ) as HTMLElement[]
-      const isRow = parentDir === 'row' || parentDir === 'row-reverse'
-      let idx = siblings.length
-      for (let i = 0; i < siblings.length; i++) {
-        const rect = siblings[i].getBoundingClientRect()
-        const mid = isRow ? rect.left + rect.width / 2 : rect.top + rect.height / 2
-        if ((isRow ? cx : cy) < mid) { idx = i; break }
-      }
-      return idx
-    }
-
-    // Try to resolve a drop as sibling insertion in the target's parent box
-    function dropAsSibling(
-      targetEl: HTMLElement, currentRoot: Frame, cx: number, cy: number,
-      setOver: (o: { parentId: string; index: number } | null) => void
-    ): boolean {
-      let parentEl = targetEl.parentElement as HTMLElement | null
-      while (parentEl && !parentEl.hasAttribute('data-frame-id')) {
-        parentEl = parentEl.parentElement as HTMLElement
-      }
-      if (!parentEl) return false
-      const parentId = parentEl.getAttribute('data-frame-id')!
-      if (parentId === frame.id || isDescendant(currentRoot, frame.id, parentId)) return false
-      const parentFrame = findInTree(currentRoot, parentId)
-      if (!parentFrame || parentFrame.type !== 'box') return false
-      setOver({ parentId, index: indexAmongSiblings(parentEl, parentFrame.direction, cx, cy) })
-      return true
-    }
+    useFrameStore.getState().setCanvasDrag(frame.id)
 
     const onMove = (ev: PointerEvent) => {
       const { root: currentRoot, setCanvasDragOver: setOver } = useFrameStore.getState()
-      const el = doc.elementFromPoint(ev.clientX, ev.clientY) as HTMLElement | null
-      if (!el) { setOver(null); return }
-
-      // Walk up to find the nearest frame element
-      let target = el
-      while (target && !target.hasAttribute('data-frame-id')) {
-        target = target.parentElement as HTMLElement
-      }
-      if (!target) { setOver(null); return }
-
-      const targetId = target.getAttribute('data-frame-id')!
-      // Can't drop on self or inside self
-      if (targetId === frame.id || isDescendant(currentRoot, frame.id, targetId)) {
-        setOver(null)
-        return
-      }
-
-      const targetFrame = findInTree(currentRoot, targetId)
-      if (!targetFrame) { setOver(null); return }
-
-      if (targetFrame.type === 'box') {
-        // Edge zone: if cursor is near the edge along parent's flex direction,
-        // treat as sibling drop in parent instead of dropping inside this box.
-        // This lets users drop at the edges of wrapper/body containers.
-        const rect = target.getBoundingClientRect()
-        let parentEl = target.parentElement as HTMLElement | null
-        while (parentEl && !parentEl.hasAttribute('data-frame-id')) {
-          parentEl = parentEl.parentElement as HTMLElement
-        }
-        if (parentEl) {
-          const parentId = parentEl.getAttribute('data-frame-id')!
-          const parentFrame = findInTree(currentRoot, parentId)
-          if (parentFrame?.type === 'box' && parentId !== frame.id && !isDescendant(currentRoot, frame.id, parentId)) {
-            const isParentRow = parentFrame.direction === 'row' || parentFrame.direction === 'row-reverse'
-            const leading = isParentRow ? ev.clientX - rect.left : ev.clientY - rect.top
-            const trailing = isParentRow ? rect.right - ev.clientX : rect.bottom - ev.clientY
-            const size = isParentRow ? rect.width : rect.height
-            const zone = Math.min(EDGE_ZONE, size * 0.25)
-
-            if (leading < zone || trailing < zone) {
-              setOver({ parentId, index: indexAmongSiblings(parentEl, parentFrame.direction, ev.clientX, ev.clientY) })
-              return
-            }
-          }
-        }
-
-        // Dropping into this box container
-        const children = Array.from(target.children).filter(
-          c => (c as HTMLElement).hasAttribute('data-frame-id')
-        ) as HTMLElement[]
-
-        if (children.length === 0) {
-          setOver({ parentId: targetId, index: 0 })
-          return
-        }
-
-        setOver({ parentId: targetId, index: indexAmongSiblings(target, (targetFrame as BoxElement).direction, ev.clientX, ev.clientY) })
-      } else {
-        // Non-box target — insert as sibling in parent
-        if (!dropAsSibling(target, currentRoot, ev.clientX, ev.clientY, setOver)) {
-          setOver(null)
-        }
-      }
+      const result = resolveCanvasDrop(doc, ev.clientX, ev.clientY, frame.id, currentRoot)
+      setOver(result)
     }
 
     const onUp = () => {
@@ -438,7 +349,7 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
   }
 
   return (
-    <div
+    <Tag
       ref={containerRef}
       data-frame-id={frame.id}
       className={`${tailwind} ${stateClasses}`}
@@ -465,9 +376,26 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
       {isSelected && (
         <div className="frame-selection">
           {showHandle && (
-            <div className="frame-drag-handle" onPointerDown={onHandlePointerDown}>
-              <GripVertical size={12} />
-            </div>
+            <>
+              <div className="frame-drag-handle" onPointerDown={onHandlePointerDown}>
+                <GripVertical size={12} />
+              </div>
+              <div
+                className="frame-snippet-btn"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  const store = useFrameStore.getState()
+                  const f = findInTree(store.root, frame.id)
+                  if (f) {
+                    useSnippetStore.getState().saveSnippet(f.name || 'Snippet', [], f)
+                    store.setTreePanelTab('snippets')
+                  }
+                }}
+                title="Save as snippet"
+              >
+                <Code size={10} />
+              </div>
+            </>
           )}
         </div>
       )}
@@ -481,7 +409,7 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
 
       {isText && (
         editingText ? (
-          <div
+          <span
             ref={textRef}
             className="frame-text-editing"
             contentEditable
@@ -495,7 +423,7 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
             }}
           >
             {frame.content}
-          </div>
+          </span>
         ) : (
           renderMultiline(frame.content)
         )
@@ -514,9 +442,7 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
           </div>
         )
       )}
-      {isButton && (
-        <span className="frame-btn-label">{renderMultiline(frame.content)}</span>
-      )}
+      {isButton && renderMultiline(frame.content)}
       {isInput && (
         <input
           className="frame-form-control"
@@ -553,6 +479,6 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
       {isBox && isDropTarget && canvasDragOver.index >= frame.children.length && (
         <DropIndicator direction={frame.direction} />
       )}
-    </div>
+    </Tag>
   )
 }

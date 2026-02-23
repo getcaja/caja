@@ -138,23 +138,39 @@ export function frameToClasses(frame: Frame): string {
 
       if (!dvIsZero(frame.gap)) cls.push(dvClass('gap', frame.gap))
       if (frame.wrap) cls.push('flex-wrap')
-    } else {
-      cls.push(frame.display) // 'block', 'inline-block', 'inline'
+    } else if (frame.display !== 'block') {
+      cls.push(frame.display) // 'inline-block', 'inline'
     }
   }
 
   // Text styles (text, button, input, textarea, select — anything with TextStyles)
   if (frame.type !== 'box' && frame.type !== 'image') {
-    // fontSize + lineHeight combined syntax
-    if (frame.fontSize.mode === 'token') {
-      // lineHeight modifier syntax: text-6xl/relaxed or text-6xl/[1.1]
-      if (frame.lineHeight.mode === 'token') {
-        cls.push(`text-${frame.fontSize.token}/${frame.lineHeight.token}`)
+    const hasFontSize = !dvIsZero(frame.fontSize)
+    const hasLineHeight = !dvIsZero(frame.lineHeight)
+
+    if (hasFontSize) {
+      // fontSize + lineHeight combined syntax
+      if (frame.fontSize.mode === 'token') {
+        if (hasLineHeight) {
+          if (frame.lineHeight.mode === 'token') {
+            cls.push(`text-${frame.fontSize.token}/${frame.lineHeight.token}`)
+          } else {
+            cls.push(`text-${frame.fontSize.token}/[${frame.lineHeight.value}]`)
+          }
+        } else {
+          cls.push(`text-${frame.fontSize.token}`)
+        }
       } else {
-        cls.push(`text-${frame.fontSize.token}/[${frame.lineHeight.value}]`)
+        cls.push(`text-[${frame.fontSize.value}px]`)
+        if (hasLineHeight) {
+          if (frame.lineHeight.mode === 'token') {
+            cls.push(`leading-${frame.lineHeight.token}`)
+          } else {
+            cls.push(`leading-[${frame.lineHeight.value}]`)
+          }
+        }
       }
-    } else {
-      cls.push(`text-[${frame.fontSize.value}px]`)
+    } else if (hasLineHeight) {
       if (frame.lineHeight.mode === 'token') {
         cls.push(`leading-${frame.lineHeight.token}`)
       } else {

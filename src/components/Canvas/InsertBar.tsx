@@ -53,6 +53,7 @@ export function InsertBar() {
       }
     }
     addChild(parentId, type)
+    useFrameStore.getState().setTreePanelTab('elements')
   }
 
   return (
