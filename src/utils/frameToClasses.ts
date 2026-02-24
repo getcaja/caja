@@ -193,8 +193,8 @@ export function frameToClasses(frame: Frame): string {
     cls.push(...insetClasses(frame.inset))
   }
 
-  // Box layout
-  if (frame.type === 'box') {
+  // Layout (applies to all container types — box, button, link, etc.)
+  if (frame.type !== 'text' && frame.type !== 'image') {
     if (frame.display === 'flex' || frame.display === 'inline-flex') {
       cls.push(frame.display === 'inline-flex' ? 'inline-flex' : 'flex')
       cls.push(frame.direction === 'row' ? 'flex-row' : 'flex-col')

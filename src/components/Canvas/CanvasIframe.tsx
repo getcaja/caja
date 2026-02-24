@@ -20,6 +20,11 @@ import { resolveCanvasDrop } from '../../utils/canvasDrop'
 import frameRendererCSS from './FrameRenderer.css?raw'
 
 // Canvas reset — form controls, default text color, scrollbar
+// Body defaults + scrollbar styling only.
+// Form element resets (appearance, bg, border, font, padding, margin) are
+// handled by Tailwind v4 Preflight (@layer base), which utilities can override.
+// An unlayered reset here would beat Tailwind's layered utilities — breaking
+// bg, border, and other styles on <button>, <input>, etc.
 const CANVAS_RESET_CSS = `
 body {
   margin: 0;
@@ -28,18 +33,6 @@ body {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-input, textarea, select, button {
-  -webkit-appearance: none;
-  appearance: none;
-  background-color: transparent;
-  border: none;
-  outline: none;
-  font: inherit;
-  color: inherit;
-  padding: 0;
-  margin: 0;
-  resize: none;
 }
 input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button {
@@ -94,11 +87,18 @@ function IframeCanvas() {
     }
   }, [])
 
+  const onCanvasClick = useCallback(() => {
+    // Clicks on empty space (outside root div) select the root frame
+    const { select, root: r } = useFrameStore.getState()
+    select(r.id)
+  }, [])
+
   return (
     <div
       className={previewMode ? 'preview-mode' : ''}
+      style={{ minHeight: '100vh' }}
       onMouseLeave={previewMode ? undefined : () => hover(null)}
-      onClick={previewMode ? onPreviewClick : undefined}
+      onClick={previewMode ? onPreviewClick : onCanvasClick}
     >
       <FrameRenderer frame={root} />
       <GoogleFontsLoader />

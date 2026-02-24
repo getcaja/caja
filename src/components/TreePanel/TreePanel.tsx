@@ -241,30 +241,32 @@ export function TreePanel({ onExportLibrary }: TreePanelProps) {
 
         {tab === 'libraries' && (
           <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="px-2 py-1.5 flex items-center gap-1.5">
-              <div className="flex-1 min-w-0">
-                {libraryIndex.length === 0 ? (
-                  <div className="c-input flex items-center text-text-muted cursor-default">
-                    No libraries installed
-                  </div>
-                ) : (
-                  <Select
-                    value={libraryIndex.some((l) => l.id === activeSource) ? activeSource : libraryIndex[0].id}
-                    options={libraryIndex.map((lib) => ({ value: lib.id, label: lib.name }))}
-                    onChange={setActiveSource}
-                    className="w-full"
-                  />
-                )}
+            {libraryIndex.length === 0 ? (
+              <div className="flex-1 flex items-center justify-center">
+                <span className="text-text-muted text-[12px]">No libraries installed</span>
               </div>
-              <button
-                className="w-5 h-5 shrink-0 c-icon-btn hover:text-accent hover:bg-accent/10"
-                onClick={() => setShowManageLibraries(true)}
-                title="Manage libraries"
-              >
-                <Settings size={14} />
-              </button>
-            </div>
-            {libraryIndex.length > 0 && <PatternsPanel />}
+            ) : (
+              <>
+                <div className="px-2 py-1.5 flex items-center gap-1.5">
+                  <div className="flex-1 min-w-0">
+                    <Select
+                      value={libraryIndex.some((l) => l.id === activeSource) ? activeSource : libraryIndex[0].id}
+                      options={libraryIndex.map((lib) => ({ value: lib.id, label: lib.name }))}
+                      onChange={setActiveSource}
+                      className="w-full"
+                    />
+                  </div>
+                  <button
+                    className="w-5 h-5 shrink-0 c-icon-btn hover:text-accent hover:bg-accent/10"
+                    onClick={() => setShowManageLibraries(true)}
+                    title="Manage libraries"
+                  >
+                    <Settings size={14} />
+                  </button>
+                </div>
+                <PatternsPanel />
+              </>
+            )}
           </div>
         )}
       </div>

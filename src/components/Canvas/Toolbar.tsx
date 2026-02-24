@@ -47,6 +47,8 @@ function DropdownButton({ icon, title, isActive, menu, children }: {
   children?: React.ReactNode
 }) {
   const [open, setOpen] = useState(false)
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const [pos, setPos] = useState({ x: 0, y: 0 })
   const stableOpen = useRef(open)
   stableOpen.current = open
 
@@ -57,26 +59,36 @@ function DropdownButton({ icon, title, isActive, menu, children }: {
     return () => { clearTimeout(id); window.removeEventListener('click', handler) }
   }, [open])
 
-  const btnIcon = 'w-7 h-7 flex items-center justify-center rounded-md transition-colors'
+  const handleClick = () => {
+    if (!open && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect()
+      setPos({ x: rect.left + rect.width / 2, y: rect.top - 8 })
+    }
+    setOpen((p) => !p)
+  }
+
+  const btnIconCls = 'w-7 h-7 flex items-center justify-center rounded-md transition-colors'
 
   return (
-    <div className="relative">
+    <>
       <button
-        onClick={() => setOpen((p) => !p)}
-        className={`${btnIcon} ${open || isActive ? 'bg-surface-3 text-text-primary' : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'}`}
+        ref={btnRef}
+        onClick={handleClick}
+        className={`${btnIconCls} ${open || isActive ? 'bg-surface-3 text-text-primary' : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'}`}
         title={title}
       >
         {icon ?? children}
       </button>
       {open && (
         <div
-          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 c-menu-popup min-w-[120px]"
+          className="fixed c-menu-popup min-w-[120px] z-[9999]"
+          style={{ left: pos.x, bottom: window.innerHeight - pos.y, transform: 'translateX(-50%)' }}
           onClick={(e) => e.stopPropagation()}
         >
           {menu}
         </div>
       )}
-    </div>
+    </>
   )
 }
 
