@@ -1,15 +1,22 @@
 import { useState, useRef } from 'react'
 import { useFrameStore, findInTree } from '../../store/frameStore'
-import { useSnippetStore } from '../../store/snippetStore'
+import { useCatalogStore } from '../../store/catalogStore'
 import { AddMenu } from './AddMenu'
 import { TreeDndProvider } from './TreeDndContext'
 import { TreeNode } from './TreeNode'
-import { SnippetsPanel, type SnippetsPanelHandle } from './SnippetsPanel'
+import { PatternsPanel, type PatternsPanelHandle } from './PatternsPanel'
+import { ManageLibrariesModal } from './ManageLibrariesModal'
+import { importLibrary, saveLibraryIndex } from '../../lib/libraryOps'
 import { PageNode } from './PageNode'
+import { Select } from '../ui/Select'
 import { useContextMenu } from './hooks/useContextMenu'
-import { Plus, FolderPlus, Code } from 'lucide-react'
+import { Plus, FolderPlus, Code, Download, Ellipsis, Import, Settings } from 'lucide-react'
 
-export function TreePanel() {
+interface TreePanelProps {
+  onExportLibrary: () => void
+}
+
+export function TreePanel({ onExportLibrary }: TreePanelProps) {
   const root = useFrameStore((s) => s.root)
   const pages = useFrameStore((s) => s.pages)
   const activePageId = useFrameStore((s) => s.activePageId)
@@ -18,14 +25,24 @@ export function TreePanel() {
   const addPage = useFrameStore((s) => s.addPage)
   const tab = useFrameStore((s) => s.treePanelTab)
   const setTab = useFrameStore((s) => s.setTreePanelTab)
+  const activeSource = useCatalogStore((s) => s.activeSource)
+  const libraryIndex = useCatalogStore((s) => s.libraryIndex)
+  const setActiveSource = useCatalogStore((s) => s.setActiveSource)
   const [showAdd, setShowAdd] = useState(false)
   const [menuPos, setMenuPos] = useState({ x: 0, y: 0 })
   const addBtnRef = useRef<HTMLButtonElement>(null)
 
-  // Snippets "+" menu
-  const snippetMenu = useContextMenu()
-  const snippetBtnRef = useRef<HTMLButtonElement>(null)
-  const snippetPanelRef = useRef<SnippetsPanelHandle>(null)
+  // Patterns "+" menu
+  const patternMenu = useContextMenu()
+  const patternBtnRef = useRef<HTMLButtonElement>(null)
+  const patternPanelRef = useRef<PatternsPanelHandle>(null)
+
+  // Libraries "..." menu
+  const libraryMenu = useContextMenu()
+  const libraryBtnRef = useRef<HTMLButtonElement>(null)
+
+  // Modal state
+  const [showManageLibraries, setShowManageLibraries] = useState(false)
 
   const activePage = pages.find((p) => p.id === activePageId)
 
@@ -59,25 +76,39 @@ export function TreePanel() {
     setShowAdd(false)
   }
 
-  const openSnippetMenu = () => {
-    if (snippetBtnRef.current) {
-      const rect = snippetBtnRef.current.getBoundingClientRect()
-      snippetMenu.openAt(rect.left, rect.bottom + 4)
+  const openPatternMenu = () => {
+    if (patternBtnRef.current) {
+      const rect = patternBtnRef.current.getBoundingClientRect()
+      patternMenu.openAt(rect.left, rect.bottom + 4)
     }
   }
 
-  const handleSaveSelectedAsSnippet = () => {
+  const handleSaveSelectedAsPattern = () => {
     if (!selectedId) return
     const frame = findInTree(root, selectedId)
     if (!frame) return
-    useSnippetStore.getState().saveSnippet(frame.name || 'Snippet', [], frame)
-    setTab('snippets')
-    snippetMenu.close()
+    useCatalogStore.getState().savePattern(frame.name || 'Pattern', [], frame)
+    useCatalogStore.getState().setActiveSource('internal')
+    setTab('patterns')
+    patternMenu.close()
   }
 
   const handleCreateCategory = () => {
-    snippetPanelRef.current?.createCategory()
-    snippetMenu.close()
+    patternPanelRef.current?.createCategory()
+    patternMenu.close()
+  }
+
+  const handlePatternsTab = () => {
+    setActiveSource('internal')
+    setTab('patterns')
+  }
+
+  const handleLibrariesTab = () => {
+    // If currently on internal, switch to first library (if any)
+    if (activeSource === 'internal' && libraryIndex.length > 0) {
+      setActiveSource(libraryIndex[0].id)
+    }
+    setTab('libraries')
   }
 
   return (
@@ -89,16 +120,22 @@ export function TreePanel() {
               className={`text-[12px] font-semibold px-1.5 py-0.5 rounded transition-colors ${tab === 'elements' ? 'text-text-primary bg-surface-2' : 'text-text-muted hover:text-text-secondary'}`}
               onClick={() => setTab('elements')}
             >
-              Elements
+              Pages
             </button>
             <button
-              className={`text-[12px] font-semibold px-1.5 py-0.5 rounded transition-colors ${tab === 'snippets' ? 'text-text-primary bg-surface-2' : 'text-text-muted hover:text-text-secondary'}`}
-              onClick={() => setTab('snippets')}
+              className={`text-[12px] font-semibold px-1.5 py-0.5 rounded transition-colors ${tab === 'patterns' ? 'text-text-primary bg-surface-2' : 'text-text-muted hover:text-text-secondary'}`}
+              onClick={handlePatternsTab}
             >
-              Snippets
+              Patterns
+            </button>
+            <button
+              className={`text-[12px] font-semibold px-1.5 py-0.5 rounded transition-colors ${tab === 'libraries' ? 'text-text-primary bg-surface-2' : 'text-text-muted hover:text-text-secondary'}`}
+              onClick={handleLibrariesTab}
+            >
+              Libraries
             </button>
           </div>
-          {tab === 'elements' ? (
+          {tab === 'elements' && (
             <button
               ref={addBtnRef}
               className="w-5 h-5 c-icon-btn hover:text-accent hover:bg-accent/10"
@@ -107,14 +144,30 @@ export function TreePanel() {
             >
               <Plus size={14} />
             </button>
-          ) : (
+          )}
+          {tab === 'patterns' && (
             <button
-              ref={snippetBtnRef}
+              ref={patternBtnRef}
               className="w-5 h-5 c-icon-btn hover:text-accent hover:bg-accent/10"
-              onClick={openSnippetMenu}
+              onClick={openPatternMenu}
               title="Add"
             >
               <Plus size={14} />
+            </button>
+          )}
+          {tab === 'libraries' && (
+            <button
+              ref={libraryBtnRef}
+              className="w-5 h-5 c-icon-btn hover:text-accent hover:bg-accent/10"
+              onClick={() => {
+                if (libraryBtnRef.current) {
+                  const rect = libraryBtnRef.current.getBoundingClientRect()
+                  libraryMenu.openAt(rect.left, rect.bottom + 4)
+                }
+              }}
+              title="Library options"
+            >
+              <Ellipsis size={14} />
             </button>
           )}
         </div>
@@ -128,19 +181,19 @@ export function TreePanel() {
           />
         )}
 
-        {/* Snippets "+" menu */}
-        {snippetMenu.menu && (
+        {/* Patterns "+" menu */}
+        {patternMenu.menu && (
           <div
             className="fixed c-menu-popup min-w-[180px] z-[9999]"
-            style={{ left: snippetMenu.menu.x, top: snippetMenu.menu.y }}
+            style={{ left: patternMenu.menu.x, top: patternMenu.menu.y }}
             onClick={(e) => e.stopPropagation()}
           >
             <button
               className={`c-menu-item ${!selectedId ? 'opacity-40 cursor-default' : ''}`}
               disabled={!selectedId}
-              onClick={handleSaveSelectedAsSnippet}
+              onClick={handleSaveSelectedAsPattern}
             >
-              <Code size={12} /> Save selected as snippet
+              <Code size={12} /> Save selected as pattern
             </button>
             <button
               className="c-menu-item"
@@ -148,30 +201,61 @@ export function TreePanel() {
             >
               <FolderPlus size={12} /> New category
             </button>
+            <div className="border-t border-border my-1" />
+            <button
+              className="c-menu-item"
+              onClick={() => { onExportLibrary(); patternMenu.close() }}
+            >
+              <Download size={12} /> Export as Library...
+            </button>
           </div>
         )}
 
-        {tab === 'elements' ? (
+        {/* Libraries "..." menu */}
+        {libraryMenu.menu && (
+          <div
+            className="fixed c-menu-popup min-w-[180px] z-[9999]"
+            style={{ left: libraryMenu.menu.x, top: libraryMenu.menu.y }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="c-menu-item"
+              onClick={async () => {
+                libraryMenu.close()
+                try {
+                  const result = await importLibrary()
+                  if (result) {
+                    useCatalogStore.getState().installLibrary(result.meta, result.data)
+                    await saveLibraryIndex(useCatalogStore.getState().libraryIndex)
+                    setActiveSource(result.meta.id)
+                  }
+                } catch (err) {
+                  console.error('Failed to import library:', err)
+                }
+              }}
+            >
+              <Import size={12} /> Import Library...
+            </button>
+            <button
+              className="c-menu-item"
+              onClick={() => { setShowManageLibraries(true); libraryMenu.close() }}
+            >
+              <Settings size={12} /> Manage Libraries...
+            </button>
+          </div>
+        )}
+
+        {tab === 'elements' && (
           <div className="flex-1 overflow-y-auto flex flex-col">
             {/* Page list */}
             <div className="px-1 pt-1 pb-0.5 flex flex-col gap-0.5">
-              <div className="flex items-center justify-between px-1.5 pb-0.5">
-                <span className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">Pages</span>
-                <button
-                  className="w-4 h-4 c-icon-btn hover:text-accent hover:bg-accent/10"
-                  onClick={() => addPage()}
-                  title="Add page"
-                >
-                  <Plus size={12} />
-                </button>
-              </div>
               {pages.map((page) => (
                 <PageNode key={page.id} page={page} />
               ))}
             </div>
 
             {/* Separator */}
-            <div className="border-t border-border mx-2 my-1" />
+            <div className="border-t border-border my-1" />
 
             {/* Active page tree */}
             <div className="flex-1 overflow-y-auto py-0.5 px-1">
@@ -180,10 +264,38 @@ export function TreePanel() {
               )}
             </div>
           </div>
-        ) : (
-          <SnippetsPanel ref={snippetPanelRef} />
+        )}
+
+        {tab === 'patterns' && (
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <PatternsPanel ref={patternPanelRef} />
+          </div>
+        )}
+
+        {tab === 'libraries' && (
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {libraryIndex.length === 0 ? (
+              <div className="flex-1 flex items-center justify-center">
+                <span className="text-text-muted text-[12px]">No libraries installed</span>
+              </div>
+            ) : (
+              <>
+                <div className="px-2 py-1.5">
+                  <Select
+                    value={libraryIndex.some((l) => l.id === activeSource) ? activeSource : libraryIndex[0].id}
+                    options={libraryIndex.map((lib) => ({ value: lib.id, label: lib.name }))}
+                    onChange={setActiveSource}
+                  />
+                </div>
+                <PatternsPanel />
+              </>
+            )}
+          </div>
         )}
       </div>
+
+      {/* Modals */}
+      <ManageLibrariesModal open={showManageLibraries} onOpenChange={setShowManageLibraries} />
     </TreeDndProvider>
   )
 }

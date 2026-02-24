@@ -6,7 +6,9 @@ import { RightPanel } from './components/RightPanel/RightPanel'
 import { ExportModal } from './components/Export/ExportModal'
 import { TooltipProvider } from './components/ui/Tooltip'
 import { saveFile, saveFileAs, openFile } from './lib/fileOps'
-import { useSnippetStore, loadSnippetsFromStorage } from './store/snippetStore'
+import { saveLibrary } from './lib/libraryOps'
+import { useCatalogStore, loadPatternsFromStorage } from './store/catalogStore'
+import { ExportLibraryModal } from './components/TreePanel/ExportLibraryModal'
 
 import { startMcpBridge, stopMcpBridge } from './mcp/bridge'
 import { TitleBar } from './components/TitleBar/TitleBar'
@@ -43,6 +45,7 @@ const isTauri = '__TAURI_INTERNALS__' in window
 
 function App() {
   const [showExport, setShowExport] = useState(false)
+  const [showExportLibrary, setShowExportLibrary] = useState(false)
   const initial = useRef(loadPanelState())
   const [leftWidth, setLeftWidth] = useState(initial.current.leftWidth)
   const [rightWidth, setRightWidth] = useState(initial.current.rightWidth)
@@ -84,7 +87,7 @@ function App() {
   const handleSave = useCallback(async () => {
     if (!isTauri) return
     const store = useFrameStore.getState()
-    const snippets = useSnippetStore.getState().getSnippetData()
+    const snippets = useCatalogStore.getState().getPatternData()
     const path = await saveFile(store.pages, store.activePageId, snippets, store.filePath)
     if (path) {
       store.setFilePath(path)
@@ -95,7 +98,7 @@ function App() {
   const handleSaveAs = useCallback(async () => {
     if (!isTauri) return
     const store = useFrameStore.getState()
-    const snippets = useSnippetStore.getState().getSnippetData()
+    const snippets = useCatalogStore.getState().getPatternData()
     const path = await saveFileAs(store.pages, store.activePageId, snippets)
     if (path) {
       store.setFilePath(path)
@@ -124,14 +127,21 @@ function App() {
         const root = migrateToInternalRoot(data.root as Record<string, unknown>, 'page-1')
         useFrameStore.getState().loadFromFile(root, result.path)
       }
-      useSnippetStore.getState().loadSnippets(data.snippets as import('./store/snippetStore').SnippetData | undefined)
+      useCatalogStore.getState().loadPatterns((data.patterns ?? data.snippets) as import('./store/catalogStore').PatternData | undefined)
     }
   }, [])
 
   useEffect(() => {
     loadFromStorage()
-    loadSnippetsFromStorage()
+    loadPatternsFromStorage()
     startMcpBridge()
+
+    // Load installed libraries (Tauri only)
+    if (isTauri) {
+      import('./components/TreePanel/ManageLibrariesModal').then(({ initializeLibraries }) => {
+        initializeLibraries().catch(() => {})
+      }).catch(() => {})
+    }
 
     // Sync initial view prefs to native menu check states
     if (isTauri) {
@@ -173,6 +183,24 @@ function App() {
             break
           case 'export':
             setShowExport(true)
+            break
+          case 'save-library': {
+            const lastExport = useCatalogStore.getState().lastExport
+            if (lastExport) {
+              const data = useCatalogStore.getState().getPatternData()
+              saveLibrary(data, {
+                name: lastExport.name,
+                author: lastExport.author || undefined,
+                description: lastExport.description || undefined,
+                version: lastExport.version || undefined,
+              }, lastExport.path).catch((err) => console.error('Failed to save library:', err))
+            } else {
+              setShowExportLibrary(true)
+            }
+            break
+          }
+          case 'export-library':
+            setShowExportLibrary(true)
             break
         }
       }).then((fn) => {
@@ -348,7 +376,7 @@ function App() {
           {!previewMode && (
             <>
               <div style={{ width: leftWidth }} className="shrink-0 border-r border-border">
-                <TreePanel />
+                <TreePanel onExportLibrary={() => setShowExportLibrary(true)} />
               </div>
               <div
                 className="w-[7px] shrink-0 cursor-col-resize bg-transparent hover:bg-accent/40 transition-colors -ml-[4px] z-10"
@@ -376,8 +404,9 @@ function App() {
           )}
         </div>
 
-        {/* Export modal */}
+        {/* Export modals */}
         <ExportModal open={showExport} onOpenChange={setShowExport} />
+        <ExportLibraryModal open={showExportLibrary} onOpenChange={setShowExportLibrary} />
       </div>
     </TooltipProvider>
   )

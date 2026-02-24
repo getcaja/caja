@@ -116,7 +116,7 @@ export function CanvasIframe() {
   const canvasZoom = useFrameStore((s) => s.canvasZoom)
   const previewMode = useFrameStore((s) => s.previewMode)
   const pages = useFrameStore((s) => s.pages)
-  const isSnippetDrag = useFrameStore((s) => s.snippetDragFrame !== null)
+  const isPatternDrag = useFrameStore((s) => s.patternDragFrame !== null)
   const rootBgValue = useFrameStore((s) => s.root.bg.value)
 
   // Sync root frame's background to the iframe <body>.
@@ -125,7 +125,7 @@ export function CanvasIframe() {
   useEffect(() => {
     const body = iframeRef.current?.contentDocument?.body
     if (!body) return
-    body.style.backgroundColor = rootBgValue || ''
+    body.style.backgroundColor = rootBgValue || '#ffffff'
   }, [rootBgValue])
 
   useEffect(() => {
@@ -138,6 +138,10 @@ export function CanvasIframe() {
     doc.open()
     doc.write('<!DOCTYPE html><html><head></head><body><div id="caja-root"></div></body></html>')
     doc.close()
+
+    // Apply root bg immediately so it's visible before React renders
+    const bgVal = useFrameStore.getState().root.bg.value
+    doc.body.style.backgroundColor = bgVal || '#ffffff'
 
     // 1. Tailwind theme config
     const theme = doc.createElement('style')
@@ -259,12 +263,12 @@ export function CanvasIframe() {
 
   const onOverlayDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
-    const { snippetDragFrame, canvasDragOver, insertFrameAt, setCanvasDrag, setCanvasDragOver, setSnippetDragFrame } = useFrameStore.getState()
-    if (!snippetDragFrame || !canvasDragOver) return
-    insertFrameAt(canvasDragOver.parentId, snippetDragFrame, canvasDragOver.index)
+    const { patternDragFrame, patternDragOrigin, canvasDragOver, insertFrameAt, setCanvasDrag, setCanvasDragOver, setPatternDragFrame } = useFrameStore.getState()
+    if (!patternDragFrame || !canvasDragOver) return
+    insertFrameAt(canvasDragOver.parentId, patternDragFrame, canvasDragOver.index, patternDragOrigin ?? undefined)
     setCanvasDrag(null)
     setCanvasDragOver(null)
-    setSnippetDragFrame(null)
+    setPatternDragFrame(null)
   }, [])
 
   const onOverlayDragLeave = useCallback((e: React.DragEvent) => {
@@ -342,7 +346,7 @@ export function CanvasIframe() {
           }}
         />
       )}
-      {isSnippetDrag && (
+      {isPatternDrag && (
         <div
           style={{ position: 'absolute', inset: 0, zIndex: 10 }}
           onDragOver={onOverlayDragOver}

@@ -100,6 +100,9 @@ interface BaseElement {
 
   // Advanced
   tailwindClasses: string
+
+  // Origin tracking — populated when inserting from a pattern source (passive, informational)
+  _origin?: { libraryId?: string; patternId?: string }
 }
 
 export type BoxTag = 'body' | 'div' | 'section' | 'nav' | 'header' | 'footer' | 'main' | 'article' | 'aside' | 'ul' | 'ol' | 'li' | 'form'

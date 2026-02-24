@@ -906,8 +906,9 @@ interface FrameStore {
   mcpConnected: boolean
   canvasDragId: string | null
   canvasDragOver: { parentId: string; index: number } | null
-  snippetDragFrame: Frame | null
-  treePanelTab: 'elements' | 'snippets'
+  patternDragFrame: Frame | null
+  patternDragOrigin: { libraryId?: string; patternId?: string } | null
+  treePanelTab: 'elements' | 'patterns' | 'libraries'
   _lastDuplicateMap: Record<string, string> | null
 
   past: Record<string, BoxElement[]>
@@ -920,8 +921,8 @@ interface FrameStore {
   toggleCollapse: (id: string) => void
   toggleHidden: (id: string) => void
 
-  insertFrame: (parentId: string, frame: Frame) => void
-  insertFrameAt: (parentId: string, frame: Frame, index: number) => void
+  insertFrame: (parentId: string, frame: Frame, origin?: { libraryId?: string; patternId?: string }) => void
+  insertFrameAt: (parentId: string, frame: Frame, index: number, origin?: { libraryId?: string; patternId?: string }) => void
   addChild: (parentId: string, type: 'box' | 'text' | 'image' | 'button' | 'input' | 'textarea' | 'select' | 'link', overrides?: Partial<Frame>) => void
   removeFrame: (id: string) => void
   duplicateFrame: (id: string) => void
@@ -957,8 +958,8 @@ interface FrameStore {
   setCanvasZoom: (zoom: number) => void
   setCanvasDrag: (id: string | null) => void
   setCanvasDragOver: (over: { parentId: string; index: number } | null) => void
-  setSnippetDragFrame: (frame: Frame | null) => void
-  setTreePanelTab: (tab: 'elements' | 'snippets') => void
+  setPatternDragFrame: (frame: Frame | null, origin?: { libraryId?: string; patternId?: string } | null) => void
+  setTreePanelTab: (tab: 'elements' | 'patterns' | 'libraries') => void
   expandToFrame: (id: string) => void
   advancedMode: boolean
   setAdvancedMode: (value: boolean) => void
@@ -1047,8 +1048,9 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   mcpConnected: false,
   canvasDragId: null,
   canvasDragOver: null,
-  snippetDragFrame: null,
-  treePanelTab: 'elements',
+  patternDragFrame: null,
+  patternDragOrigin: null,
+  treePanelTab: 'elements' as const,
   advancedMode: initialViewPrefs.advancedMode,
   _lastDuplicateMap: null,
   past: {},
@@ -1100,21 +1102,23 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
       return { ...updateActiveRoot(state, newRoot), ...history }
     }),
 
-  insertFrame: (parentId, frame) =>
+  insertFrame: (parentId, frame, origin) =>
     set((state) => {
       const parent = findInTree(state.root, parentId)
       if (!parent || parent.type !== 'box') return {}
       const cloned = cloneWithNewIds(frame)
+      if (origin) cloned._origin = origin
       const history = pushHistory(state)
       const newRoot = insertChildInTree(state.root, parentId, cloned, 0) as BoxElement
       return { ...updateActiveRoot(state, newRoot), selectedId: cloned.id, selectedIds: new Set([cloned.id]), ...history }
     }),
 
-  insertFrameAt: (parentId, frame, index) =>
+  insertFrameAt: (parentId, frame, index, origin) =>
     set((state) => {
       const parent = findInTree(state.root, parentId)
       if (!parent || parent.type !== 'box') return {}
       const cloned = cloneWithNewIds(frame)
+      if (origin) cloned._origin = origin
       const history = pushHistory(state)
       const newRoot = insertChildInTree(state.root, parentId, cloned, index) as BoxElement
       return { ...updateActiveRoot(state, newRoot), selectedId: cloned.id, selectedIds: new Set([cloned.id]), ...history }
@@ -1362,7 +1366,7 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   setCanvasZoom: (zoom) => set({ canvasZoom: zoom }),
   setCanvasDrag: (id) => set({ canvasDragId: id }),
   setCanvasDragOver: (over) => set({ canvasDragOver: over }),
-  setSnippetDragFrame: (frame) => set({ snippetDragFrame: frame }),
+  setPatternDragFrame: (frame, origin) => set({ patternDragFrame: frame, patternDragOrigin: origin ?? null }),
   setTreePanelTab: (tab) => set({ treePanelTab: tab }),
   setAdvancedMode: (value) => set((s) => {
     saveViewPrefs({ showSpacingOverlays: s.showSpacingOverlays, showOverlayValues: s.showOverlayValues, previewMode: s.previewMode, canvasWidth: s.canvasWidth, advancedMode: value })

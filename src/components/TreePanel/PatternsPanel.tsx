@@ -1,38 +1,42 @@
 import { useState, useMemo, useCallback, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
-import { useSnippetStore } from '../../store/snippetStore'
+import { useCatalogStore } from '../../store/catalogStore'
 import { useFrameStore, findInTree } from '../../store/frameStore'
 import { Plus, X, Trash2, ChevronRight, ChevronDown, Code, Folder, Pencil } from 'lucide-react'
-import type { Snippet } from '../../types/snippet'
+import type { Pattern } from '../../types/pattern'
 
-export interface SnippetsPanelHandle {
+export interface PatternsPanelHandle {
   createCategory: () => void
 }
 
 type DropPosition = 'before' | 'after' | 'inside'
 
-export const SnippetsPanel = forwardRef<SnippetsPanelHandle>(function SnippetsPanel(_props, ref) {
-  const userSnippets = useSnippetStore((s) => s.snippets)
-  const highlightId = useSnippetStore((s) => s.highlightId)
-  const setHighlightId = useSnippetStore((s) => s.setHighlightId)
-  const order = useSnippetStore((s) => s.order)
-  const emptyCategories = useSnippetStore((s) => s.emptyCategories)
-  const deleteSnippet = useSnippetStore((s) => s.deleteSnippet)
-  const renameSnippet = useSnippetStore((s) => s.renameSnippet)
-  const updateSnippetTags = useSnippetStore((s) => s.updateSnippetTags)
-  const moveSnippet = useSnippetStore((s) => s.moveSnippet)
-  const addEmptyCategory = useSnippetStore((s) => s.addEmptyCategory)
-  const removeEmptyCategory = useSnippetStore((s) => s.removeEmptyCategory)
-  const moveCategory = useSnippetStore((s) => s.moveCategory)
+export const PatternsPanel = forwardRef<PatternsPanelHandle>(function PatternsPanel(_props, ref) {
+  const userPatterns = useCatalogStore((s) => s.patterns)
+  const highlightId = useCatalogStore((s) => s.highlightId)
+  const setHighlightId = useCatalogStore((s) => s.setHighlightId)
+  const order = useCatalogStore((s) => s.order)
+  const emptyCategories = useCatalogStore((s) => s.emptyCategories)
+  const deletePattern = useCatalogStore((s) => s.deletePattern)
+  const renamePattern = useCatalogStore((s) => s.renamePattern)
+  const updatePatternTags = useCatalogStore((s) => s.updatePatternTags)
+  const movePattern = useCatalogStore((s) => s.movePattern)
+  const addEmptyCategory = useCatalogStore((s) => s.addEmptyCategory)
+  const removeEmptyCategory = useCatalogStore((s) => s.removeEmptyCategory)
+  const moveCategory = useCatalogStore((s) => s.moveCategory)
+  const activeSource = useCatalogStore((s) => s.activeSource)
+  const libraries = useCatalogStore((s) => s.libraries)
 
   const root = useFrameStore((s) => s.root)
   const selectedId = useFrameStore((s) => s.selectedId)
   const insertFrame = useFrameStore((s) => s.insertFrame)
 
-  // Use allSnippets() but memoize on deps that change
-  const snippets = useMemo(() => {
-    return useSnippetStore.getState().allSnippets()
+  const readOnly = activeSource !== 'internal'
+
+  // Use getActivePatterns() which respects the active source
+  const patterns = useMemo(() => {
+    return useCatalogStore.getState().getActivePatterns()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userSnippets, order])
+  }, [userPatterns, order, activeSource, libraries])
 
   const [rootCollapsed, setRootCollapsed] = useState(false)
   const [collapsedTags, setCollapsedTags] = useState<Set<string>>(new Set())
@@ -41,7 +45,7 @@ export const SnippetsPanel = forwardRef<SnippetsPanelHandle>(function SnippetsPa
   const [editingCategoryTag, setEditingCategoryTag] = useState<string | null>(null)
   const [editCategoryValue, setEditCategoryValue] = useState('')
   const [contextMenu, setContextMenu] = useState<
-    | { x: number; y: number; type: 'snippet'; snippet: Snippet }
+    | { x: number; y: number; type: 'pattern'; pattern: Pattern }
     | { x: number; y: number; type: 'category'; tag: string }
     | null
   >(null)
@@ -53,10 +57,10 @@ export const SnippetsPanel = forwardRef<SnippetsPanelHandle>(function SnippetsPa
 
   // Group: uncategorized at root, then by first tag (preserving order)
   const { categorized, uncategorized, allTags } = useMemo(() => {
-    const map = new Map<string, Snippet[]>()
-    const uncat: Snippet[] = []
+    const map = new Map<string, Pattern[]>()
+    const uncat: Pattern[] = []
     const tagOrder: string[] = []
-    for (const s of snippets) {
+    for (const s of patterns) {
       if (s.tags.length === 0) {
         uncat.push(s)
       } else {
@@ -65,12 +69,12 @@ export const SnippetsPanel = forwardRef<SnippetsPanelHandle>(function SnippetsPa
         map.get(tag)!.push(s)
       }
     }
-    // Append empty categories (manually created, no snippets yet)
+    // Append empty categories (manually created, no patterns yet)
     for (const cat of emptyCategories) {
       if (!map.has(cat)) { map.set(cat, []); tagOrder.push(cat) }
     }
     return { categorized: map, uncategorized: uncat, allTags: tagOrder }
-  }, [snippets, emptyCategories])
+  }, [patterns, emptyCategories])
 
   function getInsertParent(): string {
     if (selectedId) {
@@ -80,8 +84,9 @@ export const SnippetsPanel = forwardRef<SnippetsPanelHandle>(function SnippetsPa
     return root.id
   }
 
-  function handleInsert(snippet: Snippet) {
-    insertFrame(getInsertParent(), snippet.frame)
+  function handleInsert(pattern: Pattern) {
+    const origin = { libraryId: activeSource === 'internal' ? 'internal' : activeSource, patternId: pattern.id }
+    insertFrame(getInsertParent(), pattern.frame, origin)
   }
 
   function toggleTag(tag: string) {
@@ -93,12 +98,12 @@ export const SnippetsPanel = forwardRef<SnippetsPanelHandle>(function SnippetsPa
     })
   }
 
-  function startSnippetRename(snippet: Snippet) {
-    setEditingId(snippet.id)
-    setEditValue(snippet.name)
+  function startPatternRename(pattern: Pattern) {
+    setEditingId(pattern.id)
+    setEditValue(pattern.name)
   }
-  function commitSnippetRename() {
-    if (editingId && editValue.trim()) renameSnippet(editingId, editValue.trim())
+  function commitPatternRename() {
+    if (editingId && editValue.trim()) renamePattern(editingId, editValue.trim())
     setEditingId(null)
   }
 
@@ -117,9 +122,9 @@ export const SnippetsPanel = forwardRef<SnippetsPanelHandle>(function SnippetsPa
       }
     } else if (editingCategoryTag && name !== editingCategoryTag) {
       // Rename existing category
-      for (const s of snippets) {
+      for (const s of patterns) {
         if (s.tags[0] === editingCategoryTag) {
-          updateSnippetTags(s.id, [name, ...s.tags.slice(1)])
+          updatePatternTags(s.id, [name, ...s.tags.slice(1)])
         }
       }
       // Also rename in emptyCategories if present
@@ -132,9 +137,9 @@ export const SnippetsPanel = forwardRef<SnippetsPanelHandle>(function SnippetsPa
   }
 
   function deleteCategory(tag: string) {
-    for (const s of snippets) {
+    for (const s of patterns) {
       if (s.tags[0] === tag) {
-        updateSnippetTags(s.id, s.tags.slice(1))
+        updatePatternTags(s.id, s.tags.slice(1))
       }
     }
     removeEmptyCategory(tag)
@@ -170,14 +175,15 @@ export const SnippetsPanel = forwardRef<SnippetsPanelHandle>(function SnippetsPa
   }
 
   function handleDragStart(e: React.DragEvent, id: string) {
-    e.dataTransfer.effectAllowed = 'copyMove'
+    e.dataTransfer.effectAllowed = readOnly ? 'copy' : 'copyMove'
     e.dataTransfer.setData('text/plain', id)
-    setDragId(id)
+    if (!readOnly) setDragId(id)
 
-    // Set snippet drag frame + sentinel canvasDragId for cross-iframe DnD
-    const snippet = snippets.find((s) => s.id === id)
-    if (snippet) {
-      useFrameStore.getState().setSnippetDragFrame(snippet.frame)
+    // Set pattern drag frame + origin + sentinel canvasDragId for cross-iframe DnD
+    const pattern = patterns.find((s) => s.id === id)
+    if (pattern) {
+      const origin = { libraryId: activeSource === 'internal' ? 'internal' : activeSource, patternId: pattern.id }
+      useFrameStore.getState().setPatternDragFrame(pattern.frame, origin)
       // canvasDragId set lazily on first canvas dragover (not here)
     }
   }
@@ -206,26 +212,26 @@ export const SnippetsPanel = forwardRef<SnippetsPanelHandle>(function SnippetsPa
     endDrag()
 
     if (isCategory && pos === 'inside') {
-      // Drop inside category — move snippet to this category, after last item
+      // Drop inside category — move pattern to this category, after last item
       const items = categorized.get(targetId)
       const lastInCategory = items && items.length > 0 ? items[items.length - 1].id : null
       if (lastInCategory) {
-        moveSnippet(capturedDragId, lastInCategory, 'after')
+        movePattern(capturedDragId, lastInCategory, 'after')
       } else {
         // Empty category — just change tags
-        updateSnippetTags(capturedDragId, [targetId])
+        updatePatternTags(capturedDragId, [targetId])
       }
     } else if (isCategory) {
-      // before/after a category header — find first/last snippet in that category
+      // before/after a category header — find first/last pattern in that category
       const items = categorized.get(targetId)
       if (pos === 'before' && items && items.length > 0) {
-        moveSnippet(capturedDragId, items[0].id, 'before')
+        movePattern(capturedDragId, items[0].id, 'before')
       } else if (pos === 'after' && items && items.length > 0) {
-        moveSnippet(capturedDragId, items[items.length - 1].id, 'after')
+        movePattern(capturedDragId, items[items.length - 1].id, 'after')
       }
     } else {
-      // Drop before/after a snippet
-      moveSnippet(capturedDragId, targetId, pos)
+      // Drop before/after a pattern
+      movePattern(capturedDragId, targetId, pos)
     }
   }
 
@@ -237,23 +243,23 @@ export const SnippetsPanel = forwardRef<SnippetsPanelHandle>(function SnippetsPa
     // Move to uncategorized, at end
     const last = uncategorized.length > 0 ? uncategorized[uncategorized.length - 1].id : null
     if (last && last !== capturedDragId) {
-      moveSnippet(capturedDragId, last, 'after')
+      movePattern(capturedDragId, last, 'after')
     } else {
-      updateSnippetTags(capturedDragId, [])
+      updatePatternTags(capturedDragId, [])
     }
   }
 
   function endDrag() {
     setDragId(null); setOverId(null); setOverPos(null)
-    // Clear cross-iframe snippet drag state
+    // Clear cross-iframe pattern drag state
     const store = useFrameStore.getState()
-    store.setSnippetDragFrame(null)
+    store.setPatternDragFrame(null)
     store.setCanvasDrag(null)
     store.setCanvasDragOver(null)
   }
 
   const isRootOver = overId === '__root__'
-  const hasContent = snippets.length > 0 || allTags.length > 0
+  const hasContent = patterns.length > 0 || allTags.length > 0
 
   return (
     <div
@@ -261,17 +267,17 @@ export const SnippetsPanel = forwardRef<SnippetsPanelHandle>(function SnippetsPa
       onDragOver={(e) => { if (dragId) e.preventDefault() }}
       onDrop={handleRootDrop}
     >
-      {/* Root "Snippets" node — always visible, permanent drop target (like Body in Elements) */}
-      <div
+      {/* Root "Patterns" node — visible only when there's content */}
+      {hasContent && <div
         className={`flex items-center gap-1.5 py-1 px-1 rounded-md group transition-all ${
           isRootOver
             ? 'bg-[var(--color-focus)]/10 outline outline-1 outline-[var(--color-focus)]/40'
-            : highlightId === '__snippets_root__'
+            : highlightId === '__patterns_root__'
               ? 'tree-node-selected text-text-primary'
               : 'hover:bg-[var(--color-focus)]/8 text-text-secondary hover:text-text-primary'
         }`}
         style={{ paddingLeft: 4 }}
-        onClick={() => { if (!dragId) setHighlightId('__snippets_root__') }}
+        onClick={() => { if (!dragId) setHighlightId('__patterns_root__') }}
         onDragOver={(e) => {
           if (!dragId) return
           e.preventDefault()
@@ -289,9 +295,9 @@ export const SnippetsPanel = forwardRef<SnippetsPanelHandle>(function SnippetsPa
           endDrag()
           const last = uncategorized.length > 0 ? uncategorized[uncategorized.length - 1].id : null
           if (last && last !== capturedDragId) {
-            moveSnippet(capturedDragId, last, 'after')
+            movePattern(capturedDragId, last, 'after')
           } else {
-            updateSnippetTags(capturedDragId, [])
+            updatePatternTags(capturedDragId, [])
           }
         }}
       >
@@ -302,18 +308,19 @@ export const SnippetsPanel = forwardRef<SnippetsPanelHandle>(function SnippetsPa
           {hasContent ? (rootCollapsed ? <ChevronRight size={10} /> : <ChevronDown size={10} />) : null}
         </span>
         <span className="shrink-0 text-blue-400"><Folder size={12} /></span>
-        <span className="flex-1 text-[12px] truncate">Snippets</span>
-      </div>
+        <span className="flex-1 text-[12px] truncate">Patterns</span>
+      </div>}
 
-      {!rootCollapsed && (
+      {hasContent && !rootCollapsed && (
         <>
-          {/* Uncategorized snippets (depth 1) */}
+          {/* Uncategorized patterns (depth 1) */}
           {uncategorized.map((s) => (
-            <SnippetRow
+            <PatternRow
               key={s.id}
-              snippet={s}
+              pattern={s}
               depth={1}
-              isEditing={editingId === s.id}
+              readOnly={readOnly}
+              isEditing={!readOnly && editingId === s.id}
               editValue={editValue}
               isDragging={dragId === s.id}
               isOver={overId === s.id}
@@ -321,17 +328,17 @@ export const SnippetsPanel = forwardRef<SnippetsPanelHandle>(function SnippetsPa
               isHighlighted={highlightId === s.id}
               onClick={() => setHighlightId(s.id)}
               onEditChange={setEditValue}
-              onEditCommit={commitSnippetRename}
+              onEditCommit={commitPatternRename}
               onEditCancel={() => setEditingId(null)}
-              onDoubleClick={() => startSnippetRename(s)}
-              onContextMenu={(x, y) => setContextMenu({ x, y, type: 'snippet', snippet: s })}
+              onDoubleClick={() => { if (!readOnly) startPatternRename(s) }}
+              onContextMenu={(x, y) => setContextMenu({ x, y, type: 'pattern', pattern: s })}
               onDragStart={(e) => handleDragStart(e, s.id)}
-              onDragOver={(e) => handleDragOver(e, s.id, false)}
-              onDragLeave={() => handleDragLeave(s.id)}
-              onDrop={(e) => handleDrop(e, s.id, false)}
+              onDragOver={readOnly ? undefined : (e) => handleDragOver(e, s.id, false)}
+              onDragLeave={readOnly ? undefined : () => handleDragLeave(s.id)}
+              onDrop={readOnly ? undefined : (e) => handleDrop(e, s.id, false)}
               onDragEnd={endDrag}
               onInsert={() => handleInsert(s)}
-              onDelete={() => deleteSnippet(s.id)}
+              onDelete={readOnly ? undefined : () => deletePattern(s.id)}
             />
           ))}
 
@@ -380,7 +387,7 @@ export const SnippetsPanel = forwardRef<SnippetsPanelHandle>(function SnippetsPa
                     e.preventDefault()
                     e.stopPropagation()
                     e.dataTransfer.dropEffect = 'move'
-                    // Dragging a category → show before/after; dragging a snippet → always inside
+                    // Dragging a category → show before/after; dragging a pattern → always inside
                     if (isDraggingCat) {
                       const pos = getDropPos(e, e.currentTarget as HTMLElement, true)
                       setOverId(catId)
@@ -410,12 +417,12 @@ export const SnippetsPanel = forwardRef<SnippetsPanelHandle>(function SnippetsPa
                         moveCategory(dragTag, tag, pos as 'before' | 'after')
                       }
                     } else {
-                      // Snippet into this category
+                      // Pattern into this category
                       const last = items.length > 0 ? items[items.length - 1].id : null
                       if (last && last !== capturedDragId) {
-                        moveSnippet(capturedDragId, last, 'after')
+                        movePattern(capturedDragId, last, 'after')
                       } else {
-                        updateSnippetTags(capturedDragId, [tag])
+                        updatePatternTags(capturedDragId, [tag])
                       }
                     }
                   }}
@@ -471,11 +478,12 @@ export const SnippetsPanel = forwardRef<SnippetsPanelHandle>(function SnippetsPa
 
                 {/* Children (depth 2) */}
                 {!isCollapsed && items.map((s) => (
-                  <SnippetRow
+                  <PatternRow
                     key={s.id}
-                    snippet={s}
+                    pattern={s}
                     depth={2}
-                    isEditing={editingId === s.id}
+                    readOnly={readOnly}
+                    isEditing={!readOnly && editingId === s.id}
                     editValue={editValue}
                     isDragging={dragId === s.id}
                     isOver={overId === s.id}
@@ -483,17 +491,17 @@ export const SnippetsPanel = forwardRef<SnippetsPanelHandle>(function SnippetsPa
                     isHighlighted={highlightId === s.id}
                     onClick={() => setHighlightId(s.id)}
                     onEditChange={setEditValue}
-                    onEditCommit={commitSnippetRename}
+                    onEditCommit={commitPatternRename}
                     onEditCancel={() => setEditingId(null)}
-                    onDoubleClick={() => startSnippetRename(s)}
-                    onContextMenu={(x, y) => setContextMenu({ x, y, type: 'snippet', snippet: s })}
+                    onDoubleClick={() => { if (!readOnly) startPatternRename(s) }}
+                    onContextMenu={(x, y) => setContextMenu({ x, y, type: 'pattern', pattern: s })}
                     onDragStart={(e) => handleDragStart(e, s.id)}
-                    onDragOver={(e) => handleDragOver(e, s.id, false)}
-                    onDragLeave={() => handleDragLeave(s.id)}
-                    onDrop={(e) => handleDrop(e, s.id, false)}
+                    onDragOver={readOnly ? undefined : (e) => handleDragOver(e, s.id, false)}
+                    onDragLeave={readOnly ? undefined : () => handleDragLeave(s.id)}
+                    onDrop={readOnly ? undefined : (e) => handleDrop(e, s.id, false)}
                     onDragEnd={endDrag}
                     onInsert={() => handleInsert(s)}
-                    onDelete={() => deleteSnippet(s.id)}
+                    onDelete={readOnly ? undefined : () => deletePattern(s.id)}
                   />
                 ))}
               </div>
@@ -521,31 +529,38 @@ export const SnippetsPanel = forwardRef<SnippetsPanelHandle>(function SnippetsPa
             </div>
           )}
 
-          {snippets.length === 0 && allTags.length === 0 && (
-            <div className="px-3 py-4 text-[11px] text-text-muted text-center">
-              No snippets yet. Select an element and save it as a snippet.
-            </div>
-          )}
         </>
       )}
 
-      {/* Snippet context menu */}
-      {contextMenu && contextMenu.type === 'snippet' && (
+      {!hasContent && (
+        <div className="flex-1 flex items-center justify-center">
+          <span className="text-text-muted text-[12px]">
+            {readOnly ? 'This library has no patterns.' : 'No patterns yet'}
+          </span>
+        </div>
+      )}
+
+      {/* Pattern context menu */}
+      {contextMenu && contextMenu.type === 'pattern' && (
         <div
           className="fixed c-menu-popup min-w-[160px] z-[9999]"
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={(e) => e.stopPropagation()}
         >
-          <button className="c-menu-item" onClick={() => { handleInsert(contextMenu.snippet); setContextMenu(null) }}>
+          <button className="c-menu-item" onClick={() => { handleInsert(contextMenu.pattern); setContextMenu(null) }}>
             <Plus size={12} /> Insert
           </button>
-          <button className="c-menu-item" onClick={() => { startSnippetRename(contextMenu.snippet); setContextMenu(null) }}>
-            <Pencil size={12} /> Rename
-          </button>
-          <div className="border-t border-border my-1" />
-          <button className="c-menu-item text-destructive" onClick={() => { deleteSnippet(contextMenu.snippet.id); setContextMenu(null) }}>
-            <Trash2 size={12} /> Delete
-          </button>
+          {!readOnly && (
+            <>
+              <button className="c-menu-item" onClick={() => { startPatternRename(contextMenu.pattern); setContextMenu(null) }}>
+                <Pencil size={12} /> Rename
+              </button>
+              <div className="border-t border-border my-1" />
+              <button className="c-menu-item text-destructive" onClick={() => { deletePattern(contextMenu.pattern.id); setContextMenu(null) }}>
+                <Trash2 size={12} /> Delete
+              </button>
+            </>
+          )}
         </div>
       )}
 
@@ -568,16 +583,17 @@ export const SnippetsPanel = forwardRef<SnippetsPanelHandle>(function SnippetsPa
   )
 })
 
-// --- Snippet row with drop indicators (mirrors TreeNode) ---
-function SnippetRow({
-  snippet, depth, isEditing, editValue, isDragging,
+// --- Pattern row with drop indicators (mirrors TreeNode) ---
+function PatternRow({
+  pattern, depth, readOnly, isEditing, editValue, isDragging,
   isOver, overPosition, isHighlighted,
   onClick, onEditChange, onEditCommit, onEditCancel, onDoubleClick,
   onContextMenu, onDragStart, onDragOver, onDragLeave, onDrop, onDragEnd,
   onInsert, onDelete,
 }: {
-  snippet: Snippet
+  pattern: Pattern
   depth: number
+  readOnly?: boolean
   isEditing: boolean
   editValue: string
   isDragging: boolean
@@ -591,12 +607,12 @@ function SnippetRow({
   onDoubleClick: () => void
   onContextMenu: (x: number, y: number) => void
   onDragStart: (e: React.DragEvent) => void
-  onDragOver: (e: React.DragEvent) => void
-  onDragLeave: () => void
-  onDrop: (e: React.DragEvent) => void
+  onDragOver?: (e: React.DragEvent) => void
+  onDragLeave?: () => void
+  onDrop?: (e: React.DragEvent) => void
   onDragEnd: () => void
   onInsert: () => void
-  onDelete: () => void
+  onDelete?: () => void
 }) {
   const rowRef = useRef<HTMLDivElement>(null)
 
@@ -654,7 +670,7 @@ function SnippetRow({
             className="flex-1 bg-surface-0 border border-accent/50 rounded-md px-1.5 py-0.5 text-[12px] text-text-primary outline-none focus:border-accent min-w-0 transition-colors"
           />
         ) : (
-          <span className="flex-1 text-[12px] truncate" onDoubleClick={onDoubleClick}>{snippet.name}</span>
+          <span className="flex-1 text-[12px] truncate" onDoubleClick={onDoubleClick}>{pattern.name}</span>
         )}
 
         <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
@@ -665,13 +681,15 @@ function SnippetRow({
           >
             <Plus size={12} />
           </button>
-          <button
-            className="w-4 h-4 c-icon-btn text-[10px] hover:text-text-secondary hover:bg-surface-2/60"
-            onClick={(e) => { e.stopPropagation(); onDelete() }}
-            title="Delete"
-          >
-            <X size={10} />
-          </button>
+          {!readOnly && onDelete && (
+            <button
+              className="w-4 h-4 c-icon-btn text-[10px] hover:text-text-secondary hover:bg-surface-2/60"
+              onClick={(e) => { e.stopPropagation(); onDelete() }}
+              title="Delete"
+            >
+              <X size={10} />
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -1,7 +1,7 @@
 import { save, open } from '@tauri-apps/plugin-dialog'
 import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs'
 import type { Page } from '../types/frame'
-import type { SnippetData } from '../store/snippetStore'
+import type { PatternData } from '../store/catalogStore'
 
 const FILE_EXTENSION = 'caja'
 const FILE_FILTER = { name: 'Caja Layout', extensions: [FILE_EXTENSION] }
@@ -9,27 +9,28 @@ const FILE_FILTER = { name: 'Caja Layout', extensions: [FILE_EXTENSION] }
 interface CajaFileData {
   pages: Page[]
   activePageId: string
-  snippets?: SnippetData
+  patterns?: PatternData   // new — written on save
+  snippets?: PatternData   // legacy read-only
   // Legacy: may have root instead of pages
   root?: unknown
 }
 
-export async function saveFile(pages: Page[], activePageId: string, snippets: SnippetData, currentPath: string | null): Promise<string | null> {
+export async function saveFile(pages: Page[], activePageId: string, patterns: PatternData, currentPath: string | null): Promise<string | null> {
   if (currentPath) {
-    const data: CajaFileData = { pages, activePageId, snippets }
+    const data: CajaFileData = { pages, activePageId, patterns }
     await writeTextFile(currentPath, JSON.stringify(data, null, 2))
     return currentPath
   }
-  return saveFileAs(pages, activePageId, snippets)
+  return saveFileAs(pages, activePageId, patterns)
 }
 
-export async function saveFileAs(pages: Page[], activePageId: string, snippets: SnippetData): Promise<string | null> {
+export async function saveFileAs(pages: Page[], activePageId: string, patterns: PatternData): Promise<string | null> {
   const path = await save({
     filters: [FILE_FILTER],
     defaultPath: `layout.${FILE_EXTENSION}`,
   })
   if (!path) return null
-  const data: CajaFileData = { pages, activePageId, snippets }
+  const data: CajaFileData = { pages, activePageId, patterns }
   await writeTextFile(path, JSON.stringify(data, null, 2))
   return path
 }

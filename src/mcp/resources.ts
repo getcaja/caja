@@ -1,7 +1,7 @@
 // Resource readers for MCP — expose Caja state as read-only resources
 
 import { useFrameStore, findInTree } from '../store/frameStore'
-import { useSnippetStore } from '../store/snippetStore'
+import { useCatalogStore } from '../store/catalogStore'
 import { exportToJSX } from '../utils/exportTailwind'
 import { exportToHTML } from '../utils/exportHtml'
 
@@ -38,9 +38,9 @@ export const resourceDefinitions: Resource[] = [
     mimeType: 'text/html',
   },
   {
-    uri: 'caja://snippets',
-    name: 'Snippets',
-    description: 'All snippets in the current file as JSON',
+    uri: 'caja://patterns',
+    name: 'Patterns',
+    description: 'All patterns in the current file as JSON',
     mimeType: 'application/json',
   },
 ]
@@ -93,9 +93,9 @@ export function readResource(uri: string): { content: string; mimeType: string }
     }
   }
 
-  if (uri === 'caja://snippets') {
-    const snippetStore = useSnippetStore.getState()
-    const all = snippetStore.allSnippets()
+  if (uri === 'caja://patterns' || uri === 'caja://snippets') {
+    const catalogStore = useCatalogStore.getState()
+    const all = catalogStore.allPatterns()
     return {
       content: JSON.stringify(all.map(({ id, name, tags, meta, createdAt }) => ({ id, name, tags, meta, createdAt })), null, 2),
       mimeType: 'application/json',

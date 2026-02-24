@@ -5,7 +5,7 @@ import {
   Square, Type, Link, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ChevronDown,
 } from 'lucide-react'
 import { useFrameStore, isRootId, findInTree } from '../../store/frameStore'
-import { useSnippetStore } from '../../store/snippetStore'
+import { useCatalogStore } from '../../store/catalogStore'
 import { ZOOM_LEVELS } from './ZoomBar'
 import type { Frame } from '../../types/frame'
 
@@ -163,16 +163,22 @@ export function Toolbar() {
                 if (store.selectedId) {
                   const frame = findInTree(store.root, store.selectedId)
                   if (frame) {
-                    useSnippetStore.getState().saveSnippet(frame.name || 'Snippet', [], frame)
-                    store.setTreePanelTab('snippets')
+                    useCatalogStore.getState().savePattern(frame.name || 'Pattern', [], frame)
+                    useCatalogStore.getState().setActiveSource('internal')
+                    store.setTreePanelTab('patterns')
                     return
                   }
                 }
                 // No selection — just toggle the tab
-                store.setTreePanelTab(treePanelTab === 'snippets' ? 'elements' : 'snippets')
+                if (treePanelTab !== 'patterns') {
+                  useCatalogStore.getState().setActiveSource('internal')
+                  store.setTreePanelTab('patterns')
+                } else {
+                  store.setTreePanelTab('elements')
+                }
               }}
-              className={`${btnIcon} ${treePanelTab === 'snippets' ? 'bg-surface-3 text-text-primary' : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'}`}
-              title={selectedId ? 'Save selected as snippet' : 'Snippets'}
+              className={`${btnIcon} ${treePanelTab === 'patterns' ? 'bg-surface-3 text-text-primary' : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'}`}
+              title={selectedId ? 'Save selected as pattern' : 'Patterns'}
             >
               <Code size={14} />
             </button>

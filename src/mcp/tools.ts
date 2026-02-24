@@ -2,7 +2,7 @@
 // This is the single entry point for both the built-in chat and the external MCP server.
 
 import { useFrameStore, findInTree, cloneWithNewIds } from '../store/frameStore'
-import { useSnippetStore } from '../store/snippetStore'
+import { useCatalogStore } from '../store/catalogStore'
 import type { Frame, Spacing, SizeValue, DesignValue, Border, BorderRadius } from '../types/frame'
 import type { ToolName } from './schema'
 import { parseTailwindClasses } from '../utils/parseTailwindClasses'
@@ -253,7 +253,7 @@ function sanitizeFrameProperties(props: Record<string, unknown>, existingFrame?:
 // --- Batch variable substitution ---
 // Replaces "$prev", "$0", "$1", etc. ONLY in known ID-reference fields to avoid
 // corrupting content text like "$0" (a price) into a frame ID.
-const ID_FIELDS = new Set(['parent_id', 'id', 'new_parent_id', 'snippet_id', 'frame_id'])
+const ID_FIELDS = new Set(['parent_id', 'id', 'new_parent_id', 'snippet_id', 'pattern_id', 'frame_id'])
 
 function resolveRefs(params: Record<string, unknown>, resultIds: string[]): Record<string, unknown> {
   const resolve = (val: unknown, key?: string): unknown => {
@@ -338,14 +338,14 @@ const handlers: Record<string, ToolHandler> = {
     // Sanitize properties before passing to store (no existing frame for border fallback)
     const sanitized = Object.keys(mergedProps).length > 0 ? sanitizeFrameProperties(mergedProps) : undefined
 
-    // Build result with optional snippet hint when parent has repeated same-type children
+    // Build result with optional pattern hint when parent has repeated same-type children
     const buildAddResult = (child: Frame, parentFrame: Frame): ToolResult => {
       const finalChild = findInTree(getStore().root, child.id)
       const result: ToolResult = { success: true, data: finalChild ? compactSnapshot(finalChild) : { id: child.id } }
       if (parentFrame.type === 'box') {
         const sameTypeCount = parentFrame.children.filter(c => c.type === element_type).length
         if (sameTypeCount >= 3) {
-          result.hint = `Parent has ${sameTypeCount} ${element_type} children. Consider save_snippet + insert_snippet with overrides for repeated patterns.`
+          result.hint = `Parent has ${sameTypeCount} ${element_type} children. Consider save_pattern + insert_pattern with overrides for repeated patterns.`
         }
       }
       return result
@@ -495,7 +495,7 @@ const handlers: Record<string, ToolHandler> = {
     return {
       success: true,
       data: { original: id, duplicate: newId, idMap },
-      hint: 'Use idMap to update cloned children directly: batch_update with update_frame for each idMap value. For repeated patterns, consider save_snippet + insert_snippet with overrides instead.',
+      hint: 'Use idMap to update cloned children directly: batch_update with update_frame for each idMap value. For repeated patterns, consider save_pattern + insert_pattern with overrides instead.',
     }
   },
 
@@ -578,7 +578,7 @@ const handlers: Record<string, ToolHandler> = {
       if (results.length >= 8) {
         const addCount = operations.filter((op) => op.tool === 'add_frame').length
         if (addCount >= 6) {
-          response.hint = 'Building a complex structure? Save it as a snippet with save_snippet, then reuse with insert_snippet + overrides to avoid rebuilding.'
+          response.hint = 'Building a complex structure? Save it as a pattern with save_pattern, then reuse with insert_pattern + overrides to avoid rebuilding.'
         }
       }
       return response
@@ -588,12 +588,12 @@ const handlers: Record<string, ToolHandler> = {
     return { success: false, error: results[failedIdx]?.error, data: { failedAt: failedIdx, completedCount: failedIdx, completedIds, totalRequested: operations.length } }
   },
 
-  // --- Snippet tools ---
+  // --- Pattern tools (with backward-compat snippet aliases) ---
 
-  list_snippets(params) {
+  list_patterns(params) {
     const { tag } = params as { tag?: string }
-    const snippetStore = useSnippetStore.getState()
-    let all = snippetStore.allSnippets()
+    const catalogStore = useCatalogStore.getState()
+    let all = catalogStore.allPatterns()
     if (tag) all = all.filter((s) => s.tags.includes(tag))
     return {
       success: true,
@@ -601,16 +601,24 @@ const handlers: Record<string, ToolHandler> = {
     }
   },
 
-  insert_snippet(params) {
-    const { snippet_id, parent_id, index, overrides } = params as {
-      snippet_id: string
+  insert_pattern(params) {
+    const { pattern_id, snippet_id, parent_id, index, overrides, library_id } = params as {
+      pattern_id?: string
+      snippet_id?: string // backward compat alias
       parent_id: string
       index?: number
       overrides?: Record<string, { properties?: Record<string, unknown>; classes?: string }>
+      library_id?: string // optional: insert from an external library
     }
-    const snippetStore = useSnippetStore.getState()
-    const snippet = snippetStore.getSnippet(snippet_id)
-    if (!snippet) return { success: false, error: `Snippet ${snippet_id} not found` }
+    const resolvedId = pattern_id || snippet_id
+    if (!resolvedId) return { success: false, error: 'pattern_id is required' }
+
+    const catalogStore = useCatalogStore.getState()
+    // Look up pattern from library or internal catalog
+    const pattern = library_id
+      ? catalogStore.getLibraryPattern(library_id, resolvedId)
+      : catalogStore.getPattern(resolvedId)
+    if (!pattern) return { success: false, error: `Pattern ${resolvedId} not found${library_id ? ` in library ${library_id}` : ''}` }
 
     const store = getStore()
     const parent = findInTree(store.root, parent_id)
@@ -618,11 +626,12 @@ const handlers: Record<string, ToolHandler> = {
       return { success: false, error: `Parent ${parent_id} not found or is not a box` }
     }
 
+    const origin = { libraryId: library_id || 'internal', patternId: pattern.id }
     if (index !== undefined) {
-      store.insertFrameAt(parent_id, snippet.frame, index)
+      store.insertFrameAt(parent_id, pattern.frame, index, origin)
     } else {
       // Default: append at end (most natural for MCP sequential building)
-      store.insertFrameAt(parent_id, snippet.frame, parent.children.length)
+      store.insertFrameAt(parent_id, pattern.frame, parent.children.length, origin)
     }
     const newId = getStore().selectedId
 
@@ -660,22 +669,22 @@ const handlers: Record<string, ToolHandler> = {
       }
     }
 
-    const result: ToolResult = { success: true, data: { id: newId, snippet: snippet.name } }
+    const result: ToolResult = { success: true, data: { id: newId, pattern: pattern.name } }
     if (!overrides) {
       result.hint = 'Tip: use overrides param to customize content by name without extra update_frame calls. Example: overrides: { "title": { properties: { content: "New title" } } }'
     }
     return result
   },
 
-  save_snippet(params) {
+  save_pattern(params) {
     const { frame_id, name, tags } = params as { frame_id: string; name: string; tags?: string[] }
     const store = getStore()
     const frame = findInTree(store.root, frame_id)
     if (!frame) return { success: false, error: `Frame ${frame_id} not found` }
 
-    const snippetStore = useSnippetStore.getState()
+    const catalogStore = useCatalogStore.getState()
     const cloned = cloneWithNewIds(frame)
-    const snippet = snippetStore.saveSnippet(name, tags || [], cloned)
+    const pattern = catalogStore.savePattern(name, tags || [], cloned)
 
     // Collect named slots for the hint
     const slots: string[] = []
@@ -687,19 +696,49 @@ const handlers: Record<string, ToolHandler> = {
 
     return {
       success: true,
-      data: { id: snippet.id, name: snippet.name, slots },
-      hint: `Reuse with: insert_snippet({ snippet_id: "${snippet.id}", parent_id: "...", overrides: { "${slots[1] || slots[0]}": { properties: { content: "..." } } } }). Override any slot by name.`,
+      data: { id: pattern.id, name: pattern.name, slots },
+      hint: `Reuse with: insert_pattern({ pattern_id: "${pattern.id}", parent_id: "...", overrides: { "${slots[1] || slots[0]}": { properties: { content: "..." } } } }). Override any slot by name.`,
     }
   },
 
-  delete_snippet(params) {
-    const { snippet_id } = params as { snippet_id: string }
-    const snippetStore = useSnippetStore.getState()
-    const snippet = snippetStore.getSnippet(snippet_id)
-    if (!snippet) return { success: false, error: `Snippet ${snippet_id} not found` }
+  delete_pattern(params) {
+    const { pattern_id, snippet_id } = params as { pattern_id?: string; snippet_id?: string }
+    const resolvedId = pattern_id || snippet_id
+    if (!resolvedId) return { success: false, error: 'pattern_id is required' }
 
-    snippetStore.deleteSnippet(snippet_id)
-    return { success: true, data: { deleted: snippet_id } }
+    const catalogStore = useCatalogStore.getState()
+    const pattern = catalogStore.getPattern(resolvedId)
+    if (!pattern) return { success: false, error: `Pattern ${resolvedId} not found` }
+
+    catalogStore.deletePattern(resolvedId)
+    return { success: true, data: { deleted: resolvedId } }
+  },
+
+  // --- Library tools ---
+
+  list_libraries() {
+    const catalogStore = useCatalogStore.getState()
+    return {
+      success: true,
+      data: catalogStore.libraryIndex.map(({ id, name, author, version, description, importedAt }) => ({
+        id, name, author, version, description, importedAt,
+      })),
+    }
+  },
+
+  list_library_patterns(params) {
+    const { library_id } = params as { library_id: string }
+    if (!library_id) return { success: false, error: 'library_id is required' }
+
+    const catalogStore = useCatalogStore.getState()
+    const meta = catalogStore.libraryIndex.find((m) => m.id === library_id)
+    if (!meta) return { success: false, error: `Library ${library_id} not found` }
+
+    const patterns = catalogStore.getLibraryPatterns(library_id)
+    return {
+      success: true,
+      data: patterns.map(({ id, name, tags, meta, createdAt }) => ({ id, name, tags, meta, createdAt })),
+    }
   },
 
   // --- Page tools ---
@@ -746,6 +785,12 @@ const handlers: Record<string, ToolHandler> = {
     return { success: true, data: { removed: id } }
   },
 }
+
+// Backward-compat aliases: old snippet names → new pattern names
+handlers.list_snippets = handlers.list_patterns
+handlers.insert_snippet = handlers.insert_pattern
+handlers.save_snippet = handlers.save_pattern
+handlers.delete_snippet = handlers.delete_pattern
 
 export async function executeTool(name: string, params: ToolParams = {}): Promise<ToolResult> {
   const handler = handlers[name]

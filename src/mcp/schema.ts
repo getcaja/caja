@@ -219,9 +219,10 @@ export const toolSchemas = {
       required: ['operations'],
     },
   },
-  list_snippets: {
-    name: 'list_snippets',
-    description: 'List available snippets (reusable frame trees). Returns lightweight metadata without frame data. Filter by tag optionally.',
+  // --- Pattern tools (new names) ---
+  list_patterns: {
+    name: 'list_patterns',
+    description: 'List available patterns (reusable frame trees). Returns lightweight metadata without frame data. Filter by tag optionally.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -230,18 +231,86 @@ export const toolSchemas = {
     },
   },
 
-  insert_snippet: {
-    name: 'insert_snippet',
-    description: 'Insert a snippet into the tree. Clones the snippet frame with new IDs and adds it as a child of parent_id. Use overrides to customize cloned children by name (e.g. set content, classes) without extra update calls.',
+  insert_pattern: {
+    name: 'insert_pattern',
+    description: 'Insert a pattern into the tree. Clones the pattern frame with new IDs and adds it as a child of parent_id. Use overrides to customize cloned children by name (e.g. set content, classes) without extra update calls. Use library_id to insert from an external library.',
     inputSchema: {
       type: 'object' as const,
       properties: {
-        snippet_id: { type: 'string', description: 'ID of the snippet to insert' },
+        pattern_id: { type: 'string', description: 'ID of the pattern to insert' },
+        parent_id: { type: 'string', description: 'ID of the parent box to insert into' },
+        index: { type: 'number', description: 'Position index within the parent. If omitted, appends at the end.' },
+        library_id: { type: 'string', description: 'Optional library ID to insert from an external library instead of internal patterns' },
+        overrides: {
+          type: 'object',
+          description: 'Map of frame name → patch. Each patch can have "properties" (object) and/or "classes" (Tailwind string). Matches children by name in the cloned tree. Example: { "price": { "properties": { "content": "$49" } }, "cta": { "classes": "bg-violet-600" } }',
+          additionalProperties: {
+            type: 'object',
+            properties: {
+              properties: { type: 'object', additionalProperties: true },
+              classes: { type: 'string' },
+            },
+          },
+        },
+      },
+      required: ['pattern_id', 'parent_id'],
+    },
+  },
+
+  save_pattern: {
+    name: 'save_pattern',
+    description: 'Save an existing frame from the tree as a reusable pattern.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        frame_id: { type: 'string', description: 'ID of the frame to save as pattern' },
+        name: { type: 'string', description: 'Name for the pattern' },
+        tags: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Optional tags (e.g. ["layout", "form"])',
+        },
+      },
+      required: ['frame_id', 'name'],
+    },
+  },
+
+  delete_pattern: {
+    name: 'delete_pattern',
+    description: 'Delete a user-created pattern.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        pattern_id: { type: 'string', description: 'ID of the pattern to delete' },
+      },
+      required: ['pattern_id'],
+    },
+  },
+
+  // --- Backward-compat snippet aliases ---
+  list_snippets: {
+    name: 'list_snippets',
+    description: '[Alias for list_patterns] List available patterns. Filter by tag optionally.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        tag: { type: 'string', description: 'Optional tag to filter by' },
+      },
+    },
+  },
+
+  insert_snippet: {
+    name: 'insert_snippet',
+    description: '[Alias for insert_pattern] Insert a pattern into the tree.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        snippet_id: { type: 'string', description: 'ID of the pattern to insert (alias for pattern_id)' },
         parent_id: { type: 'string', description: 'ID of the parent box to insert into' },
         index: { type: 'number', description: 'Position index within the parent. If omitted, appends at the end.' },
         overrides: {
           type: 'object',
-          description: 'Map of frame name → patch. Each patch can have "properties" (object) and/or "classes" (Tailwind string). Matches children by name in the cloned tree. Example: { "price": { "properties": { "content": "$49" } }, "cta": { "classes": "bg-violet-600" } }',
+          description: 'Map of frame name → patch.',
           additionalProperties: {
             type: 'object',
             properties: {
@@ -257,16 +326,16 @@ export const toolSchemas = {
 
   save_snippet: {
     name: 'save_snippet',
-    description: 'Save an existing frame from the tree as a reusable snippet.',
+    description: '[Alias for save_pattern] Save an existing frame as a reusable pattern.',
     inputSchema: {
       type: 'object' as const,
       properties: {
-        frame_id: { type: 'string', description: 'ID of the frame to save as snippet' },
-        name: { type: 'string', description: 'Name for the snippet' },
+        frame_id: { type: 'string', description: 'ID of the frame to save as pattern' },
+        name: { type: 'string', description: 'Name for the pattern' },
         tags: {
           type: 'array',
           items: { type: 'string' },
-          description: 'Optional tags (e.g. ["layout", "form"])',
+          description: 'Optional tags',
         },
       },
       required: ['frame_id', 'name'],
@@ -275,11 +344,11 @@ export const toolSchemas = {
 
   delete_snippet: {
     name: 'delete_snippet',
-    description: 'Delete a user-created snippet. Cannot delete built-in snippets.',
+    description: '[Alias for delete_pattern] Delete a user-created pattern.',
     inputSchema: {
       type: 'object' as const,
       properties: {
-        snippet_id: { type: 'string', description: 'ID of the snippet to delete' },
+        snippet_id: { type: 'string', description: 'ID of the pattern to delete (alias for pattern_id)' },
       },
       required: ['snippet_id'],
     },
@@ -326,6 +395,29 @@ export const toolSchemas = {
         id: { type: 'string', description: 'ID of the page to remove' },
       },
       required: ['id'],
+    },
+  },
+
+  // --- Library tools ---
+  list_libraries: {
+    name: 'list_libraries',
+    description: 'List installed pattern libraries. Returns lightweight metadata (id, name, author, version, description) for each library.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {},
+    },
+  },
+
+  list_library_patterns: {
+    name: 'list_library_patterns',
+    description: 'List patterns from a specific installed library. Returns pattern metadata without full frame data.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        library_id: { type: 'string', description: 'ID of the library to list patterns from' },
+        tag: { type: 'string', description: 'Optional tag to filter by' },
+      },
+      required: ['library_id'],
     },
   },
 } as const

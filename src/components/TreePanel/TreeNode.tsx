@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import type { Frame } from '../../types/frame'
 import { useFrameStore, findInTree } from '../../store/frameStore'
-import { useSnippetStore } from '../../store/snippetStore'
+import { useCatalogStore } from '../../store/catalogStore'
 import { AddMenu } from './AddMenu'
 import { useTreeDnd, type DropPosition } from './TreeDndContext'
 import { useContextMenu } from './hooks/useContextMenu'
@@ -323,13 +323,13 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
                   const store = useFrameStore.getState()
                   const f = findInTree(store.root, frame.id)
                   if (f) {
-                    useSnippetStore.getState().saveSnippet(f.name || 'Snippet', [], f)
-                    store.setTreePanelTab('snippets')
+                    useCatalogStore.getState().savePattern(f.name || 'Pattern', [], f)
+                    store.setTreePanelTab('patterns')
                   }
                   ctxMenu.close()
                 }}
               >
-                <Bookmark size={12} /> Save as Snippet
+                <Bookmark size={12} /> Save as Pattern
               </button>
             </>
           )}
