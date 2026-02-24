@@ -10,7 +10,7 @@ import { importLibrary, saveLibraryIndex } from '../../lib/libraryOps'
 import { PageNode } from './PageNode'
 import { Select } from '../ui/Select'
 import { useContextMenu } from './hooks/useContextMenu'
-import { Plus, FolderPlus, Code, Download, Ellipsis, Import, Settings } from 'lucide-react'
+import { Plus, FolderPlus, Code, Download, Settings } from 'lucide-react'
 
 interface TreePanelProps {
   onExportLibrary: () => void
@@ -36,10 +36,6 @@ export function TreePanel({ onExportLibrary }: TreePanelProps) {
   const patternMenu = useContextMenu()
   const patternBtnRef = useRef<HTMLButtonElement>(null)
   const patternPanelRef = useRef<PatternsPanelHandle>(null)
-
-  // Libraries "..." menu
-  const libraryMenu = useContextMenu()
-  const libraryBtnRef = useRef<HTMLButtonElement>(null)
 
   // Modal state
   const [showManageLibraries, setShowManageLibraries] = useState(false)
@@ -157,17 +153,22 @@ export function TreePanel({ onExportLibrary }: TreePanelProps) {
           )}
           {tab === 'libraries' && (
             <button
-              ref={libraryBtnRef}
               className="w-5 h-5 c-icon-btn hover:text-accent hover:bg-accent/10"
-              onClick={() => {
-                if (libraryBtnRef.current) {
-                  const rect = libraryBtnRef.current.getBoundingClientRect()
-                  libraryMenu.openAt(rect.left, rect.bottom + 4)
+              onClick={async () => {
+                try {
+                  const result = await importLibrary()
+                  if (result) {
+                    useCatalogStore.getState().installLibrary(result.meta, result.data)
+                    await saveLibraryIndex(useCatalogStore.getState().libraryIndex)
+                    setActiveSource(result.meta.id)
+                  }
+                } catch (err) {
+                  console.error('Failed to import library:', err)
                 }
               }}
-              title="Library options"
+              title="Import library"
             >
-              <Ellipsis size={14} />
+              <Plus size={14} />
             </button>
           )}
         </div>
@@ -211,40 +212,6 @@ export function TreePanel({ onExportLibrary }: TreePanelProps) {
           </div>
         )}
 
-        {/* Libraries "..." menu */}
-        {libraryMenu.menu && (
-          <div
-            className="fixed c-menu-popup min-w-[180px] z-[9999]"
-            style={{ left: libraryMenu.menu.x, top: libraryMenu.menu.y }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              className="c-menu-item"
-              onClick={async () => {
-                libraryMenu.close()
-                try {
-                  const result = await importLibrary()
-                  if (result) {
-                    useCatalogStore.getState().installLibrary(result.meta, result.data)
-                    await saveLibraryIndex(useCatalogStore.getState().libraryIndex)
-                    setActiveSource(result.meta.id)
-                  }
-                } catch (err) {
-                  console.error('Failed to import library:', err)
-                }
-              }}
-            >
-              <Import size={12} /> Import Library...
-            </button>
-            <button
-              className="c-menu-item"
-              onClick={() => { setShowManageLibraries(true); libraryMenu.close() }}
-            >
-              <Settings size={12} /> Manage Libraries...
-            </button>
-          </div>
-        )}
-
         {tab === 'elements' && (
           <div className="flex-1 overflow-y-auto flex flex-col">
             {/* Page list */}
@@ -274,22 +241,30 @@ export function TreePanel({ onExportLibrary }: TreePanelProps) {
 
         {tab === 'libraries' && (
           <div className="flex-1 flex flex-col overflow-hidden">
-            {libraryIndex.length === 0 ? (
-              <div className="flex-1 flex items-center justify-center">
-                <span className="text-text-muted text-[12px]">No libraries installed</span>
-              </div>
-            ) : (
-              <>
-                <div className="px-2 py-1.5">
+            <div className="px-2 py-1.5 flex items-center gap-1.5">
+              <div className="flex-1 min-w-0">
+                {libraryIndex.length === 0 ? (
+                  <div className="c-input flex items-center text-text-muted cursor-default">
+                    No libraries installed
+                  </div>
+                ) : (
                   <Select
                     value={libraryIndex.some((l) => l.id === activeSource) ? activeSource : libraryIndex[0].id}
                     options={libraryIndex.map((lib) => ({ value: lib.id, label: lib.name }))}
                     onChange={setActiveSource}
+                    className="w-full"
                   />
-                </div>
-                <PatternsPanel />
-              </>
-            )}
+                )}
+              </div>
+              <button
+                className="w-5 h-5 shrink-0 c-icon-btn hover:text-accent hover:bg-accent/10"
+                onClick={() => setShowManageLibraries(true)}
+                title="Manage libraries"
+              >
+                <Settings size={14} />
+              </button>
+            </div>
+            {libraryIndex.length > 0 && <PatternsPanel />}
           </div>
         )}
       </div>

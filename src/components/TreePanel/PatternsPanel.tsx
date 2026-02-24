@@ -366,7 +366,7 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle>(function PatternsPa
 
                 {/* Category row */}
                 <div
-                  draggable={!isEditingCat}
+                  draggable={!readOnly && !isEditingCat}
                   className={`flex items-center gap-1.5 py-1 px-1 rounded-md group transition-all ${
                     isCatOver && catOverPos === 'inside'
                       ? 'bg-[var(--color-focus)]/10 outline outline-1 outline-[var(--color-focus)]/40'
@@ -376,7 +376,7 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle>(function PatternsPa
                   }`}
                   style={{ paddingLeft: 1 * 16 + 4 }}
                   onClick={() => { if (!dragId) setHighlightId(catId) }}
-                  onDragStart={(e) => {
+                  onDragStart={readOnly ? undefined : (e) => {
                     e.stopPropagation()
                     e.dataTransfer.effectAllowed = 'move'
                     e.dataTransfer.setData('text/plain', catId)
@@ -427,7 +427,7 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle>(function PatternsPa
                     }
                   }}
                   onDragEnd={endDrag}
-                  onContextMenu={(e) => {
+                  onContextMenu={readOnly ? undefined : (e) => {
                     e.preventDefault()
                     e.stopPropagation()
                     setContextMenu({ x: e.clientX, y: e.clientY, type: 'category', tag })
@@ -458,22 +458,24 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle>(function PatternsPa
                   ) : (
                     <span
                       className="flex-1 text-[12px] truncate cursor-default"
-                      onDoubleClick={(e) => { e.stopPropagation(); startCategoryRename(tag) }}
+                      onDoubleClick={readOnly ? undefined : (e) => { e.stopPropagation(); startCategoryRename(tag) }}
                     >
                       {tag}
                     </span>
                   )}
 
                   {/* Delete on hover */}
-                  <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
-                    <button
-                      className="w-4 h-4 c-icon-btn text-[10px] hover:text-text-secondary hover:bg-surface-2/60"
-                      onClick={(e) => { e.stopPropagation(); deleteCategory(tag) }}
-                      title="Delete category"
-                    >
-                      <X size={10} />
-                    </button>
-                  </div>
+                  {!readOnly && (
+                    <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
+                      <button
+                        className="w-4 h-4 c-icon-btn text-[10px] hover:text-text-secondary hover:bg-surface-2/60"
+                        onClick={(e) => { e.stopPropagation(); deleteCategory(tag) }}
+                        title="Delete category"
+                      >
+                        <X size={10} />
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Children (depth 2) */}

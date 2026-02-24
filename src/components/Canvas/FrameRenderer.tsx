@@ -118,6 +118,7 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
     isHovered && !isRoot && 'is-hovered',
     !previewMode && isEmpty && !isRoot && 'is-empty',
     isDragged && 'is-dragging',
+    isDropTarget && 'is-drop-target',
     previewCursor,
   ].filter(Boolean).join(' ')
 

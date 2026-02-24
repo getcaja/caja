@@ -87,7 +87,13 @@ export function resolveCanvasDrop(
   while (target && !target.hasAttribute('data-frame-id')) {
     target = target.parentElement as HTMLElement
   }
-  if (!target) return null
+  if (!target) {
+    // Cursor is over empty space (body/caja-root) — fallback to root
+    if (root.type === 'box') {
+      return { parentId: root.id, index: root.children.length }
+    }
+    return null
+  }
 
   const targetId = target.getAttribute('data-frame-id')!
   // Can't drop on self or inside self
