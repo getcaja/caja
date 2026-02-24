@@ -341,6 +341,41 @@ server.tool(
   }
 )
 
+server.tool(
+  'export_library',
+  'Package all internal patterns into a new installed library. The library is persisted as a .cjl file and added to the library index. Returns the new library ID and pattern count.',
+  {
+    name: z.string().describe('Name for the library (e.g. "My Components")'),
+    author: z.string().optional().describe('Optional author name'),
+    description: z.string().optional().describe('Optional description'),
+    version: z.string().optional().describe('Optional version string (e.g. "1.0.0")'),
+  },
+  async ({ name, author, description, version }) => {
+    const result = await callTool('export_library', { name, author, description, version })
+    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
+  }
+)
+
+server.tool(
+  'install_library',
+  'Install a library from inline JSON data. The data should contain patterns in the same format as a .cjl file. The library is persisted and added to the library index.',
+  {
+    name: z.string().describe('Name for the library'),
+    author: z.string().optional().describe('Optional author name'),
+    description: z.string().optional().describe('Optional description'),
+    version: z.string().optional().describe('Optional version string'),
+    patterns: z.object({
+      items: z.array(z.unknown()).describe('Array of pattern objects'),
+      order: z.array(z.string()).optional().describe('Ordered pattern IDs'),
+      categories: z.array(z.string()).optional().describe('Category names'),
+    }).describe('Pattern data: { items, order?, categories? }'),
+  },
+  async ({ name, author, description, version, patterns }) => {
+    const result = await callTool('install_library', { name, author, description, version, patterns })
+    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
+  }
+)
+
 // ── Backward-compat snippet aliases ──
 
 server.tool(
@@ -395,6 +430,18 @@ server.tool(
   },
   async ({ snippet_id }) => {
     const result = await callTool('delete_pattern', { pattern_id: snippet_id })
+    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
+  }
+)
+
+// ── File tools ──
+
+server.tool(
+  'new_file',
+  'Reset the project to a blank state (equivalent to File > New). Clears all pages, frames, and internal patterns. Libraries are preserved.',
+  {},
+  async () => {
+    const result = await callTool('new_file', {})
     return { content: [{ type: 'text', text: JSON.stringify(result) }] }
   }
 )

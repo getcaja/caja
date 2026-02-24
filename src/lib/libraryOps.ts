@@ -29,7 +29,7 @@ async function getIndexPath(): Promise<string> {
   return join(base, INDEX_FILE)
 }
 
-async function ensureLibrariesDir(): Promise<string> {
+export async function ensureLibrariesDir(): Promise<string> {
   const dir = await getLibrariesDir()
   if (!(await exists(dir))) {
     await mkdir(dir, { recursive: true })

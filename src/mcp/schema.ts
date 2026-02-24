@@ -353,6 +353,15 @@ export const toolSchemas = {
       required: ['snippet_id'],
     },
   },
+  new_file: {
+    name: 'new_file',
+    description: 'Reset the project to a blank state (equivalent to File > New). Clears all pages, frames, and internal patterns. Libraries are preserved.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {},
+    },
+  },
+
   list_pages: {
     name: 'list_pages',
     description: 'List all pages in the project. Returns page id, name, route, and whether it is active.',
@@ -418,6 +427,46 @@ export const toolSchemas = {
         tag: { type: 'string', description: 'Optional tag to filter by' },
       },
       required: ['library_id'],
+    },
+  },
+
+  export_library: {
+    name: 'export_library',
+    description: 'Package all internal patterns into a new installed library. The library is persisted as a .cjl file and added to the library index. Returns the new library ID and pattern count.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        name: { type: 'string', description: 'Name for the library (e.g. "My Components")' },
+        author: { type: 'string', description: 'Optional author name' },
+        description: { type: 'string', description: 'Optional description' },
+        version: { type: 'string', description: 'Optional version string (e.g. "1.0.0")' },
+      },
+      required: ['name'],
+    },
+  },
+
+  install_library: {
+    name: 'install_library',
+    description: 'Install a library from inline JSON data. The data should contain patterns in the same format as a .cjl file. The library is persisted and added to the library index.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        name: { type: 'string', description: 'Name for the library' },
+        author: { type: 'string', description: 'Optional author name' },
+        description: { type: 'string', description: 'Optional description' },
+        version: { type: 'string', description: 'Optional version string' },
+        patterns: {
+          type: 'object',
+          description: 'Pattern data: { items: Pattern[], order: string[], categories: string[] }',
+          properties: {
+            items: { type: 'array', description: 'Array of pattern objects' },
+            order: { type: 'array', items: { type: 'string' }, description: 'Ordered pattern IDs' },
+            categories: { type: 'array', items: { type: 'string' }, description: 'Category names' },
+          },
+          required: ['items'],
+        },
+      },
+      required: ['name', 'patterns'],
     },
   },
 } as const

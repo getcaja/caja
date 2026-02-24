@@ -230,7 +230,7 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
         </span>
 
         {/* Color dot */}
-        {frame.bg.value && (
+        {frame.bg?.value && (
           <span
             className="w-2 h-2 rounded-full shrink-0"
             style={{ backgroundColor: frame.bg.value }}

@@ -168,9 +168,7 @@ function App() {
       listen<string>('menu-event', (e) => {
         switch (e.payload) {
           case 'new':
-            localStorage.removeItem('caja-state')
-            localStorage.removeItem('caja-snippets-state')
-            location.reload()
+            useFrameStore.getState().newFile()
             break
           case 'open':
             handleOpen()

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { Frame, BoxElement, BoxTag, BoxDisplay, TextElement, ImageElement, ButtonElement, InputElement, TextareaElement, SelectElement, TextStyles, Spacing, Inset, SizeValue, BorderRadius, Border, DesignValue, Page } from '../types/frame'
+import { useCatalogStore } from './catalogStore'
 
 // Each page gets a unique root ID: __root__<pageId>
 function rootIdForPage(pageId: string): string {
@@ -107,24 +108,28 @@ function defaultTextStyles(): TextStyles {
   }
 }
 
-function cloneDV<T>(dv: DesignValue<T>): DesignValue<T> {
-  return { ...dv }
+function cloneDV<T>(dv: DesignValue<T> | undefined): DesignValue<T> | undefined {
+  return dv ? { ...dv } : undefined
 }
 
-function cloneSpacing(s: Spacing): Spacing {
-  return { top: cloneDV(s.top), right: cloneDV(s.right), bottom: cloneDV(s.bottom), left: cloneDV(s.left) }
+function cloneSpacing(s: Spacing | undefined): Spacing | undefined {
+  if (!s) return undefined
+  return { top: cloneDV(s.top)!, right: cloneDV(s.right)!, bottom: cloneDV(s.bottom)!, left: cloneDV(s.left)! }
 }
 
-function cloneBorderRadius(br: BorderRadius): BorderRadius {
-  return { topLeft: cloneDV(br.topLeft), topRight: cloneDV(br.topRight), bottomRight: cloneDV(br.bottomRight), bottomLeft: cloneDV(br.bottomLeft) }
+function cloneBorderRadius(br: BorderRadius | undefined): BorderRadius | undefined {
+  if (!br) return undefined
+  return { topLeft: cloneDV(br.topLeft)!, topRight: cloneDV(br.topRight)!, bottomRight: cloneDV(br.bottomRight)!, bottomLeft: cloneDV(br.bottomLeft)! }
 }
 
-function cloneBorder(b: Border): Border {
-  return { width: cloneDV(b.width), color: cloneDV(b.color), style: b.style }
+function cloneBorder(b: Border | undefined): Border | undefined {
+  if (!b) return undefined
+  return { width: cloneDV(b.width)!, color: cloneDV(b.color)!, style: b.style }
 }
 
-function cloneSizeValue(sv: SizeValue): SizeValue {
-  return { mode: sv.mode, value: cloneDV(sv.value) }
+function cloneSizeValue(sv: SizeValue | undefined): SizeValue | undefined {
+  if (!sv) return undefined
+  return { mode: sv.mode, value: cloneDV(sv.value)! }
 }
 
 function createInternalRoot(pageId: string, children: Frame[] = []): BoxElement {
@@ -440,6 +445,21 @@ export function createSelect(overrides?: Partial<SelectElement>): SelectElement 
     ...newFeatureDefaults(),
     ...overrides,
   }
+}
+
+/** Normalize a potentially incomplete frame (e.g. from external JSON) by filling in
+ *  missing fields with defaults based on its type. Recurses into children. */
+export function normalizeFrame(frame: Frame): Frame {
+  const creators: Record<string, (o?: Partial<any>) => Frame> = {
+    box: createBox, text: createText, image: createImage, button: createButton,
+    input: createInput, textarea: createTextarea, select: createSelect, link: createLink,
+  }
+  const create = creators[frame.type] || creators.text
+  if (frame.type === 'box') {
+    const children = (frame as BoxElement).children?.map(normalizeFrame) || []
+    return create({ ...frame, children } as Partial<any>)
+  }
+  return create(frame as Partial<any>)
 }
 
 // Deep clone helper
@@ -942,6 +962,7 @@ interface FrameStore {
   getParentDirection: (id: string) => 'row' | 'column'
   getParentDisplay: (id: string) => BoxElement['display'] | null
   getRootId: () => string
+  newFile: () => void
   loadFromStorage: () => void
   loadFromFile: (root: BoxElement, filePath: string) => void
   loadFromFileMulti: (pages: Page[], activePageId: string, filePath: string) => void
@@ -1270,6 +1291,22 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   },
 
   getRootId: () => get().root.id,
+
+  newFile: () => {
+    const pageId = 'page-1'
+    const root = createInternalRoot(pageId)
+    const pages: Page[] = [{ id: pageId, name: 'Home', route: '/', root }]
+    nextId = 1
+    nextPageId = 2
+    localStorage.removeItem('caja-state')
+    localStorage.removeItem('caja-snippets-state')
+    set({
+      pages, activePageId: pageId, root, filePath: null, dirty: false,
+      selectedId: null, selectedIds: new Set(), past: {}, future: {},
+      collapsedIds: new Set(), hoveredId: null,
+    })
+    useCatalogStore.getState().resetPatterns()
+  },
 
   loadFromStorage: () => {
     try {

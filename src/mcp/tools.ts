@@ -1,11 +1,17 @@
 // Tool executor — maps MCP tool calls to frameStore actions
 // This is the single entry point for both the built-in chat and the external MCP server.
 
-import { useFrameStore, findInTree, cloneWithNewIds } from '../store/frameStore'
+import { useFrameStore, findInTree, cloneWithNewIds, normalizeFrame } from '../store/frameStore'
 import { useCatalogStore } from '../store/catalogStore'
+import type { PatternData } from '../store/catalogStore'
 import type { Frame, Spacing, SizeValue, DesignValue, Border, BorderRadius } from '../types/frame'
+import type { LibraryMeta } from '../types/pattern'
+import type { CjlFileData } from '../lib/libraryOps'
 import type { ToolName } from './schema'
 import { parseTailwindClasses } from '../utils/parseTailwindClasses'
+import { ensureLibrariesDir, saveLibraryIndex } from '../lib/libraryOps'
+import { writeTextFile } from '@tauri-apps/plugin-fs'
+import { join } from '@tauri-apps/api/path'
 import type { ScaleOption } from '../data/scales'
 import {
   SPACING_SCALE, FONT_SIZE_SCALE, FONT_WEIGHT_SCALE, LINE_HEIGHT_SCALE, LETTER_SPACING_SCALE,
@@ -627,11 +633,13 @@ const handlers: Record<string, ToolHandler> = {
     }
 
     const origin = { libraryId: library_id || 'internal', patternId: pattern.id }
+    // Normalize frame tree to fill in missing fields (external library data may be incomplete)
+    const normalizedFrame = normalizeFrame(pattern.frame)
     if (index !== undefined) {
-      store.insertFrameAt(parent_id, pattern.frame, index, origin)
+      store.insertFrameAt(parent_id, normalizedFrame, index, origin)
     } else {
       // Default: append at end (most natural for MCP sequential building)
-      store.insertFrameAt(parent_id, pattern.frame, parent.children.length, origin)
+      store.insertFrameAt(parent_id, normalizedFrame, parent.children.length, origin)
     }
     const newId = getStore().selectedId
 
@@ -739,6 +747,116 @@ const handlers: Record<string, ToolHandler> = {
       success: true,
       data: patterns.map(({ id, name, tags, meta, createdAt }) => ({ id, name, tags, meta, createdAt })),
     }
+  },
+
+  async export_library(params) {
+    const { name, author, description, version } = params as {
+      name: string; author?: string; description?: string; version?: string
+    }
+    if (!name) return { success: false, error: 'name is required' }
+
+    const catalogStore = useCatalogStore.getState()
+    const patternData = catalogStore.getPatternData()
+
+    if (!patternData.items.length) {
+      return { success: false, error: 'No internal patterns to export. Save patterns first with save_pattern.' }
+    }
+
+    const id = crypto.randomUUID()
+    const fileName = `${id}.cjl`
+
+    const cjl: CjlFileData = {
+      version: 1,
+      name,
+      author,
+      description,
+      libraryVersion: version,
+      patterns: patternData,
+    }
+
+    const dir = await ensureLibrariesDir()
+    const filePath = await join(dir, fileName)
+    await writeTextFile(filePath, JSON.stringify(cjl, null, 2))
+
+    const meta: LibraryMeta = {
+      id,
+      name,
+      author,
+      version,
+      description,
+      importedAt: new Date().toISOString(),
+      filePath: fileName,
+    }
+
+    catalogStore.installLibrary(meta, patternData)
+    await saveLibraryIndex([...catalogStore.libraryIndex])
+
+    return {
+      success: true,
+      data: { id, name, patternCount: patternData.items.length },
+      hint: `Library installed. Use list_library_patterns({ library_id: "${id}" }) to see patterns, or insert_pattern({ pattern_id: "...", parent_id: "...", library_id: "${id}" }) to stamp from it.`,
+    }
+  },
+
+  async install_library(params) {
+    const { name, author, description, version, patterns } = params as {
+      name: string; author?: string; description?: string; version?: string
+      patterns: PatternData
+    }
+    if (!name) return { success: false, error: 'name is required' }
+    if (!patterns || !Array.isArray(patterns.items)) {
+      return { success: false, error: 'patterns.items array is required' }
+    }
+
+    const id = crypto.randomUUID()
+    const fileName = `${id}.cjl`
+
+    const patternData: PatternData = {
+      items: patterns.items,
+      order: patterns.order || patterns.items.map((p) => p.id),
+      categories: patterns.categories || [],
+    }
+
+    const cjl: CjlFileData = {
+      version: 1,
+      name,
+      author,
+      description,
+      libraryVersion: version,
+      patterns: patternData,
+    }
+
+    const dir = await ensureLibrariesDir()
+    const filePath = await join(dir, fileName)
+    await writeTextFile(filePath, JSON.stringify(cjl, null, 2))
+
+    const meta: LibraryMeta = {
+      id,
+      name,
+      author,
+      version,
+      description,
+      importedAt: new Date().toISOString(),
+      filePath: fileName,
+    }
+
+    const catalogStore = useCatalogStore.getState()
+    catalogStore.installLibrary(meta, patternData)
+    await saveLibraryIndex([...catalogStore.libraryIndex])
+
+    return {
+      success: true,
+      data: { id, name, patternCount: patternData.items.length },
+      hint: `Library installed. Use list_library_patterns({ library_id: "${id}" }) to browse, or insert_pattern with library_id to stamp patterns.`,
+    }
+  },
+
+  // --- File tools ---
+
+  new_file() {
+    const store = getStore()
+    store.newFile()
+    return { success: true, data: { message: 'Project reset to blank state' } }
   },
 
   // --- Page tools ---
