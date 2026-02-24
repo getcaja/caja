@@ -23,15 +23,18 @@
   --_oo: -1px;
 }
 
-/* ── Empty box: dashed outline + minimum touch target ── */
+/* ── Empty box: minimum touch target (editor-only) ── */
+
+.is-empty {
+  min-height: 32px;
+  min-width: 32px;
+}
 
 .is-empty:not(.is-selected):not(.is-hovered) {
   --_oc: #3f3f46;
   --_ow: 1px;
-  --_os: dashed;
+  --_os: dotted;
   --_oo: -1px;
-  min-height: 40px;
-  min-width: 40px;
 }
 
 /* ── Text selection highlight ── */
@@ -105,12 +108,14 @@
 
 .frame-drop-indicator.is-column {
   width: 100%;
-  height: 3px;
+  height: 4px;
+  margin: 2px 0;
 }
 
 .frame-drop-indicator.is-row {
-  width: 3px;
+  width: 4px;
   align-self: stretch;
+  margin: 0 2px;
 }
 
 /* ── Cmd+click navigable links ── */

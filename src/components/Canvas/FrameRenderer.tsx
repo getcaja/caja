@@ -68,8 +68,14 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
   const isInput = frame.type === 'input'
   const isTextarea = frame.type === 'textarea'
   const isSelect = frame.type === 'select'
-  const hasFixedSize = frame.width.mode === 'fixed' || frame.height.mode === 'fixed'
-  const isEmpty = isBox && frame.children.length === 0 && !hasFixedSize && !frame.bg.value
+  // A childless box that would collapse to 0×0 without min-size assist
+  const hasVisualPresence = isBox && (
+    frame.width.mode === 'fixed' || frame.height.mode === 'fixed'
+    || frame.width.mode === 'fill' || frame.height.mode === 'fill'
+    || frame.bg.value || frame.bgImage
+    || frame.minHeight.value > 0 || frame.minWidth.value > 0
+  )
+  const isEmpty = isBox && frame.children.length === 0 && !hasVisualPresence
   const isDragged = canvasDragId === frame.id
   const isDropTarget = isBox && canvasDragOver?.parentId === frame.id
 

@@ -1,7 +1,7 @@
 import type { Frame, BoxElement } from '../types/frame'
 import { findInTree } from '../store/frameStore'
 
-const EDGE_ZONE = 12
+const EDGE_ZONE = 20
 
 /**
  * Compute insertion index among sibling DOM elements based on cursor position.
@@ -124,7 +124,7 @@ export function resolveCanvasDrop(
         const leading = isParentRow ? cx - rect.left : cy - rect.top
         const trailing = isParentRow ? rect.right - cx : rect.bottom - cy
         const size = isParentRow ? rect.width : rect.height
-        const zone = Math.min(EDGE_ZONE, size * 0.25)
+        const zone = Math.min(EDGE_ZONE, size * 0.35)
 
         if (leading < zone || trailing < zone) {
           return {
