@@ -115,7 +115,6 @@ export function CanvasIframe() {
   const canvasWidth = useFrameStore((s) => s.canvasWidth)
   const canvasZoom = useFrameStore((s) => s.canvasZoom)
   const previewMode = useFrameStore((s) => s.previewMode)
-  const pages = useFrameStore((s) => s.pages)
   const isPatternDrag = useFrameStore((s) => s.patternDragFrame !== null)
   const rootBgValue = useFrameStore((s) => s.root.bg.value)
 
@@ -282,7 +281,6 @@ export function CanvasIframe() {
   // Compute wrapper + iframe styles based on mode
   let wrapperStyle: React.CSSProperties
   let iframeStyle: React.CSSProperties
-  let showDeviceFrame = false
 
   if (previewMode) {
     // Preview: fill entire workspace, no border/zoom
@@ -290,27 +288,29 @@ export function CanvasIframe() {
     iframeStyle = { width: '100%', height: '100%', border: 'none', display: 'block' }
   } else {
     const zoom = canvasZoom
-    const isDefault = canvasWidth === null
 
-    if (isDefault && zoom === 1) {
-      // Default at 100%: fill workspace edge-to-edge, no border
+    if (zoom === 1) {
+      // No zoom: fill workspace, constrain with max-width when breakpoint is set
       wrapperStyle = { width: '100%', height: '100%' }
-      iframeStyle = { width: '100%', height: '100%', display: 'block', border: 'none' }
+      iframeStyle = {
+        width: '100%',
+        height: '100%',
+        maxWidth: canvasWidth ?? undefined,
+        margin: '0 auto',
+        display: 'block',
+        border: 'none',
+      }
     } else {
-      showDeviceFrame = !isDefault
-      // Breakpoint (fixed width + border) or Default zoomed (no border)
+      // Zoomed: absolute-position iframe at natural size, wrapper reserves scaled space
       const iframeW = canvasWidth || workspaceW
-      // Subtract chrome (page label + matching bottom spacer) so iframe fits without overflow
-      const hasPageLabel = canvasWidth !== null && pages.length > 1
-      const chromeH = hasPageLabel ? 64 : 0 // 32px label + 32px bottom spacer
-      const iframeH = workspaceH - chromeH
+      const iframeH = workspaceH
 
       wrapperStyle = {
         width: iframeW * zoom,
         height: iframeH * zoom,
         flexShrink: 0,
         position: 'relative',
-        margin: hasPageLabel ? '0 auto' : 'auto',
+        margin: 'auto',
       }
 
       iframeStyle = {
@@ -319,11 +319,10 @@ export function CanvasIframe() {
         left: 0,
         width: iframeW,
         height: iframeH,
-        transform: zoom !== 1 ? `scale(${zoom})` : undefined,
+        transform: `scale(${zoom})`,
         transformOrigin: 'top left',
         display: 'block',
         border: 'none',
-        borderRadius: isDefault ? undefined : 6,
       }
     }
   }
@@ -331,21 +330,6 @@ export function CanvasIframe() {
   return (
     <div ref={wrapperRef} style={{ ...wrapperStyle, position: 'relative' }}>
       <iframe ref={iframeRef} title="Caja Canvas" style={iframeStyle} />
-      {/* Device frame chrome — separate element on top of iframe so it's
-          immune to iframe repaints (blur, shadows, transitions inside). */}
-      {showDeviceFrame && (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            borderRadius: 6,
-            outline: '3px solid #3f3f46',
-            outlineOffset: -3,
-            pointerEvents: 'none',
-            zIndex: 5,
-          }}
-        />
-      )}
       {isPatternDrag && (
         <div
           style={{ position: 'absolute', inset: 0, zIndex: 10 }}

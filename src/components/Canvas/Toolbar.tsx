@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import {
-  Monitor, Tablet, Smartphone, Maximize,
-  File, ToyBrick, Code, Minus, Plus, Palette, Eye,
+  Monitor, Tablet, Smartphone,
+  FilePlus, SquarePlus, LayoutGrid, Minus, Plus, Pencil, Eye,
   Square, Type, Link, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ChevronDown,
 } from 'lucide-react'
 import { useFrameStore, isRootId, findInTree } from '../../store/frameStore'
@@ -12,8 +12,7 @@ import type { Frame } from '../../types/frame'
 type ElementType = 'box' | 'text' | 'image' | 'button' | 'input' | 'textarea' | 'select' | 'link'
 
 const BREAKPOINTS = [
-  { label: 'Auto', width: null as number | null, icon: Maximize },
-  { label: 'Desktop', width: 1440, icon: Monitor },
+  { label: 'Full', width: null as number | null, icon: Monitor },
   { label: 'Tablet', width: 768, icon: Tablet },
   { label: 'Mobile', width: 375, icon: Smartphone },
 ]
@@ -83,7 +82,7 @@ function DropdownButton({ icon, title, isActive, menu, children }: {
 
 /* ---------- Section divider ---------- */
 function Divider() {
-  return <div className="w-px h-4 bg-border mx-1 shrink-0" />
+  return <div className="w-px self-stretch bg-border shrink-0" />
 }
 
 /* ---------- Toolbar ---------- */
@@ -128,22 +127,26 @@ export function Toolbar() {
 
   return (
     // No transform on this wrapper — flexbox centering so fixed/absolute children work correctly
-    <div className="absolute bottom-3 inset-x-0 z-40 flex justify-center pointer-events-none">
-      <div className="flex items-center bg-surface-1 border border-border rounded-lg px-1.5 py-1 gap-0.5 pointer-events-auto">
+    <div className="fixed bottom-3 inset-x-0 z-40 flex justify-center pointer-events-none">
+      <div className="flex items-stretch bg-surface-1 border border-border rounded-lg pointer-events-auto">
 
-        {/* Section 1: Creation tools (icon-only) */}
-        {!previewMode && (
-          <>
+        {/* Section 1: Tools */}
+        <div style={{
+          display: 'flex', alignItems: 'center', overflow: 'hidden',
+          maxWidth: previewMode ? 0 : 200, opacity: previewMode ? 0 : 1,
+          transition: 'max-width 200ms ease, opacity 150ms ease',
+        }}>
+          <div className="flex items-center gap-0.5 py-1 pl-1.5 pr-1">
             <button
               onClick={() => { addPage(); useFrameStore.getState().setTreePanelTab('elements') }}
               className={btnMuted}
               title="New page"
             >
-              <File size={14} />
+              <FilePlus size={14} />
             </button>
 
             <DropdownButton
-              icon={<ToyBrick size={14} />}
+              icon={<SquarePlus size={14} />}
               title="Add element"
               menu={PRIMITIVES.map((item) => (
                 <button
@@ -180,36 +183,40 @@ export function Toolbar() {
               className={`${btnIcon} ${treePanelTab === 'patterns' ? 'bg-surface-3 text-text-primary' : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'}`}
               title={selectedId ? 'Save selected as pattern' : 'Patterns'}
             >
-              <Code size={14} />
+              <LayoutGrid size={14} />
             </button>
-
-            <Divider />
-          </>
-        )}
-
-        {/* Section 2: Mode toggle */}
-        <div className="flex items-center bg-surface-0/50 rounded-md">
-          <button
-            onClick={() => setPreviewMode(false)}
-            className={`${btnIcon} ${!previewMode ? 'bg-surface-3 text-text-primary' : 'text-text-muted hover:text-text-secondary'}`}
-            title="Design mode"
-          >
-            <Palette size={14} />
-          </button>
-          <button
-            onClick={() => setPreviewMode(true)}
-            className={`${btnIcon} ${previewMode ? 'bg-surface-3 text-text-primary' : 'text-text-muted hover:text-text-secondary'}`}
-            title="Preview mode (⌘⇧P)"
-          >
-            <Eye size={14} />
-          </button>
+          </div>
+          <Divider />
         </div>
 
-        {!previewMode && (
-          <>
-            <Divider />
+        {/* Section 2: Mode toggle */}
+        <div className="flex items-center gap-0.5 py-1 px-1">
+          <div className="flex items-center bg-surface-0/50 rounded-md">
+            <button
+              onClick={() => setPreviewMode(false)}
+              className={`${btnIcon} ${!previewMode ? 'bg-surface-3 text-text-primary' : 'text-text-muted hover:text-text-secondary'}`}
+              title="Edit mode"
+            >
+              <Pencil size={14} />
+            </button>
+            <button
+              onClick={() => setPreviewMode(true)}
+              className={`${btnIcon} ${previewMode ? 'bg-surface-3 text-text-primary' : 'text-text-muted hover:text-text-secondary'}`}
+              title="Preview mode (⌘⇧P)"
+            >
+              <Eye size={14} />
+            </button>
+          </div>
+        </div>
 
-            {/* Section 3: Responsive + Zoom */}
+        {/* Section 3: Viewport + Zoom */}
+        <div style={{
+          display: 'flex', alignItems: 'center', overflow: 'hidden',
+          maxWidth: previewMode ? 0 : 300, opacity: previewMode ? 0 : 1,
+          transition: 'max-width 200ms ease, opacity 150ms ease',
+        }}>
+          <Divider />
+          <div className="flex items-center gap-0.5 py-1 pl-1 pr-1.5">
             <DropdownButton
               icon={<CurrentIcon size={14} />}
               title={currentBp.label}
@@ -230,8 +237,6 @@ export function Toolbar() {
               })}
             />
 
-            <div className="w-px h-3.5 bg-border mx-0.5 shrink-0" />
-
             <button
               onClick={() => zoomIdx > 0 && setCanvasZoom(ZOOM_LEVELS[zoomIdx - 1])}
               disabled={zoomIdx <= 0}
@@ -251,8 +256,8 @@ export function Toolbar() {
             >
               <Plus size={12} />
             </button>
-          </>
-        )}
+          </div>
+        </div>
       </div>
     </div>
   )

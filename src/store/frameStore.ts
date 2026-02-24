@@ -998,7 +998,7 @@ function loadViewPrefs(): ViewPrefs {
       }
     }
   } catch { /* ignore */ }
-  return { showSpacingOverlays: true, showOverlayValues: false, previewMode: false, canvasWidth: 1440, advancedMode: false }
+  return { showSpacingOverlays: true, showOverlayValues: false, previewMode: false, canvasWidth: null, advancedMode: false }
 }
 
 function saveViewPrefs(prefs: ViewPrefs) {
