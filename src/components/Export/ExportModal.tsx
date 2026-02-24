@@ -24,6 +24,7 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
   const [copied, setCopied] = useState(false)
 
   const code = useMemo(() => {
+    if (!open) return ''
     if (root.children.length === 0) return '<!-- Empty -->'
 
     switch (format) {
@@ -32,9 +33,9 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
       case 'html':
         return root.children.map((c) => exportToHTML(c)).join('\n')
       case 'html-doc':
-        return exportToHTMLDocument(root.children)
+        return exportToHTMLDocument(root)
     }
-  }, [root, format])
+  }, [open, root, format])
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(code)

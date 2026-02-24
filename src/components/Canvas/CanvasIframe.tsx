@@ -23,7 +23,6 @@ import frameRendererCSS from './FrameRenderer.css?raw'
 const CANVAS_RESET_CSS = `
 body {
   margin: 0;
-  background: #ffffff;
   color: #1c1917;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   font-size: 16px;
@@ -81,10 +80,25 @@ function IframeCanvas() {
   const hover = useFrameStore((s) => s.hover)
   const previewMode = useFrameStore((s) => s.previewMode)
 
+  const onPreviewClick = useCallback((e: React.MouseEvent) => {
+    const anchor = (e.target as HTMLElement).closest('a[href]') as HTMLAnchorElement | null
+    if (!anchor) return
+    const href = anchor.getAttribute('href')
+    if (!href) return
+
+    const { pages, setActivePage } = useFrameStore.getState()
+    const targetPage = pages.find((p) => p.route === href)
+    if (targetPage) {
+      e.preventDefault()
+      setActivePage(targetPage.id)
+    }
+  }, [])
+
   return (
     <div
       className={previewMode ? 'preview-mode' : ''}
       onMouseLeave={previewMode ? undefined : () => hover(null)}
+      onClick={previewMode ? onPreviewClick : undefined}
     >
       <FrameRenderer frame={root} />
       <GoogleFontsLoader />
@@ -101,7 +115,18 @@ export function CanvasIframe() {
   const canvasWidth = useFrameStore((s) => s.canvasWidth)
   const canvasZoom = useFrameStore((s) => s.canvasZoom)
   const previewMode = useFrameStore((s) => s.previewMode)
+  const pages = useFrameStore((s) => s.pages)
   const isSnippetDrag = useFrameStore((s) => s.snippetDragFrame !== null)
+  const rootBgValue = useFrameStore((s) => s.root.bg.value)
+
+  // Sync root frame's background to the iframe <body>.
+  // Per CSS spec, body's background propagates to the viewport canvas,
+  // so it fills the entire viewport even if the root div is shorter.
+  useEffect(() => {
+    const body = iframeRef.current?.contentDocument?.body
+    if (!body) return
+    body.style.backgroundColor = rootBgValue || ''
+  }, [rootBgValue])
 
   useEffect(() => {
     const iframe = iframeRef.current
@@ -155,20 +180,54 @@ export function CanvasIframe() {
     }
   }, [])
 
-  // Measure workspace container height for iframe viewport sizing
+  // Measure the scroll container viewport for iframe sizing.
+  // Must observe the scrollable ancestor (overflow:auto), NOT a content wrapper,
+  // to avoid ResizeObserver feedback loops when content changes size.
+  // clientWidth/clientHeight give the viewport dimensions (includes padding).
+  // The border is on the wrapper div (not the iframe), so the iframe's
+  // viewport = workspaceH exactly, matching 100vh in preview mode.
   useEffect(() => {
-    const container = wrapperRef.current?.parentElement
+    let container = wrapperRef.current?.parentElement
+    while (container && container !== document.body) {
+      const { overflow } = getComputedStyle(container)
+      if (overflow === 'auto' || overflow === 'scroll') break
+      container = container.parentElement
+    }
     if (!container) return
-    const ro = new ResizeObserver((entries) => {
-      const rect = entries[0]?.contentRect
-      if (rect) {
-        setWorkspaceW(rect.width)
-        setWorkspaceH(rect.height)
-      }
+    const el = container
+    const ro = new ResizeObserver(() => {
+      setWorkspaceW(el.clientWidth)
+      setWorkspaceH(el.clientHeight)
     })
     ro.observe(container)
     return () => ro.disconnect()
   }, [])
+
+  // Toggle .cmd-held on iframe body so CSS can show pointer cursor on navigable links.
+  // Listen on both parent and iframe windows — focus could be in either.
+  useEffect(() => {
+    if (previewMode) return
+    const iframeBody = iframeRef.current?.contentDocument?.body
+    if (!iframeBody) return
+    const iframeWin = iframeRef.current?.contentWindow
+    const toggle = (e: KeyboardEvent) => iframeBody.classList.toggle('cmd-held', e.metaKey)
+    const clear = () => iframeBody.classList.remove('cmd-held')
+    window.addEventListener('keydown', toggle)
+    window.addEventListener('keyup', toggle)
+    window.addEventListener('blur', clear)
+    iframeWin?.addEventListener('keydown', toggle)
+    iframeWin?.addEventListener('keyup', toggle)
+    iframeWin?.addEventListener('blur', clear)
+    return () => {
+      iframeBody.classList.remove('cmd-held')
+      window.removeEventListener('keydown', toggle)
+      window.removeEventListener('keyup', toggle)
+      window.removeEventListener('blur', clear)
+      iframeWin?.removeEventListener('keydown', toggle)
+      iframeWin?.removeEventListener('keyup', toggle)
+      iframeWin?.removeEventListener('blur', clear)
+    }
+  }, [previewMode])
 
   // --- Snippet → canvas drag handlers (HTML5 DnD, cross-iframe) ---
   // The iframe swallows drag events, so we render a transparent overlay on top
@@ -219,6 +278,7 @@ export function CanvasIframe() {
   // Compute wrapper + iframe styles based on mode
   let wrapperStyle: React.CSSProperties
   let iframeStyle: React.CSSProperties
+  let showDeviceFrame = false
 
   if (previewMode) {
     // Preview: fill entire workspace, no border/zoom
@@ -233,16 +293,20 @@ export function CanvasIframe() {
       wrapperStyle = { width: '100%', height: '100%' }
       iframeStyle = { width: '100%', height: '100%', display: 'block', border: 'none' }
     } else {
+      showDeviceFrame = !isDefault
       // Breakpoint (fixed width + border) or Default zoomed (no border)
       const iframeW = canvasWidth || workspaceW
-      const iframeH = workspaceH
+      // Subtract chrome (page label + matching bottom spacer) so iframe fits without overflow
+      const hasPageLabel = canvasWidth !== null && pages.length > 1
+      const chromeH = hasPageLabel ? 64 : 0 // 32px label + 32px bottom spacer
+      const iframeH = workspaceH - chromeH
 
       wrapperStyle = {
         width: iframeW * zoom,
         height: iframeH * zoom,
         flexShrink: 0,
         position: 'relative',
-        margin: 'auto',
+        margin: hasPageLabel ? '0 auto' : 'auto',
       }
 
       iframeStyle = {
@@ -254,9 +318,8 @@ export function CanvasIframe() {
         transform: zoom !== 1 ? `scale(${zoom})` : undefined,
         transformOrigin: 'top left',
         display: 'block',
-        border: isDefault ? 'none' : '3px solid #3f3f46',
+        border: 'none',
         borderRadius: isDefault ? undefined : 6,
-        boxSizing: isDefault ? undefined : ('border-box' as const),
       }
     }
   }
@@ -264,6 +327,21 @@ export function CanvasIframe() {
   return (
     <div ref={wrapperRef} style={{ ...wrapperStyle, position: 'relative' }}>
       <iframe ref={iframeRef} title="Caja Canvas" style={iframeStyle} />
+      {/* Device frame chrome — separate element on top of iframe so it's
+          immune to iframe repaints (blur, shadows, transitions inside). */}
+      {showDeviceFrame && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            borderRadius: 6,
+            outline: '3px solid #3f3f46',
+            outlineOffset: -3,
+            pointerEvents: 'none',
+            zIndex: 5,
+          }}
+        />
+      )}
       {isSnippetDrag && (
         <div
           style={{ position: 'absolute', inset: 0, zIndex: 10 }}

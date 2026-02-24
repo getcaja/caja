@@ -6,6 +6,7 @@ const host = process.env.TAURI_DEV_HOST
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  test: { exclude: ['e2e/**', 'node_modules/**'] },
   clearScreen: false,
   server: {
     port: 5173,

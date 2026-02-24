@@ -202,5 +202,13 @@ export interface SelectElement extends BaseElement, TextStyles {
   disabled: boolean
 }
 
+// Multi-page support
+export interface Page {
+  id: string
+  name: string
+  route: string
+  root: BoxElement
+}
+
 // Union type
 export type Frame = BoxElement | TextElement | ImageElement | ButtonElement | InputElement | TextareaElement | SelectElement

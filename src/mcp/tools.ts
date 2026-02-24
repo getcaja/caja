@@ -16,10 +16,14 @@ import {
 } from '../data/scales'
 import { COLOR_GRID, SPECIAL_COLORS } from '../data/colors'
 
+// 1×1 transparent PNG — fallback for CORS-blocked images during screenshot
+const IMG_PLACEHOLDER = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQABNjN9GQAAAAlwSFlzAAAWJQAAFiUBSVIk8AAAAA0lEQVQI12P4z8BQDwAEgAF/QualHQAAAABJRU5ErkJggg=='
+
 interface ToolResult {
   success: boolean
   data?: unknown
   error?: string
+  hint?: string
 }
 
 type ToolParams = Record<string, unknown>
@@ -334,6 +338,19 @@ const handlers: Record<string, ToolHandler> = {
     // Sanitize properties before passing to store (no existing frame for border fallback)
     const sanitized = Object.keys(mergedProps).length > 0 ? sanitizeFrameProperties(mergedProps) : undefined
 
+    // Build result with optional snippet hint when parent has repeated same-type children
+    const buildAddResult = (child: Frame, parentFrame: Frame): ToolResult => {
+      const finalChild = findInTree(getStore().root, child.id)
+      const result: ToolResult = { success: true, data: finalChild ? compactSnapshot(finalChild) : { id: child.id } }
+      if (parentFrame.type === 'box') {
+        const sameTypeCount = parentFrame.children.filter(c => c.type === element_type).length
+        if (sameTypeCount >= 3) {
+          result.hint = `Parent has ${sameTypeCount} ${element_type} children. Consider save_snippet + insert_snippet with overrides for repeated patterns.`
+        }
+      }
+      return result
+    }
+
     if (index !== undefined) {
       // Insert at specific position — use addChild then move to index
       store.addChild(parent_id, element_type, sanitized as Partial<Frame>)
@@ -344,8 +361,7 @@ const handlers: Record<string, ToolHandler> = {
         if (index < updatedParent.children.length - 1) {
           store.moveFrame(newChild.id, parent_id, index)
         }
-        const finalChild = findInTree(getStore().root, newChild.id)
-        return { success: true, data: finalChild ? compactSnapshot(finalChild) : { id: newChild.id } }
+        return buildAddResult(newChild, findInTree(getStore().root, parent_id)! as Frame & { type: 'box' })
       }
     } else {
       store.addChild(parent_id, element_type, sanitized as Partial<Frame>)
@@ -353,8 +369,7 @@ const handlers: Record<string, ToolHandler> = {
       const updatedParent = findInTree(getStore().root, parent_id)
       if (updatedParent && updatedParent.type === 'box') {
         const newChild = updatedParent.children[updatedParent.children.length - 1]
-        const finalChild = findInTree(getStore().root, newChild.id)
-        return { success: true, data: finalChild ? compactSnapshot(finalChild) : { id: newChild.id } }
+        return buildAddResult(newChild, updatedParent)
       }
     }
 
@@ -527,7 +542,7 @@ const handlers: Record<string, ToolHandler> = {
     const fullHeight = el.scrollHeight
 
     try {
-      const dataUrl = await toPng(el, { cacheBust: true, width: fullWidth, height: fullHeight })
+      const dataUrl = await toPng(el, { cacheBust: true, width: fullWidth, height: fullHeight, imagePlaceholder: IMG_PLACEHOLDER })
       const base64 = dataUrl.replace(/^data:image\/png;base64,/, '')
       return { success: true, data: { image: base64, mimeType: 'image/png' } }
     } finally {
@@ -569,7 +584,8 @@ const handlers: Record<string, ToolHandler> = {
       return response
     }
     const failedIdx = results.findIndex((r) => !r.success)
-    return { success: false, error: results[failedIdx]?.error, data: { failedAt: failedIdx, count: results.length } }
+    const completedIds = resultIds.slice(0, failedIdx).filter(Boolean)
+    return { success: false, error: results[failedIdx]?.error, data: { failedAt: failedIdx, completedCount: failedIdx, completedIds, totalRequested: operations.length } }
   },
 
   // --- Snippet tools ---
@@ -684,6 +700,50 @@ const handlers: Record<string, ToolHandler> = {
 
     snippetStore.deleteSnippet(snippet_id)
     return { success: true, data: { deleted: snippet_id } }
+  },
+
+  // --- Page tools ---
+
+  list_pages() {
+    const store = getStore()
+    return {
+      success: true,
+      data: store.pages.map((p) => ({
+        id: p.id,
+        name: p.name,
+        route: p.route,
+        active: p.id === store.activePageId,
+      })),
+    }
+  },
+
+  switch_page(params) {
+    const { id } = params as { id: string }
+    const store = getStore()
+    const page = store.pages.find((p) => p.id === id)
+    if (!page) return { success: false, error: `Page ${id} not found` }
+    store.setActivePage(id)
+    const newRoot = getStore().root
+    return { success: true, data: { id, name: page.name, route: page.route, tree: summaryTree(newRoot) } }
+  },
+
+  add_page(params) {
+    const { name, route } = params as { name?: string; route?: string }
+    const store = getStore()
+    store.addPage(name, route)
+    const updated = getStore()
+    const newPage = updated.pages.find((p) => p.id === updated.activePageId)
+    return { success: true, data: newPage ? { id: newPage.id, name: newPage.name, route: newPage.route } : undefined }
+  },
+
+  remove_page(params) {
+    const { id } = params as { id: string }
+    const store = getStore()
+    if (store.pages.length <= 1) return { success: false, error: 'Cannot remove the last page' }
+    const page = store.pages.find((p) => p.id === id)
+    if (!page) return { success: false, error: `Page ${id} not found` }
+    store.removePage(id)
+    return { success: true, data: { removed: id } }
   },
 }
 

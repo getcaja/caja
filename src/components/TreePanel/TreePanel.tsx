@@ -1,16 +1,21 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import { useFrameStore, findInTree } from '../../store/frameStore'
 import { useSnippetStore } from '../../store/snippetStore'
-import { TreeNode } from './TreeNode'
 import { AddMenu } from './AddMenu'
 import { TreeDndProvider } from './TreeDndContext'
+import { TreeNode } from './TreeNode'
 import { SnippetsPanel, type SnippetsPanelHandle } from './SnippetsPanel'
+import { PageNode } from './PageNode'
+import { useContextMenu } from './hooks/useContextMenu'
 import { Plus, FolderPlus, Code } from 'lucide-react'
 
 export function TreePanel() {
   const root = useFrameStore((s) => s.root)
+  const pages = useFrameStore((s) => s.pages)
+  const activePageId = useFrameStore((s) => s.activePageId)
   const selectedId = useFrameStore((s) => s.selectedId)
   const addChild = useFrameStore((s) => s.addChild)
+  const addPage = useFrameStore((s) => s.addPage)
   const tab = useFrameStore((s) => s.treePanelTab)
   const setTab = useFrameStore((s) => s.setTreePanelTab)
   const [showAdd, setShowAdd] = useState(false)
@@ -18,10 +23,11 @@ export function TreePanel() {
   const addBtnRef = useRef<HTMLButtonElement>(null)
 
   // Snippets "+" menu
-  const [showSnippetMenu, setShowSnippetMenu] = useState(false)
-  const [snippetMenuPos, setSnippetMenuPos] = useState({ x: 0, y: 0 })
+  const snippetMenu = useContextMenu()
   const snippetBtnRef = useRef<HTMLButtonElement>(null)
   const snippetPanelRef = useRef<SnippetsPanelHandle>(null)
+
+  const activePage = pages.find((p) => p.id === activePageId)
 
   function getTargetParentId(): string {
     if (!selectedId) return root.id
@@ -56,21 +62,9 @@ export function TreePanel() {
   const openSnippetMenu = () => {
     if (snippetBtnRef.current) {
       const rect = snippetBtnRef.current.getBoundingClientRect()
-      setSnippetMenuPos({ x: rect.left, y: rect.bottom + 4 })
+      snippetMenu.openAt(rect.left, rect.bottom + 4)
     }
-    setShowSnippetMenu(true)
   }
-
-  const closeSnippetMenu = useCallback(() => setShowSnippetMenu(false), [])
-  useEffect(() => {
-    if (showSnippetMenu) {
-      // Defer so the opening click doesn't immediately close the menu
-      const timer = setTimeout(() => {
-        window.addEventListener('click', closeSnippetMenu)
-      }, 0)
-      return () => { clearTimeout(timer); window.removeEventListener('click', closeSnippetMenu) }
-    }
-  }, [showSnippetMenu, closeSnippetMenu])
 
   const handleSaveSelectedAsSnippet = () => {
     if (!selectedId) return
@@ -78,12 +72,12 @@ export function TreePanel() {
     if (!frame) return
     useSnippetStore.getState().saveSnippet(frame.name || 'Snippet', [], frame)
     setTab('snippets')
-    setShowSnippetMenu(false)
+    snippetMenu.close()
   }
 
   const handleCreateCategory = () => {
     snippetPanelRef.current?.createCategory()
-    setShowSnippetMenu(false)
+    snippetMenu.close()
   }
 
   return (
@@ -135,10 +129,10 @@ export function TreePanel() {
         )}
 
         {/* Snippets "+" menu */}
-        {showSnippetMenu && (
+        {snippetMenu.menu && (
           <div
             className="fixed c-menu-popup min-w-[180px] z-[9999]"
-            style={{ left: snippetMenuPos.x, top: snippetMenuPos.y }}
+            style={{ left: snippetMenu.menu.x, top: snippetMenu.menu.y }}
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -158,8 +152,33 @@ export function TreePanel() {
         )}
 
         {tab === 'elements' ? (
-          <div className="flex-1 overflow-y-auto py-1 px-1">
-            <TreeNode frame={root} depth={0} isRoot />
+          <div className="flex-1 overflow-y-auto flex flex-col">
+            {/* Page list */}
+            <div className="px-1 pt-1 pb-0.5 flex flex-col gap-0.5">
+              <div className="flex items-center justify-between px-1.5 pb-0.5">
+                <span className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">Pages</span>
+                <button
+                  className="w-4 h-4 c-icon-btn hover:text-accent hover:bg-accent/10"
+                  onClick={() => addPage()}
+                  title="Add page"
+                >
+                  <Plus size={12} />
+                </button>
+              </div>
+              {pages.map((page) => (
+                <PageNode key={page.id} page={page} />
+              ))}
+            </div>
+
+            {/* Separator */}
+            <div className="border-t border-border mx-2 my-1" />
+
+            {/* Active page tree */}
+            <div className="flex-1 overflow-y-auto py-0.5 px-1">
+              {activePage && (
+                <TreeNode frame={activePage.root} depth={0} isRoot />
+              )}
+            </div>
           </div>
         ) : (
           <SnippetsPanel ref={snippetPanelRef} />

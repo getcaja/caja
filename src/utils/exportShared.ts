@@ -3,7 +3,7 @@ import { frameToClasses } from './frameToClasses'
 
 /** Convert text to a valid HTML id: lowercase, non-alphanum → '-', collapse, trim */
 export function slugify(text: string): string {
-  return text
+  return (text || '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
@@ -11,7 +11,7 @@ export function slugify(text: string): string {
 
 /** Escape text content — only chars that are structurally special in HTML */
 export function escapeText(text: string): string {
-  return text
+  return (text || '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -19,7 +19,7 @@ export function escapeText(text: string): string {
 
 /** Escape an attribute value (includes quotes on top of text escaping) */
 export function escapeAttr(text: string): string {
-  return escapeText(text)
+  return escapeText(text || '')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
 }

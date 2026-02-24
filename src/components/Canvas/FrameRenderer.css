@@ -1,91 +1,42 @@
-/* ── Frame node (wrapper for every element on the canvas) ── */
+/* ── Editor selection & hover outlines ── */
+/* Uses CSS custom properties so `transition: all` on user elements
+   does NOT animate the outline. Unregistered custom properties are
+   discrete (not interpolable), so they change instantly even under
+   transition-all, while the user's shadow/transform/etc still animate. */
 
-.frame-node {
-  position: relative;
-  cursor: default;
+[data-frame-id] {
+  --_oc: transparent;
+  --_ow: 2px;
+  --_os: solid;
+  --_oo: -2px;
+  outline: var(--_ow) var(--_os) var(--_oc);
+  outline-offset: var(--_oo);
 }
 
-.frame-node.is-editing {
-  cursor: text;
+.is-selected {
+  --_oc: #2563EB;
 }
 
-/* Empty box: dashed outline + minimum touch target */
-.frame-node.is-empty {
-  outline: 1px dashed var(--color-surface-3);
-  outline-offset: -1px;
+.is-hovered {
+  --_oc: #3B82F6;
+  --_ow: 1px;
+  --_oo: -1px;
+}
+
+/* ── Empty box: dashed outline + minimum touch target ── */
+
+.is-empty:not(.is-selected):not(.is-hovered) {
+  --_oc: #3f3f46;
+  --_ow: 1px;
+  --_os: dashed;
+  --_oo: -1px;
   min-height: 40px;
   min-width: 40px;
 }
 
-/* ── Hover border (overlay, same pattern as selection) ── */
-
-.frame-hover {
-  position: absolute;
-  inset: 0;
-  border: 1px solid #3B82F6;
-  pointer-events: none;
-  z-index: 10;
-}
-
-/* ── Selection border ── */
-
-.frame-selection {
-  position: absolute;
-  inset: 0;
-  border: 2px solid #2563EB;
-  pointer-events: none;
-  z-index: 10;
-}
-
-/* ── Spacing / gap overlay strips ── */
-
-.overlay-strip {
-  position: absolute;
-  pointer-events: none;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.overlay-pad {
-  background: rgba(147, 196, 125, 0.55);
-}
-
-.overlay-margin {
-  background: rgba(246, 178, 107, 0.66);
-}
-
-.overlay-gap {
-  background:
-    repeating-linear-gradient(
-      -45deg,
-      rgba(127, 32, 210, 0.8),
-      rgba(127, 32, 210, 0.8) 1px,
-      transparent 1px,
-      transparent 6px
-    ),
-    rgba(127, 32, 210, 0.3);
-}
-
-/* ── Overlay labels ── */
-
-.overlay-label {
-  font-size: 10px;
-  font-family: system-ui, -apple-system, sans-serif;
-  color: rgba(0, 0, 0, 0.7);
-  line-height: 1;
-  user-select: none;
-}
-
-.overlay-label.is-gap {
-  color: #fff;
-  text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
-}
-
 /* ── Text selection highlight ── */
 
-.frame-node ::selection {
+[data-frame-id] ::selection {
   background: rgba(37, 99, 235, 0.35);
 }
 
@@ -98,34 +49,20 @@
   z-index: 2;
 }
 
-/* ── Image ── */
-
-.frame-img {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
+/* ── Image placeholder (editor-only, when src is empty) ── */
 
 .frame-img-placeholder {
   min-height: 40px;
   min-width: 40px;
 }
 
-/* ── Button label ── */
-
-.frame-btn-label {
-  pointer-events: none;
-  user-select: none;
-}
-
-/* ── Form controls (non-interactive in canvas) ── */
-
-.frame-form-control {
-  pointer-events: none;
-  width: 100%;
-}
-
 /* ── Canvas drag & drop ── */
+
+/* position:relative needed for drag handle (position:absolute child).
+   Only on selected elements that can host children. */
+.is-selected:not(.absolute):not(.fixed):not(.sticky) {
+  position: relative;
+}
 
 .frame-drag-handle {
   position: absolute;
@@ -148,31 +85,7 @@
   cursor: grabbing;
 }
 
-.frame-snippet-btn {
-  position: absolute;
-  bottom: 4px;
-  right: 4px;
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  background: #27272a;
-  color: #a1a1aa;
-  border: 1px solid #3f3f46;
-  border-radius: 6px;
-  cursor: pointer;
-  pointer-events: auto;
-  transition: background 0.15s, color 0.15s;
-}
-
-.frame-snippet-btn:hover {
-  background: #3f3f46;
-  color: #fafafa;
-}
-
-.frame-node.is-dragging {
+.is-dragging {
   opacity: 0.4;
   pointer-events: none;
 }
@@ -195,12 +108,9 @@
   align-self: stretch;
 }
 
-/* ── Preview mode — disable editor chrome, enable interactivity ── */
+/* ── Cmd+click navigable links ── */
 
-.preview-mode .frame-form-control {
-  pointer-events: auto;
-}
-
-.preview-mode .frame-btn-label {
-  pointer-events: auto;
+body.cmd-held a[data-navigable],
+body.cmd-held a[data-navigable] * {
+  cursor: pointer !important;
 }

@@ -284,6 +284,50 @@ export const toolSchemas = {
       required: ['snippet_id'],
     },
   },
+  list_pages: {
+    name: 'list_pages',
+    description: 'List all pages in the project. Returns page id, name, route, and whether it is active.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {},
+    },
+  },
+
+  switch_page: {
+    name: 'switch_page',
+    description: 'Switch to a different page. The canvas and tree will show the new page. Returns the page info and a summary tree of the new page, so no follow-up get_tree call is needed.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        id: { type: 'string', description: 'ID of the page to switch to' },
+      },
+      required: ['id'],
+    },
+  },
+
+  add_page: {
+    name: 'add_page',
+    description: 'Add a new empty page. Automatically switches to the new page.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        name: { type: 'string', description: 'Page name (e.g. "About", "Contact"). Defaults to "Page N".' },
+        route: { type: 'string', description: 'Page route (e.g. "/about"). Auto-generated from name if omitted.' },
+      },
+    },
+  },
+
+  remove_page: {
+    name: 'remove_page',
+    description: 'Remove a page. Cannot remove the last remaining page.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        id: { type: 'string', description: 'ID of the page to remove' },
+      },
+      required: ['id'],
+    },
+  },
 } as const
 
 export type ToolName = keyof typeof toolSchemas

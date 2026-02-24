@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Eye } from 'lucide-react'
 import { useFrameStore } from '../../store/frameStore'
 import { McpModal } from '../McpModal/McpModal'
 
@@ -10,8 +9,6 @@ export function TitleBar() {
   const filePath = useFrameStore((s) => s.filePath)
   const dirty = useFrameStore((s) => s.dirty)
   const mcpConnected = useFrameStore((s) => s.mcpConnected)
-  const previewMode = useFrameStore((s) => s.previewMode)
-  const togglePreviewMode = useFrameStore((s) => s.togglePreviewMode)
   const [showMcp, setShowMcp] = useState(false)
 
   const fileName = filePath ? filePath.split('/').pop()?.replace('.caja', '') : 'Untitled'
@@ -33,22 +30,6 @@ export function TitleBar() {
 
       {/* Spacer — drag region */}
       <div data-tauri-drag-region className="flex-1 h-full" />
-
-      {/* Preview mode toggle */}
-      <div className="flex items-center px-1">
-        <button
-          onClick={togglePreviewMode}
-          className={`flex items-center gap-1.5 px-2.5 h-[24px] rounded-md text-[11px] transition-colors ${
-            previewMode
-              ? 'bg-[var(--color-focus)]/15 text-[var(--color-focus)]'
-              : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'
-          }`}
-          title="Preview mode (⌘⇧P)"
-        >
-          <Eye size={12} />
-          <span>Preview</span>
-        </button>
-      </div>
 
       {/* MCP status button */}
       <div className="flex items-center px-1 pr-2">

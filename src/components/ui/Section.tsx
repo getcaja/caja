@@ -35,17 +35,19 @@ export function Section({
 
   return (
     <div className="-mx-3 px-3 border-b border-border pb-3 mb-3">
-      <div
-        className={`flex items-center gap-1 ${collapsible ? 'cursor-pointer select-none' : ''} mb-2`}
-        onClick={toggle}
-      >
-        {collapsible && (
-          <ChevronRight
-            size={12}
-            className={`text-text-muted transition-transform duration-150 ${collapsed ? '' : 'rotate-90'}`}
-          />
-        )}
-        <span className="c-section-title">{title}</span>
+      <div className="flex items-center mb-2">
+        <span
+          className={`inline-flex items-center gap-1 ${collapsible ? 'cursor-pointer select-none' : ''}`}
+          onClick={toggle}
+        >
+          {collapsible && (
+            <ChevronRight
+              size={12}
+              className={`text-text-muted transition-transform duration-150 ${collapsed ? '' : 'rotate-90'}`}
+            />
+          )}
+          <span className="c-section-title">{title}</span>
+        </span>
       </div>
       {!collapsed && children}
     </div>

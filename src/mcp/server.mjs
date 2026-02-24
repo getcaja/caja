@@ -315,6 +315,55 @@ server.tool(
   }
 )
 
+// ── Page tools ──
+
+server.tool(
+  'list_pages',
+  'List all pages in the project. Returns page id, name, route, and whether it is active.',
+  {},
+  async () => {
+    const result = await callTool('list_pages', {})
+    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
+  }
+)
+
+server.tool(
+  'switch_page',
+  'Switch to a different page. The canvas and tree will show the new page.',
+  {
+    id: z.string().describe('ID of the page to switch to'),
+  },
+  async ({ id }) => {
+    const result = await callTool('switch_page', { id })
+    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
+  }
+)
+
+server.tool(
+  'add_page',
+  'Add a new empty page. Automatically switches to the new page.',
+  {
+    name: z.string().optional().describe('Page name (e.g. "About", "Contact"). Defaults to "Page N".'),
+    route: z.string().optional().describe('Page route (e.g. "/about"). Auto-generated from name if omitted.'),
+  },
+  async ({ name, route }) => {
+    const result = await callTool('add_page', { name, route })
+    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
+  }
+)
+
+server.tool(
+  'remove_page',
+  'Remove a page. Cannot remove the last remaining page.',
+  {
+    id: z.string().describe('ID of the page to remove'),
+  },
+  async ({ id }) => {
+    const result = await callTool('remove_page', { id })
+    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
+  }
+)
+
 // ── Resources ──
 
 server.resource(

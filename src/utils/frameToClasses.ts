@@ -278,8 +278,9 @@ export function frameToClasses(frame: Frame): string {
 
   // Image
   if (frame.type === 'image') {
-    const fitMap = { cover: 'object-cover', contain: 'object-contain', fill: 'object-fill', none: 'object-none' }
-    cls.push(fitMap[frame.objectFit])
+    const fitMap: Record<string, string> = { cover: 'object-cover', contain: 'object-contain', fill: 'object-fill', none: 'object-none' }
+    const fitClass = fitMap[frame.objectFit]
+    if (fitClass) cls.push(fitClass)
   }
 
   // Size
@@ -299,10 +300,12 @@ export function frameToClasses(frame: Frame): string {
 
   // Flex grow/shrink
   const growVal = frame.grow.value
-  if (growVal === 1) cls.push('grow')
+  if (growVal === 0 && frame.grow.mode === 'token') cls.push('grow-0')
+  else if (growVal === 1) cls.push('grow')
   else if (growVal > 1) cls.push(`grow-[${growVal}]`)
   const shrinkVal = frame.shrink.value
   if (shrinkVal === 0) cls.push('shrink-0')
+  else if (shrinkVal !== 1) cls.push(`shrink-[${shrinkVal}]`)
 
   // Align self
   if (frame.alignSelf !== 'auto' && selfMap[frame.alignSelf]) {

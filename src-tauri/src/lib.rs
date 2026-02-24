@@ -1,3 +1,7 @@
+#[cfg(target_os = "macos")]
+#[macro_use]
+extern crate objc;
+
 use axum::{extract::State, routing::{get, post}, Json, Router};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -187,6 +191,75 @@ fn set_menu_check(app: AppHandle, id: String, checked: bool) -> Result<(), Strin
     Ok(())
 }
 
+// ── macOS Traffic Light Positioning ──
+// setTitle() and window-state restoration reset traffic light position.
+// We re-apply via objc on every relevant window event.
+
+#[cfg(target_os = "macos")]
+const TRAFFIC_LIGHT_X: f64 = 13.0;
+#[cfg(target_os = "macos")]
+const TRAFFIC_LIGHT_Y: f64 = 24.0;
+
+#[cfg(target_os = "macos")]
+fn position_traffic_lights(ns_window: cocoa::base::id) {
+    use cocoa::appkit::{NSView, NSWindow, NSWindowButton};
+    use cocoa::foundation::NSRect;
+
+    unsafe {
+        let close = ns_window.standardWindowButton_(NSWindowButton::NSWindowCloseButton);
+        let miniaturize = ns_window.standardWindowButton_(NSWindowButton::NSWindowMiniaturizeButton);
+        let zoom = ns_window.standardWindowButton_(NSWindowButton::NSWindowZoomButton);
+
+        let title_bar_container = close.superview().superview();
+
+        let close_rect: NSRect = msg_send![close, frame];
+        let button_height = close_rect.size.height;
+
+        let title_bar_height = button_height + TRAFFIC_LIGHT_Y;
+        let mut title_bar_rect = NSView::frame(title_bar_container);
+        title_bar_rect.size.height = title_bar_height;
+        title_bar_rect.origin.y = NSView::frame(ns_window).size.height - title_bar_height;
+        let _: () = msg_send![title_bar_container, setFrame: title_bar_rect];
+
+        let buttons = vec![close, miniaturize, zoom];
+        let space_between = NSView::frame(miniaturize).origin.x - NSView::frame(close).origin.x;
+        let button_y = (title_bar_height - button_height) / 2.0;
+
+        for (i, button) in buttons.into_iter().enumerate() {
+            let mut rect: NSRect = NSView::frame(button);
+            rect.origin.x = TRAFFIC_LIGHT_X + (i as f64 * space_between);
+            rect.origin.y = button_y;
+            button.setFrameOrigin(rect.origin);
+        }
+    }
+}
+
+// Tauri command: set window title + reposition traffic lights (setTitle resets them)
+#[tauri::command]
+fn set_window_title(app: AppHandle, title: String) {
+    #[cfg(target_os = "macos")]
+    {
+        use cocoa::appkit::NSWindow;
+        use cocoa::base::nil;
+        use cocoa::foundation::NSString;
+
+        if let Some(window) = app.get_webview_window("main") {
+            let ns_window = window.ns_window().unwrap() as cocoa::base::id;
+            unsafe {
+                let ns_title = cocoa::foundation::NSString::alloc(nil).init_str(&title);
+                NSWindow::setTitle_(ns_window, ns_title);
+                position_traffic_lights(ns_window);
+            }
+        }
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        if let Some(window) = app.get_webview_window("main") {
+            let _ = window.set_title(&title);
+        }
+    }
+}
+
 // ── App Setup ──
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -196,7 +269,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
-        .invoke_handler(tauri::generate_handler![mcp_respond, set_menu_check])
+        .invoke_handler(tauri::generate_handler![mcp_respond, set_menu_check, set_window_title])
         .setup(|app| {
             // ── Native Menu ──
             let icon = Image::from_bytes(include_bytes!("../icons/128x128@2x.png"))
@@ -262,9 +335,15 @@ pub fn run() {
                 .accelerator("CmdOrCtrl+Shift+V")
                 .build(app)?;
 
+            let advanced_mode_item = CheckMenuItemBuilder::with_id("toggle-advanced-mode", "Advanced Mode")
+                .accelerator("CmdOrCtrl+Shift+A")
+                .build(app)?;
+
             let view_menu = SubmenuBuilder::new(app, "View")
                 .item(&spacing_overlays_item)
                 .item(&overlay_values_item)
+                .separator()
+                .item(&advanced_mode_item)
                 .build()?;
 
             let window_menu = SubmenuBuilder::new(app, "Window")
@@ -282,6 +361,13 @@ pub fn run() {
                 .build()?;
 
             app.set_menu(menu)?;
+
+            // Position traffic lights after window-state restoration
+            #[cfg(target_os = "macos")]
+            if let Some(window) = app.get_webview_window("main") {
+                let ns_win = window.ns_window().unwrap() as cocoa::base::id;
+                position_traffic_lights(ns_win);
+            }
 
             // ── MCP HTTP Bridge ──
             let bridge_state = BridgeState {
@@ -319,16 +405,26 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            if let tauri::WindowEvent::CloseRequested { .. } = event {
-                use tauri_plugin_window_state::AppHandleExt;
-                let _ = window.app_handle().save_window_state(tauri_plugin_window_state::StateFlags::all());
+            match event {
+                tauri::WindowEvent::CloseRequested { .. } => {
+                    use tauri_plugin_window_state::AppHandleExt;
+                    let _ = window.app_handle().save_window_state(tauri_plugin_window_state::StateFlags::all());
+                }
+                tauri::WindowEvent::Resized(..) | tauri::WindowEvent::ThemeChanged(..) => {
+                    #[cfg(target_os = "macos")]
+                    {
+                        let ns_win = window.ns_window().unwrap() as cocoa::base::id;
+                        position_traffic_lights(ns_win);
+                    }
+                }
+                _ => {}
             }
         })
         .on_menu_event(|app, event| {
             let id = event.id().0.as_str();
             // For check menu items, emit their new checked state
             match id {
-                "toggle-spacing-overlays" | "toggle-overlay-values" => {
+                "toggle-spacing-overlays" | "toggle-overlay-values" | "toggle-advanced-mode" => {
                     use tauri::menu::MenuItemKind;
                     if let Some(menu) = app.menu() {
                         for item in menu.items().unwrap_or_default() {

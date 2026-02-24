@@ -3,7 +3,7 @@ import { useFrameStore } from '../../store/frameStore'
 import { Section } from '../ui/Section'
 import { TokenInput } from '../ui/TokenInput'
 import { BLUR_SCALE } from '../../data/scales'
-import { OVERFLOW_OPTIONS, BOX_SHADOW_OPTIONS, CURSOR_OPTIONS } from './constants'
+import { BOX_SHADOW_OPTIONS, CURSOR_OPTIONS } from './constants'
 
 export function EffectsSection({ frame }: { frame: Frame }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
@@ -11,15 +11,6 @@ export function EffectsSection({ frame }: { frame: Frame }) {
   return (
     <Section title="Effects">
       <div className="flex flex-col gap-2.5">
-        <TokenInput
-          value={frame.overflow}
-          options={OVERFLOW_OPTIONS}
-          onChange={(v) => updateFrame(frame.id, { overflow: v as Frame['overflow'] })}
-          label="Overflow"
-          classPrefix="overflow"
-          initialValue="visible"
-        />
-
         <TokenInput
           value={frame.boxShadow}
           options={BOX_SHADOW_OPTIONS}

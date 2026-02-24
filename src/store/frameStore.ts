@@ -1,12 +1,24 @@
 import { create } from 'zustand'
-import type { Frame, BoxElement, BoxTag, BoxDisplay, TextElement, ImageElement, ButtonElement, InputElement, TextareaElement, SelectElement, TextStyles, Spacing, Inset, SizeValue, BorderRadius, Border, DesignValue } from '../types/frame'
+import type { Frame, BoxElement, BoxTag, BoxDisplay, TextElement, ImageElement, ButtonElement, InputElement, TextareaElement, SelectElement, TextStyles, Spacing, Inset, SizeValue, BorderRadius, Border, DesignValue, Page } from '../types/frame'
 
-// The internal root ID — never exposed to the user
-const INTERNAL_ROOT_ID = '__root__'
+// Each page gets a unique root ID: __root__<pageId>
+function rootIdForPage(pageId: string): string {
+  return `__root__${pageId}`
+}
+
+/** Check whether an ID belongs to an internal root frame */
+export function isRootId(id: string): boolean {
+  return id.startsWith('__root__')
+}
 
 let nextId = 1
 export function generateId(): string {
   return `frame-${nextId++}`
+}
+
+let nextPageId = 2
+function generatePageId(): string {
+  return `page-${nextPageId++}`
 }
 
 // Collect all names in the tree
@@ -115,9 +127,9 @@ function cloneSizeValue(sv: SizeValue): SizeValue {
   return { mode: sv.mode, value: cloneDV(sv.value) }
 }
 
-function createInternalRoot(children: Frame[] = []): BoxElement {
+function createInternalRoot(pageId: string, children: Frame[] = []): BoxElement {
   return {
-    id: INTERNAL_ROOT_ID,
+    id: rootIdForPage(pageId),
     type: 'box',
     name: '__root__',
     hidden: false,
@@ -140,7 +152,7 @@ function createInternalRoot(children: Frame[] = []): BoxElement {
     shrink: dvNum(1),
     overflow: 'visible',
     opacity: dvNum(100),
-    bg: dvStr(''),
+    bg: { mode: 'token', token: 'white', value: '#ffffff' },
     border: { ...defaultBorder, width: dvNum(0), color: dvStr('') },
     borderRadius: zeroBorderRadius(),
     tailwindClasses: '',
@@ -604,7 +616,7 @@ function findParent(root: Frame, id: string): BoxElement | null {
 function duplicateInTree(root: Frame, id: string): { tree: Frame; newId: string; idMap: Record<string, string> } | null {
   const target = findInTree(root, id)
   if (!target) return null
-  if (target.id === INTERNAL_ROOT_ID) return null // can't duplicate internal root
+  if (isRootId(target.id)) return null // can't duplicate internal root
   const idMap: Record<string, string> = {}
   const clone = cloneWithNewIds(target, idMap)
   const parent = findParent(root, id)
@@ -628,7 +640,7 @@ function duplicateInTree(root: Frame, id: string): { tree: Frame; newId: string;
 function wrapInFrameInTree(root: Frame, id: string): { tree: Frame; wrapperId: string } | null {
   const target = findInTree(root, id)
   if (!target) return null
-  if (target.id === INTERNAL_ROOT_ID) return null // can't wrap internal root
+  if (isRootId(target.id)) return null // can't wrap internal root
   const parent = findParent(root, id)
   if (!parent) return null
 
@@ -859,23 +871,26 @@ function migrateFrame(raw: Record<string, unknown>): Frame {
 
 // Migrate old data: if the saved root was a user frame (not internal root),
 // wrap it inside the internal root so it becomes a child.
-export function migrateToInternalRoot(saved: Record<string, unknown>): BoxElement {
+export function migrateToInternalRoot(saved: Record<string, unknown>, pageId: string): BoxElement {
   const migrated = migrateFrame(saved)
-  if (migrated.id === INTERNAL_ROOT_ID && migrated.type === 'box') {
-    // Already has internal root — ensure tag is 'body'
+  if (isRootId(migrated.id) && migrated.type === 'box') {
+    // Already has internal root — ensure tag is 'body' and ID matches page
     if ((migrated as BoxElement).tag !== 'body') {
       (migrated as BoxElement).tag = 'body'
     }
+    ;(migrated as BoxElement).id = rootIdForPage(pageId)
     return migrated as BoxElement
   }
   // Old format: user's root becomes a child of the internal root
-  return createInternalRoot([migrated])
+  return createInternalRoot(pageId, [migrated])
 }
 
 const MAX_HISTORY = 50
 
 interface FrameStore {
   root: BoxElement
+  pages: Page[]
+  activePageId: string
   selectedId: string | null
   selectedIds: Set<string>
   hoveredId: string | null
@@ -895,8 +910,8 @@ interface FrameStore {
   treePanelTab: 'elements' | 'snippets'
   _lastDuplicateMap: Record<string, string> | null
 
-  past: BoxElement[]
-  future: BoxElement[]
+  past: Record<string, BoxElement[]>
+  future: Record<string, BoxElement[]>
 
   select: (id: string | null) => void
   selectMulti: (id: string) => void
@@ -924,9 +939,11 @@ interface FrameStore {
 
   getSelected: () => Frame | null
   getParentDirection: (id: string) => 'row' | 'column'
+  getParentDisplay: (id: string) => BoxElement['display'] | null
   getRootId: () => string
   loadFromStorage: () => void
   loadFromFile: (root: BoxElement, filePath: string) => void
+  loadFromFileMulti: (pages: Page[], activePageId: string, filePath: string) => void
   setFilePath: (path: string | null) => void
   markClean: () => void
   toggleSpacingOverlays: () => void
@@ -943,6 +960,17 @@ interface FrameStore {
   setSnippetDragFrame: (frame: Frame | null) => void
   setTreePanelTab: (tab: 'elements' | 'snippets') => void
   expandToFrame: (id: string) => void
+  advancedMode: boolean
+  setAdvancedMode: (value: boolean) => void
+
+  // Page management
+  addPage: (name?: string, route?: string) => void
+  removePage: (id: string) => void
+  renamePage: (id: string, name: string) => void
+  setPageRoute: (id: string, route: string) => void
+  setActivePage: (id: string) => void
+  duplicatePage: (id: string) => void
+  reorderPages: (fromIndex: number, toIndex: number) => void
 }
 
 const VIEW_PREFS_KEY = 'caja-view-prefs'
@@ -952,6 +980,7 @@ interface ViewPrefs {
   showOverlayValues: boolean
   previewMode: boolean
   canvasWidth: number | null
+  advancedMode: boolean
 }
 
 function loadViewPrefs(): ViewPrefs {
@@ -964,10 +993,11 @@ function loadViewPrefs(): ViewPrefs {
         showOverlayValues: parsed.showOverlayValues ?? false,
         previewMode: parsed.previewMode ?? false,
         canvasWidth: parsed.canvasWidth ?? null,
+        advancedMode: parsed.advancedMode ?? false,
       }
     }
   } catch { /* ignore */ }
-  return { showSpacingOverlays: true, showOverlayValues: false, previewMode: false, canvasWidth: null }
+  return { showSpacingOverlays: true, showOverlayValues: false, previewMode: false, canvasWidth: 1440, advancedMode: false }
 }
 
 function saveViewPrefs(prefs: ViewPrefs) {
@@ -976,16 +1006,32 @@ function saveViewPrefs(prefs: ViewPrefs) {
 
 const initialViewPrefs = loadViewPrefs()
 
-function pushHistory(state: { root: BoxElement; past: BoxElement[]; future: BoxElement[] }) {
+function pushHistory(state: { root: BoxElement; past: Record<string, BoxElement[]>; future: Record<string, BoxElement[]>; activePageId: string }) {
+  const pageId = state.activePageId
+  const pagePast = state.past[pageId] || []
   return {
-    past: [...state.past.slice(-(MAX_HISTORY - 1)), cloneTree(state.root) as BoxElement],
-    future: [] as BoxElement[],
+    past: { ...state.past, [pageId]: [...pagePast.slice(-(MAX_HISTORY - 1)), cloneTree(state.root) as BoxElement] },
+    future: { ...state.future, [pageId]: [] as BoxElement[] },
     dirty: true,
   }
 }
 
+// Update both root and the active page's root in the pages array
+function updateActiveRoot(state: { pages: Page[]; activePageId: string }, newRoot: BoxElement): { pages: Page[]; root: BoxElement } {
+  return {
+    root: newRoot,
+    pages: state.pages.map((p) => p.id === state.activePageId ? { ...p, root: newRoot } : p),
+  }
+}
+
+const initialPageId = 'page-1'
+const initialRoot = createInternalRoot(initialPageId)
+const initialPages: Page[] = [{ id: initialPageId, name: 'Home', route: '/', root: initialRoot }]
+
 export const useFrameStore = create<FrameStore>((set, get) => ({
-  root: createInternalRoot(),
+  root: initialRoot,
+  pages: initialPages,
+  activePageId: initialPageId,
   selectedId: null,
   selectedIds: new Set<string>(),
   hoveredId: null,
@@ -1003,9 +1049,10 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   canvasDragOver: null,
   snippetDragFrame: null,
   treePanelTab: 'elements',
+  advancedMode: initialViewPrefs.advancedMode,
   _lastDuplicateMap: null,
-  past: [],
-  future: [],
+  past: {},
+  future: {},
 
   select: (id) => set({ selectedId: id, selectedIds: new Set(id ? [id] : []) }),
 
@@ -1026,12 +1073,12 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
     if (state.selectedId) ids.add(state.selectedId)
     if (ids.size === 0) return {}
     const history = pushHistory(state)
-    let root = state.root
+    let newRoot = state.root
     for (const id of ids) {
-      if (id === INTERNAL_ROOT_ID) continue
-      root = removeFromTree(root, id) as BoxElement
+      if (isRootId(id)) continue
+      newRoot = removeFromTree(newRoot, id) as BoxElement
     }
-    return { root, selectedId: null, selectedIds: new Set(), ...history }
+    return { ...updateActiveRoot(state, newRoot), selectedId: null, selectedIds: new Set(), ...history }
   }),
 
   hover: (id) => set({ hoveredId: id }),
@@ -1049,10 +1096,8 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
       const frame = findInTree(state.root, id)
       if (!frame) return {}
       const history = pushHistory(state)
-      return {
-        root: updateInTree(state.root, id, (f) => ({ ...f, hidden: !f.hidden })) as BoxElement,
-        ...history,
-      }
+      const newRoot = updateInTree(state.root, id, (f) => ({ ...f, hidden: !f.hidden })) as BoxElement
+      return { ...updateActiveRoot(state, newRoot), ...history }
     }),
 
   insertFrame: (parentId, frame) =>
@@ -1061,13 +1106,8 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
       if (!parent || parent.type !== 'box') return {}
       const cloned = cloneWithNewIds(frame)
       const history = pushHistory(state)
-      // Insert at beginning so new snippets appear first
-      return {
-        root: insertChildInTree(state.root, parentId, cloned, 0) as BoxElement,
-        selectedId: cloned.id,
-        selectedIds: new Set([cloned.id]),
-        ...history,
-      }
+      const newRoot = insertChildInTree(state.root, parentId, cloned, 0) as BoxElement
+      return { ...updateActiveRoot(state, newRoot), selectedId: cloned.id, selectedIds: new Set([cloned.id]), ...history }
     }),
 
   insertFrameAt: (parentId, frame, index) =>
@@ -1076,12 +1116,8 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
       if (!parent || parent.type !== 'box') return {}
       const cloned = cloneWithNewIds(frame)
       const history = pushHistory(state)
-      return {
-        root: insertChildInTree(state.root, parentId, cloned, index) as BoxElement,
-        selectedId: cloned.id,
-        selectedIds: new Set([cloned.id]),
-        ...history,
-      }
+      const newRoot = insertChildInTree(state.root, parentId, cloned, index) as BoxElement
+      return { ...updateActiveRoot(state, newRoot), selectedId: cloned.id, selectedIds: new Set([cloned.id]), ...history }
     }),
 
   addChild: (parentId, type, overrides) =>
@@ -1099,26 +1135,18 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
         : type === 'link' ? createLink({ name, ...overrides } as Partial<TextElement>)
         : createBox({ name, ...overrides } as Partial<BoxElement>)
       const history = pushHistory(state)
-      return {
-        root: addChildInTree(state.root, parentId, child) as BoxElement,
-        selectedId: child.id,
-        selectedIds: new Set([child.id]),
-        ...history,
-      }
+      const newRoot = addChildInTree(state.root, parentId, child) as BoxElement
+      return { ...updateActiveRoot(state, newRoot), selectedId: child.id, selectedIds: new Set([child.id]), ...history }
     }),
 
   removeFrame: (id) =>
     set((state) => {
-      if (id === INTERNAL_ROOT_ID) return {} // never remove internal root
+      if (isRootId(id)) return {} // never remove internal root
       const history = pushHistory(state)
       const nextIds = new Set(state.selectedIds)
       nextIds.delete(id)
-      return {
-        root: removeFromTree(state.root, id) as BoxElement,
-        selectedId: state.selectedId === id ? null : state.selectedId,
-        selectedIds: nextIds,
-        ...history,
-      }
+      const newRoot = removeFromTree(state.root, id) as BoxElement
+      return { ...updateActiveRoot(state, newRoot), selectedId: state.selectedId === id ? null : state.selectedId, selectedIds: nextIds, ...history }
     }),
 
   duplicateFrame: (id) =>
@@ -1126,7 +1154,7 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
       const result = duplicateInTree(state.root, id)
       if (!result) return {}
       const history = pushHistory(state)
-      return { root: result.tree as BoxElement, selectedId: result.newId, _lastDuplicateMap: result.idMap, ...history }
+      return { ...updateActiveRoot(state, result.tree as BoxElement), selectedId: result.newId, _lastDuplicateMap: result.idMap, ...history }
     }),
 
   wrapInFrame: (id) =>
@@ -1134,107 +1162,90 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
       const result = wrapInFrameInTree(state.root, id)
       if (!result) return {}
       const history = pushHistory(state)
-      return { root: result.tree as BoxElement, selectedId: result.wrapperId, ...history }
+      return { ...updateActiveRoot(state, result.tree as BoxElement), selectedId: result.wrapperId, ...history }
     }),
 
   moveFrame: (frameId, newParentId, index) =>
     set((state) => {
-      if (frameId === INTERNAL_ROOT_ID) return {}
+      if (isRootId(frameId)) return {}
       const history = pushHistory(state)
-      return {
-        root: moveInTree(state.root, frameId, newParentId, index) as BoxElement,
-        ...history,
-      }
+      const newRoot = moveInTree(state.root, frameId, newParentId, index) as BoxElement
+      return { ...updateActiveRoot(state, newRoot), ...history }
     }),
 
   reorderFrame: (frameId, direction) =>
     set((state) => {
-      if (frameId === INTERNAL_ROOT_ID) return {}
+      if (isRootId(frameId)) return {}
       const parent = findParent(state.root, frameId)
       if (!parent) return {}
       const idx = parent.children.findIndex((c) => c.id === frameId)
       const newIdx = direction === 'up' ? idx - 1 : idx + 1
       if (newIdx < 0 || newIdx >= parent.children.length) return {}
       const history = pushHistory(state)
-      return {
-        root: moveInTree(state.root, frameId, parent.id, newIdx) as BoxElement,
-        ...history,
-      }
+      const newRoot = moveInTree(state.root, frameId, parent.id, newIdx) as BoxElement
+      return { ...updateActiveRoot(state, newRoot), ...history }
     }),
 
   updateFrame: (id, updates) =>
     set((state) => {
       const history = pushHistory(state)
-      return {
-        root: updateInTree(state.root, id, (f) => ({ ...f, ...updates } as Frame)) as BoxElement,
-        ...history,
-      }
+      const newRoot = updateInTree(state.root, id, (f) => ({ ...f, ...updates } as Frame)) as BoxElement
+      return { ...updateActiveRoot(state, newRoot), ...history }
     }),
 
   updateSpacing: (id, field, values) =>
     set((state) => {
       const history = pushHistory(state)
-      return {
-        root: updateInTree(state.root, id, (f) => ({
-          ...f,
-          [field]: { ...f[field], ...values },
-        })) as BoxElement,
-        ...history,
-      }
+      const newRoot = updateInTree(state.root, id, (f) => ({ ...f, [field]: { ...f[field], ...values } })) as BoxElement
+      return { ...updateActiveRoot(state, newRoot), ...history }
     }),
 
   updateSize: (id, dimension, size) =>
     set((state) => {
       const history = pushHistory(state)
-      return {
-        root: updateInTree(state.root, id, (f) => ({
-          ...f,
-          [dimension]: { ...f[dimension], ...size },
-        })) as BoxElement,
-        ...history,
-      }
+      const newRoot = updateInTree(state.root, id, (f) => ({ ...f, [dimension]: { ...f[dimension], ...size } })) as BoxElement
+      return { ...updateActiveRoot(state, newRoot), ...history }
     }),
 
   updateBorderRadius: (id, values) =>
     set((state) => {
       const history = pushHistory(state)
-      return {
-        root: updateInTree(state.root, id, (f) => ({
-          ...f,
-          borderRadius: { ...f.borderRadius, ...values },
-        })) as BoxElement,
-        ...history,
-      }
+      const newRoot = updateInTree(state.root, id, (f) => ({ ...f, borderRadius: { ...f.borderRadius, ...values } })) as BoxElement
+      return { ...updateActiveRoot(state, newRoot), ...history }
     }),
 
   renameFrame: (id, name) =>
     set((state) => {
       const history = pushHistory(state)
-      return {
-        root: updateInTree(state.root, id, (f) => ({ ...f, name })) as BoxElement,
-        ...history,
-      }
+      const newRoot = updateInTree(state.root, id, (f) => ({ ...f, name })) as BoxElement
+      return { ...updateActiveRoot(state, newRoot), ...history }
     }),
 
   undo: () =>
     set((state) => {
-      if (state.past.length === 0) return {}
-      const prev = state.past[state.past.length - 1]
+      const pageId = state.activePageId
+      const pagePast = state.past[pageId] || []
+      if (pagePast.length === 0) return {}
+      const prev = pagePast[pagePast.length - 1]
+      const pageFuture = state.future[pageId] || []
       return {
-        root: prev,
-        past: state.past.slice(0, -1),
-        future: [cloneTree(state.root) as BoxElement, ...state.future],
+        ...updateActiveRoot(state, prev),
+        past: { ...state.past, [pageId]: pagePast.slice(0, -1) },
+        future: { ...state.future, [pageId]: [cloneTree(state.root) as BoxElement, ...pageFuture] },
       }
     }),
 
   redo: () =>
     set((state) => {
-      if (state.future.length === 0) return {}
-      const next = state.future[0]
+      const pageId = state.activePageId
+      const pageFuture = state.future[pageId] || []
+      if (pageFuture.length === 0) return {}
+      const next = pageFuture[0]
+      const pagePast = state.past[pageId] || []
       return {
-        root: next,
-        past: [...state.past, cloneTree(state.root) as BoxElement],
-        future: state.future.slice(1),
+        ...updateActiveRoot(state, next),
+        past: { ...state.past, [pageId]: [...pagePast, cloneTree(state.root) as BoxElement] },
+        future: { ...state.future, [pageId]: pageFuture.slice(1) },
       }
     }),
 
@@ -1249,17 +1260,42 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
     return parent?.direction ?? 'column'
   },
 
-  getRootId: () => INTERNAL_ROOT_ID,
+  getParentDisplay: (id) => {
+    const parent = findParent(get().root, id)
+    return parent?.display ?? null
+  },
+
+  getRootId: () => get().root.id,
 
   loadFromStorage: () => {
     try {
       const saved = localStorage.getItem('caja-state')
       if (saved) {
         const parsed = JSON.parse(saved)
-        if (parsed.root) {
-          const root = migrateToInternalRoot(parsed.root)
+        if (parsed.pages && Array.isArray(parsed.pages)) {
+          // New multi-page format
+          const pages: Page[] = parsed.pages.map((p: Record<string, unknown>) => ({
+            id: p.id as string,
+            name: p.name as string,
+            route: p.route as string,
+            root: migrateToInternalRoot(p.root as Record<string, unknown>, p.id as string),
+          }))
+          const activePageId = (parsed.activePageId as string) || pages[0].id
+          const activePage = pages.find((p) => p.id === activePageId) || pages[0]
+          let maxId = 0
+          for (const p of pages) maxId = Math.max(maxId, maxIdInTree(p.root))
+          nextId = maxId + 1
+          const maxPid = Math.max(...pages.map((p) => parseInt(p.id.replace('page-', '')) || 0))
+          nextPageId = maxPid + 1
+          set({ pages, activePageId: activePage.id, root: activePage.root, past: {}, future: {} })
+        } else if (parsed.root) {
+          // Legacy single-root format → wrap in one page
+          const pageId = 'page-1'
+          const root = migrateToInternalRoot(parsed.root, pageId)
           nextId = maxIdInTree(root) + 1
-          set({ root, past: [], future: [] })
+          nextPageId = 2
+          const pages: Page[] = [{ id: pageId, name: 'Home', route: '/', root }]
+          set({ pages, activePageId: pageId, root, past: {}, future: {} })
         }
       }
     } catch {
@@ -1268,41 +1304,58 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   },
 
   loadFromFile: (root, filePath) => {
+    // This is now called for legacy single-root files. Multi-page files use loadFromFileMulti.
+    const pageId = 'page-1'
+    root.id = rootIdForPage(pageId)
     nextId = maxIdInTree(root) + 1
-    set({ root, filePath, dirty: false, selectedId: null, selectedIds: new Set(), past: [], future: [] })
+    nextPageId = 2
+    const pages: Page[] = [{ id: pageId, name: 'Home', route: '/', root }]
+    set({ pages, activePageId: pageId, root, filePath, dirty: false, selectedId: null, selectedIds: new Set(), past: {}, future: {} })
+  },
+
+  loadFromFileMulti: (pages, activePageId, filePath) => {
+    // Ensure each page root has a unique ID
+    for (const p of pages) p.root.id = rootIdForPage(p.id)
+    let maxId = 0
+    for (const p of pages) maxId = Math.max(maxId, maxIdInTree(p.root))
+    nextId = maxId + 1
+    const maxPid = Math.max(...pages.map((p) => parseInt(p.id.replace('page-', '')) || 0))
+    nextPageId = maxPid + 1
+    const activePage = pages.find((p) => p.id === activePageId) || pages[0]
+    set({ pages, activePageId: activePage.id, root: activePage.root, filePath, dirty: false, selectedId: null, selectedIds: new Set(), past: {}, future: {} })
   },
 
   setFilePath: (path) => set({ filePath: path }),
   markClean: () => set({ dirty: false }),
   toggleSpacingOverlays: () => set((s) => {
     const next = !s.showSpacingOverlays
-    saveViewPrefs({ showSpacingOverlays: next, showOverlayValues: s.showOverlayValues, previewMode: s.previewMode, canvasWidth: s.canvasWidth })
+    saveViewPrefs({ showSpacingOverlays: next, showOverlayValues: s.showOverlayValues, previewMode: s.previewMode, canvasWidth: s.canvasWidth, advancedMode: s.advancedMode })
     return { showSpacingOverlays: next }
   }),
   toggleOverlayValues: () => set((s) => {
     const next = !s.showOverlayValues
-    saveViewPrefs({ showSpacingOverlays: s.showSpacingOverlays, showOverlayValues: next, previewMode: s.previewMode, canvasWidth: s.canvasWidth })
+    saveViewPrefs({ showSpacingOverlays: s.showSpacingOverlays, showOverlayValues: next, previewMode: s.previewMode, canvasWidth: s.canvasWidth, advancedMode: s.advancedMode })
     return { showOverlayValues: next }
   }),
   setSpacingOverlays: (value) => set((s) => {
-    saveViewPrefs({ showSpacingOverlays: value, showOverlayValues: s.showOverlayValues, previewMode: s.previewMode, canvasWidth: s.canvasWidth })
+    saveViewPrefs({ showSpacingOverlays: value, showOverlayValues: s.showOverlayValues, previewMode: s.previewMode, canvasWidth: s.canvasWidth, advancedMode: s.advancedMode })
     return { showSpacingOverlays: value }
   }),
   setOverlayValues: (value) => set((s) => {
-    saveViewPrefs({ showSpacingOverlays: s.showSpacingOverlays, showOverlayValues: value, previewMode: s.previewMode, canvasWidth: s.canvasWidth })
+    saveViewPrefs({ showSpacingOverlays: s.showSpacingOverlays, showOverlayValues: value, previewMode: s.previewMode, canvasWidth: s.canvasWidth, advancedMode: s.advancedMode })
     return { showOverlayValues: value }
   }),
   togglePreviewMode: () => set((s) => {
     const next = !s.previewMode
-    saveViewPrefs({ showSpacingOverlays: s.showSpacingOverlays, showOverlayValues: s.showOverlayValues, previewMode: next, canvasWidth: s.canvasWidth })
+    saveViewPrefs({ showSpacingOverlays: s.showSpacingOverlays, showOverlayValues: s.showOverlayValues, previewMode: next, canvasWidth: s.canvasWidth, advancedMode: s.advancedMode })
     return { previewMode: next, ...(next ? { selectedId: null, hoveredId: null } : {}) }
   }),
   setPreviewMode: (value) => set((s) => {
-    saveViewPrefs({ showSpacingOverlays: s.showSpacingOverlays, showOverlayValues: s.showOverlayValues, previewMode: value, canvasWidth: s.canvasWidth })
+    saveViewPrefs({ showSpacingOverlays: s.showSpacingOverlays, showOverlayValues: s.showOverlayValues, previewMode: value, canvasWidth: s.canvasWidth, advancedMode: s.advancedMode })
     return { previewMode: value, ...(value ? { selectedId: null, hoveredId: null } : {}) }
   }),
   setCanvasWidth: (width) => set((s) => {
-    saveViewPrefs({ showSpacingOverlays: s.showSpacingOverlays, showOverlayValues: s.showOverlayValues, previewMode: s.previewMode, canvasWidth: width })
+    saveViewPrefs({ showSpacingOverlays: s.showSpacingOverlays, showOverlayValues: s.showOverlayValues, previewMode: s.previewMode, canvasWidth: width, advancedMode: s.advancedMode })
     return { canvasWidth: width }
   }),
   setIframeWindow: (win) => set({ iframeWindow: win }),
@@ -1311,6 +1364,10 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   setCanvasDragOver: (over) => set({ canvasDragOver: over }),
   setSnippetDragFrame: (frame) => set({ snippetDragFrame: frame }),
   setTreePanelTab: (tab) => set({ treePanelTab: tab }),
+  setAdvancedMode: (value) => set((s) => {
+    saveViewPrefs({ showSpacingOverlays: s.showSpacingOverlays, showOverlayValues: s.showOverlayValues, previewMode: s.previewMode, canvasWidth: s.canvasWidth, advancedMode: value })
+    return { advancedMode: value }
+  }),
 
   expandToFrame: (id) => set((state) => {
     const ancestors: string[] = []
@@ -1330,6 +1387,107 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
     }
     return changed ? { collapsedIds: next } : {}
   }),
+
+  // --- Page management ---
+
+  addPage: (name, route) => set((state) => {
+    const id = generatePageId()
+    const pageName = name || `Page ${state.pages.length + 1}`
+    const pageRoute = route || `/${pageName.toLowerCase().replace(/\s+/g, '-')}`
+    const newRoot = createInternalRoot(id)
+    const page: Page = { id, name: pageName, route: pageRoute, root: newRoot }
+    return {
+      pages: [...state.pages, page],
+      activePageId: id,
+      root: newRoot,
+      selectedId: null,
+      selectedIds: new Set(),
+      hoveredId: null,
+      past: state.past,
+      future: state.future,
+      dirty: true,
+    }
+  }),
+
+  removePage: (id) => set((state) => {
+    if (state.pages.length <= 1) return {} // min 1 page
+    const pages = state.pages.filter((p) => p.id !== id)
+    const wasActive = state.activePageId === id
+    if (wasActive) {
+      const newActive = pages[0]
+      // Clean up undo stacks for removed page
+      const { [id]: _pastRemoved, ...pastRest } = state.past
+      const { [id]: _futureRemoved, ...futureRest } = state.future
+      return {
+        pages,
+        activePageId: newActive.id,
+        root: newActive.root,
+        selectedId: null,
+        selectedIds: new Set(),
+        hoveredId: null,
+        past: pastRest,
+        future: futureRest,
+        dirty: true,
+      }
+    }
+    const { [id]: _pastRemoved, ...pastRest } = state.past
+    const { [id]: _futureRemoved, ...futureRest } = state.future
+    return { pages, past: pastRest, future: futureRest, dirty: true }
+  }),
+
+  renamePage: (id, name) => set((state) => ({
+    pages: state.pages.map((p) => p.id === id ? { ...p, name } : p),
+    dirty: true,
+  })),
+
+  setPageRoute: (id, route) => set((state) => ({
+    pages: state.pages.map((p) => p.id === id ? { ...p, route } : p),
+    dirty: true,
+  })),
+
+  setActivePage: (id) => set((state) => {
+    if (state.activePageId === id) return {}
+    const page = state.pages.find((p) => p.id === id)
+    if (!page) return {}
+    return {
+      activePageId: id,
+      root: page.root,
+      selectedId: null,
+      selectedIds: new Set(),
+      hoveredId: null,
+    }
+  }),
+
+  duplicatePage: (id) => set((state) => {
+    const source = state.pages.find((p) => p.id === id)
+    if (!source) return {}
+    const newId = generatePageId()
+    const newRoot = cloneTree(source.root) as BoxElement
+    // Assign new IDs to all frames in the cloned tree
+    const clonedRoot = cloneWithNewIds(newRoot) as BoxElement
+    // Keep the internal root ID
+    ;(clonedRoot as BoxElement).id = rootIdForPage(newId)
+    const page: Page = { id: newId, name: `${source.name} (Copy)`, route: `${source.route}-copy`, root: clonedRoot }
+    const idx = state.pages.findIndex((p) => p.id === id)
+    const pages = [...state.pages]
+    pages.splice(idx + 1, 0, page)
+    return {
+      pages,
+      activePageId: newId,
+      root: clonedRoot,
+      selectedId: null,
+      selectedIds: new Set(),
+      hoveredId: null,
+      dirty: true,
+    }
+  }),
+
+  reorderPages: (fromIndex, toIndex) => set((state) => {
+    const pages = [...state.pages]
+    const [moved] = pages.splice(fromIndex, 1)
+    pages.splice(toIndex, 0, moved)
+    return { pages, dirty: true }
+  }),
 }))
 
 // Auto-save
@@ -1337,6 +1495,6 @@ let saveTimeout: ReturnType<typeof setTimeout>
 useFrameStore.subscribe((state) => {
   clearTimeout(saveTimeout)
   saveTimeout = setTimeout(() => {
-    localStorage.setItem('caja-state', JSON.stringify({ root: state.root }))
+    localStorage.setItem('caja-state', JSON.stringify({ pages: state.pages, activePageId: state.activePageId }))
   }, 500)
 })

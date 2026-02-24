@@ -13,6 +13,8 @@ export function exportToJSX(
   indent = 0,
   associations?: Map<string, LabelAssociation>,
 ): string {
+  if (frame.hidden) return ''
+
   const pad = '  '.repeat(indent)
   const classes = buildClassString(frame)
 

@@ -1,10 +1,12 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import type { Frame } from '../../types/frame'
 import { useFrameStore, findInTree } from '../../store/frameStore'
 import { useSnippetStore } from '../../store/snippetStore'
 import { AddMenu } from './AddMenu'
 import { useTreeDnd, type DropPosition } from './TreeDndContext'
-import { ChevronRight, ChevronDown, Square, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse, Plus, X, Copy, Trash2, Group, SquarePlus, Eye, EyeOff, Link, Bookmark } from 'lucide-react'
+import { useContextMenu } from './hooks/useContextMenu'
+import { useInlineEdit } from './hooks/useInlineEdit'
+import { ChevronRight, ChevronDown, Square, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse, Plus, Copy, Trash2, Group, SquarePlus, Eye, EyeOff, Link, Bookmark } from 'lucide-react'
 
 interface TreeNodeProps {
   frame: Frame
@@ -41,11 +43,10 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
 
   const { dragId, overId, overPosition, startDrag, setOver, endDrag } = useTreeDnd()
 
-  const [editing, setEditing] = useState(false)
-  const [editName, setEditName] = useState(frame.name)
+  const nameEdit = useInlineEdit((v) => renameFrame(frame.id, v))
+  const ctxMenu = useContextMenu()
   const [showAdd, setShowAdd] = useState(false)
   const [menuPos, setMenuPos] = useState({ x: 0, y: 0 })
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
   const addBtnRef = useRef<HTMLButtonElement>(null)
   const rowRef = useRef<HTMLDivElement>(null)
 
@@ -75,14 +76,6 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
     }
     setShowAdd(true)
   }
-
-  const closeContext = useCallback(() => setContextMenu(null), [])
-  useEffect(() => {
-    if (contextMenu) {
-      window.addEventListener('click', closeContext)
-      return () => window.removeEventListener('click', closeContext)
-    }
-  }, [contextMenu, closeContext])
 
   const getDropPosition = (e: React.DragEvent): DropPosition => {
     const rect = rowRef.current?.getBoundingClientRect()
@@ -171,7 +164,7 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
       {dropIndicator}
       <div
         ref={rowRef}
-        draggable={!editing && !isRoot}
+        draggable={!nameEdit.editing && !isRoot}
         className={`flex items-center gap-1.5 py-1 px-1 rounded-md cursor-pointer group transition-all ${
           isSelected
             ? 'tree-node-selected text-text-primary'
@@ -190,14 +183,11 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
         onMouseEnter={() => hover(frame.id)}
         onMouseLeave={() => hover(null)}
         onDoubleClick={() => {
-          setEditing(true)
-          setEditName(frame.name)
+          if (!isRoot) nameEdit.start(frame.name)
         }}
         onContextMenu={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
           select(frame.id)
-          setContextMenu({ x: e.clientX, y: e.clientY })
+          ctxMenu.open(e)
         }}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
@@ -248,25 +238,8 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
         )}
 
         {/* Name */}
-        {!isRoot && editing ? (
-          <input
-            autoFocus
-            value={editName}
-            onChange={(e) => setEditName(e.target.value)}
-            onBlur={() => {
-              setEditing(false)
-              if (editName.trim()) renameFrame(frame.id, editName.trim())
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                setEditing(false)
-                if (editName.trim()) renameFrame(frame.id, editName.trim())
-              }
-              if (e.key === 'Escape') setEditing(false)
-            }}
-            onClick={(e) => e.stopPropagation()}
-            className="flex-1 bg-surface-0 border border-accent/50 rounded-md px-1.5 py-0.5 text-[12px] text-text-primary outline-none focus:border-accent min-w-0 transition-colors"
-          />
+        {!isRoot && nameEdit.editing ? (
+          <input {...nameEdit.inputProps} />
         ) : (
           <span className="flex-1 text-[12px] truncate">{isRoot ? 'Body' : frame.name}</span>
         )}
@@ -324,23 +297,23 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
       )}
 
       {/* Right-click context menu (fixed position) */}
-      {contextMenu && (
+      {ctxMenu.menu && (
         <div
           className="fixed c-menu-popup min-w-[160px]"
-          style={{ left: contextMenu.x, top: contextMenu.y }}
+          style={{ left: ctxMenu.menu.x, top: ctxMenu.menu.y }}
           onClick={(e) => e.stopPropagation()}
         >
           {!isRoot && (
             <>
               <button
                 className="c-menu-item"
-                onClick={() => { duplicateFrame(frame.id); setContextMenu(null) }}
+                onClick={() => { duplicateFrame(frame.id); ctxMenu.close() }}
               >
                 <Copy size={12} /> Duplicate
               </button>
               <button
                 className="c-menu-item"
-                onClick={() => { wrapInFrame(frame.id); setContextMenu(null) }}
+                onClick={() => { wrapInFrame(frame.id); ctxMenu.close() }}
               >
                 <Group size={12} /> Wrap in Frame
               </button>
@@ -353,7 +326,7 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
                     useSnippetStore.getState().saveSnippet(f.name || 'Snippet', [], f)
                     store.setTreePanelTab('snippets')
                   }
-                  setContextMenu(null)
+                  ctxMenu.close()
                 }}
               >
                 <Bookmark size={12} /> Save as Snippet
@@ -365,49 +338,49 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
               <div className="border-t border-border my-1" />
               <button
                 className="c-menu-item"
-                onClick={() => { addChild(addTargetId, 'box'); setContextMenu(null) }}
+                onClick={() => { addChild(addTargetId, 'box'); ctxMenu.close() }}
               >
                 <SquarePlus size={12} /> Add Frame
               </button>
               <button
                 className="c-menu-item"
-                onClick={() => { addChild(addTargetId, 'text'); setContextMenu(null) }}
+                onClick={() => { addChild(addTargetId, 'text'); ctxMenu.close() }}
               >
                 <Type size={12} /> Add Text
               </button>
               <button
                 className="c-menu-item"
-                onClick={() => { addChild(addTargetId, 'link'); setContextMenu(null) }}
+                onClick={() => { addChild(addTargetId, 'link'); ctxMenu.close() }}
               >
                 <Link size={12} /> Add Link
               </button>
               <button
                 className="c-menu-item"
-                onClick={() => { addChild(addTargetId, 'image'); setContextMenu(null) }}
+                onClick={() => { addChild(addTargetId, 'image'); ctxMenu.close() }}
               >
                 <ImageIcon size={12} /> Add Image
               </button>
               <button
                 className="c-menu-item"
-                onClick={() => { addChild(addTargetId, 'button'); setContextMenu(null) }}
+                onClick={() => { addChild(addTargetId, 'button'); ctxMenu.close() }}
               >
                 <RectangleHorizontal size={12} /> Add Button
               </button>
               <button
                 className="c-menu-item"
-                onClick={() => { addChild(addTargetId, 'input'); setContextMenu(null) }}
+                onClick={() => { addChild(addTargetId, 'input'); ctxMenu.close() }}
               >
                 <TextCursorInput size={12} /> Add Input
               </button>
               <button
                 className="c-menu-item"
-                onClick={() => { addChild(addTargetId, 'textarea'); setContextMenu(null) }}
+                onClick={() => { addChild(addTargetId, 'textarea'); ctxMenu.close() }}
               >
                 <AlignLeft size={12} /> Add Textarea
               </button>
               <button
                 className="c-menu-item"
-                onClick={() => { addChild(addTargetId, 'select'); setContextMenu(null) }}
+                onClick={() => { addChild(addTargetId, 'select'); ctxMenu.close() }}
               >
                 <ListCollapse size={12} /> Add Select
               </button>
@@ -419,14 +392,14 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
               {selectedIds.size > 1 ? (
                 <button
                   className="c-menu-item text-destructive"
-                  onClick={() => { removeSelected(); setContextMenu(null) }}
+                  onClick={() => { removeSelected(); ctxMenu.close() }}
                 >
                   <Trash2 size={12} /> Delete {selectedIds.size} elements
                 </button>
               ) : (
                 <button
                   className="c-menu-item"
-                  onClick={() => { removeFrame(frame.id); setContextMenu(null) }}
+                  onClick={() => { removeFrame(frame.id); ctxMenu.close() }}
                 >
                   <Trash2 size={12} /> Delete
                 </button>

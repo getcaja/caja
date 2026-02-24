@@ -52,40 +52,16 @@ export function NameHeader({ frame, isRoot }: { frame: Frame; isRoot: boolean })
           </>
         )}
       </div>
-      {!isRoot && (
-        <>
-          {tagOptions && (
-            <div className="flex items-center gap-1.5">
-              <span className="c-label">Tag</span>
-              <Select
-                value={currentTag}
-                options={tagOptions}
-                onChange={(v) => updateFrame(frame.id, { tag: v })}
-                className="flex-1"
-              />
-            </div>
-          )}
-          <div className="flex gap-1.5">
-            <div className="flex-1 min-w-0">
-              <input
-                type="text"
-                value={frame.className}
-                onChange={(e) => updateFrame(frame.id, { className: e.target.value })}
-                placeholder="class"
-                className="w-full c-input text-[11px]"
-              />
-            </div>
-            <div className="w-[80px] shrink-0">
-              <input
-                type="text"
-                value={frame.htmlId}
-                onChange={(e) => updateFrame(frame.id, { htmlId: e.target.value })}
-                placeholder="id"
-                className="w-full c-input text-[11px]"
-              />
-            </div>
-          </div>
-        </>
+      {!isRoot && tagOptions && (
+        <div className="flex items-center gap-1.5">
+          <span className="c-label">Tag</span>
+          <Select
+            value={currentTag}
+            options={tagOptions}
+            onChange={(v) => updateFrame(frame.id, { tag: v })}
+            className="flex-1"
+          />
+        </div>
       )}
     </div>
   )

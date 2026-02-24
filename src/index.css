@@ -4,24 +4,24 @@
   --font-mono: SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, monospace;
   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 
-  /* Surfaces — wider luminance spread for clear panel separation */
-  --color-surface-0: #111114;
-  --color-surface-1: #1b1b1f;
-  --color-surface-2: #26262b;
-  --color-surface-3: #3f3f46;
+  /* Surfaces — pure neutral grays */
+  --color-surface-0: #111111;
+  --color-surface-1: #1b1b1b;
+  --color-surface-2: #262626;
+  --color-surface-3: #3f3f3f;
 
   /* Accent */
   --color-accent: #20744A;
   --color-accent-hover: #25875a;
 
   /* Text */
-  --color-text-primary: #f0f0f2;
-  --color-text-secondary: #a1a1aa;
-  --color-text-muted: #71717a;
+  --color-text-primary: #f0f0f0;
+  --color-text-secondary: #a1a1a1;
+  --color-text-muted: #717171;
 
-  /* Borders — brighter for clear segmentation */
-  --color-border: #32323a;
-  --color-border-accent: #3e3e48;
+  /* Borders */
+  --color-border: #323232;
+  --color-border-accent: #3e3e3e;
 
   /* Focus */
   --color-focus: #4A90D9;

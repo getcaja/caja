@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { useFrameStore } from './store/frameStore'
+import { useFrameStore, isRootId } from './store/frameStore'
 import { TreePanel } from './components/TreePanel/TreePanel'
 import { Canvas } from './components/Canvas/Canvas'
 import { RightPanel } from './components/RightPanel/RightPanel'
@@ -65,37 +65,41 @@ function App() {
   const dirty = useFrameStore((s) => s.dirty)
   const previewMode = useFrameStore((s) => s.previewMode)
   const iframeWindow = useFrameStore((s) => s.iframeWindow)
+  const activePageId = useFrameStore((s) => s.activePageId)
+  const pages = useFrameStore((s) => s.pages)
 
-  // Update window title with file name
+  // Update window title with file name + active page
   useEffect(() => {
     if (!isTauri) return
     const fileName = filePath ? filePath.split('/').pop() : 'Untitled'
-    const title = dirty ? `${fileName} — Edited · Caja` : `${fileName} · Caja`
-    import('@tauri-apps/api/webviewWindow').then(({ getCurrentWebviewWindow }) => {
-      getCurrentWebviewWindow().setTitle(title)
+    const activePage = pages.find((p) => p.id === activePageId)
+    const pageName = activePage?.name || ''
+    const pageLabel = pages.length > 1 && pageName ? ` — ${pageName}` : ''
+    const title = dirty ? `${fileName}${pageLabel} — Edited · Caja` : `${fileName}${pageLabel} · Caja`
+    import('@tauri-apps/api/core').then(({ invoke }) => {
+      invoke('set_window_title', { title })
     }).catch(() => {})
-  }, [filePath, dirty])
+  }, [filePath, dirty, activePageId, pages])
 
   const handleSave = useCallback(async () => {
     if (!isTauri) return
-    const root = useFrameStore.getState().root
-    const currentPath = useFrameStore.getState().filePath
+    const store = useFrameStore.getState()
     const snippets = useSnippetStore.getState().getSnippetData()
-    const path = await saveFile(root, snippets, currentPath)
+    const path = await saveFile(store.pages, store.activePageId, snippets, store.filePath)
     if (path) {
-      useFrameStore.getState().setFilePath(path)
-      useFrameStore.getState().markClean()
+      store.setFilePath(path)
+      store.markClean()
     }
   }, [])
 
   const handleSaveAs = useCallback(async () => {
     if (!isTauri) return
-    const root = useFrameStore.getState().root
+    const store = useFrameStore.getState()
     const snippets = useSnippetStore.getState().getSnippetData()
-    const path = await saveFileAs(root, snippets)
+    const path = await saveFileAs(store.pages, store.activePageId, snippets)
     if (path) {
-      useFrameStore.getState().setFilePath(path)
-      useFrameStore.getState().markClean()
+      store.setFilePath(path)
+      store.markClean()
     }
   }, [])
 
@@ -104,9 +108,23 @@ function App() {
     const result = await openFile()
     if (result) {
       const { migrateToInternalRoot } = await import('./store/frameStore')
-      const root = migrateToInternalRoot(result.data.root as Record<string, unknown>)
-      useFrameStore.getState().loadFromFile(root, result.path)
-      useSnippetStore.getState().loadSnippets(result.data.snippets as import('./store/snippetStore').SnippetData | undefined)
+      const data = result.data
+      if (data.pages && Array.isArray(data.pages)) {
+        // New multi-page format
+        const pages = (data.pages as Array<Record<string, unknown>>).map((p) => ({
+          id: p.id as string,
+          name: p.name as string,
+          route: p.route as string,
+          root: migrateToInternalRoot(p.root as Record<string, unknown>, p.id as string),
+        }))
+        const activePageId = (data.activePageId as string) || pages[0].id
+        useFrameStore.getState().loadFromFileMulti(pages, activePageId, result.path)
+      } else if (data.root) {
+        // Legacy single-root format
+        const root = migrateToInternalRoot(data.root as Record<string, unknown>, 'page-1')
+        useFrameStore.getState().loadFromFile(root, result.path)
+      }
+      useSnippetStore.getState().loadSnippets(data.snippets as import('./store/snippetStore').SnippetData | undefined)
     }
   }, [])
 
@@ -118,9 +136,10 @@ function App() {
     // Sync initial view prefs to native menu check states
     if (isTauri) {
       import('@tauri-apps/api/core').then(({ invoke }) => {
-        const { showSpacingOverlays, showOverlayValues } = useFrameStore.getState()
+        const { showSpacingOverlays, showOverlayValues, advancedMode } = useFrameStore.getState()
         invoke('set_menu_check', { id: 'toggle-spacing-overlays', checked: showSpacingOverlays }).catch(() => {})
         invoke('set_menu_check', { id: 'toggle-overlay-values', checked: showOverlayValues }).catch(() => {})
+        invoke('set_menu_check', { id: 'toggle-advanced-mode', checked: advancedMode }).catch(() => {})
       }).catch(() => {})
     }
 
@@ -168,6 +187,8 @@ function App() {
           store.setSpacingOverlays(checked)
         } else if (id === 'toggle-overlay-values') {
           store.setOverlayValues(checked)
+        } else if (id === 'toggle-advanced-mode') {
+          store.setAdvancedMode(checked)
         }
       }).then((fn) => {
         if (active) unlisteners.push(fn); else fn()
@@ -198,13 +219,19 @@ function App() {
         e.preventDefault()
         if (selectedIds.size > 1) {
           removeSelected()
-        } else if (selectedId && selectedId !== '__root__') {
+        } else if (selectedId && !isRootId(selectedId)) {
           removeFrame(selectedId)
         }
       }
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && selectedId && selectedId !== '__root__') {
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && selectedId && !isRootId(selectedId)) {
         const tag = (e.target as HTMLElement).tagName
         if (tag === 'INPUT' || tag === 'TEXTAREA') return
+        if ((e.target as HTMLElement).isContentEditable) return
+        const dir = useFrameStore.getState().getParentDirection(selectedId)
+        const isVertical = dir === 'column'
+        const isHorizontal = dir === 'row'
+        if (isVertical && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) return
+        if (isHorizontal && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) return
         e.preventDefault()
         const before = e.key === 'ArrowUp' || e.key === 'ArrowLeft'
         reorderFrame(selectedId, before ? 'up' : 'down')
@@ -239,6 +266,18 @@ function App() {
           const checked = useFrameStore.getState().showOverlayValues
           import('@tauri-apps/api/core').then(({ invoke }) => {
             invoke('set_menu_check', { id: 'toggle-overlay-values', checked })
+          }).catch(() => {})
+        }
+      }
+      // Advanced mode toggle
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'a') {
+        e.preventDefault()
+        const store = useFrameStore.getState()
+        const next = !store.advancedMode
+        store.setAdvancedMode(next)
+        if (isTauri) {
+          import('@tauri-apps/api/core').then(({ invoke }) => {
+            invoke('set_menu_check', { id: 'toggle-advanced-mode', checked: next })
           }).catch(() => {})
         }
       }

@@ -1,6 +1,7 @@
 import { Trash2 } from 'lucide-react'
 import { useFrameStore } from '../../store/frameStore'
 import { NameHeader } from './NameHeader'
+import { AttributesSection } from './AttributesSection'
 import { LayoutSection } from './LayoutSection'
 import { ContentSection } from './ContentSection'
 import { ImageSection } from './ImageSection'
@@ -24,6 +25,7 @@ export function Properties() {
   const rootId = useFrameStore((s) => s.getRootId())
   const selectedIds = useFrameStore((s) => s.selectedIds)
   const removeSelected = useFrameStore((s) => s.removeSelected)
+  const advancedMode = useFrameStore((s) => s.advancedMode)
 
   if (selectedIds.size > 1) {
     return (
@@ -48,27 +50,29 @@ export function Properties() {
   }
 
   const isRoot = selected.id === rootId
+  const hasTextStyles = selected.type !== 'box' && selected.type !== 'image'
 
   return (
     <div key={selected.id} className="h-full bg-surface-1 p-3 overflow-y-auto">
       <NameHeader frame={selected} isRoot={isRoot} />
-      {selected.type === 'box' && <LayoutSection frame={selected} isRoot={isRoot} />}
+      {advancedMode && !isRoot && <AttributesSection frame={selected} />}
       {selected.type === 'text' && <ContentSection frame={selected} />}
       {selected.type === 'image' && <ImageSection frame={selected} />}
       {selected.type === 'button' && <ButtonSection frame={selected} />}
       {selected.type === 'input' && <InputSection frame={selected} />}
       {selected.type === 'textarea' && <TextareaSection frame={selected} />}
       {selected.type === 'select' && <SelectSection frame={selected} />}
+      {advancedMode && <PositionSection frame={selected} />}
+      <LayoutSection frame={selected} isRoot={isRoot} />
       <SizeSection frame={selected} />
       <SpacingSection frame={selected} />
-      {selected.type !== 'box' && selected.type !== 'image' && <TypographySection frame={selected} />}
+      {hasTextStyles && <TypographySection frame={selected} />}
       <FillSection frame={selected} />
       <BorderSection frame={selected} />
-      <EffectsSection frame={selected} />
-      <PositionSection frame={selected} />
-      <TransformSection frame={selected} />
-      <TransitionSection frame={selected} />
-      <AdvancedSection frame={selected} />
+      {advancedMode && <EffectsSection frame={selected} />}
+      {advancedMode && <TransformSection frame={selected} />}
+      {advancedMode && <TransitionSection frame={selected} />}
+      {advancedMode && <AdvancedSection frame={selected} />}
     </div>
   )
 }

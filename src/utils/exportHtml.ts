@@ -16,6 +16,8 @@ export function exportToHTML(
   indent = 0,
   associations?: Map<string, LabelAssociation>,
 ): string {
+  if (frame.hidden) return ''
+
   const pad = '  '.repeat(indent)
   const classes = buildClassString(frame)
   const classAttr = classes ? ` class="${classes}"` : ''
@@ -94,11 +96,13 @@ export function exportToHTML(
   return `${pad}<${tag}${idAttr}${classAttr}></${tag}>\n`
 }
 
-export function exportToHTMLDocument(frames: Frame[]): string {
-  const body = frames.map((f) => exportToHTML(f, 2)).join('\n')
+export function exportToHTMLDocument(root: Frame): string {
+  const bodyClasses = buildClassString(root)
+  const bodyClassAttr = bodyClasses ? ` class="${bodyClasses}"` : ''
+  const body = root.children.map((f) => exportToHTML(f, 2)).join('\n')
 
   // [Experimental] Google Fonts — collect all used fonts and generate <link> + <style>
-  const googleFonts = collectGoogleFonts(frames)
+  const googleFonts = collectGoogleFonts(root.children)
   const fontLinks = googleFonts
     .map((f) => `  <link href="${toGoogleFontUrl(f)}" rel="stylesheet">`)
     .join('\n')
@@ -113,9 +117,9 @@ export function exportToHTMLDocument(frames: Frame[]): string {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Caja Export</title>
-${fontBlock ? fontBlock + '\n' : ''}  <script src="https://cdn.tailwindcss.com"></script>
+${fontBlock ? fontBlock + '\n' : ''}  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4/dist/cdn.min.js"></script>
 </head>
-<body>
+<body${bodyClassAttr}>
 ${body}</body>
 </html>
 `
