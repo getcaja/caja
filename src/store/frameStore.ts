@@ -66,7 +66,7 @@ function uniformBorderRadius(v: number): BorderRadius {
   return { topLeft: dvNum(v), topRight: dvNum(v), bottomRight: dvNum(v), bottomLeft: dvNum(v) }
 }
 
-const defaultBorder: Border = { width: dvNum(0), color: dvStr(''), style: 'none' }
+const defaultBorder: Border = { top: dvNum(0), right: dvNum(0), bottom: dvNum(0), left: dvNum(0), color: dvStr(''), style: 'none' }
 
 // New CSS feature defaults — shared across all create functions
 function newFeatureDefaults() {
@@ -114,7 +114,12 @@ function cloneDV<T>(dv: DesignValue<T> | undefined): DesignValue<T> | undefined 
 
 function cloneSpacing(s: Spacing | undefined): Spacing | undefined {
   if (!s) return undefined
-  return { top: cloneDV(s.top)!, right: cloneDV(s.right)!, bottom: cloneDV(s.bottom)!, left: cloneDV(s.left)! }
+  return {
+    top: migrateDVNum(s.top, 0),
+    right: migrateDVNum(s.right, 0),
+    bottom: migrateDVNum(s.bottom, 0),
+    left: migrateDVNum(s.left, 0),
+  }
 }
 
 function cloneBorderRadius(br: BorderRadius | undefined): BorderRadius | undefined {
@@ -124,7 +129,7 @@ function cloneBorderRadius(br: BorderRadius | undefined): BorderRadius | undefin
 
 function cloneBorder(b: Border | undefined): Border | undefined {
   if (!b) return undefined
-  return { width: cloneDV(b.width)!, color: cloneDV(b.color)!, style: b.style }
+  return { top: cloneDV(b.top)!, right: cloneDV(b.right)!, bottom: cloneDV(b.bottom)!, left: cloneDV(b.left)!, color: cloneDV(b.color)!, style: b.style }
 }
 
 function cloneSizeValue(sv: SizeValue | undefined): SizeValue | undefined {
@@ -158,7 +163,7 @@ function createInternalRoot(pageId: string, children: Frame[] = []): BoxElement 
     overflow: 'visible',
     opacity: dvNum(100),
     bg: { mode: 'token', token: 'white', value: '#ffffff' },
-    border: { ...defaultBorder, width: dvNum(0), color: dvStr('') },
+    border: { ...defaultBorder },
     borderRadius: zeroBorderRadius(),
     tailwindClasses: '',
     boxShadow: 'none',
@@ -200,7 +205,7 @@ export function createBox(overrides?: Partial<BoxElement>): BoxElement {
     overflow: 'visible',
     opacity: dvNum(100),
     bg: dvStr(''),
-    border: { ...defaultBorder, width: dvNum(0), color: dvStr('') },
+    border: { ...defaultBorder },
     borderRadius: zeroBorderRadius(),
     tailwindClasses: '',
     boxShadow: 'none',
@@ -238,7 +243,7 @@ export function createText(overrides?: Partial<TextElement>): TextElement {
     overflow: 'visible',
     opacity: dvNum(100),
     bg: dvStr(''),
-    border: { ...defaultBorder, width: dvNum(0), color: dvStr('') },
+    border: { ...defaultBorder },
     borderRadius: zeroBorderRadius(),
     tailwindClasses: '',
     boxShadow: 'none',
@@ -274,7 +279,7 @@ export function createImage(overrides?: Partial<ImageElement>): ImageElement {
     overflow: 'visible',
     opacity: dvNum(100),
     bg: dvStr(''),
-    border: { ...defaultBorder, width: dvNum(0), color: dvStr('') },
+    border: { ...defaultBorder },
     borderRadius: zeroBorderRadius(),
     tailwindClasses: '',
     boxShadow: 'none',
@@ -309,7 +314,7 @@ export function createButton(overrides?: Partial<ButtonElement>): ButtonElement 
     overflow: 'visible',
     opacity: dvNum(100),
     bg: dvStr(''),
-    border: { ...defaultBorder, width: dvNum(0), color: dvStr('') },
+    border: { ...defaultBorder },
     borderRadius: zeroBorderRadius(),
     tailwindClasses: '',
     boxShadow: 'none',
@@ -346,7 +351,7 @@ export function createInput(overrides?: Partial<InputElement>): InputElement {
     overflow: 'visible',
     opacity: dvNum(100),
     bg: dvStr(''),
-    border: { ...defaultBorder, width: dvNum(0), color: dvStr('') },
+    border: { ...defaultBorder },
     borderRadius: zeroBorderRadius(),
     tailwindClasses: '',
     boxShadow: 'none',
@@ -383,7 +388,7 @@ export function createTextarea(overrides?: Partial<TextareaElement>): TextareaEl
     overflow: 'visible',
     opacity: dvNum(100),
     bg: dvStr(''),
-    border: { ...defaultBorder, width: dvNum(0), color: dvStr('') },
+    border: { ...defaultBorder },
     borderRadius: zeroBorderRadius(),
     tailwindClasses: '',
     boxShadow: 'none',
@@ -432,7 +437,7 @@ export function createSelect(overrides?: Partial<SelectElement>): SelectElement 
     overflow: 'visible',
     opacity: dvNum(100),
     bg: dvStr(''),
-    border: { ...defaultBorder, width: dvNum(0), color: dvStr('') },
+    border: { ...defaultBorder },
     borderRadius: zeroBorderRadius(),
     tailwindClasses: '',
     boxShadow: 'none',
@@ -455,11 +460,16 @@ export function normalizeFrame(frame: Frame): Frame {
     input: createInput, textarea: createTextarea, select: createSelect, link: createLink,
   }
   const create = creators[frame.type] || creators.text
+  // Migrate old border format (pattern data / .caja files may have { width } instead of { top/right/bottom/left })
+  const migrated: Record<string, unknown> = { ...frame }
+  if (migrated.border && typeof migrated.border === 'object') {
+    migrated.border = migrateBorder(migrated.border)
+  }
   if (frame.type === 'box') {
     const children = (frame as BoxElement).children?.map(normalizeFrame) || []
-    return create({ ...frame, children } as Partial<any>)
+    return create({ ...migrated, children } as Partial<any>)
   }
-  return create(frame as Partial<any>)
+  return create(migrated as Partial<any>)
 }
 
 // Deep clone helper
@@ -622,7 +632,7 @@ export function cloneWithNewIds(frame: Frame, idMap?: Record<string, string>): F
 }
 
 // Find parent of a frame
-function findParent(root: Frame, id: string): BoxElement | null {
+export function findParent(root: Frame, id: string): BoxElement | null {
   if (root.type !== 'box') return null
   for (const child of root.children) {
     if (child.id === id) return root
@@ -725,10 +735,18 @@ function migrateBorderRadius(raw: unknown): BorderRadius {
 }
 
 function migrateBorder(raw: unknown): Border {
-  if (!raw || typeof raw !== 'object') return { width: dvNum(0), color: dvStr(''), style: 'none' }
+  if (!raw || typeof raw !== 'object') return { top: dvNum(0), right: dvNum(0), bottom: dvNum(0), left: dvNum(0), color: dvStr(''), style: 'none' }
   const r = raw as Record<string, unknown>
+  // Backward compat: old format had `width` as a single DesignValue — expand to all 4 sides
+  if ('width' in r && !('top' in r)) {
+    const w = migrateDVNum(r.width, 0)
+    return { top: w, right: { ...w }, bottom: { ...w }, left: { ...w }, color: migrateDVStr(r.color, ''), style: (r.style as Border['style']) || 'none' }
+  }
   return {
-    width: migrateDVNum(r.width, 0),
+    top: migrateDVNum(r.top, 0),
+    right: migrateDVNum(r.right, 0),
+    bottom: migrateDVNum(r.bottom, 0),
+    left: migrateDVNum(r.left, 0),
     color: migrateDVStr(r.color, ''),
     style: (r.style as Border['style']) || 'none',
   }
@@ -928,8 +946,10 @@ interface FrameStore {
   canvasDragOver: { parentId: string; index: number } | null
   patternDragFrame: Frame | null
   patternDragOrigin: { libraryId?: string; patternId?: string } | null
+  clipboard: Frame[]
   treePanelTab: 'elements' | 'patterns' | 'libraries'
   _lastDuplicateMap: Record<string, string> | null
+  _dragSnapshot: BoxElement | null
 
   past: Record<string, BoxElement[]>
   future: Record<string, BoxElement[]>
@@ -937,6 +957,9 @@ interface FrameStore {
   select: (id: string | null) => void
   selectMulti: (id: string) => void
   removeSelected: () => void
+  copySelected: () => void
+  cutSelected: () => void
+  pasteClipboard: () => void
   hover: (id: string | null) => void
   toggleCollapse: (id: string) => void
   toggleHidden: (id: string) => void
@@ -979,6 +1002,10 @@ interface FrameStore {
   setCanvasZoom: (zoom: number) => void
   setCanvasDrag: (id: string | null) => void
   setCanvasDragOver: (over: { parentId: string; index: number } | null) => void
+  previewMoveFrame: (frameId: string, newParentId: string, index: number) => void
+  commitPreviewMove: () => void
+  cancelPreviewMove: () => void
+  restorePreview: () => void
   setPatternDragFrame: (frame: Frame | null, origin?: { libraryId?: string; patternId?: string } | null) => void
   setTreePanelTab: (tab: 'elements' | 'patterns' | 'libraries') => void
   expandToFrame: (id: string) => void
@@ -1071,9 +1098,11 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   canvasDragOver: null,
   patternDragFrame: null,
   patternDragOrigin: null,
+  clipboard: [] as Frame[],
   treePanelTab: 'elements' as const,
   advancedMode: initialViewPrefs.advancedMode,
   _lastDuplicateMap: null,
+  _dragSnapshot: null,
   past: {},
   future: {},
 
@@ -1104,6 +1133,77 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
     return { ...updateActiveRoot(state, newRoot), selectedId: null, selectedIds: new Set(), ...history }
   }),
 
+  copySelected: () => {
+    const state = get()
+    const ids = new Set(state.selectedIds)
+    if (state.selectedId) ids.add(state.selectedId)
+    const frames: Frame[] = []
+    for (const id of ids) {
+      if (isRootId(id)) continue
+      const frame = findInTree(state.root, id)
+      if (frame) frames.push(cloneTree(frame))
+    }
+    if (frames.length > 0) set({ clipboard: frames })
+  },
+
+  cutSelected: () => set((state) => {
+    const ids = new Set(state.selectedIds)
+    if (state.selectedId) ids.add(state.selectedId)
+    const frames: Frame[] = []
+    for (const id of ids) {
+      if (isRootId(id)) continue
+      const frame = findInTree(state.root, id)
+      if (frame) frames.push(cloneTree(frame))
+    }
+    if (frames.length === 0) return {}
+    const history = pushHistory(state)
+    let newRoot = state.root
+    for (const id of ids) {
+      if (isRootId(id)) continue
+      newRoot = removeFromTree(newRoot, id) as BoxElement
+    }
+    return { clipboard: frames, ...updateActiveRoot(state, newRoot), selectedId: null, selectedIds: new Set(), ...history }
+  }),
+
+  pasteClipboard: () => set((state) => {
+    if (state.clipboard.length === 0) return {}
+    const history = pushHistory(state)
+    let newRoot = state.root
+
+    // Determine insert target — always paste as sibling after selected frame
+    let targetParentId: string
+    let insertIndex: number
+    if (state.selectedId && !isRootId(state.selectedId)) {
+      const parent = findParent(state.root, state.selectedId)
+      if (parent) {
+        targetParentId = parent.id
+        const idx = parent.children.findIndex((c) => c.id === state.selectedId)
+        insertIndex = idx + 1
+      } else {
+        targetParentId = state.root.id
+        insertIndex = state.root.children.length
+      }
+    } else {
+      // No selection or root selected: paste at root level
+      targetParentId = state.root.id
+      insertIndex = state.root.children.length
+    }
+
+    const pastedIds: string[] = []
+    for (let i = 0; i < state.clipboard.length; i++) {
+      const cloned = cloneWithNewIds(state.clipboard[i])
+      pastedIds.push(cloned.id)
+      newRoot = insertChildInTree(newRoot, targetParentId, cloned, insertIndex + i) as BoxElement
+    }
+
+    return {
+      ...updateActiveRoot(state, newRoot),
+      selectedId: pastedIds[0],
+      selectedIds: new Set(pastedIds),
+      ...history,
+    }
+  }),
+
   hover: (id) => set({ hoveredId: id }),
 
   toggleCollapse: (id) =>
@@ -1127,7 +1227,7 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
     set((state) => {
       const parent = findInTree(state.root, parentId)
       if (!parent || parent.type !== 'box') return {}
-      const cloned = cloneWithNewIds(frame)
+      const cloned = cloneWithNewIds(normalizeFrame(frame))
       if (origin) cloned._origin = origin
       const history = pushHistory(state)
       const newRoot = insertChildInTree(state.root, parentId, cloned, 0) as BoxElement
@@ -1138,7 +1238,7 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
     set((state) => {
       const parent = findInTree(state.root, parentId)
       if (!parent || parent.type !== 'box') return {}
-      const cloned = cloneWithNewIds(frame)
+      const cloned = cloneWithNewIds(normalizeFrame(frame))
       if (origin) cloned._origin = origin
       const history = pushHistory(state)
       const newRoot = insertChildInTree(state.root, parentId, cloned, index) as BoxElement
@@ -1402,7 +1502,48 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   setIframeWindow: (win) => set({ iframeWindow: win }),
   setCanvasZoom: (zoom) => set({ canvasZoom: zoom }),
   setCanvasDrag: (id) => set({ canvasDragId: id }),
-  setCanvasDragOver: (over) => set({ canvasDragOver: over }),
+  setCanvasDragOver: (over) => set((state) => {
+    const prev = state.canvasDragOver
+    if (prev === over) return {}
+    if (prev && over && prev.parentId === over.parentId && prev.index === over.index) return {}
+    return { canvasDragOver: over }
+  }),
+  previewMoveFrame: (frameId, newParentId, index) =>
+    set((state) => {
+      if (isRootId(frameId)) return {}
+      const snapshot = state._dragSnapshot ?? (cloneTree(state.root) as BoxElement)
+      const newRoot = moveInTree(state.root, frameId, newParentId, index) as BoxElement
+      return { ...updateActiveRoot(state, newRoot), _dragSnapshot: snapshot }
+    }),
+
+  commitPreviewMove: () =>
+    set((state) => {
+      if (!state._dragSnapshot) return {}
+      const pageId = state.activePageId
+      const pagePast = state.past[pageId] || []
+      return {
+        past: { ...state.past, [pageId]: [...pagePast.slice(-(MAX_HISTORY - 1)), state._dragSnapshot] },
+        future: { ...state.future, [pageId]: [] as BoxElement[] },
+        dirty: true,
+        _dragSnapshot: null,
+      }
+    }),
+
+  cancelPreviewMove: () =>
+    set((state) => {
+      if (!state._dragSnapshot) return { _dragSnapshot: null }
+      return {
+        ...updateActiveRoot(state, state._dragSnapshot),
+        _dragSnapshot: null,
+      }
+    }),
+
+  restorePreview: () =>
+    set((state) => {
+      if (!state._dragSnapshot) return {}
+      return updateActiveRoot(state, state._dragSnapshot)
+    }),
+
   setPatternDragFrame: (frame, origin) => set({ patternDragFrame: frame, patternDragOrigin: origin ?? null }),
   setTreePanelTab: (tab) => set({ treePanelTab: tab }),
   setAdvancedMode: (value) => set((s) => {

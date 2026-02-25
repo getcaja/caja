@@ -1,18 +1,16 @@
-import { useState, useRef, useEffect, useCallback, Fragment } from 'react'
-import { ImageIcon, GripVertical } from 'lucide-react'
+import { useState, useRef, useEffect, useLayoutEffect, useCallback, Fragment } from 'react'
+import { ImageIcon } from 'lucide-react'
 import type { Frame } from '../../types/frame'
 import { frameToClasses } from '../../utils/frameToClasses'
-import { useFrameStore, isRootId } from '../../store/frameStore'
-import { resolveCanvasDrop } from '../../utils/canvasDrop'
+import { useFrameStore, isRootId, findParent } from '../../store/frameStore'
+import { resolveCanvasDrop, getFrameDepth } from '../../utils/canvasDrop'
 import './FrameRenderer.css'
+
+// Module-level flag: skip the next click after a drag completes
+let _skipNextClick = false
 
 interface FrameRendererProps {
   frame: Frame
-}
-
-function DropIndicator({ direction }: { direction: string }) {
-  const isRow = direction === 'row' || direction === 'row-reverse'
-  return <span className={`frame-drop-indicator ${isRow ? 'is-row' : 'is-column'}`} />
 }
 
 function renderMultiline(text: string) {
@@ -56,6 +54,7 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
 
   const [editingText, setEditingText] = useState(false)
   const textRef = useRef<HTMLSpanElement>(null)
+  const clickPosRef = useRef<{ x: number; y: number } | null>(null)
   const Tag = resolveTag(frame)
 
   const isSelected = !previewMode && selectedId === frame.id
@@ -77,39 +76,8 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
   )
   const isEmpty = isBox && frame.children.length === 0 && !hasVisualPresence
   const isDragged = canvasDragId === frame.id
-  const isDropTarget = isBox && canvasDragOver?.parentId === frame.id
-
-  // Elements that can host arbitrary children (overlays, drag handle)
-  const canHostChildren = isBox || isText || isButton || (isImage && !frame.src)
-  const showHandle = isSelected && !isRoot && !editingText && !previewMode && canHostChildren
-
-  // --- Canvas drag handle ---
-  const onHandlePointerDown = useCallback((e: React.PointerEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    const doc = e.currentTarget.ownerDocument
-    useFrameStore.getState().setCanvasDrag(frame.id)
-
-    const onMove = (ev: PointerEvent) => {
-      const { root: currentRoot, setCanvasDragOver: setOver } = useFrameStore.getState()
-      const result = resolveCanvasDrop(doc, ev.clientX, ev.clientY, frame.id, currentRoot)
-      setOver(result)
-    }
-
-    const onUp = () => {
-      const { canvasDragOver, moveFrame: move, setCanvasDrag: setDrag, setCanvasDragOver: setOver } = useFrameStore.getState()
-      if (canvasDragOver) {
-        move(frame.id, canvasDragOver.parentId, canvasDragOver.index)
-      }
-      setDrag(null)
-      setOver(null)
-      doc.removeEventListener('pointermove', onMove)
-      doc.removeEventListener('pointerup', onUp)
-    }
-
-    doc.addEventListener('pointermove', onMove)
-    doc.addEventListener('pointerup', onUp)
-  }, [frame.id])
+  // Line mode: dragged element uses display:none (collapses gap in source container)
+  const isLineDrop = isDragged && !!canvasDragOver
 
   // Tailwind classes (source of truth — same in editor and export)
   const tailwind = frameToClasses(frame)
@@ -124,19 +92,28 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
     isSelected && 'is-selected',
     isHovered && 'is-hovered',
     !previewMode && isEmpty && !isRoot && 'is-empty',
-    isDragged && 'is-dragging',
-    isDropTarget && 'is-drop-target',
+    isDragged && !isLineDrop && 'is-dragging',
+    isLineDrop && 'is-line-drop',
+    !previewMode && (editingText ? 'cursor-text' : 'cursor-default'),
     previewCursor,
   ].filter(Boolean).join(' ')
 
-  useEffect(() => {
+  // useLayoutEffect: runs synchronously before paint — no cursor delay
+  useLayoutEffect(() => {
     if (editingText && textRef.current) {
-      textRef.current.focus()
-      const range = document.createRange()
-      range.selectNodeContents(textRef.current)
-      const sel = window.getSelection()
-      sel?.removeAllRanges()
-      sel?.addRange(range)
+      const el = textRef.current
+      const doc = el.ownerDocument
+      el.focus()
+      const pos = clickPosRef.current
+      if (pos) {
+        const range = doc.caretRangeFromPoint(pos.x, pos.y)
+        if (range) {
+          const sel = doc.getSelection()
+          sel?.removeAllRanges()
+          sel?.addRange(range)
+        }
+        clickPosRef.current = null
+      }
     }
   }, [editingText])
 
@@ -154,10 +131,198 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
     setEditingText(false)
   }
 
+
+  // Click+drag to move selected elements (no grip handle needed)
+  // Hybrid mode: reorder (same parent) uses visibility:hidden, line (cross-parent/Cmd) uses display:none
+  const onDragPointerDown = useCallback((e: React.PointerEvent) => {
+    if (e.button !== 0) return
+    e.stopPropagation() // prevent parent from also starting a drag
+    const startX = e.clientX
+    const startY = e.clientY
+    const doc = (e.target as HTMLElement).ownerDocument
+    let dragging = false
+    let ghost: HTMLElement | null = null
+    let offsetX = 0
+    let offsetY = 0
+    let lastTarget: { parentId: string; index: number } | null = null
+
+    // Hybrid state
+    let sourceParentId: string | null = null
+    let baseMaxDropDepth: number | null = null // depth without Cmd
+    let cmdHeld = false
+    let inLineMode = false
+    let lastCx = 0
+    let lastCy = 0
+    let resolveRaf = 0
+
+    const cleanup = (commit: boolean) => {
+      cancelAnimationFrame(resolveRaf)
+      doc.body.classList.remove('is-canvas-dragging')
+      if (ghost) { ghost.remove(); ghost = null }
+      if (dragging) {
+        const s = useFrameStore.getState()
+        if (commit) {
+          if (s.canvasDragOver) {
+            // Line mode: restore original tree, then apply real move with undo history
+            s.restorePreview()
+            s.moveFrame(frame.id, s.canvasDragOver.parentId, s.canvasDragOver.index)
+          } else if (s._dragSnapshot) {
+            // Reorder mode: commit the preview
+            s.commitPreviewMove()
+          }
+        } else {
+          s.cancelPreviewMove()
+        }
+        // Always clear drag snapshot (commitPreviewMove/cancelPreviewMove do it,
+        // but line mode path uses restorePreview+moveFrame which don't)
+        if (useFrameStore.getState()._dragSnapshot) {
+          useFrameStore.setState({ _dragSnapshot: null })
+        }
+        s.setCanvasDragOver(null)
+        s.setCanvasDrag(null)
+        // Safety: clear skip flag if click doesn't fire (e.g., pointer released on different element)
+        requestAnimationFrame(() => { _skipNextClick = false })
+      }
+      doc.removeEventListener('pointermove', onMove)
+      doc.removeEventListener('pointerup', onUp)
+      doc.removeEventListener('keydown', onKeyDown)
+      doc.removeEventListener('keyup', onKeyUp)
+    }
+
+    /** Core resolution: resolve drop target and apply the right visual mode */
+    const resolveAndApply = (cx: number, cy: number) => {
+      const s = useFrameStore.getState()
+      const effectiveDepth = cmdHeld ? null : baseMaxDropDepth
+      const next = resolveCanvasDrop(doc, cx, cy, frame.id, s.root, effectiveDepth)
+
+      // Skip if same position
+      if (lastTarget && next && lastTarget.parentId === next.parentId && lastTarget.index === next.index) return
+      if (!lastTarget && !next) return
+      lastTarget = next
+
+      if (!next) {
+        // No valid target — restore if in line mode
+        if (inLineMode) {
+          s.restorePreview()
+          s.setCanvasDragOver(null)
+          inLineMode = false
+        }
+        return
+      }
+
+      const wantLine = next.parentId !== sourceParentId || cmdHeld
+
+      if (wantLine) {
+        // Enter or stay in line mode
+        if (!inLineMode) {
+          // Transition reorder → line: restore original tree so display:none collapses correctly
+          s.restorePreview()
+          inLineMode = true
+        }
+        s.setCanvasDragOver(next)
+      } else {
+        // Enter or stay in reorder mode
+        if (inLineMode) {
+          // Transition line → reorder: instant
+          s.setCanvasDragOver(null)
+          inLineMode = false
+        }
+        s.previewMoveFrame(frame.id, next.parentId, next.index)
+      }
+    }
+
+    const onMove = (ev: PointerEvent) => {
+      if (!dragging && Math.abs(ev.clientX - startX) + Math.abs(ev.clientY - startY) > 4) {
+        dragging = true
+        _skipNextClick = true
+        doc.body.classList.add('is-canvas-dragging')
+
+        const srcEl = doc.querySelector(`[data-frame-id="${frame.id}"]`) as HTMLElement | null
+
+        if (srcEl) {
+          const rect = srcEl.getBoundingClientRect()
+          offsetX = startX - rect.left
+          offsetY = startY - rect.top
+
+          // Depth-lock: allow nesting into sibling containers (same depth) but not deeper
+          baseMaxDropDepth = getFrameDepth(srcEl)
+
+          // Capture source parent for mode detection
+          const root = useFrameStore.getState().root
+          const parent = findParent(root, frame.id)
+          sourceParentId = parent?.id ?? null
+
+          // Mark as dragging → CSS applies visibility:hidden or display:none
+          useFrameStore.getState().setCanvasDrag(frame.id)
+
+          // Ghost follows cursor
+          ghost = srcEl.cloneNode(true) as HTMLElement
+          ghost.removeAttribute('data-frame-id')
+          ghost.style.cssText = `
+            position: fixed; z-index: 99999; pointer-events: none;
+            width: ${rect.width}px; height: ${rect.height}px;
+            opacity: 0.7; box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+            left: ${ev.clientX - offsetX}px; top: ${ev.clientY - offsetY}px;
+            visibility: visible;
+          `
+          doc.body.appendChild(ghost)
+        } else {
+          useFrameStore.getState().setCanvasDrag(frame.id)
+        }
+      }
+      if (dragging) {
+        if (ghost) {
+          ghost.style.left = `${ev.clientX - offsetX}px`
+          ghost.style.top = `${ev.clientY - offsetY}px`
+        }
+        lastCx = ev.clientX
+        lastCy = ev.clientY
+        // Throttle resolve to one per frame — ghost stays smooth, reflow batched
+        cancelAnimationFrame(resolveRaf)
+        resolveRaf = requestAnimationFrame(() => resolveAndApply(lastCx, lastCy))
+      }
+    }
+
+    const onUp = () => cleanup(true)
+
+    const onKeyDown = (ev: KeyboardEvent) => {
+      if (ev.key === 'Escape') { cleanup(false); return }
+      if (ev.key === 'Meta' && !cmdHeld && dragging) {
+        cmdHeld = true
+        lastTarget = null // force re-resolution
+        resolveAndApply(lastCx, lastCy)
+      }
+    }
+
+    const onKeyUp = (ev: KeyboardEvent) => {
+      if (ev.key === 'Meta' && cmdHeld && dragging) {
+        cmdHeld = false
+        lastTarget = null // force re-resolution
+        resolveAndApply(lastCx, lastCy)
+      }
+    }
+
+    doc.addEventListener('pointermove', onMove)
+    doc.addEventListener('pointerup', onUp)
+    doc.addEventListener('keydown', onKeyDown)
+    doc.addEventListener('keyup', onKeyUp)
+  }, [frame.id])
+
   // Editor event handlers
   const editorHandlers = !previewMode ? {
     onClick: (e: React.MouseEvent) => {
       e.stopPropagation()
+      if (_skipNextClick) { _skipNextClick = false; return }
+      // Triple-click: select all text when editing
+      if (editingText && e.detail >= 3 && textRef.current) {
+        const doc = textRef.current.ownerDocument
+        const range = doc.createRange()
+        range.selectNodeContents(textRef.current)
+        const sel = doc.getSelection()
+        sel?.removeAllRanges()
+        sel?.addRange(range)
+        return
+      }
       if (e.metaKey && isText && frame.tag === 'a' && frame.href) {
         const { pages, setActivePage } = useFrameStore.getState()
         const targetPage = pages.find((p) => p.route === frame.href)
@@ -171,10 +336,16 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
         select(frame.id)
       }
     },
+    onMouseDown: isText && !editingText ? (e: React.MouseEvent) => {
+      // Prevent browser's native word selection on double-click (visual flash)
+      if (e.detail >= 2) e.preventDefault()
+    } : undefined,
     onDoubleClick: isText ? (e: React.MouseEvent) => {
       e.stopPropagation()
+      clickPosRef.current = { x: e.clientX, y: e.clientY }
       setEditingText(true)
     } : undefined,
+    onPointerDown: !isRoot && !editingText ? onDragPointerDown : undefined,
     onMouseOver: (e: React.MouseEvent) => {
       e.stopPropagation()
       if (!useFrameStore.getState().canvasDragId) hover(frame.id)
@@ -187,6 +358,7 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
       <img
         data-frame-id={frame.id}
         className={`${tailwind} ${stateClasses}`}
+
         src={isImage ? frame.src : ''}
         alt={isImage ? frame.alt : ''}
         draggable={false}
@@ -201,6 +373,7 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
       <input
         data-frame-id={frame.id}
         className={`${tailwind} ${stateClasses}`}
+
         type={isInput ? frame.inputType : 'text'}
         placeholder={isInput ? frame.placeholder : ''}
         disabled={isInput ? frame.disabled : false}
@@ -232,13 +405,6 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
         onMouseDown: (e: React.MouseEvent) => e.preventDefault(),
       } : {})}
     >
-      {/* Drag handle — only on elements that can host children */}
-      {showHandle && (
-        <span className="frame-drag-handle" onPointerDown={onHandlePointerDown}>
-          <GripVertical size={12} />
-        </span>
-      )}
-
       {/* Text content */}
       {isText && (
         editingText ? (
@@ -278,17 +444,9 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
       ))}
 
       {/* Box children */}
-      {isBox && frame.children.map((child, i) => (
-        <Fragment key={child.id}>
-          {isDropTarget && canvasDragOver.index === i && (
-            <DropIndicator direction={frame.direction} />
-          )}
-          <FrameRenderer frame={child} />
-        </Fragment>
+      {isBox && frame.children.map((child) => (
+        <FrameRenderer key={child.id} frame={child} />
       ))}
-      {isBox && isDropTarget && canvasDragOver.index >= frame.children.length && (
-        <DropIndicator direction={frame.direction} />
-      )}
     </Tag>
   )
 }

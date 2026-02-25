@@ -1,19 +1,40 @@
 import type { Frame, BoxElement } from '../types/frame'
 import { findInTree } from '../store/frameStore'
 
-const EDGE_ZONE = 20
+const EDGE_ZONE = 12
+
+/**
+ * Count how deep a DOM element is in the frame tree (number of data-frame-id ancestors).
+ * Root frame = depth 0, its children = depth 1, etc.
+ */
+export function getFrameDepth(el: HTMLElement): number {
+  let depth = 0
+  let node = el.parentElement
+  while (node) {
+    if (node.hasAttribute('data-frame-id')) depth++
+    node = node.parentElement
+  }
+  return depth
+}
 
 /**
  * Compute insertion index among sibling DOM elements based on cursor position.
+ * Skips the dragged element (display:none → rect is all zeros, corrupts midpoints).
+ * Returns index in terms of "array without excludeId" — matches moveInTree which
+ * extracts first, then splices at index.
  */
 export function indexAmongSiblings(
   parentEl: HTMLElement,
   parentDir: string,
   cx: number,
   cy: number,
+  excludeId: string | null,
 ): number {
   const siblings = Array.from(parentEl.children).filter(
-    (c) => (c as HTMLElement).hasAttribute('data-frame-id'),
+    (c) => {
+      const el = c as HTMLElement
+      return el.hasAttribute('data-frame-id') && el.getAttribute('data-frame-id') !== excludeId
+    },
   ) as HTMLElement[]
   const isRow = parentDir === 'row' || parentDir === 'row-reverse'
   let idx = siblings.length
@@ -39,38 +60,49 @@ function isDescendant(root: Frame, ancestorId: string, descendantId: string): bo
 }
 
 /**
- * Walk up the DOM from `el` to find the nearest parent with data-frame-id,
- * then compute a sibling insertion index there.
- * Returns false if no valid parent found.
+ * Walk up the DOM from `el` to find the nearest valid parent with data-frame-id,
+ * respecting the maximum depth constraint.
  */
-function dropAsSibling(
-  targetEl: HTMLElement,
+function findDropParent(
+  el: HTMLElement,
   currentRoot: Frame,
   excludeId: string | null,
-  cx: number,
-  cy: number,
-): { parentId: string; index: number } | null {
-  let parentEl = targetEl.parentElement as HTMLElement | null
-  while (parentEl && !parentEl.hasAttribute('data-frame-id')) {
+  maxDropDepth: number | null,
+): { parentEl: HTMLElement; parentId: string; parentFrame: BoxElement } | null {
+  let parentEl = el.parentElement as HTMLElement | null
+  while (parentEl) {
+    if (parentEl.hasAttribute('data-frame-id')) {
+      const parentId = parentEl.getAttribute('data-frame-id')!
+      // Skip excluded and descendants of excluded
+      if (excludeId && (parentId === excludeId || isDescendant(currentRoot, excludeId, parentId))) {
+        parentEl = parentEl.parentElement as HTMLElement
+        continue
+      }
+      // Check depth constraint
+      if (maxDropDepth != null && getFrameDepth(parentEl) > maxDropDepth) {
+        parentEl = parentEl.parentElement as HTMLElement
+        continue
+      }
+      const parentFrame = findInTree(currentRoot, parentId)
+      if (parentFrame?.type === 'box') {
+        return { parentEl, parentId, parentFrame }
+      }
+    }
     parentEl = parentEl.parentElement as HTMLElement
   }
-  if (!parentEl) return null
-  const parentId = parentEl.getAttribute('data-frame-id')!
-  if (excludeId && (parentId === excludeId || isDescendant(currentRoot, excludeId, parentId)))
-    return null
-  const parentFrame = findInTree(currentRoot, parentId)
-  if (!parentFrame || parentFrame.type !== 'box') return null
-  return { parentId, index: indexAmongSiblings(parentEl, parentFrame.direction, cx, cy) }
+  return null
 }
 
 /**
  * Given a document + cursor coordinates, resolve a canvas drop target.
  *
- * @param doc      The document to query (iframe contentDocument for snippets, ownerDocument for canvas-internal)
- * @param cx       Cursor X in the document's coordinate space
- * @param cy       Cursor Y in the document's coordinate space
- * @param excludeId  Frame ID to exclude from drop targets (the frame being dragged, or '__snippet__')
- * @param root     Current frame tree root
+ * @param doc           The document to query
+ * @param cx            Cursor X in the document's coordinate space
+ * @param cy            Cursor Y in the document's coordinate space
+ * @param excludeId     Frame ID to exclude (the frame being dragged, or '__snippet__')
+ * @param root          Current frame tree root
+ * @param maxDropDepth  Maximum allowed depth for drop parents (null = no limit).
+ *                      Set to sourceParentDepth to lock drag to same level or shallower.
  */
 export function resolveCanvasDrop(
   doc: Document,
@@ -78,6 +110,7 @@ export function resolveCanvasDrop(
   cy: number,
   excludeId: string | null,
   root: Frame,
+  maxDropDepth: number | null = null,
 ): { parentId: string; index: number } | null {
   const el = doc.elementFromPoint(cx, cy) as HTMLElement | null
   if (!el) return null
@@ -95,6 +128,18 @@ export function resolveCanvasDrop(
     return null
   }
 
+  // Depth constraint: if target is too deep, walk up to an allowed ancestor
+  if (maxDropDepth != null) {
+    while (target && getFrameDepth(target) > maxDropDepth) {
+      let parent = target.parentElement as HTMLElement | null
+      while (parent && !parent.hasAttribute('data-frame-id')) {
+        parent = parent.parentElement as HTMLElement
+      }
+      if (!parent) break
+      target = parent
+    }
+  }
+
   const targetId = target.getAttribute('data-frame-id')!
   // Can't drop on self or inside self
   if (excludeId && (targetId === excludeId || isDescendant(root, excludeId, targetId))) {
@@ -105,45 +150,67 @@ export function resolveCanvasDrop(
   if (!targetFrame) return null
 
   if (targetFrame.type === 'box') {
-    // Edge zone: if cursor is near the edge along parent's flex direction,
-    // treat as sibling drop in parent instead of dropping inside this box.
     const rect = target.getBoundingClientRect()
-    let parentEl = target.parentElement as HTMLElement | null
-    while (parentEl && !parentEl.hasAttribute('data-frame-id')) {
-      parentEl = parentEl.parentElement as HTMLElement
-    }
-    if (parentEl) {
-      const parentId = parentEl.getAttribute('data-frame-id')!
-      const parentFrame = findInTree(root, parentId)
-      if (
-        parentFrame?.type === 'box' &&
-        (!excludeId || (parentId !== excludeId && !isDescendant(root, excludeId, parentId)))
-      ) {
-        const isParentRow =
-          parentFrame.direction === 'row' || parentFrame.direction === 'row-reverse'
-        const leading = isParentRow ? cx - rect.left : cy - rect.top
-        const trailing = isParentRow ? rect.right - cx : rect.bottom - cy
-        const size = isParentRow ? rect.width : rect.height
-        const zone = Math.min(EDGE_ZONE, size * 0.35)
+    const targetDepth = getFrameDepth(target)
+    const dropParent = findDropParent(target, root, excludeId, maxDropDepth)
 
-        if (leading < zone || trailing < zone) {
+    // Count visible children (excluding dragged element)
+    const children = Array.from(target.children).filter(
+      (c) => {
+        const el = c as HTMLElement
+        return el.hasAttribute('data-frame-id') && el.getAttribute('data-frame-id') !== excludeId
+      },
+    ) as HTMLElement[]
+
+    // Empty box: eagerly accept drops — skip edge zone so the entire
+    // box surface is a valid target (otherwise edge zone swallows it).
+    if (children.length === 0) {
+      if (maxDropDepth != null && targetDepth > maxDropDepth) {
+        if (dropParent) {
           return {
-            parentId,
-            index: indexAmongSiblings(parentEl, parentFrame.direction, cx, cy),
+            parentId: dropParent.parentId,
+            index: indexAmongSiblings(dropParent.parentEl, dropParent.parentFrame.direction, cx, cy, excludeId),
           }
+        }
+        return null
+      }
+      return { parentId: targetId, index: 0 }
+    }
+
+    // Edge zone: escape to parent container when cursor is near the edge.
+    // BUT: don't apply when target is at maxDropDepth — this is the container
+    // we're reordering within, edges should insert at start/end, not escape.
+    const applyEdgeZone = dropParent && (maxDropDepth == null || targetDepth <= maxDropDepth)
+
+    if (applyEdgeZone) {
+      const isParentRow =
+        dropParent.parentFrame.direction === 'row' || dropParent.parentFrame.direction === 'row-reverse'
+      const leading = isParentRow ? cx - rect.left : cy - rect.top
+      const trailing = isParentRow ? rect.right - cx : rect.bottom - cy
+      const size = isParentRow ? rect.width : rect.height
+      const zone = Math.min(EDGE_ZONE, size * 0.35)
+
+      if (leading < zone || trailing < zone) {
+        return {
+          parentId: dropParent.parentId,
+          index: indexAmongSiblings(dropParent.parentEl, dropParent.parentFrame.direction, cx, cy, excludeId),
         }
       }
     }
 
-    // Dropping into this box container
-    const children = Array.from(target.children).filter(
-      (c) => (c as HTMLElement).hasAttribute('data-frame-id'),
-    ) as HTMLElement[]
-
-    if (children.length === 0) {
-      return { parentId: targetId, index: 0 }
+    // Check if dropping INTO this box is allowed by depth constraint
+    if (maxDropDepth != null && targetDepth > maxDropDepth) {
+      // Too deep — fall back to inserting as sibling in nearest valid parent
+      if (dropParent) {
+        return {
+          parentId: dropParent.parentId,
+          index: indexAmongSiblings(dropParent.parentEl, dropParent.parentFrame.direction, cx, cy, excludeId),
+        }
+      }
+      return null
     }
 
+    // Dropping into this box container
     return {
       parentId: targetId,
       index: indexAmongSiblings(
@@ -151,10 +218,16 @@ export function resolveCanvasDrop(
         (targetFrame as BoxElement).direction,
         cx,
         cy,
+        excludeId,
       ),
     }
   } else {
-    // Non-box target — insert as sibling in parent
-    return dropAsSibling(target, root, excludeId, cx, cy)
+    // Non-box target — insert as sibling in nearest valid parent
+    const dropParent = findDropParent(target, root, excludeId, maxDropDepth)
+    if (!dropParent) return null
+    return {
+      parentId: dropParent.parentId,
+      index: indexAmongSiblings(dropParent.parentEl, dropParent.parentFrame.direction, cx, cy, excludeId),
+    }
   }
 }
