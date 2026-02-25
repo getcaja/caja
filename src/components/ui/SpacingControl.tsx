@@ -1,12 +1,28 @@
 import { useState } from 'react'
-import { Scan, Link } from 'lucide-react'
+import { Scan } from 'lucide-react'
 import type { Spacing, DesignValue } from '../../types/frame'
 import type { ScaleOption } from '../../data/scales'
 import { TokenInput } from './TokenInput'
 import { SPACING_SCALE } from '../../data/scales'
 
+type SpacingMode = 'all' | 'axis' | 'sides'
+
 function dvSame(a: DesignValue<number>, b: DesignValue<number>): boolean {
   return a.mode === b.mode && a.value === b.value && a.token === b.token
+}
+
+function detectMode(v: Spacing): SpacingMode {
+  const allSame = dvSame(v.top, v.bottom) && dvSame(v.left, v.right) && dvSame(v.top, v.left)
+  if (allSame) return 'all'
+  const axisSame = dvSame(v.top, v.bottom) && dvSame(v.left, v.right)
+  if (axisSame) return 'axis'
+  return 'sides'
+}
+
+const NEXT: Record<SpacingMode, SpacingMode> = {
+  all: 'axis',
+  axis: 'sides',
+  sides: 'all',
 }
 
 export function SpacingControl({
@@ -22,8 +38,21 @@ export function SpacingControl({
   classPrefix: string
   scale?: ScaleOption[]
 }) {
-  const isHV = dvSame(value.top, value.bottom) && dvSame(value.left, value.right)
-  const [perSide, setPerSide] = useState(!isHV)
+  const [mode, setMode] = useState<SpacingMode>(() => detectMode(value))
+
+  const cycle = () => {
+    const next = NEXT[mode]
+    setMode(next)
+    if (next === 'all') {
+      // Sync all sides to top value
+      const v = value.top
+      onChange({ top: v, right: { ...v }, bottom: { ...v }, left: { ...v } })
+    } else if (next === 'axis') {
+      // Sync H/V pairs
+      onChange({ right: { ...value.left }, bottom: { ...value.top } })
+    }
+    // 'sides' — no sync needed, just expand
+  }
 
   return (
     <div className="flex flex-col gap-1">
@@ -31,20 +60,21 @@ export function SpacingControl({
         <span className="text-text-muted text-[12px]">{label}</span>
         <button
           className="w-5 h-5 flex items-center justify-center text-text-muted hover:text-accent hover:bg-accent/10 rounded transition-all shrink-0"
-          onClick={() => {
-            if (perSide) {
-              setPerSide(false)
-              onChange({ right: { ...value.left }, bottom: { ...value.top } })
-            } else {
-              setPerSide(true)
-            }
-          }}
-          title={perSide ? 'Link sides' : 'Per side'}
+          onClick={cycle}
+          title={mode === 'all' ? 'Split H / V' : mode === 'axis' ? 'Split per side' : 'Uniform'}
         >
-          {perSide ? <Link size={12} /> : <Scan size={12} />}
+          <Scan size={12} />
         </button>
       </div>
-      {!perSide ? (
+      {mode === 'all' ? (
+        <TokenInput
+          scale={scale}
+          value={value.top}
+          onChange={(v) => onChange({ top: v, right: { ...v }, bottom: { ...v }, left: { ...v } })}
+          min={0}
+          classPrefix={classPrefix}
+        />
+      ) : mode === 'axis' ? (
         <div className="grid grid-cols-[auto_1fr_auto_1fr] gap-1 items-center">
           <span className="text-text-muted text-[11px]">H</span>
           <TokenInput

@@ -437,6 +437,7 @@ export function TokenInput(props: TokenInputProps) {
             <button
               type="button"
               tabIndex={-1}
+              onClick={(e) => e.stopPropagation()}
               onMouseDown={(e) => {
                 e.preventDefault()
                 e.stopPropagation()

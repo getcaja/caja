@@ -1,8 +1,12 @@
 import { useState } from 'react'
-import { Scan, Link } from 'lucide-react'
-import type { BorderRadius } from '../../types/frame'
+import { Scan } from 'lucide-react'
+import type { BorderRadius, DesignValue } from '../../types/frame'
 import { TokenInput } from './TokenInput'
 import { BORDER_RADIUS_SCALE } from '../../data/scales'
+
+function dvSame(a: DesignValue<number>, b: DesignValue<number>): boolean {
+  return a.mode === b.mode && a.value === b.value && a.token === b.token
+}
 
 export function BorderRadiusControl({
   value,
@@ -11,12 +15,9 @@ export function BorderRadiusControl({
   value: BorderRadius
   onChange: (v: Partial<BorderRadius>) => void
 }) {
-  const allEqual = value.topLeft.value === value.topRight.value
-    && value.topRight.value === value.bottomRight.value
-    && value.bottomRight.value === value.bottomLeft.value
-    && value.topLeft.mode === value.topRight.mode
-    && value.topRight.mode === value.bottomRight.mode
-    && value.bottomRight.mode === value.bottomLeft.mode
+  const allEqual = dvSame(value.topLeft, value.topRight)
+    && dvSame(value.topRight, value.bottomRight)
+    && dvSame(value.bottomRight, value.bottomLeft)
   const [uniform, setUniform] = useState(allEqual)
 
   return (
@@ -34,9 +35,9 @@ export function BorderRadiusControl({
               setUniform(false)
             }
           }}
-          title={uniform ? 'Per corner' : 'Link corners'}
+          title={uniform ? 'Per corner' : 'Uniform'}
         >
-          {uniform ? <Scan size={12} /> : <Link size={12} />}
+          <Scan size={12} />
         </button>
       </div>
       {uniform ? (
