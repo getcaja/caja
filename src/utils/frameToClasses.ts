@@ -38,6 +38,7 @@ function dvIsZero(dv: DesignValue<number>): boolean {
 }
 
 function spacingClasses(prefix: string, s: Spacing): string[] {
+  if (!s?.top || !s?.right || !s?.bottom || !s?.left) return []
   if (dvIsZero(s.top) && dvIsZero(s.right) && dvIsZero(s.bottom) && dvIsZero(s.left)) return []
   // Uniform
   if (dvEqual(s.top, s.right) && dvEqual(s.right, s.bottom) && dvEqual(s.bottom, s.left)) {
@@ -63,6 +64,7 @@ function dvIsAuto(dv: DesignValue<number>): boolean {
 }
 
 function insetClasses(inset: Inset): string[] {
+  if (!inset?.top || !inset?.right || !inset?.bottom || !inset?.left) return []
   const { top, right, bottom, left } = inset
   const allZero = dvIsZero(top) && dvIsZero(right) && dvIsZero(bottom) && dvIsZero(left)
   if (allZero) return []
@@ -127,6 +129,7 @@ function borderRadiusClass(prefix: string, dv: DesignValue<number>): string {
 }
 
 function borderRadiusClasses(br: BorderRadius): string[] {
+  if (!br?.topLeft || !br?.topRight || !br?.bottomRight || !br?.bottomLeft) return []
   const allEqual = dvEqual(br.topLeft, br.topRight) && dvEqual(br.topRight, br.bottomRight) && dvEqual(br.bottomRight, br.bottomLeft)
   if (allEqual) {
     return !dvIsZero(br.topLeft) ? [borderRadiusClass('rounded', br.topLeft)] : []
@@ -139,16 +142,38 @@ function borderRadiusClasses(br: BorderRadius): string[] {
   return cls
 }
 
+// Border width class for a single side — handles the bare `border` / `border-t` = 1px convention
+function borderWidthClass(prefix: string, dv: DesignValue<number>): string {
+  if (dv.mode === 'token') {
+    // token "" = bare class (1px): `border`, `border-t`, etc.
+    return dv.token === '' ? prefix : `${prefix}-${dv.token}`
+  }
+  // custom 1px → bare class
+  return dv.value === 1 ? prefix : `${prefix}-[${dv.value}px]`
+}
+
 function borderClasses(border: Border): string[] {
-  if (dvIsZero(border.width) || border.style === 'none') return []
+  // Defensive: old data may lack per-side fields
+  if (!border.top || !border.right || !border.bottom || !border.left) return []
+  const allZero = dvIsZero(border.top) && dvIsZero(border.right) && dvIsZero(border.bottom) && dvIsZero(border.left)
+  if (allZero || border.style === 'none') return []
+
   const cls: string[] = []
 
-  // Border width
-  if (border.width.mode === 'token') {
-    // token "" = class `border` (1px), token "2" = `border-2`, etc.
-    cls.push(border.width.token === '' ? 'border' : `border-${border.width.token}`)
+  // Border width — follow spacingClasses pattern: uniform → symmetric → per-side
+  const allEqual = dvEqual(border.top, border.right) && dvEqual(border.right, border.bottom) && dvEqual(border.bottom, border.left)
+  if (allEqual) {
+    cls.push(borderWidthClass('border', border.top))
+  } else if (dvEqual(border.top, border.bottom) && dvEqual(border.left, border.right)) {
+    // Symmetric: border-x / border-y
+    if (!dvIsZero(border.top)) cls.push(borderWidthClass('border-y', border.top))
+    if (!dvIsZero(border.left)) cls.push(borderWidthClass('border-x', border.left))
   } else {
-    cls.push(border.width.value === 1 ? 'border' : `border-[${border.width.value}px]`)
+    // Per-side
+    if (!dvIsZero(border.top)) cls.push(borderWidthClass('border-t', border.top))
+    if (!dvIsZero(border.right)) cls.push(borderWidthClass('border-r', border.right))
+    if (!dvIsZero(border.bottom)) cls.push(borderWidthClass('border-b', border.bottom))
+    if (!dvIsZero(border.left)) cls.push(borderWidthClass('border-l', border.left))
   }
 
   if (border.style !== 'solid') cls.push(`border-${border.style}`)
@@ -182,6 +207,7 @@ const selfMap: Record<string, string> = {
  * Used by: FrameRenderer (canvas preview), Export (JSX output), Properties panel (class pills).
  */
 export function frameToClasses(frame: Frame): string {
+  try {
   const cls: string[] = []
 
   // Position
@@ -392,4 +418,8 @@ export function frameToClasses(frame: Frame): string {
   if (frame.tailwindClasses) cls.push(frame.tailwindClasses)
 
   return cls.join(' ')
+  } catch (err) {
+    console.warn(`[frameToClasses] Error for frame ${frame?.id}:`, err)
+    return frame?.tailwindClasses || ''
+  }
 }

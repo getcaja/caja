@@ -171,3 +171,38 @@ export async function listLibraryFiles(): Promise<string[]> {
     return []
   }
 }
+
+/** Rebuild library index from .cjl files on disk — recovery for empty/corrupt index. */
+export async function rebuildLibraryIndex(): Promise<LibraryMeta[]> {
+  const files = await listLibraryFiles()
+  if (files.length === 0) return []
+
+  const dir = await getLibrariesDir()
+  const byName = new Map<string, LibraryMeta>()
+
+  for (const fileName of files) {
+    try {
+      const filePath = await join(dir, fileName)
+      const content = await readTextFile(filePath)
+      const parsed = JSON.parse(content) as CjlFileData
+      if (!parsed.name || !parsed.patterns) continue
+
+      const id = fileName.replace('.cjl', '')
+      const meta: LibraryMeta = {
+        id,
+        name: parsed.name,
+        author: parsed.author,
+        version: parsed.libraryVersion,
+        description: parsed.description,
+        importedAt: new Date().toISOString(),
+        filePath: fileName,
+      }
+      // Dedupe by name — keep last
+      byName.set(parsed.name, meta)
+    } catch {
+      // Skip corrupt files
+    }
+  }
+
+  return Array.from(byName.values())
+}

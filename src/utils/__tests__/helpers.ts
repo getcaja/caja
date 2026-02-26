@@ -38,7 +38,7 @@ export function zeroBorderRadius(): BorderRadius {
   return { topLeft: dvNum(0), topRight: dvNum(0), bottomRight: dvNum(0), bottomLeft: dvNum(0) }
 }
 
-export const defaultBorder: Border = { width: dvNum(0), color: dvStr(''), style: 'none' }
+export const defaultBorder: Border = { top: dvNum(0), right: dvNum(0), bottom: dvNum(0), left: dvNum(0), color: dvStr(''), style: 'none' }
 
 function defaultSize(): SizeValue {
   return { mode: 'default', value: dvNum(0) }

@@ -67,7 +67,7 @@ function makePatternData(patterns: Pattern[]): PatternData {
 function resetStore() {
   const store = useCatalogStore.getState()
   store.loadPatterns(undefined)
-  store.setActiveSource('internal')
+  store.setActiveLibraryId(null)
   // Clear libraries
   for (const meta of store.libraryIndex) {
     store.removeLibrary(meta.id)
@@ -305,56 +305,36 @@ describe('catalogStore', () => {
       expect(store.libraries.has(meta.id)).toBe(false)
     })
 
-    it('removeLibrary switches back to internal if viewing removed library', () => {
+    it('removeLibrary switches to next library if viewing removed library', () => {
+      const meta1 = makeLibraryMeta({ name: 'Lib 1' })
+      const meta2 = makeLibraryMeta({ name: 'Lib 2' })
+      useCatalogStore.getState().installLibrary(meta1, makePatternData([]))
+      useCatalogStore.getState().installLibrary(meta2, makePatternData([]))
+      useCatalogStore.getState().setActiveLibraryId(meta1.id)
+      expect(useCatalogStore.getState().activeLibraryId).toBe(meta1.id)
+
+      useCatalogStore.getState().removeLibrary(meta1.id)
+      expect(useCatalogStore.getState().activeLibraryId).toBe(meta2.id)
+    })
+
+    it('removeLibrary sets null when no libraries remain', () => {
       const meta = makeLibraryMeta()
       useCatalogStore.getState().installLibrary(meta, makePatternData([]))
-      useCatalogStore.getState().setActiveSource(meta.id)
-      expect(useCatalogStore.getState().activeSource).toBe(meta.id)
+      useCatalogStore.getState().setActiveLibraryId(meta.id)
 
       useCatalogStore.getState().removeLibrary(meta.id)
-      expect(useCatalogStore.getState().activeSource).toBe('internal')
+      expect(useCatalogStore.getState().activeLibraryId).toBeNull()
     })
 
-    it('setActiveSource changes active source', () => {
-      useCatalogStore.getState().setActiveSource('lib-123')
-      expect(useCatalogStore.getState().activeSource).toBe('lib-123')
+    it('setActiveLibraryId changes active library', () => {
+      useCatalogStore.getState().setActiveLibraryId('lib-123')
+      expect(useCatalogStore.getState().activeLibraryId).toBe('lib-123')
     })
 
-    it('getActivePatterns returns internal patterns when source is internal', () => {
-      const store = useCatalogStore.getState()
-      store.savePattern('Card', [], makeFrame())
-
-      const active = useCatalogStore.getState().getActivePatterns()
-      expect(active).toHaveLength(1)
-      expect(active[0].name).toBe('Card')
-    })
-
-    it('getActivePatterns returns library patterns when source is a library', () => {
-      const meta = makeLibraryMeta()
-      const libPatterns = [makePattern({ name: 'Lib Button' })]
-      useCatalogStore.getState().installLibrary(meta, makePatternData(libPatterns))
-      useCatalogStore.getState().setActiveSource(meta.id)
-
-      // Also add an internal pattern to make sure it's NOT returned
-      useCatalogStore.getState().savePattern('Internal Card', [], makeFrame())
-
-      const active = useCatalogStore.getState().getActivePatterns()
-      expect(active).toHaveLength(1)
-      expect(active[0].name).toBe('Lib Button')
-    })
-
-    it('getActivePatterns returns empty for missing library', () => {
-      useCatalogStore.getState().setActiveSource('nonexistent')
-      expect(useCatalogStore.getState().getActivePatterns()).toEqual([])
-    })
-
-    it('isActiveReadOnly returns false for internal', () => {
-      expect(useCatalogStore.getState().isActiveReadOnly()).toBe(false)
-    })
-
-    it('isActiveReadOnly returns true for library source', () => {
-      useCatalogStore.getState().setActiveSource('some-lib')
-      expect(useCatalogStore.getState().isActiveReadOnly()).toBe(true)
+    it('setActiveLibraryId accepts null', () => {
+      useCatalogStore.getState().setActiveLibraryId('lib-123')
+      useCatalogStore.getState().setActiveLibraryId(null)
+      expect(useCatalogStore.getState().activeLibraryId).toBeNull()
     })
 
     it('getLibraryPatterns returns patterns for a specific library', () => {

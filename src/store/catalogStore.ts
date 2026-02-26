@@ -20,7 +20,7 @@ interface CatalogStore {
   // --- Library system (app-level, read-only) ---
   libraryIndex: LibraryMeta[]           // lightweight metadata for installed libs
   libraries: Map<string, PatternData>   // loaded library data (lazy-loaded)
-  activeSource: string                  // 'internal' | libraryId
+  activeLibraryId: string | null         // null = no library selected; libraryId when viewing a library
 
   // --- Internal pattern operations ---
   allPatterns: () => Pattern[]
@@ -44,11 +44,9 @@ interface CatalogStore {
   setLastExport: (config: { path: string; name: string; author: string; description: string; version: string }) => void
 
   // --- Library operations ---
-  setActiveSource: (id: string) => void
+  setActiveLibraryId: (id: string | null) => void
   installLibrary: (meta: LibraryMeta, data: PatternData) => void
   removeLibrary: (id: string) => void
-  getActivePatterns: () => Pattern[]
-  isActiveReadOnly: () => boolean
   getLibraryPatterns: (libraryId: string) => Pattern[]
   getLibraryPattern: (libraryId: string, patternId: string) => Pattern | undefined
   setLibraryIndex: (index: LibraryMeta[]) => void
@@ -73,7 +71,7 @@ export const useCatalogStore = create<CatalogStore>((set, get) => {
     // Library state
     libraryIndex: [],
     libraries: new Map(),
-    activeSource: 'internal',
+    activeLibraryId: null,
 
     // Export memory
     lastExport: null,
@@ -255,7 +253,7 @@ export const useCatalogStore = create<CatalogStore>((set, get) => {
 
     // --- Library operations ---
 
-    setActiveSource: (id) => set({ activeSource: id }),
+    setActiveLibraryId: (id) => set({ activeLibraryId: id }),
 
     installLibrary: (meta, data) => {
       set((state) => {
@@ -271,25 +269,14 @@ export const useCatalogStore = create<CatalogStore>((set, get) => {
         const newIndex = state.libraryIndex.filter((m) => m.id !== id)
         const newLibraries = new Map(state.libraries)
         newLibraries.delete(id)
-        // If we were viewing the removed library, switch back to internal
-        const newSource = state.activeSource === id ? 'internal' : state.activeSource
-        return { libraryIndex: newIndex, libraries: newLibraries, activeSource: newSource }
+        // If we were viewing the removed library, switch to next available or null
+        let newActiveLibraryId = state.activeLibraryId
+        if (state.activeLibraryId === id) {
+          newActiveLibraryId = newIndex.length > 0 ? newIndex[0].id : null
+        }
+        return { libraryIndex: newIndex, libraries: newLibraries, activeLibraryId: newActiveLibraryId }
       })
     },
-
-    getActivePatterns: () => {
-      const { activeSource, libraries } = get()
-      if (activeSource === 'internal') {
-        return get().allPatterns()
-      }
-      const libData = libraries.get(activeSource)
-      if (!libData) return []
-      return ensureOrder(libData.order || [], libData.items || [])
-        .map((id) => (libData.items || []).find((p) => p.id === id))
-        .filter((p): p is Pattern => p !== undefined)
-    },
-
-    isActiveReadOnly: () => get().activeSource !== 'internal',
 
     getLibraryPatterns: (libraryId) => {
       const libData = get().libraries.get(libraryId)
@@ -315,7 +302,7 @@ export const useCatalogStore = create<CatalogStore>((set, get) => {
   }
 })
 
-// Auto-save patterns to localStorage (parallel to caja-state for root)
+// Auto-save patterns + libraryIndex to localStorage
 let patternSaveTimeout: ReturnType<typeof setTimeout>
 useCatalogStore.subscribe((state) => {
   clearTimeout(patternSaveTimeout)
@@ -324,17 +311,22 @@ useCatalogStore.subscribe((state) => {
       items: state.patterns,
       order: state.order,
       categories: state.emptyCategories,
+      libraryIndex: state.libraryIndex,
     }))
   }, 500)
 })
 
-// Load patterns from localStorage on startup (called from App.tsx loadFromStorage flow)
+// Load patterns + libraryIndex from localStorage on startup (called from App.tsx loadFromStorage flow)
 export function loadPatternsFromStorage() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
       const data = JSON.parse(raw)
       useCatalogStore.getState().loadPatterns(data)
+      // Restore libraryIndex cache — gives instant display while Tauri disk load happens async
+      if (Array.isArray(data.libraryIndex) && data.libraryIndex.length > 0) {
+        useCatalogStore.getState().setLibraryIndex(data.libraryIndex)
+      }
     }
   } catch {
     localStorage.removeItem(STORAGE_KEY)

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useLayoutEffect, useCallback, Fragment } f
 import { ImageIcon } from 'lucide-react'
 import type { Frame } from '../../types/frame'
 import { frameToClasses } from '../../utils/frameToClasses'
-import { useFrameStore, isRootId, findParent } from '../../store/frameStore'
+import { useFrameStore, isRootId, findInTree } from '../../store/frameStore'
 import { resolveCanvasDrop, getFrameDepth } from '../../utils/canvasDrop'
 import './FrameRenderer.css'
 
@@ -50,7 +50,7 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
   const expandToFrame = useFrameStore((s) => s.expandToFrame)
   const previewMode = useFrameStore((s) => s.previewMode)
   const canvasDragId = useFrameStore((s) => s.canvasDragId)
-  const canvasDragOver = useFrameStore((s) => s.canvasDragOver)
+  const isMcpHighlighted = useFrameStore((s) => s.mcpHighlightIds.has(frame.id))
 
   const [editingText, setEditingText] = useState(false)
   const textRef = useRef<HTMLSpanElement>(null)
@@ -76,8 +76,6 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
   )
   const isEmpty = isBox && frame.children.length === 0 && !hasVisualPresence
   const isDragged = canvasDragId === frame.id
-  // Line mode: dragged element uses display:none (collapses gap in source container)
-  const isLineDrop = isDragged && !!canvasDragOver
 
   // Tailwind classes (source of truth — same in editor and export)
   const tailwind = frameToClasses(frame)
@@ -92,8 +90,8 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
     isSelected && 'is-selected',
     isHovered && 'is-hovered',
     !previewMode && isEmpty && !isRoot && 'is-empty',
-    isDragged && !isLineDrop && 'is-dragging',
-    isLineDrop && 'is-line-drop',
+    isDragged && 'is-line-drop',
+    isMcpHighlighted && 'mcp-highlight',
     !previewMode && (editingText ? 'cursor-text' : 'cursor-default'),
     previewCursor,
   ].filter(Boolean).join(' ')
@@ -132,55 +130,41 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
   }
 
 
-  // Click+drag to move selected elements (no grip handle needed)
-  // Hybrid mode: reorder (same parent) uses visibility:hidden, line (cross-parent/Cmd) uses display:none
+  // Click+drag to move elements — line mode with Cmd to unlock nesting
   const onDragPointerDown = useCallback((e: React.PointerEvent) => {
     if (e.button !== 0) return
-    e.stopPropagation() // prevent parent from also starting a drag
+    e.stopPropagation()
     const startX = e.clientX
     const startY = e.clientY
-    const doc = (e.target as HTMLElement).ownerDocument
+    const pointerId = e.pointerId
+    const captureTarget = e.target as HTMLElement
+    const doc = captureTarget.ownerDocument
     let dragging = false
-    let ghost: HTMLElement | null = null
-    let offsetX = 0
-    let offsetY = 0
     let lastTarget: { parentId: string; index: number } | null = null
-
-    // Hybrid state
-    let sourceParentId: string | null = null
-    let baseMaxDropDepth: number | null = null // depth without Cmd
+    let maxDropDepth: number | null = null
     let cmdHeld = false
-    let inLineMode = false
     let lastCx = 0
     let lastCy = 0
     let resolveRaf = 0
 
     const cleanup = (commit: boolean) => {
       cancelAnimationFrame(resolveRaf)
-      doc.body.classList.remove('is-canvas-dragging')
-      if (ghost) { ghost.remove(); ghost = null }
+      try { captureTarget.releasePointerCapture(pointerId) } catch {}
       if (dragging) {
         const s = useFrameStore.getState()
-        if (commit) {
-          if (s.canvasDragOver) {
-            // Line mode: restore original tree, then apply real move with undo history
-            s.restorePreview()
-            s.moveFrame(frame.id, s.canvasDragOver.parentId, s.canvasDragOver.index)
-          } else if (s._dragSnapshot) {
-            // Reorder mode: commit the preview
-            s.commitPreviewMove()
+        if (commit && s.canvasDragOver) {
+          const { parentId, index: visualIdx } = s.canvasDragOver
+          // Visual → logical: moveFrame extracts first, then inserts at index
+          const parentFrame = findInTree(s.root, parentId)
+          let idx = visualIdx
+          if (parentFrame?.type === 'box') {
+            const dragPos = parentFrame.children.findIndex(c => c.id === frame.id)
+            if (dragPos >= 0 && visualIdx > dragPos) idx--
           }
-        } else {
-          s.cancelPreviewMove()
-        }
-        // Always clear drag snapshot (commitPreviewMove/cancelPreviewMove do it,
-        // but line mode path uses restorePreview+moveFrame which don't)
-        if (useFrameStore.getState()._dragSnapshot) {
-          useFrameStore.setState({ _dragSnapshot: null })
+          s.moveFrame(frame.id, parentId, idx)
         }
         s.setCanvasDragOver(null)
         s.setCanvasDrag(null)
-        // Safety: clear skip flag if click doesn't fire (e.g., pointer released on different element)
         requestAnimationFrame(() => { _skipNextClick = false })
       }
       doc.removeEventListener('pointermove', onMove)
@@ -189,95 +173,32 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
       doc.removeEventListener('keyup', onKeyUp)
     }
 
-    /** Core resolution: resolve drop target and apply the right visual mode */
     const resolveAndApply = (cx: number, cy: number) => {
       const s = useFrameStore.getState()
-      const effectiveDepth = cmdHeld ? null : baseMaxDropDepth
-      const next = resolveCanvasDrop(doc, cx, cy, frame.id, s.root, effectiveDepth)
+      const next = resolveCanvasDrop(doc, cx, cy, frame.id, s.root, cmdHeld ? null : maxDropDepth)
 
-      // Skip if same position
       if (lastTarget && next && lastTarget.parentId === next.parentId && lastTarget.index === next.index) return
       if (!lastTarget && !next) return
       lastTarget = next
 
-      if (!next) {
-        // No valid target — restore if in line mode
-        if (inLineMode) {
-          s.restorePreview()
-          s.setCanvasDragOver(null)
-          inLineMode = false
-        }
-        return
-      }
-
-      const wantLine = next.parentId !== sourceParentId || cmdHeld
-
-      if (wantLine) {
-        // Enter or stay in line mode
-        if (!inLineMode) {
-          // Transition reorder → line: restore original tree so display:none collapses correctly
-          s.restorePreview()
-          inLineMode = true
-        }
-        s.setCanvasDragOver(next)
-      } else {
-        // Enter or stay in reorder mode
-        if (inLineMode) {
-          // Transition line → reorder: instant
-          s.setCanvasDragOver(null)
-          inLineMode = false
-        }
-        s.previewMoveFrame(frame.id, next.parentId, next.index)
-      }
+      s.setCanvasDragOver(next)
     }
 
     const onMove = (ev: PointerEvent) => {
       if (!dragging && Math.abs(ev.clientX - startX) + Math.abs(ev.clientY - startY) > 4) {
         dragging = true
         _skipNextClick = true
-        doc.body.classList.add('is-canvas-dragging')
-
+        captureTarget.setPointerCapture(pointerId)
         const srcEl = doc.querySelector(`[data-frame-id="${frame.id}"]`) as HTMLElement | null
-
-        if (srcEl) {
-          const rect = srcEl.getBoundingClientRect()
-          offsetX = startX - rect.left
-          offsetY = startY - rect.top
-
-          // Depth-lock: allow nesting into sibling containers (same depth) but not deeper
-          baseMaxDropDepth = getFrameDepth(srcEl)
-
-          // Capture source parent for mode detection
-          const root = useFrameStore.getState().root
-          const parent = findParent(root, frame.id)
-          sourceParentId = parent?.id ?? null
-
-          // Mark as dragging → CSS applies visibility:hidden or display:none
-          useFrameStore.getState().setCanvasDrag(frame.id)
-
-          // Ghost follows cursor
-          ghost = srcEl.cloneNode(true) as HTMLElement
-          ghost.removeAttribute('data-frame-id')
-          ghost.style.cssText = `
-            position: fixed; z-index: 99999; pointer-events: none;
-            width: ${rect.width}px; height: ${rect.height}px;
-            opacity: 0.7; box-shadow: 0 8px 24px rgba(0,0,0,0.25);
-            left: ${ev.clientX - offsetX}px; top: ${ev.clientY - offsetY}px;
-            visibility: visible;
-          `
-          doc.body.appendChild(ghost)
-        } else {
-          useFrameStore.getState().setCanvasDrag(frame.id)
-        }
+        if (srcEl) maxDropDepth = getFrameDepth(srcEl) - 1
+        const s = useFrameStore.getState()
+        s.expandToFrame(frame.id)
+        s.select(frame.id)
+        s.setCanvasDrag(frame.id)
       }
       if (dragging) {
-        if (ghost) {
-          ghost.style.left = `${ev.clientX - offsetX}px`
-          ghost.style.top = `${ev.clientY - offsetY}px`
-        }
         lastCx = ev.clientX
         lastCy = ev.clientY
-        // Throttle resolve to one per frame — ghost stays smooth, reflow batched
         cancelAnimationFrame(resolveRaf)
         resolveRaf = requestAnimationFrame(() => resolveAndApply(lastCx, lastCy))
       }
@@ -289,7 +210,7 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
       if (ev.key === 'Escape') { cleanup(false); return }
       if (ev.key === 'Meta' && !cmdHeld && dragging) {
         cmdHeld = true
-        lastTarget = null // force re-resolution
+        lastTarget = null
         resolveAndApply(lastCx, lastCy)
       }
     }
@@ -297,7 +218,7 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
     const onKeyUp = (ev: KeyboardEvent) => {
       if (ev.key === 'Meta' && cmdHeld && dragging) {
         cmdHeld = false
-        lastTarget = null // force re-resolution
+        lastTarget = null
         resolveAndApply(lastCx, lastCy)
       }
     }

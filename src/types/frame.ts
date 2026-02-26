@@ -19,7 +19,10 @@ export interface Spacing {
 export type Inset = Spacing
 
 export interface Border {
-  width: DesignValue<number>
+  top: DesignValue<number>     // border-t width
+  right: DesignValue<number>   // border-r width
+  bottom: DesignValue<number>  // border-b width
+  left: DesignValue<number>    // border-l width
   color: DesignValue<string>
   style: 'none' | 'solid' | 'dashed' | 'dotted'
 }

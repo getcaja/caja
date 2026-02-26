@@ -10,7 +10,7 @@ export function Canvas() {
     <div className="flex-1 flex flex-col relative overflow-hidden">
       <div
         className="flex-1 overflow-auto flex"
-        style={previewMode ? undefined : { backgroundColor: '#0e0e11' }}
+        style={previewMode ? undefined : { backgroundColor: 'var(--color-canvas-bg)' }}
       >
         <CanvasIframe />
         {!hasChildren && !previewMode && (

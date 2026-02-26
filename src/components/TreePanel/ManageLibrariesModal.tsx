@@ -1,5 +1,5 @@
 import { useCatalogStore } from '../../store/catalogStore'
-import { importLibrary, removeLibraryFile, loadLibraryIndex, saveLibraryIndex, loadLibraryData } from '../../lib/libraryOps'
+import { importLibrary, removeLibraryFile, loadLibraryIndex, saveLibraryIndex, loadLibraryData, rebuildLibraryIndex } from '../../lib/libraryOps'
 import { X, Trash2, Upload, Library } from 'lucide-react'
 import { useState } from 'react'
 
@@ -118,8 +118,14 @@ export function ManageLibrariesModal({ open, onOpenChange }: ManageLibrariesModa
 /** Load all installed libraries on startup */
 export async function initializeLibraries() {
   try {
-    const index = await loadLibraryIndex()
-    if (index.length === 0) return
+    let index = await loadLibraryIndex()
+
+    // Auto-recovery: if index is empty but .cjl files exist on disk, rebuild it
+    if (index.length === 0) {
+      index = await rebuildLibraryIndex()
+      if (index.length === 0) return
+      await saveLibraryIndex(index)
+    }
 
     useCatalogStore.getState().setLibraryIndex(index)
 

@@ -23,11 +23,18 @@
   --color-border: #323232;
   --color-border-accent: #3e3e3e;
 
-  /* Focus */
-  --color-focus: #4A90D9;
+  /* Focus (editor — teal) */
+  --color-focus: #2dd4bf;
+
+  /* MCP agent (indigo) */
+  --color-mcp: #818cf8;
 
   /* Semantic */
   --color-destructive: #ef4444;
+
+  /* Selection & canvas */
+  --color-selection: rgba(45, 212, 191, 0.3);
+  --color-canvas-bg: #0e0e11;
 }
 
 html, body, #root {
@@ -44,7 +51,7 @@ html, body, #root {
 
 /* Selection */
 ::selection {
-  background: rgba(13, 153, 255, 0.3);
+  background: var(--color-selection);
   color: inherit;
 }
 

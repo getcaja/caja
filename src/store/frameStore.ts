@@ -949,7 +949,7 @@ interface FrameStore {
   clipboard: Frame[]
   treePanelTab: 'elements' | 'patterns' | 'libraries'
   _lastDuplicateMap: Record<string, string> | null
-  _dragSnapshot: BoxElement | null
+  mcpHighlightIds: Set<string>
 
   past: Record<string, BoxElement[]>
   future: Record<string, BoxElement[]>
@@ -1002,13 +1002,10 @@ interface FrameStore {
   setCanvasZoom: (zoom: number) => void
   setCanvasDrag: (id: string | null) => void
   setCanvasDragOver: (over: { parentId: string; index: number } | null) => void
-  previewMoveFrame: (frameId: string, newParentId: string, index: number) => void
-  commitPreviewMove: () => void
-  cancelPreviewMove: () => void
-  restorePreview: () => void
   setPatternDragFrame: (frame: Frame | null, origin?: { libraryId?: string; patternId?: string } | null) => void
   setTreePanelTab: (tab: 'elements' | 'patterns' | 'libraries') => void
   expandToFrame: (id: string) => void
+  addMcpHighlight: (id: string) => void
   advancedMode: boolean
   setAdvancedMode: (value: boolean) => void
 
@@ -1102,7 +1099,7 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   treePanelTab: 'elements' as const,
   advancedMode: initialViewPrefs.advancedMode,
   _lastDuplicateMap: null,
-  _dragSnapshot: null,
+  mcpHighlightIds: new Set<string>(),
   past: {},
   future: {},
 
@@ -1508,42 +1505,6 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
     if (prev && over && prev.parentId === over.parentId && prev.index === over.index) return {}
     return { canvasDragOver: over }
   }),
-  previewMoveFrame: (frameId, newParentId, index) =>
-    set((state) => {
-      if (isRootId(frameId)) return {}
-      const snapshot = state._dragSnapshot ?? (cloneTree(state.root) as BoxElement)
-      const newRoot = moveInTree(state.root, frameId, newParentId, index) as BoxElement
-      return { ...updateActiveRoot(state, newRoot), _dragSnapshot: snapshot }
-    }),
-
-  commitPreviewMove: () =>
-    set((state) => {
-      if (!state._dragSnapshot) return {}
-      const pageId = state.activePageId
-      const pagePast = state.past[pageId] || []
-      return {
-        past: { ...state.past, [pageId]: [...pagePast.slice(-(MAX_HISTORY - 1)), state._dragSnapshot] },
-        future: { ...state.future, [pageId]: [] as BoxElement[] },
-        dirty: true,
-        _dragSnapshot: null,
-      }
-    }),
-
-  cancelPreviewMove: () =>
-    set((state) => {
-      if (!state._dragSnapshot) return { _dragSnapshot: null }
-      return {
-        ...updateActiveRoot(state, state._dragSnapshot),
-        _dragSnapshot: null,
-      }
-    }),
-
-  restorePreview: () =>
-    set((state) => {
-      if (!state._dragSnapshot) return {}
-      return updateActiveRoot(state, state._dragSnapshot)
-    }),
-
   setPatternDragFrame: (frame, origin) => set({ patternDragFrame: frame, patternDragOrigin: origin ?? null }),
   setTreePanelTab: (tab) => set({ treePanelTab: tab }),
   setAdvancedMode: (value) => set((s) => {
@@ -1569,6 +1530,46 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
     }
     return changed ? { collapsedIds: next } : {}
   }),
+
+  addMcpHighlight: (() => {
+    let pending: string[] = []
+    let flushTimer: ReturnType<typeof setTimeout> | null = null
+
+    return (id: string) => {
+      pending.push(id)
+      if (flushTimer) return
+      // Microtask batch: accumulate all IDs from a single batch_update, flush once
+      flushTimer = setTimeout(() => {
+        const ids = pending
+        pending = []
+        flushTimer = null
+        // Dedupe to top-level ancestors: skip any ID whose parent is also in the batch
+        // Also skip the root — animating the full-page element is wasteful
+        const idSet = new Set(ids)
+        const root = get().root
+        idSet.delete(root.id)
+        const roots: string[] = []
+        for (const hid of idSet) {
+          let ancestor = findParent(root, hid)
+          let hasAncestorInBatch = false
+          while (ancestor) {
+            if (idSet.has(ancestor.id)) { hasAncestorInBatch = true; break }
+            ancestor = findParent(root, ancestor.id)
+          }
+          if (!hasAncestorInBatch) roots.push(hid)
+        }
+        const next = new Set(get().mcpHighlightIds)
+        for (const hid of roots) next.add(hid)
+        set({ mcpHighlightIds: next })
+        setTimeout(() => {
+          const curr = get().mcpHighlightIds
+          const after = new Set(curr)
+          for (const hid of roots) after.delete(hid)
+          if (after.size !== curr.size) set({ mcpHighlightIds: after })
+        }, 800)
+      }, 0)
+    }
+  })(),
 
   // --- Page management ---
 

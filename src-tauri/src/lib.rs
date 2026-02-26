@@ -174,19 +174,27 @@ async fn mcp_respond(
 #[tauri::command]
 fn set_menu_check(app: AppHandle, id: String, checked: bool) -> Result<(), String> {
     use tauri::menu::MenuItemKind;
-    if let Some(menu) = app.menu() {
-        for item in menu.items().unwrap_or_default() {
-            if let MenuItemKind::Submenu(sub) = item {
-                for sub_item in sub.items().unwrap_or_default() {
-                    if let MenuItemKind::Check(check) = sub_item {
-                        if check.id().0 == id {
-                            let _ = check.set_checked(checked);
-                            return Ok(());
-                        }
+    fn find_and_set(items: Vec<MenuItemKind<tauri::Wry>>, id: &str, checked: bool) -> bool {
+        for item in items {
+            match item {
+                MenuItemKind::Check(check) => {
+                    if check.id().0 == id {
+                        let _ = check.set_checked(checked);
+                        return true;
                     }
                 }
+                MenuItemKind::Submenu(sub) => {
+                    if find_and_set(sub.items().unwrap_or_default(), id, checked) {
+                        return true;
+                    }
+                }
+                _ => {}
             }
         }
+        false
+    }
+    if let Some(menu) = app.menu() {
+        find_and_set(menu.items().unwrap_or_default(), &id, checked);
     }
     Ok(())
 }
@@ -346,11 +354,27 @@ pub fn run() {
                 .accelerator("CmdOrCtrl+Shift+A")
                 .build(app)?;
 
+            let theme_default = CheckMenuItemBuilder::with_id("theme-default-dark", "Default Dark")
+                .checked(true)
+                .build(app)?;
+            let theme_dracula = CheckMenuItemBuilder::with_id("theme-dracula", "Dracula")
+                .build(app)?;
+            let theme_catppuccin = CheckMenuItemBuilder::with_id("theme-catppuccin-mocha", "Catppuccin Mocha")
+                .build(app)?;
+
+            let themes_submenu = SubmenuBuilder::new(app, "Theme")
+                .item(&theme_default)
+                .item(&theme_dracula)
+                .item(&theme_catppuccin)
+                .build()?;
+
             let view_menu = SubmenuBuilder::new(app, "View")
                 .item(&spacing_overlays_item)
                 .item(&overlay_values_item)
                 .separator()
                 .item(&advanced_mode_item)
+                .separator()
+                .item(&themes_submenu)
                 .build()?;
 
             let window_menu = SubmenuBuilder::new(app, "Window")
@@ -429,6 +453,31 @@ pub fn run() {
         })
         .on_menu_event(|app, event| {
             let id = event.id().0.as_str();
+
+            // Theme radio items — uncheck siblings, emit theme-change
+            let theme_ids = ["theme-default-dark", "theme-dracula", "theme-catppuccin-mocha"];
+            if theme_ids.contains(&id) {
+                use tauri::menu::MenuItemKind;
+                // Walk: menu > View submenu > Theme submenu > check items
+                if let Some(menu) = app.menu() {
+                    for top_item in menu.items().unwrap_or_default() {
+                        if let MenuItemKind::Submenu(view_sub) = top_item {
+                            for view_item in view_sub.items().unwrap_or_default() {
+                                if let MenuItemKind::Submenu(theme_sub) = view_item {
+                                    for theme_item in theme_sub.items().unwrap_or_default() {
+                                        if let MenuItemKind::Check(check) = theme_item {
+                                            let _ = check.set_checked(check.id().0 == id);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                let _ = app.emit("menu-event", id);
+                return;
+            }
+
             // For check menu items, emit their new checked state
             match id {
                 "toggle-spacing-overlays" | "toggle-overlay-values" | "toggle-advanced-mode" => {

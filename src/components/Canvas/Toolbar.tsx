@@ -179,14 +179,12 @@ export function Toolbar() {
                   const frame = findInTree(store.root, store.selectedId)
                   if (frame) {
                     useCatalogStore.getState().savePattern(frame.name || 'Pattern', [], frame)
-                    useCatalogStore.getState().setActiveSource('internal')
                     store.setTreePanelTab('patterns')
                     return
                   }
                 }
                 // No selection — just toggle the tab
                 if (treePanelTab !== 'patterns') {
-                  useCatalogStore.getState().setActiveSource('internal')
                   store.setTreePanelTab('patterns')
                 } else {
                   store.setTreePanelTab('elements')

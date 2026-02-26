@@ -348,20 +348,44 @@ function matchVisual(
     return false
   }
 
-  // border (width, style, color)
-  if (cls === 'border') { border.width = dvNum('', 1); border.style = 'solid'; return true }
+  // border (per-side width, style, color)
+  if (cls === 'border') {
+    // Uniform 1px — set all 4 sides
+    const w = dvNum('', 1)
+    border.top = w; border.right = { ...w }; border.bottom = { ...w }; border.left = { ...w }
+    border.style = 'solid'; return true
+  }
   if (cls.startsWith('border-')) {
     const rest = cls.slice(7)
-    // Directional borders (border-t, border-b-2, border-x, border-y-4, etc.)
-    // Not supported in Border model — pass through to tailwindClasses intentionally
-    if (/^[tblrxy](-|$)/.test(rest)) return false
+    // Per-side borders: border-t, border-b-2, border-x, border-y-4, etc.
+    const dirMatch = rest.match(/^([tbrlxy])(?:-(.+))?$/)
+    if (dirMatch) {
+      const dir = dirMatch[1]
+      const widthPart = dirMatch[2]
+      const wdv = widthPart ? parseNumericDV(widthPart, BORDER_WIDTH_TOKENS) : dvNum('', 1)
+      if (wdv) {
+        if (dir === 't') border.top = wdv
+        else if (dir === 'b') border.bottom = wdv
+        else if (dir === 'r') border.right = wdv
+        else if (dir === 'l') border.left = wdv
+        else if (dir === 'x') { border.left = wdv; border.right = { ...wdv } }
+        else if (dir === 'y') { border.top = wdv; border.bottom = { ...wdv } }
+        if (!border.style || border.style === 'none') border.style = 'solid'
+        return true
+      }
+      return false
+    }
     // Style
     if (['solid', 'dashed', 'dotted', 'none'].includes(rest)) {
       border.style = rest as Border['style']; return true
     }
-    // Width token/arbitrary
+    // Uniform width token/arbitrary (border-2, border-[3px])
     const wdv = parseNumericDV(rest, BORDER_WIDTH_TOKENS)
-    if (wdv) { border.width = wdv; if (!border.style || border.style === 'none') border.style = 'solid'; return true }
+    if (wdv) {
+      border.top = wdv; border.right = { ...wdv }; border.bottom = { ...wdv }; border.left = { ...wdv }
+      if (!border.style || border.style === 'none') border.style = 'solid'
+      return true
+    }
     // Color
     const cdv = parseColorDV(rest)
     if (cdv) { border.color = cdv; return true }
@@ -642,8 +666,12 @@ export function parseTailwindClasses(classes: string): ParsedTailwindResult {
 
   // Assemble border if any fields were set
   if (Object.keys(border).length > 0) {
+    const zero: DesignValue<number> = { mode: 'custom', value: 0 }
     props.border = {
-      width: border.width || { mode: 'custom', value: 0 },
+      top: border.top || zero,
+      right: border.right || zero,
+      bottom: border.bottom || zero,
+      left: border.left || zero,
       color: border.color || { mode: 'custom', value: '' },
       style: border.style || 'none',
     }

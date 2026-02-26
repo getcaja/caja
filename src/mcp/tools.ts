@@ -160,8 +160,20 @@ function sanitizeBorder(raw: unknown, existing: Border): Border | undefined {
   if (raw === undefined || raw === null) return undefined
   if (typeof raw !== 'object') return undefined
   const r = raw as Record<string, unknown>
+  // Backward compat: if MCP sends { width: 2 }, expand to all 4 sides
+  if ('width' in r && !('top' in r)) {
+    const w = sanitizeDVNum(r.width, BORDER_WIDTH_LOOKUP) || existing.top
+    return {
+      top: w, right: { ...w }, bottom: { ...w }, left: { ...w },
+      color: sanitizeDVStr(r.color, COLOR_LOOKUP) || existing.color,
+      style: (r.style as Border['style']) || existing.style,
+    }
+  }
   return {
-    width: sanitizeDVNum(r.width, BORDER_WIDTH_LOOKUP) || existing.width,
+    top: sanitizeDVNum(r.top, BORDER_WIDTH_LOOKUP) || existing.top,
+    right: sanitizeDVNum(r.right, BORDER_WIDTH_LOOKUP) || existing.right,
+    bottom: sanitizeDVNum(r.bottom, BORDER_WIDTH_LOOKUP) || existing.bottom,
+    left: sanitizeDVNum(r.left, BORDER_WIDTH_LOOKUP) || existing.left,
     color: sanitizeDVStr(r.color, COLOR_LOOKUP) || existing.color,
     style: (r.style as Border['style']) || existing.style,
   }
@@ -531,7 +543,13 @@ const handlers: Record<string, ToolHandler> = {
 
   async screenshot() {
     const { toPng } = await import('html-to-image')
-    const iframeWin = getStore().iframeWindow
+    let iframeWin = getStore().iframeWindow
+    // Fallback: find iframe from DOM if store reference is stale (e.g., after HMR)
+    if (!iframeWin) {
+      const iframe = document.querySelector('iframe[title="Caja Canvas"]') as HTMLIFrameElement | null
+      iframeWin = iframe?.contentWindow ?? null
+      if (iframeWin) getStore().setIframeWindow(iframeWin)
+    }
     const el = iframeWin?.document.getElementById('caja-root')
     if (!el) return { success: false, error: 'Canvas element not found' }
 
@@ -910,13 +928,26 @@ handlers.insert_snippet = handlers.insert_pattern
 handlers.save_snippet = handlers.save_pattern
 handlers.delete_snippet = handlers.delete_pattern
 
+// Tools that visually modify frames — trigger MCP highlight on success
+const HIGHLIGHT_TOOLS = new Set([
+  'add_frame', 'update_frame', 'update_spacing', 'update_size',
+  'move_frame', 'duplicate_frame', 'wrap_frame', 'rename_frame',
+  'insert_pattern', 'insert_snippet',
+])
+
 export async function executeTool(name: string, params: ToolParams = {}): Promise<ToolResult> {
   const handler = handlers[name]
   if (!handler) {
     return { success: false, error: `Unknown tool: ${name}` }
   }
   try {
-    return await handler(params)
+    const result = await handler(params)
+    // Flash the affected element so the user sees the agent's work
+    if (result.success && HIGHLIGHT_TOOLS.has(name)) {
+      const id = extractResultId(result)
+      if (id) useFrameStore.getState().addMcpHighlight(id)
+    }
+    return result
   } catch (err) {
     return { success: false, error: String(err) }
   }

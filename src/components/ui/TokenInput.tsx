@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Diamond, Unlink, Check } from 'lucide-react'
+import { Diamond, Check } from 'lucide-react'
 import type { ScaleOption } from '../../data/scales'
 import type { DesignValue } from '../../types/frame'
 
@@ -405,20 +405,12 @@ export function TokenInput(props: TokenInputProps) {
               tabIndex={-1}
               onMouseDown={(e) => {
                 e.preventDefault()
-                if (scaleToken) {
-                  removeToken()
-                } else {
-                  toggleDropdown()
-                }
+                toggleDropdown()
                 inputRef.current?.focus()
               }}
-              className={`w-5 h-5 flex items-center justify-center rounded shrink-0 ${
-                scaleToken
-                  ? 'text-text-muted hover:text-text-primary hover:bg-surface-3/60'
-                  : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'
-              }`}
+              className="w-5 h-5 flex items-center justify-center rounded shrink-0 text-text-muted hover:text-text-secondary hover:bg-surface-2"
             >
-              {scaleToken ? <Unlink size={11} /> : <Diamond size={11} />}
+              <Diamond size={11} />
             </button>
           </div>
         ) : (

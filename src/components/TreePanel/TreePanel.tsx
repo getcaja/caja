@@ -4,7 +4,7 @@ import { useCatalogStore } from '../../store/catalogStore'
 import { AddMenu } from './AddMenu'
 import { TreeDndProvider } from './TreeDndContext'
 import { TreeNode } from './TreeNode'
-import { PatternsPanel, type PatternsPanelHandle } from './PatternsPanel'
+import { PatternsPanel, type PatternsPanelHandle, type PatternSource } from './PatternsPanel'
 import { ManageLibrariesModal } from './ManageLibrariesModal'
 import { importLibrary, saveLibraryIndex } from '../../lib/libraryOps'
 import { PageNode } from './PageNode'
@@ -25,9 +25,9 @@ export function TreePanel({ onExportLibrary }: TreePanelProps) {
   const addPage = useFrameStore((s) => s.addPage)
   const tab = useFrameStore((s) => s.treePanelTab)
   const setTab = useFrameStore((s) => s.setTreePanelTab)
-  const activeSource = useCatalogStore((s) => s.activeSource)
+  const activeLibraryId = useCatalogStore((s) => s.activeLibraryId)
   const libraryIndex = useCatalogStore((s) => s.libraryIndex)
-  const setActiveSource = useCatalogStore((s) => s.setActiveSource)
+  const setActiveLibraryId = useCatalogStore((s) => s.setActiveLibraryId)
   const [showAdd, setShowAdd] = useState(false)
   const [menuPos, setMenuPos] = useState({ x: 0, y: 0 })
   const addBtnRef = useRef<HTMLButtonElement>(null)
@@ -84,7 +84,6 @@ export function TreePanel({ onExportLibrary }: TreePanelProps) {
     const frame = findInTree(root, selectedId)
     if (!frame) return
     useCatalogStore.getState().savePattern(frame.name || 'Pattern', [], frame)
-    useCatalogStore.getState().setActiveSource('internal')
     setTab('patterns')
     patternMenu.close()
   }
@@ -95,14 +94,13 @@ export function TreePanel({ onExportLibrary }: TreePanelProps) {
   }
 
   const handlePatternsTab = () => {
-    setActiveSource('internal')
     setTab('patterns')
   }
 
   const handleLibrariesTab = () => {
-    // If currently on internal, switch to first library (if any)
-    if (activeSource === 'internal' && libraryIndex.length > 0) {
-      setActiveSource(libraryIndex[0].id)
+    // Auto-select first library if none selected
+    if (activeLibraryId === null && libraryIndex.length > 0) {
+      setActiveLibraryId(libraryIndex[0].id)
     }
     setTab('libraries')
   }
@@ -160,7 +158,7 @@ export function TreePanel({ onExportLibrary }: TreePanelProps) {
                   if (result) {
                     useCatalogStore.getState().installLibrary(result.meta, result.data)
                     await saveLibraryIndex(useCatalogStore.getState().libraryIndex)
-                    setActiveSource(result.meta.id)
+                    setActiveLibraryId(result.meta.id)
                   }
                 } catch (err) {
                   console.error('Failed to import library:', err)
@@ -235,7 +233,7 @@ export function TreePanel({ onExportLibrary }: TreePanelProps) {
 
         {tab === 'patterns' && (
           <div className="flex-1 flex flex-col overflow-hidden">
-            <PatternsPanel ref={patternPanelRef} />
+            <PatternsPanel ref={patternPanelRef} source={{ type: 'internal' }} />
           </div>
         )}
 
@@ -250,9 +248,9 @@ export function TreePanel({ onExportLibrary }: TreePanelProps) {
                 <div className="px-2 py-1.5 flex items-center gap-1.5">
                   <div className="flex-1 min-w-0">
                     <Select
-                      value={libraryIndex.some((l) => l.id === activeSource) ? activeSource : libraryIndex[0].id}
+                      value={libraryIndex.some((l) => l.id === activeLibraryId) ? activeLibraryId! : libraryIndex[0].id}
                       options={libraryIndex.map((lib) => ({ value: lib.id, label: lib.name }))}
-                      onChange={setActiveSource}
+                      onChange={setActiveLibraryId}
                       className="w-full"
                     />
                   </div>
@@ -264,7 +262,7 @@ export function TreePanel({ onExportLibrary }: TreePanelProps) {
                     <Settings size={14} />
                   </button>
                 </div>
-                <PatternsPanel />
+                <PatternsPanel source={{ type: 'library', libraryId: (libraryIndex.some((l) => l.id === activeLibraryId) ? activeLibraryId! : libraryIndex[0].id) }} />
               </>
             )}
           </div>

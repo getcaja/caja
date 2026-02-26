@@ -11,25 +11,26 @@ export function TitleBar() {
   const mcpConnected = useFrameStore((s) => s.mcpConnected)
   const [showMcp, setShowMcp] = useState(false)
 
-  const fileName = filePath ? filePath.split('/').pop()?.replace('.caja', '') : 'Untitled'
+  const fileName = filePath ? filePath.split('/').pop()?.replace('.caja', '') : 'Untitled — Caja'
 
   return (
     <div
-      className="flex items-center bg-surface-0 border-b border-border select-none"
+      className="relative flex items-center bg-surface-0 border-b border-border select-none"
+      data-tauri-drag-region
       style={{ height: TITLE_BAR_HEIGHT, paddingLeft: TRAFFIC_LIGHT_WIDTH }}
     >
-      {/* Tab bar */}
-      <div className="flex items-center h-full">
-        <div className="flex items-center gap-1.5 px-3 h-[28px] rounded-md bg-surface-1 text-[12px] text-text-primary">
-          <span>{fileName}</span>
+      {/* Centered title — absolute so it's truly centered across full width */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <span className="text-[12px] text-text-secondary">
+          {fileName}
           {dirty && (
-            <span className="text-text-muted text-[10px]" title="Unsaved changes">●</span>
+            <span className="text-text-muted text-[10px] ml-1" title="Unsaved changes">●</span>
           )}
-        </div>
+        </span>
       </div>
 
       {/* Spacer — drag region */}
-      <div data-tauri-drag-region className="flex-1 h-full" />
+      <div className="flex-1 h-full" />
 
       {/* MCP status button */}
       <div className="flex items-center px-1 pr-2">
@@ -38,12 +39,7 @@ export function TitleBar() {
           className="flex items-center gap-1.5 px-2.5 h-[24px] rounded-md text-[11px] text-text-muted hover:text-text-secondary hover:bg-surface-2 transition-colors"
         >
           <div
-            className="rounded-full"
-            style={{
-              width: 6,
-              height: 6,
-              backgroundColor: mcpConnected ? '#22C55E' : '#71717a',
-            }}
+            className={`w-1.5 h-1.5 rounded-full ${mcpConnected ? 'bg-green-500' : 'bg-text-muted'}`}
           />
           <span>MCP</span>
         </button>

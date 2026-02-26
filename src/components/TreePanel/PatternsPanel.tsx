@@ -4,13 +4,21 @@ import { useFrameStore, findInTree } from '../../store/frameStore'
 import { Plus, X, Trash2, ChevronRight, ChevronDown, Code, Folder, Pencil } from 'lucide-react'
 import type { Pattern } from '../../types/pattern'
 
+export type PatternSource =
+  | { type: 'internal' }
+  | { type: 'library'; libraryId: string }
+
 export interface PatternsPanelHandle {
   createCategory: () => void
 }
 
+interface PatternsPanelProps {
+  source?: PatternSource
+}
+
 type DropPosition = 'before' | 'after' | 'inside'
 
-export const PatternsPanel = forwardRef<PatternsPanelHandle>(function PatternsPanel(_props, ref) {
+export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>(function PatternsPanel({ source = { type: 'internal' } }, ref) {
   const userPatterns = useCatalogStore((s) => s.patterns)
   const highlightId = useCatalogStore((s) => s.highlightId)
   const setHighlightId = useCatalogStore((s) => s.setHighlightId)
@@ -23,20 +31,21 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle>(function PatternsPa
   const addEmptyCategory = useCatalogStore((s) => s.addEmptyCategory)
   const removeEmptyCategory = useCatalogStore((s) => s.removeEmptyCategory)
   const moveCategory = useCatalogStore((s) => s.moveCategory)
-  const activeSource = useCatalogStore((s) => s.activeSource)
   const libraries = useCatalogStore((s) => s.libraries)
 
   const root = useFrameStore((s) => s.root)
   const selectedId = useFrameStore((s) => s.selectedId)
   const insertFrame = useFrameStore((s) => s.insertFrame)
 
-  const readOnly = activeSource !== 'internal'
+  const readOnly = source.type === 'library'
 
-  // Use getActivePatterns() which respects the active source
   const patterns = useMemo(() => {
-    return useCatalogStore.getState().getActivePatterns()
+    if (source.type === 'library') {
+      return useCatalogStore.getState().getLibraryPatterns(source.libraryId)
+    }
+    return useCatalogStore.getState().allPatterns()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userPatterns, order, activeSource, libraries])
+  }, [source.type, source.type === 'library' ? source.libraryId : null, userPatterns, order, libraries])
 
   const [rootCollapsed, setRootCollapsed] = useState(false)
   const [collapsedTags, setCollapsedTags] = useState<Set<string>>(new Set())
@@ -85,7 +94,7 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle>(function PatternsPa
   }
 
   function handleInsert(pattern: Pattern) {
-    const origin = { libraryId: activeSource === 'internal' ? 'internal' : activeSource, patternId: pattern.id }
+    const origin = { libraryId: source.type === 'library' ? source.libraryId : 'internal', patternId: pattern.id }
     insertFrame(getInsertParent(), pattern.frame, origin)
   }
 
@@ -182,7 +191,7 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle>(function PatternsPa
     // Set pattern drag frame + origin + sentinel canvasDragId for cross-iframe DnD
     const pattern = patterns.find((s) => s.id === id)
     if (pattern) {
-      const origin = { libraryId: activeSource === 'internal' ? 'internal' : activeSource, patternId: pattern.id }
+      const origin = { libraryId: source.type === 'library' ? source.libraryId : 'internal', patternId: pattern.id }
       useFrameStore.getState().setPatternDragFrame(pattern.frame, origin)
       // canvasDragId set lazily on first canvas dragover (not here)
     }

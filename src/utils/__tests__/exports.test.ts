@@ -19,7 +19,7 @@ describe('Class consistency: frameToClasses = buildClassString = export classes'
     makeText({ fontSize: dvToken('lg', 18), fontWeight: dvNum(700), color: dvColorToken('red-500') }),
     makeImage({ objectFit: 'contain', width: { mode: 'fixed', value: dvNum(200) } }),
     makeButton({ bg: dvStr('#333'), borderRadius: { topLeft: dvToken('lg', 8), topRight: dvToken('lg', 8), bottomRight: dvToken('lg', 8), bottomLeft: dvToken('lg', 8) } }),
-    makeInput({ fontSize: dvToken('sm', 14), border: { width: dvToken('', 1), color: dvColorToken('gray-300'), style: 'solid' } }),
+    makeInput({ fontSize: dvToken('sm', 14), border: { top: dvToken('', 1), right: dvToken('', 1), bottom: dvToken('', 1), left: dvToken('', 1), color: dvColorToken('gray-300'), style: 'solid' } }),
   ]
 
   for (const frame of frames) {
@@ -413,7 +413,7 @@ describe('Editor ↔ Export parity: classes match', () => {
     makeText({ fontSize: dvToken('lg', 18), fontWeight: dvNum(700), color: dvColorToken('red-500') }),
     makeImage({ src: 'photo.jpg', objectFit: 'contain', width: { mode: 'fixed', value: dvNum(200) } }),
     makeButton({ bg: dvStr('#333'), borderRadius: { topLeft: dvToken('lg', 8), topRight: dvToken('lg', 8), bottomRight: dvToken('lg', 8), bottomLeft: dvToken('lg', 8) } }),
-    makeInput({ fontSize: dvToken('sm', 14), border: { width: dvToken('', 1), color: dvColorToken('gray-300'), style: 'solid' } }),
+    makeInput({ fontSize: dvToken('sm', 14), border: { top: dvToken('', 1), right: dvToken('', 1), bottom: dvToken('', 1), left: dvToken('', 1), color: dvColorToken('gray-300'), style: 'solid' } }),
     makeTextarea({ fontSize: dvToken('base', 16), padding: { top: dvToken('2', 8), right: dvToken('2', 8), bottom: dvToken('2', 8), left: dvToken('2', 8) } }),
     makeSelect({ fontSize: dvToken('sm', 14), bg: dvColorToken('white') }),
   ]

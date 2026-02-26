@@ -14,8 +14,11 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { useFrameStore } from '../../store/frameStore'
 import { FrameRenderer } from './FrameRenderer'
+import { SelectionOverlay } from './SelectionOverlay'
 import { GoogleFontsLoader } from './GoogleFontsLoader'
+import { ErrorBoundary } from '../ErrorBoundary'
 import { resolveCanvasDrop } from '../../utils/canvasDrop'
+import { applyTheme, getActiveTheme } from '../../lib/theme'
 // Raw CSS string — injected into iframe <style>, not the parent document
 import frameRendererCSS from './FrameRenderer.css?raw'
 
@@ -41,27 +44,31 @@ input[type=number]::-webkit-outer-spin-button {
 }
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #71717a; }
+::-webkit-scrollbar-thumb { background: var(--color-surface-3); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-text-muted); }
 `
 
-// Tailwind theme — needed for editor overlay classes (surface-3 dashed outline, etc.)
+// Tailwind theme registration — registers token names so utility classes work.
+// Actual values are overridden by the generated <style id="caja-theme">.
 const TAILWIND_THEME = `@theme {
   --font-mono: SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, monospace;
   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  --color-surface-0: #111114;
-  --color-surface-1: #1b1b1f;
-  --color-surface-2: #26262b;
-  --color-surface-3: #3f3f46;
+  --color-surface-0: #111111;
+  --color-surface-1: #1b1b1b;
+  --color-surface-2: #262626;
+  --color-surface-3: #3f3f3f;
   --color-accent: #20744A;
   --color-accent-hover: #25875a;
-  --color-text-primary: #f0f0f2;
-  --color-text-secondary: #a1a1aa;
-  --color-text-muted: #71717a;
-  --color-border: #32323a;
-  --color-border-accent: #3e3e48;
-  --color-focus: #4A90D9;
+  --color-text-primary: #f0f0f0;
+  --color-text-secondary: #a1a1a1;
+  --color-text-muted: #717171;
+  --color-border: #323232;
+  --color-border-accent: #3e3e3e;
+  --color-focus: #2dd4bf;
+  --color-mcp: #818cf8;
   --color-destructive: #ef4444;
+  --color-selection: rgba(45, 212, 191, 0.3);
+  --color-canvas-bg: #0e0e11;
 }`
 
 /**
@@ -96,11 +103,14 @@ function IframeCanvas() {
   return (
     <div
       className={previewMode ? 'preview-mode' : ''}
-      style={{ minHeight: '100vh' }}
+      style={{ minHeight: '100vh', position: 'relative' }}
       onMouseLeave={previewMode ? undefined : () => hover(null)}
       onClick={previewMode ? onPreviewClick : onCanvasClick}
     >
-      <FrameRenderer frame={root} />
+      <ErrorBoundary fallback="inline" resetKey={root.id}>
+        <FrameRenderer frame={root} />
+      </ErrorBoundary>
+      {!previewMode && <SelectionOverlay />}
       <GoogleFontsLoader />
     </div>
   )
@@ -117,6 +127,16 @@ export function CanvasIframe() {
   const previewMode = useFrameStore((s) => s.previewMode)
   const isPatternDrag = useFrameStore((s) => s.patternDragFrame !== null)
   const rootBgValue = useFrameStore((s) => s.root.bg.value)
+
+  // Re-register iframe window if store lost the reference (HMR store recreation).
+  // This restores keyboard shortcuts, screenshot, and other iframe-dependent features.
+  const storeIframeWin = useFrameStore((s) => s.iframeWindow)
+  useEffect(() => {
+    const iframeWin = iframeRef.current?.contentWindow
+    if (!storeIframeWin && iframeWin) {
+      useFrameStore.getState().setIframeWindow(iframeWin)
+    }
+  }, [storeIframeWin])
 
   // Sync root frame's background to the iframe <body>.
   // Per CSS spec, body's background propagates to the viewport canvas,
@@ -142,11 +162,14 @@ export function CanvasIframe() {
     const bgVal = useFrameStore.getState().root.bg.value
     doc.body.style.backgroundColor = bgVal || '#ffffff'
 
-    // 1. Tailwind theme config
+    // 1. Tailwind theme config (registers token names for utility classes)
     const theme = doc.createElement('style')
     theme.setAttribute('type', 'text/tailwindcss')
     theme.textContent = TAILWIND_THEME
     doc.head.appendChild(theme)
+
+    // 1b. Generated theme CSS (:root overrides — keeps iframe in sync with main app)
+    applyTheme(getActiveTheme(), doc)
 
     // 2. Canvas reset
     const reset = doc.createElement('style')
@@ -204,6 +227,63 @@ export function CanvasIframe() {
     })
     ro.observe(container)
     return () => ro.disconnect()
+  }, [])
+
+  // Fix: WKWebView iframes don't receive mouse events until focused.
+  // Parent-side pointermove listener provides hover hit-testing as fallback,
+  // using the same elementFromPoint pattern as the drag-and-drop overlay.
+  useEffect(() => {
+    const iframe = iframeRef.current
+    if (!iframe) return
+
+    let wasInside = false
+
+    const onMove = (e: PointerEvent) => {
+      const store = useFrameStore.getState()
+      if (store.previewMode || store.canvasDragId) return
+
+      const rect = iframe.getBoundingClientRect()
+      const inside =
+        e.clientX >= rect.left && e.clientX <= rect.right &&
+        e.clientY >= rect.top && e.clientY <= rect.bottom
+
+      if (!inside) {
+        if (wasInside) {
+          store.hover(null)
+          wasInside = false
+        }
+        return
+      }
+
+      wasInside = true
+      const iframeDoc = iframe.contentDocument
+      if (!iframeDoc) return
+
+      const zoom = store.canvasZoom
+      const x = (e.clientX - rect.left - iframe.clientLeft) / zoom
+      const y = (e.clientY - rect.top - iframe.clientTop) / zoom
+      const el = iframeDoc.elementFromPoint(x, y) as HTMLElement | null
+      const frameEl = el?.closest('[data-frame-id]') as HTMLElement | null
+      store.hover(frameEl?.getAttribute('data-frame-id') || null)
+    }
+
+    // Clear hover when window loses focus or cursor leaves document bounds.
+    // Handles external window managers (Rectangle, etc.) repositioning the
+    // window — the OS doesn't fire pointer events because the mouse didn't
+    // move, so the hover state would otherwise stay stuck.
+    const clearHover = () => {
+      wasInside = false
+      useFrameStore.getState().hover(null)
+    }
+
+    document.addEventListener('pointermove', onMove, { passive: true })
+    window.addEventListener('blur', clearHover)
+    document.addEventListener('mouseleave', clearHover)
+    return () => {
+      document.removeEventListener('pointermove', onMove)
+      window.removeEventListener('blur', clearHover)
+      document.removeEventListener('mouseleave', clearHover)
+    }
   }, [])
 
   // Toggle .cmd-held on iframe body so CSS can show pointer cursor on navigable links.

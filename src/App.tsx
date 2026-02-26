@@ -13,6 +13,7 @@ import { ExportLibraryModal } from './components/TreePanel/ExportLibraryModal'
 import { startMcpBridge, stopMcpBridge } from './mcp/bridge'
 import { TitleBar } from './components/TitleBar/TitleBar'
 import { ZOOM_LEVELS } from './components/Canvas/ZoomBar'
+import { switchTheme, getActiveTheme } from './lib/theme'
 
 const LEFT_MIN = 150
 const LEFT_MAX = 400
@@ -150,6 +151,11 @@ function App() {
         invoke('set_menu_check', { id: 'toggle-spacing-overlays', checked: showSpacingOverlays }).catch(() => {})
         invoke('set_menu_check', { id: 'toggle-overlay-values', checked: showOverlayValues }).catch(() => {})
         invoke('set_menu_check', { id: 'toggle-advanced-mode', checked: advancedMode }).catch(() => {})
+        // Sync theme radio checks
+        const activeId = getActiveTheme().id
+        for (const tid of ['default-dark', 'dracula', 'catppuccin-mocha']) {
+          invoke('set_menu_check', { id: `theme-${tid}`, checked: tid === activeId }).catch(() => {})
+        }
       }).catch(() => {})
     }
 
@@ -200,6 +206,14 @@ function App() {
           case 'export-library':
             setShowExportLibrary(true)
             break
+          default:
+            // Theme menu items: "theme-<id>" → strip prefix
+            if (e.payload.startsWith('theme-')) {
+              const themeId = e.payload.slice(6) // "theme-default-dark" → "default-dark"
+              const iframeDoc = useFrameStore.getState().iframeWindow?.document
+              const docs = [document, ...(iframeDoc ? [iframeDoc] : [])]
+              switchTheme(themeId, docs)
+            }
         }
       }).then((fn) => {
         if (active) unlisteners.push(fn); else fn()
@@ -253,14 +267,46 @@ function App() {
         const tag = (e.target as HTMLElement).tagName
         if (tag === 'INPUT' || tag === 'TEXTAREA') return
         if ((e.target as HTMLElement).isContentEditable) return
-        const dir = useFrameStore.getState().getParentDirection(selectedId)
-        const isVertical = dir === 'column'
-        const isHorizontal = dir === 'row'
-        if (isVertical && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) return
-        if (isHorizontal && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) return
+        const { getParentDirection, getParentDisplay } = useFrameStore.getState()
+        const display = getParentDisplay(selectedId)
+        // Grid with multiple columns behaves like a row (Left/Right only)
+        const dir = display === 'grid' ? 'row' : getParentDirection(selectedId)
+        if (dir === 'column' && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) return
+        if (dir === 'row' && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) return
         e.preventDefault()
         const before = e.key === 'ArrowUp' || e.key === 'ArrowLeft'
         reorderFrame(selectedId, before ? 'up' : 'down')
+      }
+      // Copy / Cut / Paste
+      if ((e.metaKey || e.ctrlKey) && key === 'c' && !e.shiftKey) {
+        const tag = (e.target as HTMLElement).tagName
+        if (tag === 'INPUT' || tag === 'TEXTAREA') return
+        if ((e.target as HTMLElement).isContentEditable) return
+        e.preventDefault()
+        useFrameStore.getState().copySelected()
+      }
+      if ((e.metaKey || e.ctrlKey) && key === 'x' && !e.shiftKey) {
+        const tag = (e.target as HTMLElement).tagName
+        if (tag === 'INPUT' || tag === 'TEXTAREA') return
+        if ((e.target as HTMLElement).isContentEditable) return
+        e.preventDefault()
+        useFrameStore.getState().cutSelected()
+      }
+      if ((e.metaKey || e.ctrlKey) && key === 'v' && !e.shiftKey) {
+        const tag = (e.target as HTMLElement).tagName
+        if (tag === 'INPUT' || tag === 'TEXTAREA') return
+        if ((e.target as HTMLElement).isContentEditable) return
+        e.preventDefault()
+        useFrameStore.getState().pasteClipboard()
+      }
+      // Duplicate
+      if ((e.metaKey || e.ctrlKey) && key === 'd') {
+        const tag = (e.target as HTMLElement).tagName
+        if (tag === 'INPUT' || tag === 'TEXTAREA') return
+        if ((e.target as HTMLElement).isContentEditable) return
+        e.preventDefault()
+        const s = useFrameStore.getState()
+        if (s.selectedId && !isRootId(s.selectedId)) s.duplicateFrame(s.selectedId)
       }
       if ((e.metaKey || e.ctrlKey) && e.key === 's' && !e.shiftKey) {
         e.preventDefault()

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Diamond, Unlink } from 'lucide-react'
+import { Diamond } from 'lucide-react'
 import { HexColorPicker } from 'react-colorful'
 import { Popover } from './Popover'
 import { TokenInput } from './TokenInput'
@@ -145,25 +145,15 @@ export function FillInput({
 
             <Popover
               open={showGrid}
-              onOpenChange={(open) => {
-                if (open && stableToken) {
-                  removeColorToken()
-                  return
-                }
-                setShowGrid(open)
-              }}
+              onOpenChange={setShowGrid}
               trigger={
                 <button
                   type="button"
                   tabIndex={-1}
                   onMouseDown={(e) => e.stopPropagation()}
-                  className={`w-5 h-5 flex items-center justify-center rounded shrink-0 ${
-                    stableToken
-                      ? 'text-text-muted hover:text-text-primary hover:bg-surface-3/60'
-                      : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'
-                  }`}
+                  className="w-5 h-5 flex items-center justify-center rounded shrink-0 text-text-muted hover:text-text-secondary hover:bg-surface-2"
                 >
-                  {stableToken ? <Unlink size={11} /> : <Diamond size={11} />}
+                  <Diamond size={11} />
                 </button>
               }
               align="end"

@@ -382,47 +382,83 @@ describe('Background', () => {
 // 9. BORDER
 // ══════════════════════════════════════════════════════════════
 
+// Helper: uniform border width on all 4 sides
+function uniformBorder(w: ReturnType<typeof dvNum>, color: ReturnType<typeof dvStr>, style: 'none' | 'solid' | 'dashed' | 'dotted') {
+  return { top: w, right: { ...w }, bottom: { ...w }, left: { ...w }, color, style } as const
+}
+
 describe('Border', () => {
   it('omits border when style is none', () => {
-    const c = classes(makeBox({ border: { width: dvNum(2), color: dvStr('#000'), style: 'none' } }))
+    const c = classes(makeBox({ border: uniformBorder(dvNum(2), dvStr('#000'), 'none') }))
     expect(c.some(cl => cl.startsWith('border'))).toBe(false)
   })
 
-  it('omits border when width is 0', () => {
-    const c = classes(makeBox({ border: { width: dvNum(0), color: dvStr('#000'), style: 'solid' } }))
+  it('omits border when all widths are 0', () => {
+    const c = classes(makeBox({ border: uniformBorder(dvNum(0), dvStr('#000'), 'solid') }))
     expect(c.some(cl => cl.startsWith('border'))).toBe(false)
   })
 
-  it('emits `border` for 1px (empty token)', () => {
-    const c = classes(makeBox({ border: { width: dvToken('', 1), color: dvStr('#000'), style: 'solid' } }))
+  it('emits `border` for uniform 1px (empty token)', () => {
+    const c = classes(makeBox({ border: uniformBorder(dvToken('', 1), dvStr('#000'), 'solid') }))
     expect(c).toContain('border')
     expect(c).toContain('border-[#000]')
   })
 
-  it('emits `border` for custom 1px', () => {
-    const c = classes(makeBox({ border: { width: dvNum(1), color: dvStr('#000'), style: 'solid' } }))
+  it('emits `border` for uniform custom 1px', () => {
+    const c = classes(makeBox({ border: uniformBorder(dvNum(1), dvStr('#000'), 'solid') }))
     expect(c).toContain('border')
   })
 
-  it('emits border-2 for token 2', () => {
-    expect(has(makeBox({ border: { width: dvToken('2', 2), color: dvStr(''), style: 'solid' } }), 'border-2')).toBe(true)
+  it('emits border-2 for uniform token 2', () => {
+    expect(has(makeBox({ border: uniformBorder(dvToken('2', 2), dvStr(''), 'solid') }), 'border-2')).toBe(true)
   })
 
-  it('emits border-[3px] for custom 3', () => {
-    expect(has(makeBox({ border: { width: dvNum(3), color: dvStr(''), style: 'solid' } }), 'border-[3px]')).toBe(true)
+  it('emits border-[3px] for uniform custom 3', () => {
+    expect(has(makeBox({ border: uniformBorder(dvNum(3), dvStr(''), 'solid') }), 'border-[3px]')).toBe(true)
   })
 
   it('emits border-dashed', () => {
-    expect(has(makeBox({ border: { width: dvNum(1), color: dvStr(''), style: 'dashed' } }), 'border-dashed')).toBe(true)
+    expect(has(makeBox({ border: uniformBorder(dvNum(1), dvStr(''), 'dashed') }), 'border-dashed')).toBe(true)
   })
 
   it('omits border-solid (default)', () => {
-    expect(has(makeBox({ border: { width: dvNum(1), color: dvStr(''), style: 'solid' } }), 'border-solid')).toBe(false)
+    expect(has(makeBox({ border: uniformBorder(dvNum(1), dvStr(''), 'solid') }), 'border-solid')).toBe(false)
   })
 
   it('emits border color token', () => {
-    const c = classes(makeBox({ border: { width: dvNum(1), color: dvColorToken('zinc-300'), style: 'solid' } }))
+    const c = classes(makeBox({ border: uniformBorder(dvNum(1), dvColorToken('zinc-300'), 'solid') }))
     expect(c).toContain('border-zinc-300')
+  })
+
+  // Per-side tests
+  it('emits border-t-2 for top-only', () => {
+    const b = { top: dvToken('2', 2), right: dvNum(0), bottom: dvNum(0), left: dvNum(0), color: dvStr(''), style: 'solid' as const }
+    const c = classes(makeBox({ border: b }))
+    expect(c).toContain('border-t-2')
+    expect(c.some(cl => cl === 'border-r-2' || cl === 'border-b-2' || cl === 'border-l-2')).toBe(false)
+  })
+
+  it('emits border-x-2 border-y-4 for symmetric', () => {
+    const b = { top: dvToken('4', 4), right: dvToken('2', 2), bottom: dvToken('4', 4), left: dvToken('2', 2), color: dvStr(''), style: 'solid' as const }
+    const c = classes(makeBox({ border: b }))
+    expect(c).toContain('border-y-4')
+    expect(c).toContain('border-x-2')
+  })
+
+  it('emits border-b for bottom 1px only', () => {
+    const b = { top: dvNum(0), right: dvNum(0), bottom: dvToken('', 1), left: dvNum(0), color: dvStr(''), style: 'solid' as const }
+    const c = classes(makeBox({ border: b }))
+    expect(c).toContain('border-b')
+    expect(c.some(cl => cl === 'border-t' || cl === 'border-r' || cl === 'border-l')).toBe(false)
+  })
+
+  it('emits per-side classes for all different widths', () => {
+    const b = { top: dvNum(1), right: dvNum(2), bottom: dvNum(3), left: dvNum(4), color: dvStr(''), style: 'solid' as const }
+    const c = classes(makeBox({ border: b }))
+    expect(c).toContain('border-t')
+    expect(c).toContain('border-r-[2px]')
+    expect(c).toContain('border-b-[3px]')
+    expect(c).toContain('border-l-[4px]')
   })
 })
 

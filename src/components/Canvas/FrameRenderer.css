@@ -49,19 +49,24 @@
 
 /* ── Canvas drag & drop ── */
 
-body.is-canvas-dragging,
-body.is-canvas-dragging * {
-  cursor: grabbing !important;
-}
-
-.is-dragging {
-  visibility: hidden !important;
-  pointer-events: none !important;
-}
-
 .is-line-drop {
-  display: none !important;
+  opacity: 0.3 !important;
   pointer-events: none !important;
+}
+
+/* ── MCP agent highlight ── */
+
+.mcp-highlight {
+  outline: 3px solid transparent;
+  outline-offset: -1px;
+  animation: mcp-pulse 0.8s ease-out;
+}
+
+@keyframes mcp-pulse {
+  0%   { outline-color: transparent; }
+  15%  { outline-color: #c7d2fe; }
+  55%  { outline-color: #818cf8; }
+  100% { outline-color: transparent; }
 }
 
 /* ── Cmd+click navigable links ── */
