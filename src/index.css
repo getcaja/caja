@@ -134,6 +134,11 @@ input[type=number] {
     @apply flex items-center justify-center rounded text-text-muted;
   }
 
+  /* --- Pattern preview insert button --- */
+  .preview-insert-btn:hover {
+    background: var(--color-accent-hover) !important;
+  }
+
   /* --- Placeholder color --- */
   .c-input::placeholder,
   .c-scale-input input::placeholder,

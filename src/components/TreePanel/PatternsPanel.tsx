@@ -3,6 +3,7 @@ import { useCatalogStore } from '../../store/catalogStore'
 import { useFrameStore, findInTree } from '../../store/frameStore'
 import { Plus, X, Trash2, ChevronRight, ChevronDown, Code, Folder, Pencil } from 'lucide-react'
 import type { Pattern } from '../../types/pattern'
+import { PatternPreview } from './PatternPreview'
 
 export type PatternSource =
   | { type: 'internal' }
@@ -32,6 +33,7 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
   const removeEmptyCategory = useCatalogStore((s) => s.removeEmptyCategory)
   const moveCategory = useCatalogStore((s) => s.moveCategory)
   const libraries = useCatalogStore((s) => s.libraries)
+  const libraryIndex = useCatalogStore((s) => s.libraryIndex)
 
   const root = useFrameStore((s) => s.root)
   const selectedId = useFrameStore((s) => s.selectedId)
@@ -63,6 +65,68 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
   const [dragId, setDragId] = useState<string | null>(null)
   const [overId, setOverId] = useState<string | null>(null)
   const [overPos, setOverPos] = useState<DropPosition | null>(null)
+
+  // Pattern hover preview
+  const [previewPattern, setPreviewPattern] = useState<Pattern | null>(null)
+  const [previewY, setPreviewY] = useState(0)
+  const previewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const leaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+
+  const sourceName = useMemo(() => {
+    if (source.type === 'internal') return 'Internal Patterns'
+    const lib = libraryIndex.find((l) => l.id === source.libraryId)
+    return lib?.name || 'Library'
+  }, [source, libraryIndex])
+
+  const cancelLeave = useCallback(() => {
+    if (leaveTimerRef.current) { clearTimeout(leaveTimerRef.current); leaveTimerRef.current = null }
+  }, [])
+
+  const onPreviewEnter = useCallback((pattern: Pattern, y: number) => {
+    cancelLeave()
+    if (previewTimerRef.current) clearTimeout(previewTimerRef.current)
+    previewTimerRef.current = setTimeout(() => {
+      setPreviewPattern(pattern)
+      setPreviewY(y)
+    }, 300)
+  }, [cancelLeave])
+
+  const onPreviewLeave = useCallback(() => {
+    if (previewTimerRef.current) { clearTimeout(previewTimerRef.current); previewTimerRef.current = null }
+    leaveTimerRef.current = setTimeout(() => {
+      setPreviewPattern(null)
+    }, 150)
+  }, [])
+
+  const onPreviewPopupEnter = useCallback(() => {
+    cancelLeave()
+  }, [cancelLeave])
+
+  const onPreviewPopupLeave = useCallback(() => {
+    leaveTimerRef.current = setTimeout(() => {
+      setPreviewPattern(null)
+    }, 150)
+  }, [])
+
+  function handlePreviewInsert() {
+    if (!previewPattern) return
+    handleInsert(previewPattern)
+    cancelLeave()
+    if (previewTimerRef.current) { clearTimeout(previewTimerRef.current); previewTimerRef.current = null }
+    setPreviewPattern(null)
+  }
+
+  function handlePreviewClose() {
+    cancelLeave()
+    if (previewTimerRef.current) { clearTimeout(previewTimerRef.current); previewTimerRef.current = null }
+    setPreviewPattern(null)
+  }
+
+  // Clear preview during drag
+  useEffect(() => {
+    if (dragId) onPreviewLeave()
+  }, [dragId, onPreviewLeave])
 
   // Group: uncategorized at root, then by first tag (preserving order)
   const { categorized, uncategorized, allTags } = useMemo(() => {
@@ -270,8 +334,11 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
   const isRootOver = overId === '__root__'
   const hasContent = patterns.length > 0 || allTags.length > 0
 
+  const panelRight = panelRef.current ? panelRef.current.getBoundingClientRect().right : 280
+
   return (
     <div
+      ref={panelRef}
       className="h-full flex flex-col overflow-y-auto py-1 px-1"
       onDragOver={(e) => { if (dragId) e.preventDefault() }}
       onDrop={handleRootDrop}
@@ -348,6 +415,8 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
               onDragEnd={endDrag}
               onInsert={() => handleInsert(s)}
               onDelete={readOnly ? undefined : () => deletePattern(s.id)}
+              onPreviewEnter={onPreviewEnter}
+              onPreviewLeave={onPreviewLeave}
             />
           ))}
 
@@ -513,6 +582,8 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
                     onDragEnd={endDrag}
                     onInsert={() => handleInsert(s)}
                     onDelete={readOnly ? undefined : () => deletePattern(s.id)}
+                    onPreviewEnter={onPreviewEnter}
+                    onPreviewLeave={onPreviewLeave}
                   />
                 ))}
               </div>
@@ -590,6 +661,19 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
           </button>
         </div>
       )}
+
+      {/* Pattern hover preview — always mounted, iframe persists */}
+      <PatternPreview
+        frame={previewPattern?.frame ?? null}
+        name={previewPattern?.name ?? ''}
+        sourceName={sourceName}
+        anchorY={previewY}
+        panelRight={panelRight}
+        onInsert={handlePreviewInsert}
+        onClose={handlePreviewClose}
+        onPopupEnter={onPreviewPopupEnter}
+        onPopupLeave={onPreviewPopupLeave}
+      />
     </div>
   )
 })
@@ -600,7 +684,7 @@ function PatternRow({
   isOver, overPosition, isHighlighted,
   onClick, onEditChange, onEditCommit, onEditCancel, onDoubleClick,
   onContextMenu, onDragStart, onDragOver, onDragLeave, onDrop, onDragEnd,
-  onInsert, onDelete,
+  onInsert, onDelete, onPreviewEnter, onPreviewLeave,
 }: {
   pattern: Pattern
   depth: number
@@ -624,6 +708,8 @@ function PatternRow({
   onDragEnd: () => void
   onInsert: () => void
   onDelete?: () => void
+  onPreviewEnter?: (pattern: Pattern, y: number) => void
+  onPreviewLeave?: () => void
 }) {
   const rowRef = useRef<HTMLDivElement>(null)
 
@@ -645,6 +731,11 @@ function PatternRow({
       onDragLeave={onDragLeave}
       onDrop={onDrop}
       onDragEnd={onDragEnd}
+      onMouseEnter={(e) => {
+        const rect = e.currentTarget.getBoundingClientRect()
+        onPreviewEnter?.(pattern, rect.top)
+      }}
+      onMouseLeave={() => onPreviewLeave?.()}
     >
       {/* Drop indicators — pointer-events-none so drag events pass through */}
       {isOver && overPosition === 'before' && (
