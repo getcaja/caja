@@ -40,7 +40,8 @@ function StaticFrame({ frame, style }: { frame: Frame; style?: React.CSSProperti
     return <img className={classes} src={isImage ? frame.src : ''} alt="" style={style} draggable={false} />
   }
   if (Tag === 'input') {
-    return <input className={classes} style={style} type={frame.type === 'input' ? frame.inputType : 'text'} placeholder={frame.type === 'input' ? frame.placeholder : ''} readOnly />
+    const it = frame.type === 'input' ? frame.inputType : 'text'
+    return <input className={classes} style={style} type={it} {...(it === 'range' ? { min: frame.type === 'input' ? frame.min : 0, max: frame.type === 'input' ? frame.max : 100 } : {})} placeholder={frame.type === 'input' ? frame.placeholder : ''} readOnly />
   }
 
   return (

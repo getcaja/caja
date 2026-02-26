@@ -46,12 +46,18 @@ export function exportToHTML(
   }
 
   if (frame.type === 'input') {
-    const typeAttr = frame.inputType !== 'text' ? ` type="${frame.inputType}"` : ''
-    const placeholderAttr = frame.placeholder ? ` placeholder="${escapeAttr(frame.placeholder)}"` : ''
+    const it = frame.inputType
+    const typeAttr = it !== 'text' ? ` type="${it}"` : ''
+    const placeholderAttr = it !== 'checkbox' && it !== 'radio' && it !== 'range' && frame.placeholder ? ` placeholder="${escapeAttr(frame.placeholder)}"` : ''
+    const checkedAttr = (it === 'checkbox' || it === 'radio') && frame.checked ? ' checked' : ''
+    const nameAttr = it === 'radio' && frame.inputName ? ` name="${escapeAttr(frame.inputName)}"` : ''
+    const valueAttr = it === 'radio' && frame.inputValue ? ` value="${escapeAttr(frame.inputValue)}"` : ''
+    const rangeAttrs = it === 'range' ? ` min="${frame.min}" max="${frame.max}" step="${frame.step}" value="${frame.defaultValue}"` : ''
+    const numberAttrs = it === 'number' ? `${frame.min !== 0 ? ` min="${frame.min}"` : ''}${frame.max !== 100 ? ` max="${frame.max}"` : ''}${frame.step !== 1 ? ` step="${frame.step}"` : ''}` : ''
     const disabledAttr = frame.disabled ? ' disabled' : ''
     const assoc = associations?.get(frame.id)
     const idAttr = resolveIdAttr(frame, assoc)
-    return `${pad}<input${idAttr}${typeAttr}${placeholderAttr}${disabledAttr}${classAttr}>\n`
+    return `${pad}<input${idAttr}${typeAttr}${nameAttr}${valueAttr}${placeholderAttr}${checkedAttr}${rangeAttrs}${numberAttrs}${disabledAttr}${classAttr}>\n`
   }
 
   if (frame.type === 'textarea') {

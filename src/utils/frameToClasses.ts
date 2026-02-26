@@ -219,8 +219,8 @@ export function frameToClasses(frame: Frame): string {
     cls.push(...insetClasses(frame.inset))
   }
 
-  // Layout (applies to all container types — box, button, link, etc.)
-  if (frame.type !== 'text' && frame.type !== 'image') {
+  // Layout (only applies to box — the only container type with display/direction/gap)
+  if (frame.type === 'box') {
     if (frame.display === 'flex' || frame.display === 'inline-flex') {
       cls.push(frame.display === 'inline-flex' ? 'inline-flex' : 'flex')
       cls.push(frame.direction === 'row' ? 'flex-row' : 'flex-col')
@@ -244,7 +244,7 @@ export function frameToClasses(frame: Frame): string {
   }
 
   // Text styles (text, button, input, textarea, select — anything with TextStyles)
-  if (frame.type !== 'box' && frame.type !== 'image') {
+  if ('fontSize' in frame) {
     const hasFontSize = !dvIsZero(frame.fontSize)
     const hasLineHeight = !dvIsZero(frame.lineHeight)
 

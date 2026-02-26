@@ -341,6 +341,13 @@ export function createInput(overrides?: Partial<InputElement>): InputElement {
     placeholder: 'Placeholder',
     inputType: 'text',
     disabled: false,
+    checked: false,
+    inputName: '',
+    inputValue: '',
+    min: 0,
+    max: 100,
+    step: 1,
+    defaultValue: 50,
     ...defaultTextStyles(),
     padding: zeroSpacing(),
     margin: zeroSpacing(),
@@ -505,8 +512,8 @@ function cloneTree(frame: Frame): Frame {
   if (frame.type === 'box') {
     return { ...base, type: 'box', gap: cloneDV(frame.gap), gridCols: cloneDV(frame.gridCols), gridRows: cloneDV(frame.gridRows), children: frame.children.map(cloneTree) } as BoxElement
   }
-  // Clone TextStyles DV fields for all text-capable types
-  if (frame.type !== 'box' && frame.type !== 'image') {
+  // Clone TextStyles DV fields for types that have them (text, button, input, textarea, select)
+  if ('fontSize' in frame) {
     const textClones = { fontSize: cloneDV(frame.fontSize), fontWeight: cloneDV(frame.fontWeight), lineHeight: cloneDV(frame.lineHeight), color: cloneDV(frame.color), letterSpacing: cloneDV(frame.letterSpacing) }
     return { ...base, ...textClones } as Frame
   }

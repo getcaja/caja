@@ -184,7 +184,7 @@ function sanitizeBorder(raw: unknown, existing: Border): Border | undefined {
 function sanitizeFrameProperties(props: Record<string, unknown>, existingFrame?: Frame): Record<string, unknown> {
   const sanitized = { ...props }
 
-  // label → content alias for backwards MCP compat (button)
+  // label → content alias for backwards MCP compat
   if ('label' in sanitized && !('content' in sanitized)) {
     sanitized.content = sanitized.label
     delete sanitized.label

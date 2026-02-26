@@ -34,6 +34,14 @@ export const INPUT_TYPE_OPTIONS = [
   { value: 'email', label: 'Email' },
   { value: 'password', label: 'Password' },
   { value: 'number', label: 'Number' },
+  { value: 'search', label: 'Search' },
+  { value: 'tel', label: 'Tel' },
+  { value: 'url', label: 'URL' },
+  { value: 'date', label: 'Date' },
+  { value: 'time', label: 'Time' },
+  { value: 'checkbox', label: 'Checkbox' },
+  { value: 'radio', label: 'Radio' },
+  { value: 'range', label: 'Range' },
 ]
 
 export const OVERFLOW_OPTIONS = [

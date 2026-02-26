@@ -178,7 +178,7 @@ export interface ButtonElement extends BaseElement, TextStyles {
   content: string
 }
 
-export type InputType = 'text' | 'email' | 'password' | 'number'
+export type InputType = 'text' | 'email' | 'password' | 'number' | 'search' | 'tel' | 'url' | 'date' | 'time' | 'checkbox' | 'radio' | 'range'
 
 export interface InputElement extends BaseElement, TextStyles {
   type: 'input'
@@ -186,6 +186,19 @@ export interface InputElement extends BaseElement, TextStyles {
   placeholder: string
   inputType: InputType
   disabled: boolean
+
+  // Checkbox/radio state
+  checked: boolean
+
+  // Radio: HTML name (groups radios) and value (distinguishes options)
+  inputName: string
+  inputValue: string
+
+  // Range/number constraints
+  min: number
+  max: number
+  step: number
+  defaultValue: number
 }
 
 export interface TextareaElement extends BaseElement, TextStyles {

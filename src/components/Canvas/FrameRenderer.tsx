@@ -289,15 +289,36 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
     )
   }
 
-  if (Tag === 'input') {
+  if (frame.type === 'input') {
+    const it = frame.inputType
     return (
       <input
         data-frame-id={frame.id}
         className={`${tailwind} ${stateClasses}`}
 
-        type={isInput ? frame.inputType : 'text'}
-        placeholder={isInput ? frame.placeholder : ''}
-        disabled={isInput ? frame.disabled : false}
+        type={it === 'range' ? 'range' : it}
+        {...(it !== 'checkbox' && it !== 'radio' && it !== 'range' ? { placeholder: frame.placeholder } : {})}
+        {...(it === 'checkbox' || it === 'radio' ? { defaultChecked: frame.checked } : {})}
+        {...(it === 'radio' && frame.inputName ? { name: frame.inputName } : {})}
+        {...(it === 'radio' && frame.inputValue ? { value: frame.inputValue } : {})}
+        {...(it === 'range' ? { min: frame.min, max: frame.max, step: frame.step, defaultValue: frame.defaultValue } : {})}
+        disabled={frame.disabled}
+        {...(it !== 'checkbox' && it !== 'radio' && it !== 'range' ? { readOnly: !previewMode } : {})}
+        {...editorHandlers}
+        {...(!previewMode ? { onMouseDown: (e: React.MouseEvent) => e.preventDefault() } : {})}
+      />
+    )
+  }
+
+  // --- Textarea (void-like in React — no children) ---
+  if (isTextarea) {
+    return (
+      <textarea
+        data-frame-id={frame.id}
+        className={`${tailwind} ${stateClasses}`}
+        placeholder={frame.placeholder}
+        rows={frame.rows}
+        disabled={frame.disabled}
         readOnly={!previewMode}
         {...editorHandlers}
         {...(!previewMode ? { onMouseDown: (e: React.MouseEvent) => e.preventDefault() } : {})}
@@ -316,13 +337,7 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
           ? { href: frame.href }
           : { 'data-navigable': true }
         : {})}
-      {...(isTextarea ? {
-        placeholder: frame.placeholder,
-        rows: frame.rows,
-        disabled: frame.disabled,
-        readOnly: !previewMode,
-      } : {})}
-      {...((isTextarea || isSelect) && !previewMode ? {
+      {...(isSelect && !previewMode ? {
         onMouseDown: (e: React.MouseEvent) => e.preventDefault(),
       } : {})}
     >
