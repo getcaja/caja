@@ -243,6 +243,9 @@ export function frameToClasses(frame: Frame): string {
     }
   }
 
+  // Text color (all elements — enables CSS cascade inheritance)
+  if (frame.color?.value) cls.push(dvColorClass('text', frame.color))
+
   // Text styles (text, button, input, textarea, select — anything with TextStyles)
   if ('fontSize' in frame) {
     const hasFontSize = !dvIsZero(frame.fontSize)
@@ -284,7 +287,6 @@ export function frameToClasses(frame: Frame): string {
         cls.push(weightMap[frame.fontWeight.value] || `font-[${frame.fontWeight.value}]`)
       }
     }
-    if (frame.color.value) cls.push(dvColorClass('text', frame.color))
     if (frame.textAlign !== 'left') cls.push(`text-${frame.textAlign}`)
     if (frame.fontStyle === 'italic') cls.push('italic')
     if (frame.textDecoration === 'underline') cls.push('underline')

@@ -72,6 +72,7 @@ interface BaseElement {
   inset: Inset
 
   // Visuals
+  color: DesignValue<string>   // text color — inheritable via CSS cascade
   bg: DesignValue<string>
   bgImage: string
   bgSize: 'auto' | 'cover' | 'contain'
@@ -112,7 +113,7 @@ export type BoxTag = 'body' | 'div' | 'section' | 'nav' | 'header' | 'footer' | 
 
 export type BoxDisplay = 'flex' | 'inline-flex' | 'block' | 'inline-block' | 'inline' | 'grid'
 
-export interface BoxElement extends BaseElement {
+export interface BoxElement extends BaseElement, TextStyles {
   type: 'box'
 
   // Semantic tag
@@ -141,7 +142,6 @@ export interface TextStyles {
   fontSize: DesignValue<number>
   fontWeight: DesignValue<number>
   lineHeight: DesignValue<number> // multiplier, e.g. 1.5
-  color: DesignValue<string>
   textAlign: 'left' | 'center' | 'right'
   fontStyle: 'normal' | 'italic'
   textDecoration: 'none' | 'underline' | 'line-through'
