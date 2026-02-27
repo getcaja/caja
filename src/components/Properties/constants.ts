@@ -24,7 +24,6 @@ export const TEXT_TAG_OPTIONS = [
   { value: 'h5', label: 'h5 — Heading 5' },
   { value: 'h6', label: 'h6 — Heading 6' },
   { value: 'span', label: 'span — Inline' },
-  { value: 'a', label: 'a — Link' },
   { value: 'label', label: 'label — Label' },
 ]
 
@@ -90,16 +89,18 @@ export const ALIGN_SELF_OPTIONS = [
   { value: 'stretch', label: 'Stretch' },
 ]
 
+const BADGE = 'bg-accent/15 text-accent'
+
 export const TYPE_BADGE_STYLES: Record<string, string> = {
-  root: 'bg-blue-900/30 text-blue-400',
-  box: 'bg-accent/15 text-accent',
-  text: 'bg-emerald-900/30 text-emerald-400',
-  image: 'bg-violet-900/30 text-violet-400',
-  button: 'bg-amber-900/30 text-amber-400',
-  input: 'bg-sky-900/30 text-sky-400',
-  textarea: 'bg-sky-900/30 text-sky-400',
-  select: 'bg-sky-900/30 text-sky-400',
-  link: 'bg-indigo-900/30 text-indigo-400',
+  root: BADGE,
+  box: BADGE,
+  text: BADGE,
+  image: BADGE,
+  button: BADGE,
+  input: BADGE,
+  textarea: BADGE,
+  select: BADGE,
+  link: BADGE,
 }
 
 export const TYPE_BADGE_LABELS: Record<string, string> = {

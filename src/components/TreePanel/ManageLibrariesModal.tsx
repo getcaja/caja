@@ -102,7 +102,7 @@ export function ManageLibrariesModal({ open, onOpenChange }: ManageLibrariesModa
         {/* Footer */}
         <div className="px-4 py-3 border-t border-border">
           <button
-            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] text-text-primary bg-accent hover:bg-accent-hover transition-colors disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] text-surface-0 font-medium bg-accent hover:bg-accent-hover transition-colors disabled:opacity-50"
             onClick={handleImport}
             disabled={importing}
           >

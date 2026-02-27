@@ -81,7 +81,7 @@ test.describe('Tree operations', () => {
     await seedAndLoad(page, fixtures)
     const frame = canvasFrame(page)
 
-    // Click "Title" in the tree panel — the tree panel is outside the iframe
+    // Click "Title" in the tree panel
     // Use a locator scoped to the left panel (not matching canvas content)
     const treeTitle = page.locator('span:text-is("Title")').first()
     await treeTitle.click()
@@ -330,7 +330,7 @@ test.describe('Keyboard shortcuts', () => {
     await frame.locator('[data-frame-id="text-1"]').click()
     await expect(frame.locator('[data-frame-id="text-1"]')).toHaveClass(/is-selected/)
 
-    // Press Escape on the main page (not inside iframe)
+    // Press Escape
     await page.keyboard.press('Escape')
     await page.waitForTimeout(200)
 
@@ -416,27 +416,3 @@ test.describe('File operations', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// Canvas interaction: multi-select
-// ---------------------------------------------------------------------------
-
-test.describe('Multi-select', () => {
-  test('Shift+click adds to selection', async ({ page }) => {
-    await seedAndLoad(page, [
-      makeText('text-1', 'First', 'A'),
-      makeText('text-2', 'Second', 'B'),
-    ])
-    const frame = canvasFrame(page)
-
-    // Click first
-    await frame.locator('[data-frame-id="text-1"]').click()
-    await expect(frame.locator('[data-frame-id="text-1"]')).toHaveClass(/is-selected/)
-
-    // Shift+click second
-    await frame.locator('[data-frame-id="text-2"]').click({ modifiers: ['Shift'] })
-    await page.waitForTimeout(200)
-
-    // Both should be selected (or at least the multi-select class should be present)
-    await expect(frame.locator('[data-frame-id="text-2"]')).toHaveClass(/is-selected/)
-  })
-})

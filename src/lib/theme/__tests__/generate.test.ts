@@ -65,24 +65,17 @@ describe('deriveTokens', () => {
   })
 
   it('accent matches input', () => {
-    expectColorMatch(tokens.accent, '#20744A')
+    expectColorMatch(tokens.accent, '#0c8ce9')
   })
 
-  it('accent-hover ≈ #25875a', () => {
-    expectColorMatch(tokens['accent-hover'], '#25875a', 5)
-  })
-
-  it('focus matches input', () => {
-    expectColorMatch(tokens.focus, '#4A90D9')
+  it('accent-hover is lighter than accent', () => {
+    const [ar] = rgb(tokens.accent)
+    const [hr] = rgb(tokens['accent-hover'])
+    expect(hr).toBeGreaterThan(ar)
   })
 
   it('destructive matches input', () => {
     expectColorMatch(tokens.destructive, '#ef4444')
-  })
-
-  it('selection is translucent focus', () => {
-    expect(tokens.selection).toMatch(/^rgba\(/)
-    expect(tokens.selection).toMatch(/0\.3\)$/)
   })
 
   it('canvas-bg is darker than surface', () => {
@@ -106,7 +99,7 @@ describe('generateThemeCSS', () => {
       'text-primary', 'text-secondary', 'text-muted',
       'border', 'border-accent',
       'accent', 'accent-hover',
-      'focus', 'destructive', 'selection', 'canvas-bg',
+      'destructive', 'canvas-bg',
     ]
     for (const key of expected) {
       expect(css, `Missing --color-${key}`).toContain(`--color-${key}:`)

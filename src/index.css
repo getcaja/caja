@@ -10,9 +10,9 @@
   --color-surface-2: #262626;
   --color-surface-3: #3f3f3f;
 
-  /* Accent */
-  --color-accent: #20744A;
-  --color-accent-hover: #25875a;
+  /* Accent — single color for the entire UI */
+  --color-accent: #0c8ce9;
+  --color-accent-hover: #47b5f5;
 
   /* Text */
   --color-text-primary: #f0f0f0;
@@ -23,17 +23,10 @@
   --color-border: #323232;
   --color-border-accent: #3e3e3e;
 
-  /* Focus (editor — teal) */
-  --color-focus: #2dd4bf;
-
-  /* MCP agent (indigo) */
-  --color-mcp: #818cf8;
-
   /* Semantic */
   --color-destructive: #ef4444;
 
-  /* Selection & canvas */
-  --color-selection: rgba(45, 212, 191, 0.3);
+  /* Canvas */
   --color-canvas-bg: #0e0e11;
 }
 
@@ -51,7 +44,7 @@ html, body, #root {
 
 /* Selection */
 ::selection {
-  background: var(--color-selection);
+  background: color-mix(in srgb, var(--color-accent) 30%, transparent);
   color: inherit;
 }
 
@@ -83,7 +76,7 @@ input[type=number] {
 
 /* Focus ring — default for all elements outside canvas */
 *:focus-visible {
-  outline: 2px solid var(--color-focus);
+  outline: 2px solid var(--color-accent);
   outline-offset: -2px;
 }
 
@@ -157,19 +150,19 @@ input[type=number] {
    !important needed to beat Tailwind v4's unlayered &:focus ring-shadow. */
 .c-input:focus,
 .c-textarea:focus {
-  border-color: var(--color-focus);
+  border-color: var(--color-accent);
   outline: none;
   box-shadow: none !important;
 }
 .c-scale-input:focus-within {
-  border-color: var(--color-focus);
+  border-color: var(--color-accent);
   box-shadow: none !important;
 }
 
 /* Tree node selected state */
 .tree-node-selected {
-  background: color-mix(in srgb, var(--color-focus) 15%, transparent);
-  outline: 1px solid color-mix(in srgb, var(--color-focus) 50%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 15%, transparent);
+  outline: 1px solid color-mix(in srgb, var(--color-accent) 50%, transparent);
   outline-offset: -1px;
 }
 

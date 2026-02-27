@@ -1,4 +1,4 @@
-// Shared Tailwind theme + canvas reset CSS — used by CanvasIframe and PatternPreview.
+// Shared Tailwind theme + canvas reset CSS — used by PatternPreview iframe.
 
 // Canvas reset — form controls, default text color, scrollbar
 // Body defaults + scrollbar styling only.
@@ -39,16 +39,13 @@ export const TAILWIND_THEME = `@theme {
   --color-surface-1: #1b1b1b;
   --color-surface-2: #262626;
   --color-surface-3: #3f3f3f;
-  --color-accent: #20744A;
-  --color-accent-hover: #25875a;
+  --color-accent: #0c8ce9;
+  --color-accent-hover: #47b5f5;
   --color-text-primary: #f0f0f0;
   --color-text-secondary: #a1a1a1;
   --color-text-muted: #717171;
   --color-border: #323232;
   --color-border-accent: #3e3e3e;
-  --color-focus: #2dd4bf;
-  --color-mcp: #818cf8;
   --color-destructive: #ef4444;
-  --color-selection: rgba(45, 212, 191, 0.3);
   --color-canvas-bg: #0e0e11;
 }`

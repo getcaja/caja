@@ -105,9 +105,9 @@ export function McpModal({ open, onOpenChange }: McpModalProps) {
             <h2 className="text-[14px] font-semibold text-text-primary">MCP Server</h2>
             <div className="flex items-center gap-1.5 text-[11px]">
               <div
-                className={`w-1.5 h-1.5 rounded-full ${mcpConnected ? 'bg-green-500' : 'bg-text-muted'}`}
+                className={`w-1.5 h-1.5 rounded-full ${mcpConnected ? 'bg-accent' : 'bg-text-muted'}`}
               />
-              <span className={mcpConnected ? 'text-emerald-400' : 'text-text-muted'}>
+              <span className={mcpConnected ? 'text-accent' : 'text-text-muted'}>
                 {mcpConnected ? 'Running' : 'Offline'}
               </span>
             </div>

@@ -254,7 +254,6 @@ interface FrameStore {
   showOverlayValues: boolean
   previewMode: boolean
   canvasWidth: number | null
-  iframeWindow: Window | null
   canvasZoom: number
   mcpConnected: boolean
   canvasDragId: string | null
@@ -262,7 +261,7 @@ interface FrameStore {
   patternDragFrame: Frame | null
   patternDragOrigin: { libraryId?: string; patternId?: string } | null
   clipboard: Frame[]
-  treePanelTab: 'elements' | 'patterns' | 'libraries'
+  treePanelTab: 'layers' | 'patterns' | 'libraries'
   _lastDuplicateMap: Record<string, string> | null
   mcpHighlightIds: Set<string>
 
@@ -313,12 +312,11 @@ interface FrameStore {
   togglePreviewMode: () => void
   setPreviewMode: (value: boolean) => void
   setCanvasWidth: (width: number | null) => void
-  setIframeWindow: (win: Window | null) => void
   setCanvasZoom: (zoom: number) => void
   setCanvasDrag: (id: string | null) => void
   setCanvasDragOver: (over: { parentId: string; index: number } | null) => void
   setPatternDragFrame: (frame: Frame | null, origin?: { libraryId?: string; patternId?: string } | null) => void
-  setTreePanelTab: (tab: 'elements' | 'patterns' | 'libraries') => void
+  setTreePanelTab: (tab: 'layers' | 'patterns' | 'libraries') => void
   expandToFrame: (id: string) => void
   addMcpHighlight: (id: string) => void
   advancedMode: boolean
@@ -407,7 +405,6 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   showOverlayValues: initialViewPrefs.showOverlayValues,
   previewMode: initialViewPrefs.previewMode,
   canvasWidth: initialViewPrefs.canvasWidth,
-  iframeWindow: null,
   canvasZoom: 1,
   mcpConnected: false,
   canvasDragId: null,
@@ -415,7 +412,7 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   patternDragFrame: null,
   patternDragOrigin: null,
   clipboard: [] as Frame[],
-  treePanelTab: 'elements' as const,
+  treePanelTab: 'layers' as const,
   advancedMode: initialViewPrefs.advancedMode,
   _lastDuplicateMap: null,
   mcpHighlightIds: new Set<string>(),
@@ -816,7 +813,6 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
     saveViewPrefs({ showSpacingOverlays: s.showSpacingOverlays, showOverlayValues: s.showOverlayValues, previewMode: s.previewMode, canvasWidth: width, advancedMode: s.advancedMode })
     return { canvasWidth: width }
   }),
-  setIframeWindow: (win) => set({ iframeWindow: win }),
   setCanvasZoom: (zoom) => set({ canvasZoom: zoom }),
   setCanvasDrag: (id) => set({ canvasDragId: id }),
   setCanvasDragOver: (over) => set((state) => {

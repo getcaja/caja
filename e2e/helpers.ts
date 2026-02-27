@@ -3,7 +3,7 @@
  *
  * Used by canvas.spec.ts and editor.spec.ts.
  */
-import type { Page, FrameLocator } from '@playwright/test'
+import type { Page, Locator } from '@playwright/test'
 
 // ---------------------------------------------------------------------------
 // DesignValue helpers — mirrors store format
@@ -111,14 +111,15 @@ export function seedState(children: object[]) {
 // Playwright helpers
 // ---------------------------------------------------------------------------
 
-export function canvasFrame(page: Page): FrameLocator {
-  return page.frameLocator('iframe[title="Caja Canvas"]')
+/** Returns a locator scoped to the inline canvas container */
+export function canvasFrame(page: Page): Locator {
+  return page.locator('#caja-canvas')
 }
 
-/** Wait for the canvas iframe to be ready (Tailwind loaded, React mounted) */
+/** Wait for the canvas to be ready (React mounted, frames rendered) */
 export async function waitForCanvas(page: Page) {
-  const frame = canvasFrame(page)
-  await frame.locator('[data-frame-id]').first().waitFor({ timeout: 10_000 })
+  const canvas = canvasFrame(page)
+  await canvas.locator('[data-frame-id]').first().waitFor({ timeout: 10_000 })
 }
 
 export async function seedAndLoad(page: Page, children: object[]) {

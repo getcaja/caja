@@ -106,112 +106,112 @@ export function TreePanel({ onExportLibrary }: TreePanelProps) {
   }
 
   return (
-    <TreeDndProvider>
-      <div className="h-full bg-surface-1 flex flex-col">
-        <div className="px-4 py-2.5 border-b border-border flex items-center justify-between">
-          <div className="flex items-center gap-1">
-            <button
-              className={`text-[12px] font-semibold px-1.5 py-0.5 rounded transition-colors ${tab === 'elements' ? 'text-text-primary bg-surface-2' : 'text-text-muted hover:text-text-secondary'}`}
-              onClick={() => setTab('elements')}
-            >
-              Pages
-            </button>
-            <button
-              className={`text-[12px] font-semibold px-1.5 py-0.5 rounded transition-colors ${tab === 'patterns' ? 'text-text-primary bg-surface-2' : 'text-text-muted hover:text-text-secondary'}`}
-              onClick={handlePatternsTab}
-            >
-              Patterns
-            </button>
-            <button
-              className={`text-[12px] font-semibold px-1.5 py-0.5 rounded transition-colors ${tab === 'libraries' ? 'text-text-primary bg-surface-2' : 'text-text-muted hover:text-text-secondary'}`}
-              onClick={handleLibrariesTab}
-            >
-              Libraries
-            </button>
-          </div>
-          {tab === 'elements' && (
-            <button
-              ref={addBtnRef}
-              className="w-5 h-5 c-icon-btn hover:text-accent hover:bg-accent/10"
-              onClick={openAddMenu}
-              title="Add element"
-            >
-              <Plus size={14} />
-            </button>
-          )}
-          {tab === 'patterns' && (
-            <button
-              ref={patternBtnRef}
-              className="w-5 h-5 c-icon-btn hover:text-accent hover:bg-accent/10"
-              onClick={openPatternMenu}
-              title="Add"
-            >
-              <Plus size={14} />
-            </button>
-          )}
-          {tab === 'libraries' && (
-            <button
-              className="w-5 h-5 c-icon-btn hover:text-accent hover:bg-accent/10"
-              onClick={async () => {
-                try {
-                  const result = await importLibrary()
-                  if (result) {
-                    useCatalogStore.getState().installLibrary(result.meta, result.data)
-                    await saveLibraryIndex(useCatalogStore.getState().libraryIndex)
-                    setActiveLibraryId(result.meta.id)
-                  }
-                } catch (err) {
-                  console.error('Failed to import library:', err)
-                }
-              }}
-              title="Import library"
-            >
-              <Plus size={14} />
-            </button>
-          )}
-        </div>
-
-        {showAdd && (
-          <AddMenu
-            x={menuPos.x}
-            y={menuPos.y}
-            onAdd={handleAdd}
-            onClose={() => setShowAdd(false)}
-          />
-        )}
-
-        {/* Patterns "+" menu */}
-        {patternMenu.backdrop}
-        {patternMenu.menu && (
-          <div
-            className="fixed c-menu-popup min-w-[180px] z-50"
-            style={{ left: patternMenu.menu.x, top: patternMenu.menu.y }}
-            onClick={(e) => e.stopPropagation()}
+    <div className="h-full bg-surface-1 flex flex-col">
+      <div className="px-4 py-2.5 border-b border-border flex items-center justify-between">
+        <div className="flex items-center gap-1">
+          <button
+            className={`text-[12px] font-semibold px-1.5 py-0.5 rounded transition-colors ${tab === 'layers' ? 'text-text-primary bg-surface-2' : 'text-text-muted hover:text-text-secondary'}`}
+            onClick={() => setTab('layers')}
           >
-            <button
-              className={`c-menu-item ${!selectedId ? 'opacity-40 cursor-default' : ''}`}
-              disabled={!selectedId}
-              onClick={handleSaveSelectedAsPattern}
-            >
-              <Code size={12} /> Save selected as pattern
-            </button>
-            <button
-              className="c-menu-item"
-              onClick={handleCreateCategory}
-            >
-              <FolderPlus size={12} /> New category
-            </button>
-            <div className="border-t border-border my-1" />
-            <button
-              className="c-menu-item"
-              onClick={() => { onExportLibrary(); patternMenu.close() }}
-            >
-              <Download size={12} /> Export as Library...
-            </button>
-          </div>
+            Layers
+          </button>
+          <button
+            className={`text-[12px] font-semibold px-1.5 py-0.5 rounded transition-colors ${tab === 'patterns' ? 'text-text-primary bg-surface-2' : 'text-text-muted hover:text-text-secondary'}`}
+            onClick={handlePatternsTab}
+          >
+            Patterns
+          </button>
+          <button
+            className={`text-[12px] font-semibold px-1.5 py-0.5 rounded transition-colors ${tab === 'libraries' ? 'text-text-primary bg-surface-2' : 'text-text-muted hover:text-text-secondary'}`}
+            onClick={handleLibrariesTab}
+          >
+            Libraries
+          </button>
+        </div>
+        {tab === 'layers' && (
+          <button
+            ref={addBtnRef}
+            className="w-5 h-5 c-icon-btn hover:text-accent hover:bg-accent/10"
+            onClick={openAddMenu}
+            title="Add element"
+          >
+            <Plus size={14} />
+          </button>
         )}
+        {tab === 'patterns' && (
+          <button
+            ref={patternBtnRef}
+            className="w-5 h-5 c-icon-btn hover:text-accent hover:bg-accent/10"
+            onClick={openPatternMenu}
+            title="Add"
+          >
+            <Plus size={14} />
+          </button>
+        )}
+        {tab === 'libraries' && (
+          <button
+            className="w-5 h-5 c-icon-btn hover:text-accent hover:bg-accent/10"
+            onClick={async () => {
+              try {
+                const result = await importLibrary()
+                if (result) {
+                  useCatalogStore.getState().installLibrary(result.meta, result.data)
+                  await saveLibraryIndex(useCatalogStore.getState().libraryIndex)
+                  setActiveLibraryId(result.meta.id)
+                }
+              } catch (err) {
+                console.error('Failed to import library:', err)
+              }
+            }}
+            title="Import library"
+          >
+            <Plus size={14} />
+          </button>
+        )}
+      </div>
 
-        {tab === 'elements' && (
+      {showAdd && (
+        <AddMenu
+          x={menuPos.x}
+          y={menuPos.y}
+          onAdd={handleAdd}
+          onClose={() => setShowAdd(false)}
+        />
+      )}
+
+      {/* Patterns "+" menu */}
+      {patternMenu.backdrop}
+      {patternMenu.menu && (
+        <div
+          className="fixed c-menu-popup min-w-[180px] z-50"
+          style={{ left: patternMenu.menu.x, top: patternMenu.menu.y }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            className={`c-menu-item ${!selectedId ? 'opacity-40 cursor-default' : ''}`}
+            disabled={!selectedId}
+            onClick={handleSaveSelectedAsPattern}
+          >
+            <Code size={12} /> Save selected as pattern
+          </button>
+          <button
+            className="c-menu-item"
+            onClick={handleCreateCategory}
+          >
+            <FolderPlus size={12} /> New category
+          </button>
+          <div className="border-t border-border my-1" />
+          <button
+            className="c-menu-item"
+            onClick={() => { onExportLibrary(); patternMenu.close() }}
+          >
+            <Download size={12} /> Export as Library...
+          </button>
+        </div>
+      )}
+
+      {tab === 'layers' && (
+        <TreeDndProvider>
           <div className="flex-1 overflow-y-auto flex flex-col">
             {/* Page list */}
             <div className="px-1 pt-1 pb-0.5 flex flex-col gap-0.5">
@@ -230,48 +230,48 @@ export function TreePanel({ onExportLibrary }: TreePanelProps) {
               )}
             </div>
           </div>
-        )}
+        </TreeDndProvider>
+      )}
 
-        {tab === 'patterns' && (
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <PatternsPanel ref={patternPanelRef} source={{ type: 'internal' }} />
-          </div>
-        )}
+      {tab === 'patterns' && (
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <PatternsPanel ref={patternPanelRef} source={{ type: 'internal' }} />
+        </div>
+      )}
 
-        {tab === 'libraries' && (
-          <div className="flex-1 flex flex-col overflow-hidden">
-            {libraryIndex.length === 0 ? (
-              <div className="flex-1 flex items-center justify-center">
-                <span className="text-text-muted text-[12px]">No libraries installed</span>
-              </div>
-            ) : (
-              <>
-                <div className="px-2 py-1.5 flex items-center gap-1.5">
-                  <div className="flex-1 min-w-0">
-                    <Select
-                      value={libraryIndex.some((l) => l.id === activeLibraryId) ? activeLibraryId! : libraryIndex[0].id}
-                      options={libraryIndex.map((lib) => ({ value: lib.id, label: lib.name }))}
-                      onChange={setActiveLibraryId}
-                      className="w-full"
-                    />
-                  </div>
-                  <button
-                    className="w-5 h-5 shrink-0 c-icon-btn hover:text-accent hover:bg-accent/10"
-                    onClick={() => setShowManageLibraries(true)}
-                    title="Manage libraries"
-                  >
-                    <Settings size={14} />
-                  </button>
+      {tab === 'libraries' && (
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {libraryIndex.length === 0 ? (
+            <div className="flex-1 flex items-center justify-center">
+              <span className="text-text-muted text-[12px]">No libraries installed</span>
+            </div>
+          ) : (
+            <>
+              <div className="px-2 py-1.5 flex items-center gap-1.5">
+                <div className="flex-1 min-w-0">
+                  <Select
+                    value={libraryIndex.some((l) => l.id === activeLibraryId) ? activeLibraryId! : libraryIndex[0].id}
+                    options={libraryIndex.map((lib) => ({ value: lib.id, label: lib.name }))}
+                    onChange={setActiveLibraryId}
+                    className="w-full"
+                  />
                 </div>
-                <PatternsPanel source={{ type: 'library', libraryId: (libraryIndex.some((l) => l.id === activeLibraryId) ? activeLibraryId! : libraryIndex[0].id) }} />
-              </>
-            )}
-          </div>
-        )}
-      </div>
+                <button
+                  className="w-5 h-5 shrink-0 c-icon-btn hover:text-accent hover:bg-accent/10"
+                  onClick={() => setShowManageLibraries(true)}
+                  title="Manage libraries"
+                >
+                  <Settings size={14} />
+                </button>
+              </div>
+              <PatternsPanel source={{ type: 'library', libraryId: (libraryIndex.some((l) => l.id === activeLibraryId) ? activeLibraryId! : libraryIndex[0].id) }} />
+            </>
+          )}
+        </div>
+      )}
 
       {/* Modals */}
       <ManageLibrariesModal open={showManageLibraries} onOpenChange={setShowManageLibraries} />
-    </TreeDndProvider>
+    </div>
   )
 }

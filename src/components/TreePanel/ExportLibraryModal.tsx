@@ -126,7 +126,7 @@ export function ExportLibraryModal({ open, onOpenChange }: ExportLibraryModalPro
             Cancel
           </button>
           <button
-            className="px-3 py-1.5 rounded-md text-[12px] text-text-primary bg-accent hover:bg-accent-hover transition-colors disabled:opacity-50"
+            className="px-3 py-1.5 rounded-md text-[12px] text-surface-0 font-medium bg-accent hover:bg-accent-hover transition-colors disabled:opacity-50"
             onClick={handleExport}
             disabled={!name.trim() || exporting}
           >

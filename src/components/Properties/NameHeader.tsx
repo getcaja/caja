@@ -4,9 +4,9 @@ import { useFrameStore } from '../../store/frameStore'
 import { Select } from '../ui/Select'
 import { TYPE_BADGE_STYLES, TYPE_BADGE_LABELS, getBadgeKey, BOX_TAG_OPTIONS, TEXT_TAG_OPTIONS } from './constants'
 
-function getTagOptions(type: Frame['type']) {
+function getTagOptions(type: Frame['type'], tag?: string) {
   if (type === 'box') return BOX_TAG_OPTIONS
-  if (type === 'text') return TEXT_TAG_OPTIONS
+  if (type === 'text' && tag !== 'a') return TEXT_TAG_OPTIONS
   return null
 }
 
@@ -20,10 +20,10 @@ export function NameHeader({ frame, isRoot }: { frame: Frame; isRoot: boolean })
   const renameFrame = useFrameStore((s) => s.renameFrame)
   const updateFrame = useFrameStore((s) => s.updateFrame)
   const toggleHidden = useFrameStore((s) => s.toggleHidden)
-  const key = getBadgeKey(frame.type, isRoot, 'tag' in frame ? (frame as { tag?: string }).tag : undefined)
-
-  const tagOptions = getTagOptions(frame.type)
-  const currentTag = ('tag' in frame ? (frame as { tag?: string }).tag : undefined) || getTagDefault(frame.type)
+  const frameTag = 'tag' in frame ? (frame as { tag?: string }).tag : undefined
+  const key = getBadgeKey(frame.type, isRoot, frameTag)
+  const tagOptions = getTagOptions(frame.type, frameTag)
+  const currentTag = frameTag || getTagDefault(frame.type)
 
   return (
     <div className="-mx-3 px-3 border-b border-border pb-3 mb-3 flex flex-col gap-2">

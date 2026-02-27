@@ -303,14 +303,7 @@ const handlers: Record<string, ToolHandler> = {
 
   async screenshot() {
     const { domToPng } = await import('modern-screenshot')
-    let iframeWin = getStore().iframeWindow
-    // Fallback: find iframe from DOM if store reference is stale (e.g., after HMR)
-    if (!iframeWin) {
-      const iframe = document.querySelector('iframe[title="Caja Canvas"]') as HTMLIFrameElement | null
-      iframeWin = iframe?.contentWindow ?? null
-      if (iframeWin) getStore().setIframeWindow(iframeWin)
-    }
-    const el = iframeWin?.document.getElementById('caja-root')
+    const el = document.getElementById('caja-canvas')
     if (!el) return { success: false, error: 'Canvas element not found' }
 
     // Temporarily deselect to remove editor outlines

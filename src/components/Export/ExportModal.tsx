@@ -72,7 +72,7 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
           <div className="flex gap-2">
             <button
               type="button"
-              className="px-3 py-1.5 text-[12px] bg-accent text-white rounded-md hover:opacity-85 transition-opacity"
+              className="px-3 py-1.5 text-[12px] bg-accent text-surface-0 font-medium rounded-md hover:opacity-85 transition-opacity"
               onClick={handleCopy}
             >
               {copied ? 'Copied!' : 'Copy'}

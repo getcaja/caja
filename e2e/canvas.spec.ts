@@ -1,8 +1,7 @@
 /**
  * Canvas E2E tests — runs in WebKit (matches Tauri WKWebView).
  *
- * Architecture: The canvas renders inside an iframe. We access the iframe's
- * content via page.frameLocator('iframe[title="Caja Canvas"]').
+ * Architecture: The canvas renders inline via #caja-canvas container.
  *
  * State is seeded via localStorage before the app loads.
  */
@@ -222,7 +221,7 @@ test.describe('Canvas outline rendering', () => {
 })
 
 test.describe('Canvas visual regression', () => {
-  test('selection outline does not leak to iframe border', async ({ page }) => {
+  test('selection outline does not leak to canvas border', async ({ page }) => {
     await seedAndLoad(page, [
       makeBox('frame-1', 'Box', [makeText('text-1', 'Text', 'Hello')]),
     ])
@@ -270,8 +269,8 @@ test.describe('Canvas visual regression', () => {
       }),
     ])
 
-    const iframe = page.locator('iframe[title="Caja Canvas"]')
-    await expect(iframe).toHaveScreenshot('basic-card-layout.png', {
+    const canvas = canvasFrame(page)
+    await expect(canvas).toHaveScreenshot('basic-card-layout.png', {
       maxDiffPixelRatio: 0.01,
     })
   })

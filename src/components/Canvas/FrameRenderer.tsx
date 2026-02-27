@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useLayoutEffect, useCallback, useSyncExter
 import { ImageIcon } from 'lucide-react'
 import type { Frame } from '../../types/frame'
 import { frameToClasses } from '../../utils/frameToClasses'
+import { toContainerQueries } from '../../utils/responsiveClasses'
 import { useFrameStore, isRootId, findInTree } from '../../store/frameStore'
 import { resolveCanvasDrop, getFrameDepth } from '../../utils/canvasDrop'
 import { resolveRenderSrc, subscribeAssets, getAssetSnapshot } from '../../lib/assetOps'
@@ -81,8 +82,8 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
   const isEmpty = isBox && frame.children.length === 0 && !hasVisualPresence
   const isDragged = canvasDragId === frame.id
 
-  // Tailwind classes (source of truth — same in editor and export)
-  const tailwind = frameToClasses(frame)
+  // Tailwind classes — container query prefixes for canvas rendering
+  const tailwind = toContainerQueries(frameToClasses(frame))
 
   // In preview mode, infer cursor from semantic tag
   const previewCursor = previewMode && 'tag' in frame && (frame.tag === 'a' || frame.tag === 'button' || frame.type === 'button')
@@ -133,8 +134,7 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
     setEditingText(false)
   }
 
-
-  // Click+drag to move elements — line mode with Cmd to unlock nesting
+  // Click+drag to move elements — pointer-capture system with line mode + Cmd nesting
   const onDragPointerDown = useCallback((e: React.PointerEvent) => {
     if (e.button !== 0) return
     e.stopPropagation()
@@ -156,16 +156,20 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
       try { captureTarget.releasePointerCapture(pointerId) } catch { /* expected: browser may have already released capture */ }
       if (dragging) {
         const s = useFrameStore.getState()
-        if (commit && s.canvasDragOver) {
-          const { parentId, index: visualIdx } = s.canvasDragOver
-          // Visual → logical: moveFrame extracts first, then inserts at index
-          const parentFrame = findInTree(s.root, parentId)
-          let idx = visualIdx
-          if (parentFrame?.type === 'box') {
-            const dragPos = parentFrame.children.findIndex(c => c.id === frame.id)
-            if (dragPos >= 0 && visualIdx > dragPos) idx--
+        if (commit) {
+          // Synchronous resolve at final pointer position — avoids stale rAF state
+          const result = resolveCanvasDrop(doc, lastCx, lastCy, frame.id, s.root, cmdHeld ? null : maxDropDepth)
+          if (result) {
+            const { parentId, index: visualIdx } = result
+            // Visual → logical: moveFrame extracts first, then inserts at index
+            const parentFrame = findInTree(s.root, parentId)
+            let idx = visualIdx
+            if (parentFrame?.type === 'box') {
+              const dragPos = parentFrame.children.findIndex(c => c.id === frame.id)
+              if (dragPos >= 0 && visualIdx > dragPos) idx--
+            }
+            s.moveFrame(frame.id, parentId, idx)
           }
-          s.moveFrame(frame.id, parentId, idx)
         }
         s.setCanvasDragOver(null)
         s.setCanvasDrag(null)

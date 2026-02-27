@@ -1,5 +1,5 @@
-import { Trash2 } from 'lucide-react'
 import { useFrameStore } from '../../store/frameStore'
+import { PagePanel } from './PagePanel'
 import { NameHeader } from './NameHeader'
 import { AttributesSection } from './AttributesSection'
 import { LayoutSection } from './LayoutSection'
@@ -23,30 +23,10 @@ import { AdvancedSection } from './AdvancedSection'
 export function Properties() {
   const selected = useFrameStore((s) => s.getSelected())
   const rootId = useFrameStore((s) => s.getRootId())
-  const selectedIds = useFrameStore((s) => s.selectedIds)
-  const removeSelected = useFrameStore((s) => s.removeSelected)
   const advancedMode = useFrameStore((s) => s.advancedMode)
 
-  if (selectedIds.size > 1) {
-    return (
-      <div className="h-full bg-surface-1 p-4 flex flex-col items-center justify-center gap-3">
-        <span className="text-text-secondary text-[12px]">{selectedIds.size} elements selected</span>
-        <button
-          onClick={removeSelected}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] text-destructive bg-destructive/10 hover:bg-destructive/20 transition-colors"
-        >
-          <Trash2 size={12} /> Delete all
-        </button>
-      </div>
-    )
-  }
-
   if (!selected) {
-    return (
-      <div className="h-full bg-surface-1 p-4 flex items-center justify-center">
-        <span className="text-text-muted text-[12px]">Select an element</span>
-      </div>
-    )
+    return <PagePanel />
   }
 
   const isRoot = selected.id === rootId

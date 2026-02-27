@@ -17,7 +17,7 @@
 /* ── Text selection highlight ── */
 
 [data-frame-id] ::selection {
-  background: var(--color-selection);
+  background: color-mix(in srgb, var(--color-accent) 30%, transparent);
 }
 
 /* ── Prevent text selection in canvas (design tool, not document viewer) ── */
@@ -71,7 +71,7 @@
 
 /* ── Cmd+click navigable links ── */
 
-body.cmd-held a[data-navigable],
-body.cmd-held a[data-navigable] * {
+[data-cmd-held] a[data-navigable],
+[data-cmd-held] a[data-navigable] * {
   cursor: pointer !important;
 }

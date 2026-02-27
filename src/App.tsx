@@ -9,6 +9,7 @@ import { saveFile, saveFileAs, openFile } from './lib/fileOps'
 import { saveLibrary } from './lib/libraryOps'
 import { useCatalogStore, loadPatternsFromStorage } from './store/catalogStore'
 import { ExportLibraryModal } from './components/TreePanel/ExportLibraryModal'
+import { WorkspaceDndProvider } from './components/TreePanel/WorkspaceDndContext'
 
 import { startMcpBridge, stopMcpBridge } from './mcp/bridge'
 import { TitleBar } from './components/TitleBar/TitleBar'
@@ -76,7 +77,6 @@ function App() {
   const filePath = useFrameStore((s) => s.filePath)
   const dirty = useFrameStore((s) => s.dirty)
   const previewMode = useFrameStore((s) => s.previewMode)
-  const iframeWindow = useFrameStore((s) => s.iframeWindow)
   const activePageId = useFrameStore((s) => s.activePageId)
   const pages = useFrameStore((s) => s.pages)
 
@@ -226,9 +226,7 @@ function App() {
             // Theme menu items: "theme-<id>" → strip prefix
             if (e.payload.startsWith('theme-')) {
               const themeId = e.payload.slice(6) // "theme-default-dark" → "default-dark"
-              const iframeDoc = useFrameStore.getState().iframeWindow?.document
-              const docs = [document, ...(iframeDoc ? [iframeDoc] : [])]
-              switchTheme(themeId, docs)
+              switchTheme(themeId)
             }
         }
       }).then((fn) => {
@@ -388,12 +386,10 @@ function App() {
     }
 
     window.addEventListener('keydown', handler)
-    iframeWindow?.addEventListener('keydown', handler)
     return () => {
       window.removeEventListener('keydown', handler)
-      iframeWindow?.removeEventListener('keydown', handler)
     }
-  }, [undo, redo, removeFrame, removeSelected, reorderFrame, selectedId, handleSave, handleSaveAs, handleOpen, iframeWindow])
+  }, [undo, redo, removeFrame, removeSelected, reorderFrame, selectedId, handleSave, handleSaveAs, handleOpen])
 
   // Resize drag — full-viewport overlay prevents iframe from stealing events.
   // Uses pointermove/pointerup (NOT mousemove/mouseup) because preventDefault()
@@ -427,35 +423,37 @@ function App() {
     <TooltipProvider>
       <div className="h-full flex flex-col bg-surface-0 select-none">
         <TitleBar />
-        {/* Full-viewport overlay during panel resize — prevents iframe from stealing events */}
+        {/* Full-viewport overlay during panel resize — prevents canvas from stealing events */}
         {isResizing && <div className="fixed inset-0 z-50 cursor-col-resize" />}
         {/* Main panels */}
         <div className="flex-1 flex overflow-hidden">
-          {!previewMode && (
-            <>
-              <div style={{ width: leftWidth }} className="shrink-0 border-r border-border">
-                <TreePanel onExportLibrary={() => setShowExportLibrary(true)} />
-              </div>
-              <div
-                className="w-[7px] shrink-0 cursor-col-resize bg-transparent hover:bg-accent/40 transition-colors -ml-[4px] z-10"
-                onPointerDown={(e) => startDrag('left', e)}
-              />
-            </>
-          )}
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <Canvas />
-          </div>
-          {!previewMode && (
-            <>
-              <div
-                className="w-[7px] shrink-0 cursor-col-resize bg-transparent hover:bg-accent/40 transition-colors -mr-[4px] z-10"
-                onPointerDown={(e) => startDrag('right', e)}
-              />
-              <div style={{ width: rightWidth }} className="shrink-0 border-l border-border">
-                <RightPanel />
-              </div>
-            </>
-          )}
+          <WorkspaceDndProvider>
+            {!previewMode && (
+              <>
+                <div style={{ width: leftWidth }} className="shrink-0 border-r border-border">
+                  <TreePanel onExportLibrary={() => setShowExportLibrary(true)} />
+                </div>
+                <div
+                  className="w-[7px] shrink-0 cursor-col-resize bg-transparent hover:bg-accent/40 transition-colors -ml-[4px] z-10"
+                  onPointerDown={(e) => startDrag('left', e)}
+                />
+              </>
+            )}
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <Canvas />
+            </div>
+            {!previewMode && (
+              <>
+                <div
+                  className="w-[7px] shrink-0 cursor-col-resize bg-transparent hover:bg-accent/40 transition-colors -mr-[4px] z-10"
+                  onPointerDown={(e) => startDrag('right', e)}
+                />
+                <div style={{ width: rightWidth }} className="shrink-0 border-l border-border">
+                  <RightPanel />
+                </div>
+              </>
+            )}
+          </WorkspaceDndProvider>
         </div>
 
         {/* Export modals */}

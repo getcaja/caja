@@ -115,19 +115,19 @@ export function buildOverlayRules(state: {
   const rules: string[] = []
 
   if (showSel && selectedId) {
-    rules.push(`[data-frame-id="${selectedId}"] { outline: 2px solid var(--color-focus) !important; outline-offset: -2px !important; }`)
+    rules.push(`[data-frame-id="${selectedId}"] { outline: 2px solid var(--color-accent) !important; outline-offset: -2px !important; }`)
     const exc = canvasDragId ? `:not([data-frame-id="${canvasDragId}"])` : ''
-    rules.push(`[data-frame-id="${selectedId}"] > [data-frame-id]${exc} { outline: 1px dotted var(--color-focus) !important; outline-offset: -1px; }`)
+    rules.push(`[data-frame-id="${selectedId}"] > [data-frame-id]${exc} { outline: 1px dotted var(--color-accent) !important; outline-offset: -1px; }`)
   }
 
   if (showHov && hoveredId) {
-    rules.push(`[data-frame-id="${hoveredId}"] { outline: 1px solid var(--color-focus) !important; outline-offset: -1px !important; }`)
-    rules.push(`[data-frame-id="${hoveredId}"] > [data-frame-id] { outline: 1px dotted var(--color-focus) !important; outline-offset: -1px; }`)
+    rules.push(`[data-frame-id="${hoveredId}"] { outline: 1px solid var(--color-accent) !important; outline-offset: -1px !important; }`)
+    rules.push(`[data-frame-id="${hoveredId}"] > [data-frame-id] { outline: 1px dotted var(--color-accent) !important; outline-offset: -1px; }`)
   }
 
   if (showDragGuides && dragTargetParentId) {
     const exc = canvasDragId ? `:not([data-frame-id="${canvasDragId}"])` : ''
-    rules.push(`[data-frame-id="${dragTargetParentId}"] > [data-frame-id]${exc} { outline: 1px dotted var(--color-focus) !important; outline-offset: -1px; }`)
+    rules.push(`[data-frame-id="${dragTargetParentId}"] > [data-frame-id]${exc} { outline: 1px dotted var(--color-accent) !important; outline-offset: -1px; }`)
   }
 
   return rules
@@ -184,7 +184,7 @@ export function SelectionOverlay() {
             left: lineRect.left,
             width: lineRect.width,
             height: lineRect.height,
-            background: 'var(--color-focus)',
+            background: 'var(--color-accent)',
             borderRadius: 2,
           }} />
         </div>

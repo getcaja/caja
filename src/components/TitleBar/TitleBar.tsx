@@ -39,7 +39,7 @@ export function TitleBar() {
           className="flex items-center gap-1.5 px-2.5 h-[24px] rounded-md text-[11px] text-text-muted hover:text-text-secondary hover:bg-surface-2 transition-colors"
         >
           <div
-            className={`w-1.5 h-1.5 rounded-full ${mcpConnected ? 'bg-green-500' : 'bg-text-muted'}`}
+            className={`w-1.5 h-1.5 rounded-full ${mcpConnected ? 'bg-accent' : 'bg-text-muted'}`}
           />
           <span>MCP</span>
         </button>

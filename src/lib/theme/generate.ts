@@ -16,9 +16,7 @@ export interface ThemeTokens {
   'border-accent': string
   accent: string
   'accent-hover': string
-  focus: string
   destructive: string
-  selection: string
   'canvas-bg': string
 }
 
@@ -26,7 +24,6 @@ export function deriveTokens(theme: CajaTheme): ThemeTokens {
   const surface = ThemeColor.parse(theme.base.surface)
   const text = ThemeColor.parse(theme.base.text)
   const accent = ThemeColor.parse(theme.base.accent)
-  const focus = ThemeColor.parse(theme.base.focus)
 
   return {
     'surface-0': surface.css(),
@@ -40,9 +37,7 @@ export function deriveTokens(theme: CajaTheme): ThemeTokens {
     'border-accent': surface.lift(0.189).css(),
     accent: accent.css(),
     'accent-hover': accent.lift(0.066).css(),
-    focus: focus.css(),
     destructive: ThemeColor.parse(theme.base.destructive).css(),
-    selection: focus.translucify(0.7).css(),
     'canvas-bg': surface.lower(0.088).css(),
   }
 }
@@ -75,10 +70,10 @@ export function getActiveTheme(): CajaTheme {
   return DEFAULT_THEME
 }
 
-/** Persist theme choice and apply to given documents */
+/** Persist theme choice and apply to the document */
 export function switchTheme(themeId: string, docs: Document[] = [document]): CajaTheme {
   const theme = THEMES.find((t) => t.id === themeId) ?? DEFAULT_THEME
-  try { localStorage.setItem(THEME_STORAGE_KEY, theme.id) } catch { /* expected: SSR or iframe without localStorage */ }
+  try { localStorage.setItem(THEME_STORAGE_KEY, theme.id) } catch { /* expected: SSR */ }
   for (const doc of docs) applyTheme(theme, doc)
   return theme
 }

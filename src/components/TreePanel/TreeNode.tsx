@@ -1,12 +1,12 @@
-import { useState, useRef, useEffect } from 'react'
+import { useRef, useEffect, useCallback, useMemo } from 'react'
+import { useDraggable, useDroppable, useDndContext } from '@dnd-kit/core'
 import type { Frame } from '../../types/frame'
 import { useFrameStore, findInTree } from '../../store/frameStore'
 import { useCatalogStore } from '../../store/catalogStore'
-import { AddMenu } from './AddMenu'
 import { useTreeDnd, type DropPosition } from './TreeDndContext'
 import { useContextMenu } from './hooks/useContextMenu'
 import { useInlineEdit } from './hooks/useInlineEdit'
-import { ChevronRight, ChevronDown, Square, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse, Plus, Copy, Trash2, Group, SquarePlus, Eye, EyeOff, Link, Bookmark } from 'lucide-react'
+import { ChevronRight, ChevronDown, Square, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse, Copy, Trash2, Group, SquarePlus, Eye, EyeOff, Link, Bookmark } from 'lucide-react'
 
 interface TreeNodeProps {
   frame: Frame
@@ -16,21 +16,11 @@ interface TreeNodeProps {
   isRoot?: boolean
 }
 
-function isDescendant(frame: Frame, targetId: string): boolean {
-  if (frame.id === targetId) return true
-  if (frame.type === 'box') {
-    return frame.children.some((c) => isDescendant(c, targetId))
-  }
-  return false
-}
-
 export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = false }: TreeNodeProps) {
   const selectedId = useFrameStore((s) => s.selectedId)
   const selectedIds = useFrameStore((s) => s.selectedIds)
   const collapsedIds = useFrameStore((s) => s.collapsedIds)
   const select = useFrameStore((s) => s.select)
-  const selectMulti = useFrameStore((s) => s.selectMulti)
-  const removeSelected = useFrameStore((s) => s.removeSelected)
   const hover = useFrameStore((s) => s.hover)
   const toggleCollapse = useFrameStore((s) => s.toggleCollapse)
   const addChild = useFrameStore((s) => s.addChild)
@@ -39,15 +29,12 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
   const wrapInFrame = useFrameStore((s) => s.wrapInFrame)
   const renameFrame = useFrameStore((s) => s.renameFrame)
   const toggleHidden = useFrameStore((s) => s.toggleHidden)
-  const moveFrame = useFrameStore((s) => s.moveFrame)
 
-  const { dragId, overId, overPosition, startDrag, setOver, endDrag } = useTreeDnd()
+  const { activeId, overId, overPosition } = useTreeDnd()
+  const { active: dndActive } = useDndContext()
 
   const nameEdit = useInlineEdit((v) => renameFrame(frame.id, v))
   const ctxMenu = useContextMenu()
-  const [showAdd, setShowAdd] = useState(false)
-  const [menuPos, setMenuPos] = useState({ x: 0, y: 0 })
-  const addBtnRef = useRef<HTMLButtonElement>(null)
   const rowRef = useRef<HTMLDivElement>(null)
 
   const isSelected = selectedId === frame.id || selectedIds.has(frame.id)
@@ -63,85 +50,45 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
   const isBox = frame.type === 'box'
   const hasChildren = isBox && frame.children.length > 0
   const isCollapsed = collapsedIds.has(frame.id)
-  const isDragging = dragId === frame.id
-  const isOver = overId === frame.id && dragId !== frame.id
+  // Use dnd-kit's own context for isDragging — most reliable source of truth
+  const isDragging = dndActive !== null && String(dndActive.id) === frame.id
+  const isOver = overId === frame.id && !isDragging
 
   const isLeaf = frame.type !== 'box'
   const addTargetId = isLeaf ? parentId : frame.id
 
-  const openAddMenu = () => {
-    if (addBtnRef.current) {
-      const rect = addBtnRef.current.getBoundingClientRect()
-      setMenuPos({ x: rect.left, y: rect.bottom + 4 })
-    }
-    setShowAdd(true)
-  }
+  /* ── dnd-kit hooks ──────────────────────────────────────── */
 
-  const getDropPosition = (e: React.DragEvent): DropPosition => {
-    const rect = rowRef.current?.getBoundingClientRect()
-    if (!rect) return 'after'
-    const y = e.clientY - rect.top
-    const third = rect.height / 3
-    if (y < third) return 'before'
-    if (y > third * 2 || !isBox) return 'after'
-    return 'inside'
-  }
+  const { setNodeRef: setDraggableRef, listeners, attributes } = useDraggable({
+    id: frame.id,
+    disabled: isRoot || nameEdit.editing,
+  })
 
-  const handleDragStart = (e: React.DragEvent) => {
-    e.stopPropagation()
-    e.dataTransfer.effectAllowed = 'move'
-    e.dataTransfer.setData('text/plain', frame.id)
-    startDrag(frame.id)
-  }
+  const hasExpandedChildren = isBox && hasChildren && !isCollapsed
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (!dragId || dragId === frame.id) return
-    const root = useFrameStore.getState().root
-    if (root) {
-      const dragNode = findInTree(root, dragId)
-      if (dragNode && isDescendant(dragNode, frame.id)) return
-    }
-    e.dataTransfer.dropEffect = 'move'
-    setOver(frame.id, getDropPosition(e))
-  }
+  const droppableData = useMemo(
+    () => ({ parentId, index, isBox, hasExpandedChildren }),
+    [parentId, index, isBox, hasExpandedChildren],
+  )
 
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.stopPropagation()
-    if (overId === frame.id) {
-      setOver(null, null)
-    }
-  }
+  const { setNodeRef: setDroppableRef } = useDroppable({
+    id: frame.id,
+    data: droppableData,
+  })
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (!dragId || dragId === frame.id || !overPosition) {
-      endDrag()
-      return
-    }
-
-    const pos = getDropPosition(e)
-
-    if (pos === 'inside' && isBox) {
-      moveFrame(dragId, frame.id, frame.children.length)
-    } else if (pos === 'before' && parentId) {
-      moveFrame(dragId, parentId, index)
-    } else if (pos === 'after' && parentId) {
-      moveFrame(dragId, parentId, index + 1)
-    }
-
-    endDrag()
-  }
-
-  const handleDragEnd = () => {
-    endDrag()
-  }
+  // Merge draggable + droppable + local refs
+  const setNodeRef = useCallback(
+    (el: HTMLElement | null) => {
+      setDraggableRef(el)
+      setDroppableRef(el)
+      rowRef.current = el
+    },
+    [setDraggableRef, setDroppableRef],
+  )
 
   // Drop indicator styles
   let dropIndicator: React.ReactNode = null
-  if (isOver && overPosition && dragId) {
+  if (isOver && overPosition && activeId) {
     if (overPosition === 'before') {
       dropIndicator = (
         <div
@@ -160,26 +107,21 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
   }
 
   return (
-    <div className="relative">
+    <div className="relative" style={isDragging ? { opacity: 0.3 } : undefined}>
       {dropIndicator}
       <div
-        ref={rowRef}
-        draggable={!nameEdit.editing && !isRoot}
-        className={`flex items-center gap-1.5 py-1 px-1 rounded-md cursor-pointer group transition-all ${
+        ref={setNodeRef}
+        {...listeners}
+        {...attributes}
+        className={`flex items-center gap-1.5 py-1 px-1 rounded-md cursor-default group transition-all ${
           isSelected
             ? 'tree-node-selected text-text-primary'
             : isOver && overPosition === 'inside'
-              ? 'bg-[var(--color-focus)]/10 outline outline-1 outline-[var(--color-focus)]/40'
-              : 'hover:bg-[var(--color-focus)]/8 text-text-secondary hover:text-text-primary'
-        } ${isDragging ? 'opacity-40' : ''} ${frame.hidden ? 'opacity-40' : ''}`}
+              ? 'bg-[var(--color-accent)]/10 outline outline-1 outline-[var(--color-accent)]/40'
+              : 'hover:bg-[var(--color-accent)]/8 text-text-secondary hover:text-text-primary'
+        } ${frame.hidden ? 'opacity-40' : ''}`}
         style={{ paddingLeft: depth * 16 + 4 }}
-        onClick={(e) => {
-          if ((e.metaKey || e.ctrlKey) && !isRoot) {
-            selectMulti(frame.id)
-          } else {
-            select(frame.id)
-          }
-        }}
+        onClick={() => select(frame.id)}
         onMouseEnter={() => hover(frame.id)}
         onMouseLeave={() => hover(null)}
         onDoubleClick={() => {
@@ -189,11 +131,6 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
           select(frame.id)
           ctxMenu.open(e)
         }}
-        onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onDragEnd={handleDragEnd}
       >
         {/* Collapse chevron */}
         <span
@@ -210,15 +147,7 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
         </span>
 
         {/* Type icon */}
-        <span className={`shrink-0 ${
-          isRoot ? 'text-blue-400'
-          : frame.type === 'text' && 'tag' in frame && frame.tag === 'a' ? 'text-indigo-400'
-          : frame.type === 'text' ? 'text-emerald-400'
-          : frame.type === 'image' ? 'text-violet-400'
-          : frame.type === 'button' ? 'text-amber-400'
-          : frame.type === 'input' || frame.type === 'textarea' || frame.type === 'select' ? 'text-sky-400'
-          : 'text-text-muted'
-        }`}>
+        <span className="shrink-0">
           {frame.type === 'text' && 'tag' in frame && frame.tag === 'a' ? <Link size={12} />
             : frame.type === 'text' ? <Type size={12} />
             : frame.type === 'image' ? <ImageIcon size={12} />
@@ -244,57 +173,20 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
           <span className="flex-1 text-[12px] truncate">{isRoot ? 'Body' : frame.name}</span>
         )}
 
-        {/* Actions on hover */}
-        <div className={`${frame.hidden ? 'flex' : 'hidden group-hover:flex'} items-center gap-0.5 shrink-0`}>
-          {addTargetId && !frame.hidden && (
-            <button
-              ref={addBtnRef}
-              className="w-4 h-4 c-icon-btn text-[10px] hover:text-accent hover:bg-accent/10"
-              onClick={(e) => {
-                e.stopPropagation()
-                openAddMenu()
-              }}
-              title="Add"
-            >
-              <Plus size={12} />
-            </button>
-          )}
-          {!isRoot && !frame.hidden && (
-            <button
-              className="w-4 h-4 c-icon-btn text-[10px] hover:text-text-secondary hover:bg-surface-2/60"
-              onClick={(e) => {
-                e.stopPropagation()
-                duplicateFrame(frame.id)
-              }}
-              title="Duplicate"
-            >
-              <Copy size={10} />
-            </button>
-          )}
-          {!isRoot && (
-            <button
-              className={`w-4 h-4 c-icon-btn text-[10px] ${frame.hidden ? 'text-text-muted' : 'hover:text-text-secondary hover:bg-surface-2/60'}`}
-              onClick={(e) => {
-                e.stopPropagation()
-                toggleHidden(frame.id)
-              }}
-              title={frame.hidden ? 'Show' : 'Hide'}
-            >
-              {frame.hidden ? <EyeOff size={10} /> : <Eye size={10} />}
-            </button>
-          )}
-        </div>
+        {/* Visibility toggle on hover */}
+        {!isRoot && (
+          <button
+            className={`w-4 h-4 c-icon-btn text-[10px] shrink-0 ${frame.hidden ? '' : 'hidden group-hover:flex'} ${frame.hidden ? 'text-text-muted' : 'hover:text-text-secondary hover:bg-surface-2/60'}`}
+            onClick={(e) => {
+              e.stopPropagation()
+              toggleHidden(frame.id)
+            }}
+            title={frame.hidden ? 'Show' : 'Hide'}
+          >
+            {frame.hidden ? <EyeOff size={10} /> : <Eye size={10} />}
+          </button>
+        )}
       </div>
-
-      {/* Add menu (fixed position) */}
-      {showAdd && addTargetId && (
-        <AddMenu
-          x={menuPos.x}
-          y={menuPos.y}
-          onAdd={(type) => { addChild(addTargetId, type); setShowAdd(false) }}
-          onClose={() => setShowAdd(false)}
-        />
-      )}
 
       {/* Right-click context menu (fixed position) */}
       {ctxMenu.backdrop}
@@ -390,21 +282,12 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
           {!isRoot && (
             <>
               <div className="border-t border-border my-1" />
-              {selectedIds.size > 1 ? (
-                <button
-                  className="c-menu-item text-destructive"
-                  onClick={() => { removeSelected(); ctxMenu.close() }}
-                >
-                  <Trash2 size={12} /> Delete {selectedIds.size} elements
-                </button>
-              ) : (
-                <button
-                  className="c-menu-item"
-                  onClick={() => { removeFrame(frame.id); ctxMenu.close() }}
-                >
-                  <Trash2 size={12} /> Delete
-                </button>
-              )}
+              <button
+                className="c-menu-item"
+                onClick={() => { removeFrame(frame.id); ctxMenu.close() }}
+              >
+                <Trash2 size={12} /> Delete
+              </button>
             </>
           )}
         </div>

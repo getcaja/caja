@@ -1,11 +1,13 @@
 import { useState, useMemo, useCallback, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
+import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { useFrameStore, findInTree } from '../../store/frameStore'
 import { Plus, X, ChevronRight, ChevronDown, Code, Folder } from 'lucide-react'
 import type { Pattern } from '../../types/pattern'
 import { PatternPreview } from './PatternPreview'
 import { usePatternsData } from './usePatternsData'
 import { PatternContextMenu } from './PatternContextMenu'
-import { createDragHandlers, getDropPos, type DropPosition } from './PatternDragDrop'
+import { useWorkspaceDnd } from './WorkspaceDndContext'
+import type { DropPosition } from './dndUtils'
 
 export type PatternSource =
   | { type: 'internal' }
@@ -27,6 +29,8 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
     removeEmptyCategory, moveCategory,
   } = usePatternsData(source)
 
+  const { activeId: dragId } = useWorkspaceDnd()
+
   const [rootCollapsed, setRootCollapsed] = useState(false)
   const [collapsedTags, setCollapsedTags] = useState<Set<string>>(new Set())
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -38,11 +42,6 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
     | { x: number; y: number; type: 'category'; tag: string }
     | null
   >(null)
-
-  // DnD state
-  const [dragId, setDragId] = useState<string | null>(null)
-  const [overId, setOverId] = useState<string | null>(null)
-  const [overPos, setOverPos] = useState<DropPosition | null>(null)
 
   // Pattern hover preview
   const [previewPattern, setPreviewPattern] = useState<Pattern | null>(null)
@@ -101,7 +100,7 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
   }, [dragId, onPreviewLeave])
 
   // Group: uncategorized at root, then by first tag (preserving order)
-  const { categorized, uncategorized, allTags } = useMemo(() => {
+  const { uncategorized, allTags, categorized } = useMemo(() => {
     const map = new Map<string, Pattern[]>()
     const uncat: Pattern[] = []
     const tagOrder: string[] = []
@@ -114,15 +113,11 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
         map.get(tag)!.push(s)
       }
     }
-    // Append empty categories (manually created, no patterns yet)
     for (const cat of emptyCategories) {
       if (!map.has(cat)) { map.set(cat, []); tagOrder.push(cat) }
     }
     return { categorized: map, uncategorized: uncat, allTags: tagOrder }
   }, [patterns, emptyCategories])
-
-  // DnD handlers (extracted)
-  const dnd = createDragHandlers(readOnly, patterns, source, dragId, overId, setDragId, setOverId, setOverPos)
 
   function getInsertParent(): string {
     if (selectedId) {
@@ -164,18 +159,15 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
     if (!name) { setEditingCategoryTag(null); return }
 
     if (editingCategoryTag === '__new__') {
-      // Create a new empty category
       if (!allTags.includes(name)) {
         addEmptyCategory(name)
       }
     } else if (editingCategoryTag && name !== editingCategoryTag) {
-      // Rename existing category
       for (const s of patterns) {
         if (s.tags[0] === editingCategoryTag) {
           updatePatternTags(s.id, [name, ...s.tags.slice(1)])
         }
       }
-      // Also rename in emptyCategories if present
       if (emptyCategories.includes(editingCategoryTag)) {
         removeEmptyCategory(editingCategoryTag)
         addEmptyCategory(name)
@@ -203,10 +195,8 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
 
   useImperativeHandle(ref, () => ({ createCategory }))
 
-  // Close context menu
   const closeContext = useCallback(() => setContextMenu(null), [])
 
-  const isRootOver = overId === '__root__'
   const hasContent = patterns.length > 0 || allTags.length > 0
 
   const panelRight = panelRef.current ? panelRef.current.getBoundingClientRect().right : 280
@@ -214,53 +204,20 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
   return (
     <div
       ref={panelRef}
+      data-pattern-dnd-panel
       className="h-full flex flex-col overflow-y-auto py-1 px-1"
-      onDragOver={(e) => { if (dragId) e.preventDefault() }}
-      onDrop={(e) => dnd.handleRootDrop(e, { uncategorized, movePattern, updatePatternTags })}
     >
       {/* Root "Patterns" node — visible only when there's content */}
-      {hasContent && <div
-        className={`flex items-center gap-1.5 py-1 px-1 rounded-md group transition-all ${
-          isRootOver
-            ? 'bg-[var(--color-focus)]/10 outline outline-1 outline-[var(--color-focus)]/40'
-            : highlightId === '__patterns_root__'
-              ? 'tree-node-selected text-text-primary'
-              : 'hover:bg-[var(--color-focus)]/8 text-text-secondary hover:text-text-primary'
-        }`}
-        style={{ paddingLeft: 4 }}
-        onClick={() => { if (!dragId) setHighlightId('__patterns_root__') }}
-        onDragOver={(e) => {
-          if (!dragId) return
-          e.preventDefault()
-          e.stopPropagation()
-          e.dataTransfer.dropEffect = 'move'
-          setOverId('__root__')
-          setOverPos('inside')
-        }}
-        onDragLeave={() => { if (overId === '__root__') { setOverId(null); setOverPos(null) } }}
-        onDrop={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
-          if (!dragId) return
-          const capturedDragId = dragId
-          dnd.endDrag()
-          const last = uncategorized.length > 0 ? uncategorized[uncategorized.length - 1].id : null
-          if (last && last !== capturedDragId) {
-            movePattern(capturedDragId, last, 'after')
-          } else {
-            updatePatternTags(capturedDragId, [])
-          }
-        }}
-      >
-        <span
-          className="w-3.5 h-4 flex items-center justify-center shrink-0 text-text-muted select-none cursor-pointer"
-          onClick={() => setRootCollapsed((p) => !p)}
-        >
-          {hasContent ? (rootCollapsed ? <ChevronRight size={10} /> : <ChevronDown size={10} />) : null}
-        </span>
-        <span className="shrink-0 text-blue-400"><Folder size={12} /></span>
-        <span className="flex-1 text-[12px] truncate">Patterns</span>
-      </div>}
+      {hasContent && (
+        <RootDroppable
+          readOnly={readOnly}
+          isHighlighted={highlightId === '__patterns_root__'}
+          isCollapsed={rootCollapsed}
+          hasContent={hasContent}
+          onToggle={() => setRootCollapsed((p) => !p)}
+          onClick={() => setHighlightId('__patterns_root__')}
+        />
+      )}
 
       {hasContent && !rootCollapsed && (
         <>
@@ -273,9 +230,6 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
               readOnly={readOnly}
               isEditing={!readOnly && editingId === s.id}
               editValue={editValue}
-              isDragging={dragId === s.id}
-              isOver={overId === s.id}
-              overPosition={overId === s.id ? overPos : null}
               isHighlighted={highlightId === s.id}
               onClick={() => setHighlightId(s.id)}
               onEditChange={setEditValue}
@@ -283,11 +237,6 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
               onEditCancel={() => setEditingId(null)}
               onDoubleClick={() => { if (!readOnly) startPatternRename(s) }}
               onContextMenu={(x, y) => setContextMenu({ x, y, type: 'pattern', pattern: s })}
-              onDragStart={(e) => dnd.handleDragStart(e, s.id)}
-              onDragOver={readOnly ? undefined : (e) => dnd.handleDragOver(e, s.id, false)}
-              onDragLeave={readOnly ? undefined : () => dnd.handleDragLeave(s.id)}
-              onDrop={readOnly ? undefined : (e) => dnd.handleDrop(e, s.id, false, { categorized, movePattern, updatePatternTags })}
-              onDragEnd={dnd.endDrag}
               onInsert={() => handleInsert(s)}
               onDelete={readOnly ? undefined : () => deletePattern(s.id)}
               onPreviewEnter={onPreviewEnter}
@@ -300,138 +249,30 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
             const items = categorized.get(tag) || []
             const isCollapsed = collapsedTags.has(tag)
             const isEditingCat = editingCategoryTag === tag
-            const catId = `__cat:${tag}`
-            const isCatOver = overId === catId
-            const catOverPos = isCatOver ? overPos : null
-            const isCatSelected = highlightId === catId
-            const isDraggingCat = dragId?.startsWith('__cat:')
-            const isCatDragging = dragId === catId
 
             return (
-              <div key={tag} className="relative">
-                {/* Drop indicators for category reorder */}
-                {isCatOver && catOverPos === 'before' && (
-                  <div className="absolute left-0 right-0 top-0 h-[2px] bg-accent z-10 pointer-events-none" style={{ marginLeft: 1 * 16 + 4 }} />
-                )}
-                {isCatOver && catOverPos === 'after' && (
-                  <div className="absolute left-0 right-0 bottom-0 h-[2px] bg-accent z-10 pointer-events-none" style={{ marginLeft: 1 * 16 + 4 }} />
-                )}
-
-                {/* Category row */}
-                <div
-                  draggable={!readOnly && !isEditingCat}
-                  className={`flex items-center gap-1.5 py-1 px-1 rounded-md group transition-all ${
-                    isCatOver && catOverPos === 'inside'
-                      ? 'bg-[var(--color-focus)]/10 outline outline-1 outline-[var(--color-focus)]/40'
-                      : isCatSelected
-                        ? 'tree-node-selected text-text-primary'
-                        : isCatDragging ? 'opacity-40' : 'hover:bg-[var(--color-focus)]/8 text-text-secondary hover:text-text-primary'
-                  }`}
-                  style={{ paddingLeft: 1 * 16 + 4 }}
-                  onClick={() => { if (!dragId) setHighlightId(catId) }}
-                  onDragStart={readOnly ? undefined : (e) => {
-                    e.stopPropagation()
-                    e.dataTransfer.effectAllowed = 'move'
-                    e.dataTransfer.setData('text/plain', catId)
-                    setDragId(catId)
-                  }}
-                  onDragOver={(e) => {
-                    if (!dragId || dragId === catId) return
-                    e.preventDefault()
-                    e.stopPropagation()
-                    e.dataTransfer.dropEffect = 'move'
-                    // Dragging a category → show before/after; dragging a pattern → always inside
-                    if (isDraggingCat) {
-                      const pos = getDropPos(e, e.currentTarget as HTMLElement, true)
-                      setOverId(catId)
-                      setOverPos(pos === 'inside' ? 'inside' : pos)
-                    } else {
-                      setOverId(catId)
-                      setOverPos('inside')
-                    }
-                  }}
-                  onDragLeave={() => { if (overId === catId) { setOverId(null); setOverPos(null) } }}
-                  onDrop={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    if (!dragId) return
-                    // Capture drag info before clearing state
-                    const wasDraggingCat = isDraggingCat
-                    const capturedDragId = dragId
-                    const pos = getDropPos(e, e.currentTarget as HTMLElement, true)
-                    // Clear DnD visual state FIRST (before store updates trigger re-renders)
-                    dnd.endDrag()
-                    if (wasDraggingCat) {
-                      // Category-on-category: reorder
-                      const dragTag = capturedDragId.slice('__cat:'.length)
-                      if (pos === 'inside') {
-                        moveCategory(dragTag, tag, 'after')
-                      } else {
-                        moveCategory(dragTag, tag, pos as 'before' | 'after')
-                      }
-                    } else {
-                      // Pattern into this category
-                      const last = items.length > 0 ? items[items.length - 1].id : null
-                      if (last && last !== capturedDragId) {
-                        movePattern(capturedDragId, last, 'after')
-                      } else {
-                        updatePatternTags(capturedDragId, [tag])
-                      }
-                    }
-                  }}
-                  onDragEnd={dnd.endDrag}
-                  onContextMenu={readOnly ? undefined : (e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    setContextMenu({ x: e.clientX, y: e.clientY, type: 'category', tag })
-                  }}
-                >
-                  <span
-                    className="w-3.5 h-4 flex items-center justify-center shrink-0 text-text-muted select-none cursor-pointer"
-                    onClick={(e) => { e.stopPropagation(); toggleTag(tag) }}
-                  >
-                    {isCollapsed ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
-                  </span>
-
-                  <span className="shrink-0 text-text-muted"><Folder size={12} /></span>
-
-                  {isEditingCat ? (
-                    <input
-                      autoFocus
-                      value={editCategoryValue}
-                      onChange={(e) => setEditCategoryValue(e.target.value)}
-                      onBlur={commitCategoryRename}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') commitCategoryRename()
-                        if (e.key === 'Escape') setEditingCategoryTag(null)
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                      className="flex-1 bg-surface-0 border border-accent/50 rounded-md px-1.5 py-0.5 text-[12px] text-text-primary outline-none focus:border-accent min-w-0 transition-colors"
-                    />
-                  ) : (
-                    <span
-                      className="flex-1 text-[12px] truncate cursor-default"
-                      onDoubleClick={readOnly ? undefined : (e) => { e.stopPropagation(); startCategoryRename(tag) }}
-                    >
-                      {tag}
-                    </span>
-                  )}
-
-                  {/* Delete on hover */}
-                  {!readOnly && (
-                    <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
-                      <button
-                        className="w-4 h-4 c-icon-btn text-[10px] hover:text-text-secondary hover:bg-surface-2/60"
-                        onClick={(e) => { e.stopPropagation(); deleteCategory(tag) }}
-                        title="Delete category"
-                      >
-                        <X size={10} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Children (depth 2) */}
+              <CategoryRow
+                key={tag}
+                tag={tag}
+                items={items}
+                readOnly={readOnly}
+                isCollapsed={isCollapsed}
+                isEditingCat={isEditingCat}
+                editCategoryValue={editCategoryValue}
+                isHighlighted={highlightId === `__cat:${tag}`}
+                onToggle={() => toggleTag(tag)}
+                onClick={() => setHighlightId(`__cat:${tag}`)}
+                onEditChange={setEditCategoryValue}
+                onEditCommit={commitCategoryRename}
+                onEditCancel={() => setEditingCategoryTag(null)}
+                onDoubleClick={() => { if (!readOnly) startCategoryRename(tag) }}
+                onDeleteCategory={() => deleteCategory(tag)}
+                onContextMenu={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setContextMenu({ x: e.clientX, y: e.clientY, type: 'category', tag })
+                }}
+              >
                 {!isCollapsed && items.map((s) => (
                   <PatternRow
                     key={s.id}
@@ -440,9 +281,6 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
                     readOnly={readOnly}
                     isEditing={!readOnly && editingId === s.id}
                     editValue={editValue}
-                    isDragging={dragId === s.id}
-                    isOver={overId === s.id}
-                    overPosition={overId === s.id ? overPos : null}
                     isHighlighted={highlightId === s.id}
                     onClick={() => setHighlightId(s.id)}
                     onEditChange={setEditValue}
@@ -450,18 +288,13 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
                     onEditCancel={() => setEditingId(null)}
                     onDoubleClick={() => { if (!readOnly) startPatternRename(s) }}
                     onContextMenu={(x, y) => setContextMenu({ x, y, type: 'pattern', pattern: s })}
-                    onDragStart={(e) => dnd.handleDragStart(e, s.id)}
-                    onDragOver={readOnly ? undefined : (e) => dnd.handleDragOver(e, s.id, false)}
-                    onDragLeave={readOnly ? undefined : () => dnd.handleDragLeave(s.id)}
-                    onDrop={readOnly ? undefined : (e) => dnd.handleDrop(e, s.id, false, { categorized, movePattern, updatePatternTags })}
-                    onDragEnd={dnd.endDrag}
                     onInsert={() => handleInsert(s)}
                     onDelete={readOnly ? undefined : () => deletePattern(s.id)}
                     onPreviewEnter={onPreviewEnter}
                     onPreviewLeave={onPreviewLeave}
                   />
                 ))}
-              </div>
+              </CategoryRow>
             )
           })}
 
@@ -485,7 +318,6 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
               />
             </div>
           )}
-
         </>
       )}
 
@@ -503,7 +335,6 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
         <PatternContextMenu
           contextMenu={contextMenu}
           readOnly={readOnly}
-          onInsert={handleInsert}
           onRename={startPatternRename}
           onDelete={(id) => deletePattern(id)}
           onCategoryRename={startCategoryRename}
@@ -528,22 +359,193 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
   )
 })
 
-// --- Pattern row with drop indicators (mirrors TreeNode) ---
+/* ── Root droppable node ─────────────────────────────────── */
+
+function RootDroppable({
+  readOnly, isHighlighted, isCollapsed, hasContent, onToggle, onClick,
+}: {
+  readOnly: boolean
+  isHighlighted: boolean
+  isCollapsed: boolean
+  hasContent: boolean
+  onToggle: () => void
+  onClick: () => void
+}) {
+  const { activeId, overId, overPosition } = useWorkspaceDnd()
+
+  const { setNodeRef } = useDroppable({
+    id: '__patterns_root__',
+    disabled: readOnly || !!activeId?.startsWith('__cat:'),
+    data: { type: 'root', isBox: true },
+  })
+
+  const isOver = overId === '__patterns_root__' && overPosition === 'inside'
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`flex items-center gap-1.5 py-1 px-1 rounded-md group transition-all ${
+        isOver
+          ? 'bg-[var(--color-accent)]/10 outline outline-1 outline-[var(--color-accent)]/40'
+          : isHighlighted
+            ? 'tree-node-selected text-text-primary'
+            : 'hover:bg-[var(--color-accent)]/8 text-text-secondary hover:text-text-primary'
+      }`}
+      style={{ paddingLeft: 4 }}
+      onClick={onClick}
+    >
+      <span
+        className="w-3.5 h-4 flex items-center justify-center shrink-0 text-text-muted select-none cursor-pointer"
+        onClick={(e) => { e.stopPropagation(); onToggle() }}
+      >
+        {hasContent ? (isCollapsed ? <ChevronRight size={10} /> : <ChevronDown size={10} />) : null}
+      </span>
+      <span className="shrink-0"><Folder size={12} /></span>
+      <span className="flex-1 text-[12px] truncate">Patterns</span>
+    </div>
+  )
+}
+
+/* ── Category row with DnD ───────────────────────────────── */
+
+function CategoryRow({
+  tag, items, readOnly, isCollapsed, isEditingCat, editCategoryValue,
+  isHighlighted, onToggle, onClick, onEditChange, onEditCommit, onEditCancel,
+  onDoubleClick, onDeleteCategory, onContextMenu, children,
+}: {
+  tag: string
+  items: Pattern[]
+  readOnly: boolean
+  isCollapsed: boolean
+  isEditingCat: boolean
+  editCategoryValue: string
+  isHighlighted: boolean
+  onToggle: () => void
+  onClick: () => void
+  onEditChange: (v: string) => void
+  onEditCommit: () => void
+  onEditCancel: () => void
+  onDoubleClick: () => void
+  onDeleteCategory: () => void
+  onContextMenu: (e: React.MouseEvent) => void
+  children: React.ReactNode
+}) {
+  const catId = `__cat:${tag}`
+  const { activeId, overId, overPosition } = useWorkspaceDnd()
+
+  const { attributes: dragAttrs, listeners: dragListeners, setNodeRef: setDragRef, isDragging } = useDraggable({
+    id: catId,
+    disabled: readOnly || isEditingCat,
+    data: { type: 'category', tag },
+  })
+
+  const { setNodeRef: setDropRef } = useDroppable({
+    id: catId,
+    disabled: readOnly,
+    data: { type: 'category', tag, isBox: true, hasExpandedChildren: !isCollapsed && items.length > 0 },
+  })
+
+  const isCatOver = overId === catId
+  const catOverPos = isCatOver ? overPosition : null
+
+  // Merge refs
+  const mergedRef = useCallback((node: HTMLDivElement | null) => {
+    setDragRef(node)
+    setDropRef(node)
+  }, [setDragRef, setDropRef])
+
+  return (
+    <div className="relative">
+      {/* Drop indicators for category reorder */}
+      {isCatOver && catOverPos === 'before' && (
+        <div className="absolute left-0 right-0 top-0 h-[2px] bg-accent z-10 pointer-events-none" style={{ marginLeft: 1 * 16 + 4 }} />
+      )}
+      {isCatOver && catOverPos === 'after' && (
+        <div className="absolute left-0 right-0 bottom-0 h-[2px] bg-accent z-10 pointer-events-none" style={{ marginLeft: 1 * 16 + 4 }} />
+      )}
+
+      {/* Category row */}
+      <div
+        ref={mergedRef}
+        {...dragListeners}
+        {...dragAttrs}
+        className={`flex items-center gap-1.5 py-1 px-1 rounded-md group transition-all ${
+          isCatOver && catOverPos === 'inside'
+            ? 'bg-[var(--color-accent)]/10 outline outline-1 outline-[var(--color-accent)]/40'
+            : isHighlighted
+              ? 'tree-node-selected text-text-primary'
+              : isDragging ? 'opacity-40' : 'hover:bg-[var(--color-accent)]/8 text-text-secondary hover:text-text-primary'
+        }`}
+        style={{ paddingLeft: 1 * 16 + 4 }}
+        onClick={() => { if (!activeId) onClick() }}
+        onContextMenu={readOnly ? undefined : onContextMenu}
+      >
+        <span
+          className="w-3.5 h-4 flex items-center justify-center shrink-0 text-text-muted select-none cursor-pointer"
+          onClick={(e) => { e.stopPropagation(); onToggle() }}
+        >
+          {isCollapsed ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
+        </span>
+
+        <span className="shrink-0 text-text-muted"><Folder size={12} /></span>
+
+        {isEditingCat ? (
+          <input
+            autoFocus
+            value={editCategoryValue}
+            onChange={(e) => onEditChange(e.target.value)}
+            onBlur={onEditCommit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') onEditCommit()
+              if (e.key === 'Escape') onEditCancel()
+            }}
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+            className="flex-1 bg-surface-0 border border-accent/50 rounded-md px-1.5 py-0.5 text-[12px] text-text-primary outline-none focus:border-accent min-w-0 transition-colors"
+          />
+        ) : (
+          <span
+            className="flex-1 text-[12px] truncate cursor-default"
+            onDoubleClick={readOnly ? undefined : (e) => { e.stopPropagation(); onDoubleClick() }}
+          >
+            {tag}
+          </span>
+        )}
+
+        {/* Delete on hover */}
+        {!readOnly && (
+          <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
+            <button
+              className="w-4 h-4 c-icon-btn text-[10px] hover:text-text-secondary hover:bg-surface-2/60"
+              onClick={(e) => { e.stopPropagation(); onDeleteCategory() }}
+              onPointerDown={(e) => e.stopPropagation()}
+              title="Delete category"
+            >
+              <X size={10} />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Children */}
+      {children}
+    </div>
+  )
+}
+
+/* ── Pattern row with @dnd-kit hooks ─────────────────────── */
+
 function PatternRow({
-  pattern, depth, readOnly, isEditing, editValue, isDragging,
-  isOver, overPosition, isHighlighted,
+  pattern, depth, readOnly, isEditing, editValue,
+  isHighlighted,
   onClick, onEditChange, onEditCommit, onEditCancel, onDoubleClick,
-  onContextMenu, onDragStart, onDragOver, onDragLeave, onDrop, onDragEnd,
-  onInsert, onDelete, onPreviewEnter, onPreviewLeave,
+  onContextMenu, onInsert, onDelete, onPreviewEnter, onPreviewLeave,
 }: {
   pattern: Pattern
   depth: number
   readOnly?: boolean
   isEditing: boolean
   editValue: string
-  isDragging: boolean
-  isOver: boolean
-  overPosition: DropPosition | null
   isHighlighted: boolean
   onClick: () => void
   onEditChange: (v: string) => void
@@ -551,47 +553,62 @@ function PatternRow({
   onEditCancel: () => void
   onDoubleClick: () => void
   onContextMenu: (x: number, y: number) => void
-  onDragStart: (e: React.DragEvent) => void
-  onDragOver?: (e: React.DragEvent) => void
-  onDragLeave?: () => void
-  onDrop?: (e: React.DragEvent) => void
-  onDragEnd: () => void
   onInsert: () => void
   onDelete?: () => void
   onPreviewEnter?: (pattern: Pattern, y: number) => void
   onPreviewLeave?: () => void
 }) {
-  const rowRef = useRef<HTMLDivElement>(null)
+  const { activeId, overId, overPosition } = useWorkspaceDnd()
+
+  const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({
+    id: pattern.id,
+    disabled: isEditing,
+    data: { type: 'pattern' },
+  })
+
+  const { setNodeRef: setDropRef } = useDroppable({
+    id: pattern.id,
+    disabled: !!readOnly,
+    data: { type: 'pattern', tag: pattern.tags[0] ?? null },
+  })
+
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  // Merge refs
+  const mergedRef = useCallback((node: HTMLDivElement | null) => {
+    setDragRef(node)
+    setDropRef(node)
+    ;(scrollRef as React.MutableRefObject<HTMLDivElement | null>).current = node
+  }, [setDragRef, setDropRef])
 
   useEffect(() => {
-    if (isHighlighted && rowRef.current) {
+    if (isHighlighted && scrollRef.current) {
       requestAnimationFrame(() => {
-        rowRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+        scrollRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
       })
     }
   }, [isHighlighted])
 
+  const isOver = overId === pattern.id
+  const pos = isOver ? overPosition : null
+
   return (
     <div
-      ref={rowRef}
+      ref={mergedRef}
+      {...listeners}
+      {...attributes}
       className="relative"
-      draggable={!isEditing}
-      onDragStart={onDragStart}
-      onDragOver={onDragOver}
-      onDragLeave={onDragLeave}
-      onDrop={onDrop}
-      onDragEnd={onDragEnd}
       onMouseEnter={(e) => {
         const rect = e.currentTarget.getBoundingClientRect()
         onPreviewEnter?.(pattern, rect.top)
       }}
       onMouseLeave={() => onPreviewLeave?.()}
     >
-      {/* Drop indicators — pointer-events-none so drag events pass through */}
-      {isOver && overPosition === 'before' && (
+      {/* Drop indicators */}
+      {isOver && pos === 'before' && (
         <div className="absolute left-0 right-0 top-0 h-[2px] bg-accent z-10 pointer-events-none" style={{ marginLeft: depth * 16 + 4 }} />
       )}
-      {isOver && overPosition === 'after' && (
+      {isOver && pos === 'after' && (
         <div className="absolute left-0 right-0 bottom-0 h-[2px] bg-accent z-10 pointer-events-none" style={{ marginLeft: depth * 16 + 4 }} />
       )}
 
@@ -599,7 +616,7 @@ function PatternRow({
         className={`flex items-center gap-1.5 py-1 px-1 rounded-md group transition-all ${
           isHighlighted
             ? 'tree-node-selected text-text-primary'
-            : isDragging ? 'opacity-40' : 'hover:bg-[var(--color-focus)]/8 text-text-secondary hover:text-text-primary'
+            : isDragging ? 'opacity-40' : 'hover:bg-[var(--color-accent)]/8 text-text-secondary hover:text-text-primary'
         }`}
         style={{ paddingLeft: depth * 16 + 4 }}
         onClick={onClick}
@@ -619,6 +636,7 @@ function PatternRow({
               if (e.key === 'Escape') onEditCancel()
             }}
             onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
             className="flex-1 bg-surface-0 border border-accent/50 rounded-md px-1.5 py-0.5 text-[12px] text-text-primary outline-none focus:border-accent min-w-0 transition-colors"
           />
         ) : (
@@ -629,6 +647,7 @@ function PatternRow({
           <button
             className="w-4 h-4 c-icon-btn text-[10px] hover:text-accent hover:bg-accent/10"
             onClick={(e) => { e.stopPropagation(); onInsert() }}
+            onPointerDown={(e) => e.stopPropagation()}
             title="Insert"
           >
             <Plus size={12} />
@@ -637,6 +656,7 @@ function PatternRow({
             <button
               className="w-4 h-4 c-icon-btn text-[10px] hover:text-text-secondary hover:bg-surface-2/60"
               onClick={(e) => { e.stopPropagation(); onDelete() }}
+              onPointerDown={(e) => e.stopPropagation()}
               title="Delete"
             >
               <X size={10} />
