@@ -26,3 +26,4 @@ src-tauri/target
 *.njsproj
 *.sln
 *.sw?
+test-results/
