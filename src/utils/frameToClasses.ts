@@ -1,5 +1,6 @@
 import type { Frame, Spacing, Inset, BorderRadius, Border, DesignValue } from '../types/frame'
 import { toGoogleFontClass } from './googleFonts'
+import { resolveRenderSrc } from '../lib/assetOps'
 
 const weightMap: Record<number, string> = {
   100: 'font-thin',
@@ -359,7 +360,7 @@ export function frameToClasses(frame: Frame): string {
 
   // Background image
   if (frame.bgImage) {
-    cls.push(`bg-[url('${frame.bgImage}')]`)
+    cls.push(`bg-[url('${resolveRenderSrc(frame.bgImage)}')]`)
     if (frame.bgSize !== 'auto') cls.push(`bg-${frame.bgSize}`)
     if (frame.bgPosition !== 'center') {
       // Tailwind v4 format: bg-left-top, not bg-top-left

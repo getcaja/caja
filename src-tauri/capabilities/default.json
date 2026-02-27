@@ -1,6 +1,6 @@
 {
   "identifier": "default",
-  "description": "Default permissions for Caja",
+  "description": "Default permissions for Caja. CSP is disabled in tauri.conf.json because the Tailwind browser runtime (CDN), blob: URLs for local assets, and the asset:// protocol require a permissive policy. Tauri's IPC security model is the primary security boundary, not CSP.",
   "windows": ["main"],
   "permissions": [
     "core:default",
@@ -16,6 +16,14 @@
     "fs:allow-remove",
     "fs:allow-appdata-read-recursive",
     "fs:allow-appdata-write-recursive",
+    "fs:allow-write-file",
+    {
+      "identifier": "http:default",
+      "allow": [
+        { "url": "https://**" },
+        { "url": "http://**" }
+      ]
+    },
     "window-state:default"
   ]
 }

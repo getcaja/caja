@@ -276,6 +276,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .invoke_handler(tauri::generate_handler![mcp_respond, set_menu_check, set_window_title])
         .setup(|app| {
@@ -441,7 +442,9 @@ pub fn run() {
                     use tauri_plugin_window_state::AppHandleExt;
                     let _ = window.app_handle().save_window_state(tauri_plugin_window_state::StateFlags::all());
                 }
-                tauri::WindowEvent::Resized(..) | tauri::WindowEvent::ThemeChanged(..) => {
+                tauri::WindowEvent::Resized(..)
+                | tauri::WindowEvent::ThemeChanged(..)
+                | tauri::WindowEvent::Focused(true) => {
                     #[cfg(target_os = "macos")]
                     {
                         let ns_win = window.ns_window().unwrap() as cocoa::base::id;

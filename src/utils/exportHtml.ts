@@ -1,6 +1,7 @@
 import type { Frame } from '../types/frame'
 import { buildClassString, detectLabelPairs, escapeAttr, escapeText, type LabelAssociation } from './exportShared'
 import { collectGoogleFonts, toGoogleFontUrl, toGoogleFontStyleRule } from './googleFonts'
+import { resolveAssetSrc } from '../lib/assetOps'
 
 /** Build the id attribute string from htmlId or label association */
 function resolveIdAttr(frame: Frame, assoc?: LabelAssociation): string {
@@ -33,7 +34,8 @@ export function exportToHTML(
   }
 
   if (frame.type === 'image') {
-    const srcAttr = frame.src ? ` src="${escapeAttr(frame.src)}"` : ''
+    const src = frame.src ? resolveAssetSrc(frame.src) : ''
+    const srcAttr = src ? ` src="${escapeAttr(src)}"` : ''
     const altAttr = ` alt="${escapeAttr(frame.alt || '')}"`
     const idAttr = resolveIdAttr(frame)
     return `${pad}<img${idAttr}${srcAttr}${altAttr}${classAttr}>\n`

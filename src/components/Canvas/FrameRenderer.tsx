@@ -1,9 +1,10 @@
-import { useState, useRef, useEffect, useLayoutEffect, useCallback, Fragment } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect, useCallback, useSyncExternalStore, Fragment } from 'react'
 import { ImageIcon } from 'lucide-react'
 import type { Frame } from '../../types/frame'
 import { frameToClasses } from '../../utils/frameToClasses'
 import { useFrameStore, isRootId, findInTree } from '../../store/frameStore'
 import { resolveCanvasDrop, getFrameDepth } from '../../utils/canvasDrop'
+import { resolveRenderSrc, subscribeAssets, getAssetSnapshot } from '../../lib/assetOps'
 import './FrameRenderer.css'
 
 // Module-level flag: skip the next click after a drag completes
@@ -41,6 +42,9 @@ export function resolveTag(frame: Frame): keyof React.JSX.IntrinsicElements {
 
 export function FrameRenderer({ frame }: FrameRendererProps) {
   if (frame.hidden) return null
+
+  // Re-render when blob cache is updated (e.g. after restoreAllAssets on app load)
+  useSyncExternalStore(subscribeAssets, getAssetSnapshot)
 
   const selectedId = useFrameStore((s) => s.selectedId)
   const hoveredId = useFrameStore((s) => s.hoveredId)
@@ -149,7 +153,7 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
 
     const cleanup = (commit: boolean) => {
       cancelAnimationFrame(resolveRaf)
-      try { captureTarget.releasePointerCapture(pointerId) } catch {}
+      try { captureTarget.releasePointerCapture(pointerId) } catch { /* expected: browser may have already released capture */ }
       if (dragging) {
         const s = useFrameStore.getState()
         if (commit && s.canvasDragOver) {
@@ -280,7 +284,7 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
         data-frame-id={frame.id}
         className={`${tailwind} ${stateClasses}`}
 
-        src={isImage ? frame.src : ''}
+        src={isImage ? resolveRenderSrc(frame.src) : ''}
         alt={isImage ? frame.alt : ''}
         draggable={false}
         {...editorHandlers}

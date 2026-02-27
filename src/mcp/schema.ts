@@ -469,6 +469,17 @@ export const toolSchemas = {
       required: ['name', 'patterns'],
     },
   },
+  upload_asset: {
+    name: 'upload_asset',
+    description: 'Download an external image URL to local storage and return a local asset URL. Use this to ensure images are available offline and avoid CORS issues in the canvas. The returned URL can be used as the `src` property for image frames.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        url: { type: 'string', description: 'The external image URL to download (must be http:// or https://)' },
+      },
+      required: ['url'],
+    },
+  },
 } as const
 
 export type ToolName = keyof typeof toolSchemas
