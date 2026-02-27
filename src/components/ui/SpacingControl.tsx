@@ -7,11 +7,13 @@ import { SPACING_SCALE } from '../../data/scales'
 
 type SpacingMode = 'all' | 'axis' | 'sides'
 
-function dvSame(a: DesignValue<number>, b: DesignValue<number>): boolean {
+function dvSame(a: DesignValue<number> | undefined, b: DesignValue<number> | undefined): boolean {
+  if (!a || !b) return a === b
   return a.mode === b.mode && a.value === b.value && a.token === b.token
 }
 
 function detectMode(v: Spacing): SpacingMode {
+  if (!v?.top || !v?.right || !v?.bottom || !v?.left) return 'all'
   const allSame = dvSame(v.top, v.bottom) && dvSame(v.left, v.right) && dvSame(v.top, v.left)
   if (allSame) return 'all'
   const axisSame = dvSame(v.top, v.bottom) && dvSame(v.left, v.right)
@@ -25,8 +27,10 @@ const NEXT: Record<SpacingMode, SpacingMode> = {
   sides: 'all',
 }
 
+const ZERO: DesignValue<number> = { mode: 'custom', value: 0 }
+
 export function SpacingControl({
-  value,
+  value: rawValue,
   onChange,
   label,
   classPrefix,
@@ -38,6 +42,13 @@ export function SpacingControl({
   classPrefix: string
   scale?: ScaleOption[]
 }) {
+  // Defensive: fill in missing sides from malformed frame data
+  const value: Spacing = {
+    top: rawValue?.top || ZERO,
+    right: rawValue?.right || ZERO,
+    bottom: rawValue?.bottom || ZERO,
+    left: rawValue?.left || ZERO,
+  }
   const [mode, setMode] = useState<SpacingMode>(() => detectMode(value))
 
   const cycle = () => {

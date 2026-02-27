@@ -4,7 +4,7 @@
 import { useFrameStore, findInTree, cloneWithNewIds, normalizeFrame } from '../store/frameStore'
 import { useCatalogStore } from '../store/catalogStore'
 import type { PatternData } from '../store/catalogStore'
-import type { Frame, Spacing, SizeValue, DesignValue, Border, BorderRadius } from '../types/frame'
+import type { Frame, SizeValue } from '../types/frame'
 import type { LibraryMeta } from '../types/pattern'
 import type { CjlFileData } from '../lib/libraryOps'
 import type { ToolName } from './schema'
@@ -12,18 +12,15 @@ import { parseTailwindClasses } from '../utils/parseTailwindClasses'
 import { ensureLibrariesDir, saveLibraryIndex } from '../lib/libraryOps'
 import { writeTextFile } from '@tauri-apps/plugin-fs'
 import { join } from '@tauri-apps/api/path'
-import type { ScaleOption } from '../data/scales'
+import { downloadAsset, isExternalUrl } from '../lib/assetOps'
 import {
-  SPACING_SCALE, FONT_SIZE_SCALE, FONT_WEIGHT_SCALE, LINE_HEIGHT_SCALE, LETTER_SPACING_SCALE,
-  BORDER_WIDTH_SCALE, BORDER_RADIUS_SCALE, SIZE_CONSTRAINT_SCALE, OPACITY_SCALE,
-  GROW_SCALE, SHRINK_SCALE,
-  Z_INDEX_SCALE, GRID_COLS_SCALE, GRID_ROWS_SCALE, COL_SPAN_SCALE, ROW_SPAN_SCALE,
-  ROTATE_SCALE, SCALE_SCALE, DURATION_SCALE, BLUR_SCALE,
-} from '../data/scales'
-import { COLOR_GRID, SPECIAL_COLORS } from '../data/colors'
+  sanitizeDVNum, sanitizeSpacingValues, sanitizeBorderRadius,
+  sanitizeFrameProperties, SIZE_CONSTRAINT_LOOKUP,
+} from './sanitize'
+import { resolveRefs, extractResultId } from './batchRefs'
 
-// 1×1 transparent PNG — fallback for CORS-blocked images during screenshot
-const IMG_PLACEHOLDER = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQABNjN9GQAAAAlwSFlzAAAWJQAAFiUBSVIk8AAAAA0lEQVQI12P4z8BQDwAEgAF/QualHQAAAABJRU5ErkJggg=='
+// 1×1 transparent PNG — fallback for unresolvable images during screenshot
+const IMG_PLACEHOLDER = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
 
 interface ToolResult {
   success: boolean
@@ -39,7 +36,7 @@ function getStore() {
 }
 
 // Compact snapshot for mutation responses — only essential fields
-function compactSnapshot(frame: Frame): Record<string, unknown> {
+export function compactSnapshot(frame: Frame): Record<string, unknown> {
   const snap: Record<string, unknown> = { id: frame.id, type: frame.type, name: frame.name }
   if (frame.type === 'box') {
     snap.childCount = frame.children.length
@@ -57,262 +54,9 @@ function frameSnapshot(frame: Frame): Record<string, unknown> {
   return { ...frame }
 }
 
-// --- Token lookup maps (value → token) for auto-matching raw MCP inputs ---
-
-function buildNumLookup(scale: ScaleOption[]): Map<number, string> {
-  const map = new Map<number, string>()
-  for (const { token, value } of scale) map.set(value, token)
-  return map
-}
-
-function buildColorLookup(): Map<string, string> {
-  const map = new Map<string, string>()
-  for (const { token, value } of SPECIAL_COLORS) map.set(value.toLowerCase(), token)
-  for (const family of COLOR_GRID) {
-    for (const { token, value } of family.shades) map.set(value.toLowerCase(), token)
-  }
-  return map
-}
-
-const SPACING_LOOKUP = buildNumLookup(SPACING_SCALE)
-const FONT_SIZE_LOOKUP = buildNumLookup(FONT_SIZE_SCALE)
-const FONT_WEIGHT_LOOKUP = buildNumLookup(FONT_WEIGHT_SCALE)
-const GROW_LOOKUP = buildNumLookup(GROW_SCALE)
-const SHRINK_LOOKUP = buildNumLookup(SHRINK_SCALE)
-const LINE_HEIGHT_LOOKUP = buildNumLookup(LINE_HEIGHT_SCALE)
-const LETTER_SPACING_LOOKUP = buildNumLookup(LETTER_SPACING_SCALE)
-const BORDER_WIDTH_LOOKUP = buildNumLookup(BORDER_WIDTH_SCALE)
-const BORDER_RADIUS_LOOKUP = buildNumLookup(BORDER_RADIUS_SCALE)
-const SIZE_CONSTRAINT_LOOKUP = buildNumLookup(SIZE_CONSTRAINT_SCALE)
-const OPACITY_LOOKUP = buildNumLookup(OPACITY_SCALE)
-const Z_INDEX_LOOKUP = buildNumLookup(Z_INDEX_SCALE)
-const GRID_COLS_LOOKUP = buildNumLookup(GRID_COLS_SCALE)
-const GRID_ROWS_LOOKUP = buildNumLookup(GRID_ROWS_SCALE)
-const COL_SPAN_LOOKUP = buildNumLookup(COL_SPAN_SCALE)
-const ROW_SPAN_LOOKUP = buildNumLookup(ROW_SPAN_SCALE)
-const ROTATE_LOOKUP = buildNumLookup(ROTATE_SCALE)
-const SCALE_LOOKUP = buildNumLookup(SCALE_SCALE)
-const DURATION_LOOKUP = buildNumLookup(DURATION_SCALE)
-const BLUR_LOOKUP = buildNumLookup(BLUR_SCALE)
-const COLOR_LOOKUP = buildColorLookup()
-
-// --- Sanitization helpers for MCP inputs ---
-// Wrap raw number/string values into DesignValue objects,
-// auto-matching to Tailwind tokens when possible.
-
-function sanitizeDVNum(raw: unknown, lookup?: Map<number, string>): DesignValue<number> | undefined {
-  if (raw === undefined || raw === null) return undefined
-  if (typeof raw === 'number') {
-    if (lookup) {
-      const token = lookup.get(raw)
-      if (token !== undefined) return { mode: 'token', token, value: raw }
-    }
-    return { mode: 'custom', value: raw }
-  }
-  if (typeof raw === 'object' && raw !== null && 'mode' in raw) return raw as DesignValue<number>
-  return undefined
-}
-
-function sanitizeDVStr(raw: unknown, colorLookup?: Map<string, string>): DesignValue<string> | undefined {
-  if (raw === undefined || raw === null) return undefined
-  if (typeof raw === 'string') {
-    if (colorLookup) {
-      const token = colorLookup.get(raw.toLowerCase())
-      if (token) return { mode: 'token', token, value: raw }
-    }
-    return { mode: 'custom', value: raw }
-  }
-  if (typeof raw === 'object' && raw !== null && 'mode' in raw) return raw as DesignValue<string>
-  return undefined
-}
-
-function sanitizeSpacingValues(values: Record<string, unknown>): Partial<Spacing> {
-  const result: Partial<Spacing> = {}
-  if ('top' in values) { const v = sanitizeDVNum(values.top, SPACING_LOOKUP); if (v) result.top = v }
-  if ('right' in values) { const v = sanitizeDVNum(values.right, SPACING_LOOKUP); if (v) result.right = v }
-  if ('bottom' in values) { const v = sanitizeDVNum(values.bottom, SPACING_LOOKUP); if (v) result.bottom = v }
-  if ('left' in values) { const v = sanitizeDVNum(values.left, SPACING_LOOKUP); if (v) result.left = v }
-  return result
-}
-
-function sanitizeBorderRadius(raw: unknown): BorderRadius | undefined {
-  if (raw === undefined || raw === null) return undefined
-  if (typeof raw === 'number') {
-    const dv = sanitizeDVNum(raw, BORDER_RADIUS_LOOKUP) || { mode: 'custom' as const, value: raw }
-    return { topLeft: dv, topRight: { ...dv }, bottomRight: { ...dv }, bottomLeft: { ...dv } }
-  }
-  if (typeof raw === 'object' && raw !== null) {
-    const r = raw as Record<string, unknown>
-    // Check if it's already migrated (has DesignValue sub-fields)
-    if (r.topLeft !== undefined && typeof r.topLeft === 'object') return raw as BorderRadius
-    // Old format: { topLeft: number, ... }
-    return {
-      topLeft: sanitizeDVNum(r.topLeft, BORDER_RADIUS_LOOKUP) || { mode: 'custom', value: 0 },
-      topRight: sanitizeDVNum(r.topRight, BORDER_RADIUS_LOOKUP) || { mode: 'custom', value: 0 },
-      bottomRight: sanitizeDVNum(r.bottomRight, BORDER_RADIUS_LOOKUP) || { mode: 'custom', value: 0 },
-      bottomLeft: sanitizeDVNum(r.bottomLeft, BORDER_RADIUS_LOOKUP) || { mode: 'custom', value: 0 },
-    }
-  }
-  return undefined
-}
-
-function sanitizeBorder(raw: unknown, existing: Border): Border | undefined {
-  if (raw === undefined || raw === null) return undefined
-  if (typeof raw !== 'object') return undefined
-  const r = raw as Record<string, unknown>
-  // Backward compat: if MCP sends { width: 2 }, expand to all 4 sides
-  if ('width' in r && !('top' in r)) {
-    const w = sanitizeDVNum(r.width, BORDER_WIDTH_LOOKUP) || existing.top
-    return {
-      top: w, right: { ...w }, bottom: { ...w }, left: { ...w },
-      color: sanitizeDVStr(r.color, COLOR_LOOKUP) || existing.color,
-      style: (r.style as Border['style']) || existing.style,
-    }
-  }
-  return {
-    top: sanitizeDVNum(r.top, BORDER_WIDTH_LOOKUP) || existing.top,
-    right: sanitizeDVNum(r.right, BORDER_WIDTH_LOOKUP) || existing.right,
-    bottom: sanitizeDVNum(r.bottom, BORDER_WIDTH_LOOKUP) || existing.bottom,
-    left: sanitizeDVNum(r.left, BORDER_WIDTH_LOOKUP) || existing.left,
-    color: sanitizeDVStr(r.color, COLOR_LOOKUP) || existing.color,
-    style: (r.style as Border['style']) || existing.style,
-  }
-}
-
-// Sanitize raw MCP property values → DesignValue objects expected by the store.
-// Used by both add_frame and update_frame to prevent crashes from raw numbers/strings.
-function sanitizeFrameProperties(props: Record<string, unknown>, existingFrame?: Frame): Record<string, unknown> {
-  const sanitized = { ...props }
-
-  // label → content alias for backwards MCP compat
-  if ('label' in sanitized && !('content' in sanitized)) {
-    sanitized.content = sanitized.label
-    delete sanitized.label
-  }
-
-  // options: must be SelectOption[], coerce from string or reject
-  if ('options' in sanitized) {
-    const raw = sanitized.options
-    if (typeof raw === 'string') {
-      sanitized.options = raw.split('\n').filter(Boolean).map((line: string) => {
-        const trimmed = line.trim()
-        return { value: trimmed.toLowerCase().replace(/\s+/g, '-'), label: trimmed }
-      })
-    }
-  }
-
-  // DesignValue<number> fields — coerce number → DesignValue, auto-match tokens
-  const numFieldLookup: Record<string, Map<number, string>> = {
-    fontSize: FONT_SIZE_LOOKUP,
-    fontWeight: FONT_WEIGHT_LOOKUP,
-    lineHeight: LINE_HEIGHT_LOOKUP,
-    letterSpacing: LETTER_SPACING_LOOKUP,
-    gap: SPACING_LOOKUP,
-    opacity: OPACITY_LOOKUP,
-    grow: GROW_LOOKUP,
-    shrink: SHRINK_LOOKUP,
-    minWidth: SIZE_CONSTRAINT_LOOKUP,
-    maxWidth: SIZE_CONSTRAINT_LOOKUP,
-    minHeight: SIZE_CONSTRAINT_LOOKUP,
-    maxHeight: SIZE_CONSTRAINT_LOOKUP,
-    zIndex: Z_INDEX_LOOKUP,
-    gridCols: GRID_COLS_LOOKUP,
-    gridRows: GRID_ROWS_LOOKUP,
-    colSpan: COL_SPAN_LOOKUP,
-    rowSpan: ROW_SPAN_LOOKUP,
-    rotate: ROTATE_LOOKUP,
-    scaleVal: SCALE_LOOKUP,
-    translateX: SPACING_LOOKUP,
-    translateY: SPACING_LOOKUP,
-    duration: DURATION_LOOKUP,
-    blur: BLUR_LOOKUP,
-    backdropBlur: BLUR_LOOKUP,
-  }
-  for (const key of Object.keys(numFieldLookup)) {
-    if (key in sanitized) {
-      const v = sanitizeDVNum(sanitized[key], numFieldLookup[key])
-      if (v) sanitized[key] = v
-    }
-  }
-
-  // DesignValue<string> fields — coerce string → DesignValue, auto-match color tokens
-  for (const key of ['bg', 'color'] as const) {
-    if (key in sanitized) {
-      const v = sanitizeDVStr(sanitized[key], COLOR_LOOKUP)
-      if (v) sanitized[key] = v
-    }
-  }
-
-  // borderRadius: coerce number → uniform DV object
-  if ('borderRadius' in sanitized) {
-    const v = sanitizeBorderRadius(sanitized.borderRadius)
-    if (v) sanitized.borderRadius = v
-  }
-
-  // bgImage: pass through as trimmed string
-  if ('bgImage' in sanitized) {
-    sanitized.bgImage = typeof sanitized.bgImage === 'string' ? sanitized.bgImage.trim() : ''
-  }
-
-  // [Experimental] fontFamily: pass through as trimmed string
-  if ('fontFamily' in sanitized) {
-    sanitized.fontFamily = typeof sanitized.fontFamily === 'string' ? sanitized.fontFamily.trim() : ''
-  }
-
-  // border: coerce primitive fields
-  if ('border' in sanitized && existingFrame) {
-    const v = sanitizeBorder(sanitized.border, existingFrame.border)
-    if (v) sanitized.border = v
-  }
-
-  return sanitized
-}
-
-// --- Batch variable substitution ---
-// Replaces "$prev", "$0", "$1", etc. ONLY in known ID-reference fields to avoid
-// corrupting content text like "$0" (a price) into a frame ID.
-const ID_FIELDS = new Set(['parent_id', 'id', 'new_parent_id', 'snippet_id', 'pattern_id', 'frame_id'])
-
-function resolveRefs(params: Record<string, unknown>, resultIds: string[]): Record<string, unknown> {
-  const resolve = (val: unknown, key?: string): unknown => {
-    if (typeof val === 'string' && key && ID_FIELDS.has(key)) {
-      if (val === '$prev') {
-        for (let i = resultIds.length - 1; i >= 0; i--) {
-          if (resultIds[i]) return resultIds[i]
-        }
-        return val
-      }
-      const m = val.match(/^\$(\d+)$/)
-      if (m) {
-        const idx = parseInt(m[1])
-        return (idx < resultIds.length && resultIds[idx]) ? resultIds[idx] : val
-      }
-      return val
-    }
-    if (Array.isArray(val)) return val.map((v) => resolve(v))
-    if (val !== null && typeof val === 'object') {
-      const out: Record<string, unknown> = {}
-      for (const [k, v] of Object.entries(val as Record<string, unknown>)) out[k] = resolve(v, k)
-      return out
-    }
-    return val
-  }
-  return resolve(params) as Record<string, unknown>
-}
-
-// Extracts the result ID from any tool result shape.
-function extractResultId(result: ToolResult): string {
-  if (!result.data || typeof result.data !== 'object') return ''
-  const d = result.data as Record<string, unknown>
-  if (typeof d.id === 'string') return d.id               // add/update/move/rename
-  if (typeof d.duplicate === 'string') return d.duplicate  // duplicate_frame
-  if (typeof d.removed === 'string') return d.removed      // remove_frame
-  if (typeof d.wrapper === 'string') return d.wrapper      // wrap_frame (return wrapper, not wrapped)
-  return ''
-}
 
 // Lightweight tree representation for LLM context — strips all styling, keeps structure.
-function summaryTree(frame: Frame): Record<string, unknown> {
+export function summaryTree(frame: Frame): Record<string, unknown> {
   const node: Record<string, unknown> = { id: frame.id, type: frame.type, name: frame.name }
   if (frame.type === 'text' || frame.type === 'button') node.content = (frame as { content: string }).content
   if (frame.type === 'box') {
@@ -326,7 +70,7 @@ function summaryTree(frame: Frame): Record<string, unknown> {
 type ToolHandler = (params: ToolParams) => ToolResult | Promise<ToolResult>
 
 const handlers: Record<string, ToolHandler> = {
-  add_frame(params) {
+  async add_frame(params) {
     const { parent_id, element_type, properties, classes, index } = params as {
       parent_id: string
       element_type: 'box' | 'text' | 'image' | 'button' | 'input' | 'textarea' | 'select' | 'link'
@@ -369,6 +113,17 @@ const handlers: Record<string, ToolHandler> = {
       return result
     }
 
+    // Auto-download external image src to local assets (stores persistent localPath)
+    const autoDownloadSrc = async (childId: string) => {
+      if (element_type !== 'image') return
+      const frame = findInTree(getStore().root, childId)
+      if (!frame || frame.type !== 'image' || !isExternalUrl(frame.src)) return
+      try {
+        const { localPath } = await downloadAsset(frame.src, getStore().filePath)
+        getStore().updateFrame(childId, { src: localPath })
+      } catch { /* expected: keep original URL if download fails */ }
+    }
+
     if (index !== undefined) {
       // Insert at specific position — use addChild then move to index
       store.addChild(parent_id, element_type, sanitized as Partial<Frame>)
@@ -379,7 +134,10 @@ const handlers: Record<string, ToolHandler> = {
         if (index < updatedParent.children.length - 1) {
           store.moveFrame(newChild.id, parent_id, index)
         }
-        return buildAddResult(newChild, findInTree(getStore().root, parent_id)! as Frame & { type: 'box' })
+        const result = buildAddResult(newChild, findInTree(getStore().root, parent_id)! as Frame & { type: 'box' })
+        // Fire-and-forget: download image in background
+        autoDownloadSrc(newChild.id)
+        return result
       }
     } else {
       store.addChild(parent_id, element_type, sanitized as Partial<Frame>)
@@ -387,7 +145,9 @@ const handlers: Record<string, ToolHandler> = {
       const updatedParent = findInTree(getStore().root, parent_id)
       if (updatedParent && updatedParent.type === 'box') {
         const newChild = updatedParent.children[updatedParent.children.length - 1]
-        return buildAddResult(newChild, updatedParent)
+        const result = buildAddResult(newChild, updatedParent)
+        autoDownloadSrc(newChild.id)
+        return result
       }
     }
 
@@ -542,7 +302,7 @@ const handlers: Record<string, ToolHandler> = {
   },
 
   async screenshot() {
-    const { toPng } = await import('html-to-image')
+    const { domToPng } = await import('modern-screenshot')
     let iframeWin = getStore().iframeWindow
     // Fallback: find iframe from DOM if store reference is stale (e.g., after HMR)
     if (!iframeWin) {
@@ -566,9 +326,15 @@ const handlers: Record<string, ToolHandler> = {
     const fullHeight = el.scrollHeight
 
     try {
-      const dataUrl = await toPng(el, { cacheBust: true, width: fullWidth, height: fullHeight, imagePlaceholder: IMG_PLACEHOLDER })
+      const dataUrl = await domToPng(el, {
+        width: fullWidth,
+        height: fullHeight,
+        style: { transform: 'none', transformOrigin: 'top left' },
+      })
       const base64 = dataUrl.replace(/^data:image\/png;base64,/, '')
       return { success: true, data: { image: base64, mimeType: 'image/png' } }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
     } finally {
       if (prevSelected) store.select(prevSelected)
     }
@@ -919,6 +685,20 @@ const handlers: Record<string, ToolHandler> = {
     if (!page) return { success: false, error: `Page ${id} not found` }
     store.removePage(id)
     return { success: true, data: { removed: id } }
+  },
+
+  async upload_asset(params) {
+    const { url } = params as { url: string }
+    if (!url || !isExternalUrl(url)) {
+      return { success: false, error: 'url must be an http:// or https:// URL' }
+    }
+    const filePath = getStore().filePath
+    const result = await downloadAsset(url, filePath)
+    return {
+      success: true,
+      data: { localPath: result.localPath },
+      hint: 'Use localPath as the src value for image frames. It resolves to a renderable blob URL automatically.',
+    }
   },
 }
 
