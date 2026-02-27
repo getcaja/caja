@@ -1,10 +1,12 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, createElement } from 'react'
 
 interface ContextMenuState {
   menu: { x: number; y: number } | null
   open: (e: React.MouseEvent) => void
   openAt: (x: number, y: number) => void
   close: () => void
+  /** Render this backdrop before the menu to close on outside click (including iframe) */
+  backdrop: React.ReactNode
 }
 
 export function useContextMenu(): ContextMenuState {
@@ -22,12 +24,14 @@ export function useContextMenu(): ContextMenuState {
 
   const close = useCallback(() => setMenu(null), [])
 
-  useEffect(() => {
-    if (menu) {
-      const timer = setTimeout(() => window.addEventListener('click', close), 0)
-      return () => { clearTimeout(timer); window.removeEventListener('click', close) }
-    }
-  }, [menu, close])
+  // Transparent overlay covers the entire viewport (including iframe) to catch outside clicks
+  const backdrop = menu
+    ? createElement('div', {
+        className: 'fixed inset-0 z-40',
+        onClick: close,
+        onContextMenu: (e: React.MouseEvent) => { e.preventDefault(); close() },
+      })
+    : null
 
-  return { menu, open, openAt, close }
+  return { menu, open, openAt, close, backdrop }
 }

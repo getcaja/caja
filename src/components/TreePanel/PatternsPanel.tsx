@@ -1,9 +1,11 @@
 import { useState, useMemo, useCallback, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
-import { useCatalogStore } from '../../store/catalogStore'
 import { useFrameStore, findInTree } from '../../store/frameStore'
-import { Plus, X, Trash2, ChevronRight, ChevronDown, Code, Folder, Pencil } from 'lucide-react'
+import { Plus, X, ChevronRight, ChevronDown, Code, Folder } from 'lucide-react'
 import type { Pattern } from '../../types/pattern'
 import { PatternPreview } from './PatternPreview'
+import { usePatternsData } from './usePatternsData'
+import { PatternContextMenu } from './PatternContextMenu'
+import { createDragHandlers, getDropPos, type DropPosition } from './PatternDragDrop'
 
 export type PatternSource =
   | { type: 'internal' }
@@ -17,37 +19,13 @@ interface PatternsPanelProps {
   source?: PatternSource
 }
 
-type DropPosition = 'before' | 'after' | 'inside'
-
 export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>(function PatternsPanel({ source = { type: 'internal' } }, ref) {
-  const userPatterns = useCatalogStore((s) => s.patterns)
-  const highlightId = useCatalogStore((s) => s.highlightId)
-  const setHighlightId = useCatalogStore((s) => s.setHighlightId)
-  const order = useCatalogStore((s) => s.order)
-  const emptyCategories = useCatalogStore((s) => s.emptyCategories)
-  const deletePattern = useCatalogStore((s) => s.deletePattern)
-  const renamePattern = useCatalogStore((s) => s.renamePattern)
-  const updatePatternTags = useCatalogStore((s) => s.updatePatternTags)
-  const movePattern = useCatalogStore((s) => s.movePattern)
-  const addEmptyCategory = useCatalogStore((s) => s.addEmptyCategory)
-  const removeEmptyCategory = useCatalogStore((s) => s.removeEmptyCategory)
-  const moveCategory = useCatalogStore((s) => s.moveCategory)
-  const libraries = useCatalogStore((s) => s.libraries)
-  const libraryIndex = useCatalogStore((s) => s.libraryIndex)
-
-  const root = useFrameStore((s) => s.root)
-  const selectedId = useFrameStore((s) => s.selectedId)
-  const insertFrame = useFrameStore((s) => s.insertFrame)
-
-  const readOnly = source.type === 'library'
-
-  const patterns = useMemo(() => {
-    if (source.type === 'library') {
-      return useCatalogStore.getState().getLibraryPatterns(source.libraryId)
-    }
-    return useCatalogStore.getState().allPatterns()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [source.type, source.type === 'library' ? source.libraryId : null, userPatterns, order, libraries])
+  const {
+    patterns, readOnly, sourceName, root, selectedId, insertFrame,
+    highlightId, setHighlightId, emptyCategories, deletePattern,
+    renamePattern, updatePatternTags, movePattern, addEmptyCategory,
+    removeEmptyCategory, moveCategory,
+  } = usePatternsData(source)
 
   const [rootCollapsed, setRootCollapsed] = useState(false)
   const [collapsedTags, setCollapsedTags] = useState<Set<string>>(new Set())
@@ -72,12 +50,6 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
   const previewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const leaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const panelRef = useRef<HTMLDivElement>(null)
-
-  const sourceName = useMemo(() => {
-    if (source.type === 'internal') return 'Internal Patterns'
-    const lib = libraryIndex.find((l) => l.id === source.libraryId)
-    return lib?.name || 'Library'
-  }, [source, libraryIndex])
 
   const cancelLeave = useCallback(() => {
     if (leaveTimerRef.current) { clearTimeout(leaveTimerRef.current); leaveTimerRef.current = null }
@@ -148,6 +120,9 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
     }
     return { categorized: map, uncategorized: uncat, allTags: tagOrder }
   }, [patterns, emptyCategories])
+
+  // DnD handlers (extracted)
+  const dnd = createDragHandlers(readOnly, patterns, source, dragId, overId, setDragId, setOverId, setOverPos)
 
   function getInsertParent(): string {
     if (selectedId) {
@@ -230,106 +205,6 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
 
   // Close context menu
   const closeContext = useCallback(() => setContextMenu(null), [])
-  useEffect(() => {
-    if (contextMenu) {
-      window.addEventListener('click', closeContext)
-      return () => window.removeEventListener('click', closeContext)
-    }
-  }, [contextMenu, closeContext])
-
-  // --- DnD helpers ---
-  function getDropPos(e: React.DragEvent, el: HTMLElement, isCategory: boolean): DropPosition {
-    const rect = el.getBoundingClientRect()
-    const y = e.clientY - rect.top
-    const third = rect.height / 3
-    if (y < third) return 'before'
-    if (y > third * 2 || !isCategory) return 'after'
-    return 'inside'
-  }
-
-  function handleDragStart(e: React.DragEvent, id: string) {
-    e.dataTransfer.effectAllowed = readOnly ? 'copy' : 'copyMove'
-    e.dataTransfer.setData('text/plain', id)
-    if (!readOnly) setDragId(id)
-
-    // Set pattern drag frame + origin + sentinel canvasDragId for cross-iframe DnD
-    const pattern = patterns.find((s) => s.id === id)
-    if (pattern) {
-      const origin = { libraryId: source.type === 'library' ? source.libraryId : 'internal', patternId: pattern.id }
-      useFrameStore.getState().setPatternDragFrame(pattern.frame, origin)
-      // canvasDragId set lazily on first canvas dragover (not here)
-    }
-  }
-
-  function handleDragOver(e: React.DragEvent, id: string, isCategory: boolean) {
-    if (!dragId || dragId === id) return
-    e.preventDefault()
-    e.stopPropagation()
-    e.dataTransfer.dropEffect = 'move'
-    const pos = getDropPos(e, e.currentTarget as HTMLElement, isCategory)
-    setOverId(id)
-    setOverPos(pos)
-  }
-
-  function handleDragLeave(id: string) {
-    if (overId === id) { setOverId(null); setOverPos(null) }
-  }
-
-  function handleDrop(e: React.DragEvent, targetId: string, isCategory: boolean) {
-    e.preventDefault()
-    e.stopPropagation()
-    if (!dragId || dragId === targetId) { endDrag(); return }
-
-    const pos = getDropPos(e, e.currentTarget as HTMLElement, isCategory)
-    const capturedDragId = dragId
-    endDrag()
-
-    if (isCategory && pos === 'inside') {
-      // Drop inside category — move pattern to this category, after last item
-      const items = categorized.get(targetId)
-      const lastInCategory = items && items.length > 0 ? items[items.length - 1].id : null
-      if (lastInCategory) {
-        movePattern(capturedDragId, lastInCategory, 'after')
-      } else {
-        // Empty category — just change tags
-        updatePatternTags(capturedDragId, [targetId])
-      }
-    } else if (isCategory) {
-      // before/after a category header — find first/last pattern in that category
-      const items = categorized.get(targetId)
-      if (pos === 'before' && items && items.length > 0) {
-        movePattern(capturedDragId, items[0].id, 'before')
-      } else if (pos === 'after' && items && items.length > 0) {
-        movePattern(capturedDragId, items[items.length - 1].id, 'after')
-      }
-    } else {
-      // Drop before/after a pattern
-      movePattern(capturedDragId, targetId, pos)
-    }
-  }
-
-  function handleRootDrop(e: React.DragEvent) {
-    e.preventDefault()
-    if (!dragId) return
-    const capturedDragId = dragId
-    endDrag()
-    // Move to uncategorized, at end
-    const last = uncategorized.length > 0 ? uncategorized[uncategorized.length - 1].id : null
-    if (last && last !== capturedDragId) {
-      movePattern(capturedDragId, last, 'after')
-    } else {
-      updatePatternTags(capturedDragId, [])
-    }
-  }
-
-  function endDrag() {
-    setDragId(null); setOverId(null); setOverPos(null)
-    // Clear cross-iframe pattern drag state
-    const store = useFrameStore.getState()
-    store.setPatternDragFrame(null)
-    store.setCanvasDrag(null)
-    store.setCanvasDragOver(null)
-  }
 
   const isRootOver = overId === '__root__'
   const hasContent = patterns.length > 0 || allTags.length > 0
@@ -341,7 +216,7 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
       ref={panelRef}
       className="h-full flex flex-col overflow-y-auto py-1 px-1"
       onDragOver={(e) => { if (dragId) e.preventDefault() }}
-      onDrop={handleRootDrop}
+      onDrop={(e) => dnd.handleRootDrop(e, { uncategorized, movePattern, updatePatternTags })}
     >
       {/* Root "Patterns" node — visible only when there's content */}
       {hasContent && <div
@@ -368,7 +243,7 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
           e.stopPropagation()
           if (!dragId) return
           const capturedDragId = dragId
-          endDrag()
+          dnd.endDrag()
           const last = uncategorized.length > 0 ? uncategorized[uncategorized.length - 1].id : null
           if (last && last !== capturedDragId) {
             movePattern(capturedDragId, last, 'after')
@@ -408,11 +283,11 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
               onEditCancel={() => setEditingId(null)}
               onDoubleClick={() => { if (!readOnly) startPatternRename(s) }}
               onContextMenu={(x, y) => setContextMenu({ x, y, type: 'pattern', pattern: s })}
-              onDragStart={(e) => handleDragStart(e, s.id)}
-              onDragOver={readOnly ? undefined : (e) => handleDragOver(e, s.id, false)}
-              onDragLeave={readOnly ? undefined : () => handleDragLeave(s.id)}
-              onDrop={readOnly ? undefined : (e) => handleDrop(e, s.id, false)}
-              onDragEnd={endDrag}
+              onDragStart={(e) => dnd.handleDragStart(e, s.id)}
+              onDragOver={readOnly ? undefined : (e) => dnd.handleDragOver(e, s.id, false)}
+              onDragLeave={readOnly ? undefined : () => dnd.handleDragLeave(s.id)}
+              onDrop={readOnly ? undefined : (e) => dnd.handleDrop(e, s.id, false, { categorized, movePattern, updatePatternTags })}
+              onDragEnd={dnd.endDrag}
               onInsert={() => handleInsert(s)}
               onDelete={readOnly ? undefined : () => deletePattern(s.id)}
               onPreviewEnter={onPreviewEnter}
@@ -485,7 +360,7 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
                     const capturedDragId = dragId
                     const pos = getDropPos(e, e.currentTarget as HTMLElement, true)
                     // Clear DnD visual state FIRST (before store updates trigger re-renders)
-                    endDrag()
+                    dnd.endDrag()
                     if (wasDraggingCat) {
                       // Category-on-category: reorder
                       const dragTag = capturedDragId.slice('__cat:'.length)
@@ -504,7 +379,7 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
                       }
                     }
                   }}
-                  onDragEnd={endDrag}
+                  onDragEnd={dnd.endDrag}
                   onContextMenu={readOnly ? undefined : (e) => {
                     e.preventDefault()
                     e.stopPropagation()
@@ -575,11 +450,11 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
                     onEditCancel={() => setEditingId(null)}
                     onDoubleClick={() => { if (!readOnly) startPatternRename(s) }}
                     onContextMenu={(x, y) => setContextMenu({ x, y, type: 'pattern', pattern: s })}
-                    onDragStart={(e) => handleDragStart(e, s.id)}
-                    onDragOver={readOnly ? undefined : (e) => handleDragOver(e, s.id, false)}
-                    onDragLeave={readOnly ? undefined : () => handleDragLeave(s.id)}
-                    onDrop={readOnly ? undefined : (e) => handleDrop(e, s.id, false)}
-                    onDragEnd={endDrag}
+                    onDragStart={(e) => dnd.handleDragStart(e, s.id)}
+                    onDragOver={readOnly ? undefined : (e) => dnd.handleDragOver(e, s.id, false)}
+                    onDragLeave={readOnly ? undefined : () => dnd.handleDragLeave(s.id)}
+                    onDrop={readOnly ? undefined : (e) => dnd.handleDrop(e, s.id, false, { categorized, movePattern, updatePatternTags })}
+                    onDragEnd={dnd.endDrag}
                     onInsert={() => handleInsert(s)}
                     onDelete={readOnly ? undefined : () => deletePattern(s.id)}
                     onPreviewEnter={onPreviewEnter}
@@ -623,43 +498,18 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
       )}
 
       {/* Pattern context menu */}
-      {contextMenu && contextMenu.type === 'pattern' && (
-        <div
-          className="fixed c-menu-popup min-w-[160px] z-[9999]"
-          style={{ left: contextMenu.x, top: contextMenu.y }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button className="c-menu-item" onClick={() => { handleInsert(contextMenu.pattern); setContextMenu(null) }}>
-            <Plus size={12} /> Insert
-          </button>
-          {!readOnly && (
-            <>
-              <button className="c-menu-item" onClick={() => { startPatternRename(contextMenu.pattern); setContextMenu(null) }}>
-                <Pencil size={12} /> Rename
-              </button>
-              <div className="border-t border-border my-1" />
-              <button className="c-menu-item text-destructive" onClick={() => { deletePattern(contextMenu.pattern.id); setContextMenu(null) }}>
-                <Trash2 size={12} /> Delete
-              </button>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* Category context menu */}
-      {contextMenu && contextMenu.type === 'category' && (
-        <div
-          className="fixed c-menu-popup min-w-[140px] z-[9999]"
-          style={{ left: contextMenu.x, top: contextMenu.y }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button className="c-menu-item" onClick={() => { startCategoryRename(contextMenu.tag); setContextMenu(null) }}>
-            <Pencil size={12} /> Rename
-          </button>
-          <button className="c-menu-item text-destructive" onClick={() => { deleteCategory(contextMenu.tag); setContextMenu(null) }}>
-            <Trash2 size={12} /> Delete category
-          </button>
-        </div>
+      {contextMenu && <div className="fixed inset-0 z-40" onClick={closeContext} onContextMenu={(e) => { e.preventDefault(); closeContext() }} />}
+      {contextMenu && (
+        <PatternContextMenu
+          contextMenu={contextMenu}
+          readOnly={readOnly}
+          onInsert={handleInsert}
+          onRename={startPatternRename}
+          onDelete={(id) => deletePattern(id)}
+          onCategoryRename={startCategoryRename}
+          onCategoryDelete={deleteCategory}
+          onClose={() => setContextMenu(null)}
+        />
       )}
 
       {/* Pattern hover preview — always mounted, iframe persists */}

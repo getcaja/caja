@@ -54,9 +54,10 @@ export function PageNode({ page }: PageNodeProps) {
         )}
       </div>
 
+      {ctxMenu.backdrop}
       {ctxMenu.menu && (
         <div
-          className="fixed c-menu-popup min-w-[160px] z-[9999]"
+          className="fixed c-menu-popup min-w-[160px] z-50"
           style={{ left: ctxMenu.menu.x, top: ctxMenu.menu.y }}
           onClick={(e) => e.stopPropagation()}
         >

@@ -181,9 +181,10 @@ export function TreePanel({ onExportLibrary }: TreePanelProps) {
         )}
 
         {/* Patterns "+" menu */}
+        {patternMenu.backdrop}
         {patternMenu.menu && (
           <div
-            className="fixed c-menu-popup min-w-[180px] z-[9999]"
+            className="fixed c-menu-popup min-w-[180px] z-50"
             style={{ left: patternMenu.menu.x, top: patternMenu.menu.y }}
             onClick={(e) => e.stopPropagation()}
           >

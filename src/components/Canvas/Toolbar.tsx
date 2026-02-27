@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useRef } from 'react'
 import {
   Monitor, Tablet, Smartphone,
   FilePlus, SquarePlus, LayoutGrid, Minus, Plus, Pencil, Eye,
@@ -49,15 +49,6 @@ function DropdownButton({ icon, title, isActive, menu, children }: {
   const [open, setOpen] = useState(false)
   const btnRef = useRef<HTMLButtonElement>(null)
   const [pos, setPos] = useState({ x: 0, y: 0 })
-  const stableOpen = useRef(open)
-  stableOpen.current = open
-
-  useEffect(() => {
-    if (!open) return
-    const handler = () => { if (stableOpen.current) setOpen(false) }
-    const id = setTimeout(() => window.addEventListener('click', handler), 0)
-    return () => { clearTimeout(id); window.removeEventListener('click', handler) }
-  }, [open])
 
   const handleClick = () => {
     if (!open && btnRef.current) {
@@ -80,13 +71,17 @@ function DropdownButton({ icon, title, isActive, menu, children }: {
         {icon ?? children}
       </button>
       {open && (
-        <div
-          className="fixed c-menu-popup min-w-[120px] z-[9999]"
-          style={{ left: pos.x, bottom: window.innerHeight - pos.y, transform: 'translateX(-50%)' }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {menu}
-        </div>
+        <>
+          {/* Backdrop catches clicks outside menu (including on iframe) */}
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div
+            className="fixed c-menu-popup min-w-[120px] z-50"
+            style={{ left: pos.x, bottom: window.innerHeight - pos.y, transform: 'translateX(-50%)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {menu}
+          </div>
+        </>
       )}
     </>
   )

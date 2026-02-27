@@ -297,9 +297,10 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
       )}
 
       {/* Right-click context menu (fixed position) */}
+      {ctxMenu.backdrop}
       {ctxMenu.menu && (
         <div
-          className="fixed c-menu-popup min-w-[160px]"
+          className="fixed c-menu-popup min-w-[160px] z-50"
           style={{ left: ctxMenu.menu.x, top: ctxMenu.menu.y }}
           onClick={(e) => e.stopPropagation()}
         >

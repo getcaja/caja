@@ -1,4 +1,3 @@
-import { useEffect, useCallback } from 'react'
 import { Square, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ChevronDown, Link } from 'lucide-react'
 
 interface AddMenuProps {
@@ -9,25 +8,15 @@ interface AddMenuProps {
 }
 
 export function AddMenu({ x, y, onAdd, onClose }: AddMenuProps) {
-  const handleClose = useCallback(() => onClose(), [onClose])
-
-  useEffect(() => {
-    const handler = () => handleClose()
-    const id = setTimeout(() => {
-      window.addEventListener('click', handler)
-    }, 0)
-    return () => {
-      clearTimeout(id)
-      window.removeEventListener('click', handler)
-    }
-  }, [handleClose])
-
   return (
-    <div
-      className="fixed c-menu-popup min-w-[120px]"
-      style={{ left: x, top: y }}
-      onClick={(e) => e.stopPropagation()}
-    >
+    <>
+      {/* Backdrop catches clicks outside menu (including on iframe) */}
+      <div className="fixed inset-0 z-40" onClick={onClose} />
+      <div
+        className="fixed c-menu-popup min-w-[120px] z-50"
+        style={{ left: x, top: y }}
+        onClick={(e) => e.stopPropagation()}
+      >
       <button
         className="c-menu-item"
         onClick={() => onAdd('box')}
@@ -77,5 +66,6 @@ export function AddMenu({ x, y, onAdd, onClose }: AddMenuProps) {
         <ChevronDown size={12} /> Select
       </button>
     </div>
+    </>
   )
 }
