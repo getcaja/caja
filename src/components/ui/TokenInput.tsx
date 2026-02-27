@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { Diamond, Check } from 'lucide-react'
 import type { ScaleOption } from '../../data/scales'
 import type { DesignValue } from '../../types/frame'
+import { useFrameStore } from '../../store/frameStore'
 
 export interface EnumOption {
   value: string
@@ -50,6 +51,8 @@ interface NormalizedItem {
 export function TokenInput(props: TokenInputProps) {
   const { label, classPrefix } = props
   const isScale = 'scale' in props && props.scale !== undefined
+  const startPreview = useFrameStore((s) => s.startPreview)
+  const endPreview = useFrameStore((s) => s.endPreview)
 
   // --- Shared state ---
   const [showDropdown, setShowDropdown] = useState(false)
@@ -114,7 +117,8 @@ export function TokenInput(props: TokenInputProps) {
       const idx = enumProps!.options.findIndex((o) => o.value === enumProps!.value)
       setSelectedIdx(idx)
     }
-  }, [isScale, scaleToken, scaleProps?.scale, enumProps?.value, enumProps?.options])
+    startPreview()
+  }, [isScale, scaleToken, scaleProps?.scale, enumProps?.value, enumProps?.options, startPreview])
 
   const closeDropdown = useCallback(() => {
     if (originalRef.current !== null) {
@@ -127,7 +131,8 @@ export function TokenInput(props: TokenInputProps) {
     }
     setShowDropdown(false)
     setSelectedIdx(-1)
-  }, [isScale, scaleProps?.onChange, enumProps?.onChange])
+    endPreview(false)
+  }, [isScale, scaleProps?.onChange, enumProps?.onChange, endPreview])
 
   const toggleDropdown = useCallback(() => {
     if (showDropdown) closeDropdown()
@@ -148,6 +153,7 @@ export function TokenInput(props: TokenInputProps) {
   }, [isScale, items.length, scaleProps?.scale, scaleProps?.value, scaleProps?.onChange, enumProps?.options, enumProps?.value, enumProps?.onChange])
 
   const commitAtIndex = useCallback((idx: number) => {
+    endPreview(true)
     originalRef.current = null
     if (isScale) {
       const opt = scaleProps!.scale[idx]
@@ -161,7 +167,7 @@ export function TokenInput(props: TokenInputProps) {
       setShowDropdown(false)
       setSelectedIdx(-1)
     }
-  }, [isScale, scaleProps?.scale, scaleProps?.onChange, enumProps?.options, enumProps?.onChange])
+  }, [isScale, scaleProps?.scale, scaleProps?.onChange, enumProps?.options, enumProps?.onChange, endPreview])
 
   const revertPreview = useCallback(() => {
     if (originalRef.current === null) return

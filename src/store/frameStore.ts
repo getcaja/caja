@@ -263,6 +263,7 @@ interface FrameStore {
   clipboard: Frame[]
   treePanelTab: 'layers' | 'patterns' | 'libraries'
   _lastDuplicateMap: Record<string, string> | null
+  _previewSnapshot: BoxElement | null
   mcpHighlightIds: Set<string>
 
   past: Record<string, BoxElement[]>
@@ -292,6 +293,8 @@ interface FrameStore {
   updateBorderRadius: (id: string, values: Partial<BorderRadius>) => void
   renameFrame: (id: string, name: string) => void
 
+  startPreview: () => void
+  endPreview: (commit: boolean) => void
   undo: () => void
   redo: () => void
 
@@ -369,7 +372,8 @@ function saveViewPrefs(prefs: ViewPrefs) {
 
 const initialViewPrefs = loadViewPrefs()
 
-function pushHistory(state: { root: BoxElement; past: Record<string, BoxElement[]>; future: Record<string, BoxElement[]>; activePageId: string }) {
+function pushHistory(state: { root: BoxElement; past: Record<string, BoxElement[]>; future: Record<string, BoxElement[]>; activePageId: string; _previewSnapshot: BoxElement | null }) {
+  if (state._previewSnapshot) return {}
   const pageId = state.activePageId
   const pagePast = state.past[pageId] || []
   return {
@@ -415,6 +419,7 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   treePanelTab: 'layers' as const,
   advancedMode: initialViewPrefs.advancedMode,
   _lastDuplicateMap: null,
+  _previewSnapshot: null,
   mcpHighlightIds: new Set<string>(),
   past: {},
   future: {},
@@ -658,6 +663,26 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
       const newRoot = updateInTree(state.root, id, (f) => ({ ...f, name })) as BoxElement
       return { ...updateActiveRoot(state, newRoot), ...history }
     }),
+
+  startPreview: () => set((state) => {
+    if (state._previewSnapshot) return {}
+    return { _previewSnapshot: cloneTree(state.root) as BoxElement }
+  }),
+
+  endPreview: (commit) => set((state) => {
+    if (!state._previewSnapshot) return {}
+    if (commit) {
+      const pageId = state.activePageId
+      const pagePast = state.past[pageId] || []
+      return {
+        past: { ...state.past, [pageId]: [...pagePast.slice(-(MAX_HISTORY - 1)), state._previewSnapshot] },
+        future: { ...state.future, [pageId]: [] },
+        _previewSnapshot: null,
+        dirty: true,
+      }
+    }
+    return { ...updateActiveRoot(state, state._previewSnapshot), _previewSnapshot: null }
+  }),
 
   undo: () =>
     set((state) => {

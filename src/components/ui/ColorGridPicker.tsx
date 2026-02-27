@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { COLOR_GRID, SPECIAL_COLORS, SHADE_NAMES } from '../../data/colors'
 import type { ColorSwatch } from '../../data/colors'
 import type { DesignValue } from '../../types/frame'
+import { useFrameStore } from '../../store/frameStore'
 
 export function ColorGridPicker({
   value,
@@ -14,6 +15,8 @@ export function ColorGridPicker({
   onCommit?: () => void
   classPrefix?: string
 }) {
+  const startPreview = useFrameStore((s) => s.startPreview)
+  const endPreview = useFrameStore((s) => s.endPreview)
   const currentToken = value.mode === 'token' ? value.token : null
   const [hovered, setHovered] = useState<ColorSwatch | null>(null)
 
@@ -26,10 +29,13 @@ export function ColorGridPicker({
   onChangeRef.current = onChange
 
   // Revert on unmount (popover closes without committing)
+  const endPreviewRef = useRef(endPreview)
+  endPreviewRef.current = endPreview
   useEffect(() => {
     return () => {
       if (originalRef.current) {
         onChangeRef.current(originalRef.current)
+        endPreviewRef.current(false)
       }
     }
   }, [])
@@ -37,12 +43,16 @@ export function ColorGridPicker({
   const label = (token: string) => classPrefix ? `${classPrefix}-${token}` : token
 
   const handleHover = (swatch: ColorSwatch) => {
-    if (!originalRef.current) originalRef.current = value
+    if (!originalRef.current) {
+      originalRef.current = value
+      startPreview()
+    }
     setHovered(swatch)
     onChange({ mode: 'token', token: swatch.token, value: swatch.value })
   }
 
   const handleClick = (swatch: ColorSwatch) => {
+    endPreview(true)
     originalRef.current = null
     onChange({ mode: 'token', token: swatch.token, value: swatch.value })
     onCommit?.()
@@ -57,6 +67,7 @@ export function ColorGridPicker({
   }
 
   const handleUnlink = () => {
+    endPreview(true)
     const base = originalRef.current || value
     originalRef.current = null
     onChange({ mode: 'custom', value: base.value })
