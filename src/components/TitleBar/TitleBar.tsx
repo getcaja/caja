@@ -29,8 +29,8 @@ export function TitleBar() {
         </span>
       </div>
 
-      {/* Spacer — drag region */}
-      <div className="flex-1 h-full" />
+      {/* Spacer — drag region (explicit attribute for WKWebView reliability) */}
+      <div className="flex-1 h-full" data-tauri-drag-region />
 
       {/* MCP status button */}
       <div className="flex items-center px-1 pr-2">

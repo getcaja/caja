@@ -9,7 +9,7 @@ function readCollapsed(title: string, defaultCollapsed: boolean): boolean {
   try {
     const v = localStorage.getItem(getStorageKey(title))
     if (v !== null) return v === '1'
-  } catch { /* ignore */ }
+  } catch { /* expected: localStorage unavailable — collapsed state is non-critical */ }
   return defaultCollapsed
 }
 
@@ -30,7 +30,7 @@ export function Section({
     if (!collapsible) return
     const next = !collapsed
     setCollapsed(next)
-    try { localStorage.setItem(getStorageKey(title), next ? '1' : '0') } catch { /* ignore */ }
+    try { localStorage.setItem(getStorageKey(title), next ? '1' : '0') } catch { /* expected: localStorage unavailable — collapsed state is non-critical */ }
   }
 
   return (

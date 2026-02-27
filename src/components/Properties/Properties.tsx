@@ -50,7 +50,7 @@ export function Properties() {
   }
 
   const isRoot = selected.id === rootId
-  const hasTextStyles = selected.type !== 'image'
+  const hasTextStyles = 'fontSize' in selected
 
   return (
     <div key={selected.id} className="h-full bg-surface-1 p-3 overflow-y-auto">

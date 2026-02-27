@@ -34,7 +34,7 @@ function loadPanelState(): { leftWidth: number; rightWidth: number } {
         rightWidth: Math.min(RIGHT_MAX, Math.max(RIGHT_MIN, parsed.rightWidth ?? RIGHT_DEFAULT)),
       }
     }
-  } catch { /* ignore */ }
+  } catch { /* expected: localStorage unavailable — panel state is non-critical */ }
   return { leftWidth: LEFT_DEFAULT, rightWidth: RIGHT_DEFAULT }
 }
 
@@ -43,6 +43,13 @@ function savePanelState(state: { leftWidth: number; rightWidth: number }) {
 }
 
 const isTauri = '__TAURI_INTERNALS__' in window
+
+// TODO: Global ErrorBoundary component for React render crashes
+
+/** Fire-and-forget Tauri menu sync — logs on failure instead of silently swallowing */
+function safeMenuSync(invoke: (cmd: string, args?: Record<string, unknown>) => Promise<unknown>, id: string, checked: boolean) {
+  invoke('set_menu_check', { id, checked }).catch((err) => console.warn(`Menu sync failed (${id}):`, err))
+}
 
 function App() {
   const [showExport, setShowExport] = useState(false)
@@ -55,6 +62,7 @@ function App() {
   useEffect(() => {
     savePanelState({ leftWidth, rightWidth })
   }, [leftWidth, rightWidth])
+  const [isResizing, setIsResizing] = useState(false)
   const dragging = useRef<'left' | 'right' | null>(null)
   const startX = useRef(0)
   const startWidth = useRef(0)
@@ -82,7 +90,7 @@ function App() {
     const title = dirty ? `${fileName}${pageLabel} — Edited · Caja` : `${fileName}${pageLabel} · Caja`
     import('@tauri-apps/api/core').then(({ invoke }) => {
       invoke('set_window_title', { title })
-    }).catch(() => {})
+    }).catch((err) => console.warn('Failed to set window title:', err))
   }, [filePath, dirty, activePageId, pages])
 
   const handleSave = useCallback(async () => {
@@ -129,34 +137,42 @@ function App() {
         useFrameStore.getState().loadFromFile(root, result.path)
       }
       useCatalogStore.getState().loadPatterns((data.patterns ?? data.snippets) as import('./store/catalogStore').PatternData | undefined)
+      // Restore blob URLs from local asset files after file load
+      import('./lib/assetOps').then(({ restoreAllAssets }) => {
+        restoreAllAssets(useFrameStore.getState().pages).catch((err) => console.warn('Asset restore failed:', err))
+      })
     }
   }, [])
 
   useEffect(() => {
     loadFromStorage()
+    // Restore blob URLs from local asset files (async, non-blocking)
+    import('./lib/assetOps').then(({ restoreAllAssets }) => {
+      restoreAllAssets(useFrameStore.getState().pages).catch((err) => console.warn('Asset restore failed:', err))
+    })
     loadPatternsFromStorage()
     startMcpBridge()
 
     // Load installed libraries (Tauri only)
     if (isTauri) {
       import('./components/TreePanel/ManageLibrariesModal').then(({ initializeLibraries }) => {
-        initializeLibraries().catch(() => {})
-      }).catch(() => {})
+        initializeLibraries().catch((err) => console.warn('Library initialization failed:', err))
+      }).catch((err) => console.warn('Failed to load library module:', err))
     }
 
     // Sync initial view prefs to native menu check states
     if (isTauri) {
       import('@tauri-apps/api/core').then(({ invoke }) => {
         const { showSpacingOverlays, showOverlayValues, advancedMode } = useFrameStore.getState()
-        invoke('set_menu_check', { id: 'toggle-spacing-overlays', checked: showSpacingOverlays }).catch(() => {})
-        invoke('set_menu_check', { id: 'toggle-overlay-values', checked: showOverlayValues }).catch(() => {})
-        invoke('set_menu_check', { id: 'toggle-advanced-mode', checked: advancedMode }).catch(() => {})
+        safeMenuSync(invoke, 'toggle-spacing-overlays', showSpacingOverlays)
+        safeMenuSync(invoke, 'toggle-overlay-values', showOverlayValues)
+        safeMenuSync(invoke, 'toggle-advanced-mode', advancedMode)
         // Sync theme radio checks
         const activeId = getActiveTheme().id
         for (const tid of ['default-dark', 'dracula', 'catppuccin-mocha']) {
-          invoke('set_menu_check', { id: `theme-${tid}`, checked: tid === activeId }).catch(() => {})
+          safeMenuSync(invoke, `theme-${tid}`, tid === activeId)
         }
-      }).catch(() => {})
+      }).catch((err) => console.warn('Failed to load Tauri core for menu sync:', err))
     }
 
     return () => stopMcpBridge()
@@ -326,9 +342,7 @@ function App() {
         useFrameStore.getState().toggleSpacingOverlays()
         if (isTauri) {
           const checked = useFrameStore.getState().showSpacingOverlays
-          import('@tauri-apps/api/core').then(({ invoke }) => {
-            invoke('set_menu_check', { id: 'toggle-spacing-overlays', checked })
-          }).catch(() => {})
+          import('@tauri-apps/api/core').then(({ invoke }) => safeMenuSync(invoke, 'toggle-spacing-overlays', checked))
         }
       }
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'v') {
@@ -336,9 +350,7 @@ function App() {
         useFrameStore.getState().toggleOverlayValues()
         if (isTauri) {
           const checked = useFrameStore.getState().showOverlayValues
-          import('@tauri-apps/api/core').then(({ invoke }) => {
-            invoke('set_menu_check', { id: 'toggle-overlay-values', checked })
-          }).catch(() => {})
+          import('@tauri-apps/api/core').then(({ invoke }) => safeMenuSync(invoke, 'toggle-overlay-values', checked))
         }
       }
       // Advanced mode toggle
@@ -348,9 +360,7 @@ function App() {
         const next = !store.advancedMode
         store.setAdvancedMode(next)
         if (isTauri) {
-          import('@tauri-apps/api/core').then(({ invoke }) => {
-            invoke('set_menu_check', { id: 'toggle-advanced-mode', checked: next })
-          }).catch(() => {})
+          import('@tauri-apps/api/core').then(({ invoke }) => safeMenuSync(invoke, 'toggle-advanced-mode', next))
         }
       }
       // Preview mode toggle
@@ -385,36 +395,40 @@ function App() {
     }
   }, [undo, redo, removeFrame, removeSelected, reorderFrame, selectedId, handleSave, handleSaveAs, handleOpen, iframeWindow])
 
-  // Resize drag handlers — pointer events + capture for reliable tracking
+  // Resize drag — full-viewport overlay prevents iframe from stealing events.
+  // Uses pointermove/pointerup (NOT mousemove/mouseup) because preventDefault()
+  // on pointerdown cancels mouse compatibility events per the pointer events spec.
   const startDrag = (side: 'left' | 'right', e: React.PointerEvent) => {
     e.preventDefault()
     dragging.current = side
     startX.current = e.clientX
     startWidth.current = side === 'left' ? leftWidth : rightWidth
-    const target = e.currentTarget as HTMLElement
-    target.setPointerCapture(e.pointerId)
-    document.body.style.cursor = 'col-resize'
-  }
+    setIsResizing(true)
 
-  const onResizeMove = useCallback((e: React.PointerEvent) => {
-    if (!dragging.current) return
-    const delta = e.clientX - startX.current
-    if (dragging.current === 'left') {
-      setLeftWidth(Math.min(LEFT_MAX, Math.max(LEFT_MIN, startWidth.current + delta)))
-    } else {
-      setRightWidth(Math.min(RIGHT_MAX, Math.max(RIGHT_MIN, startWidth.current - delta)))
+    const onMove = (ev: PointerEvent) => {
+      const delta = ev.clientX - startX.current
+      if (dragging.current === 'left') {
+        setLeftWidth(Math.min(LEFT_MAX, Math.max(LEFT_MIN, startWidth.current + delta)))
+      } else {
+        setRightWidth(Math.min(RIGHT_MAX, Math.max(RIGHT_MIN, startWidth.current - delta)))
+      }
     }
-  }, [])
-
-  const onResizeUp = useCallback(() => {
-    dragging.current = null
-    document.body.style.cursor = ''
-  }, [])
+    const onUp = () => {
+      dragging.current = null
+      setIsResizing(false)
+      document.documentElement.removeEventListener('pointermove', onMove)
+      document.documentElement.removeEventListener('pointerup', onUp)
+    }
+    document.documentElement.addEventListener('pointermove', onMove)
+    document.documentElement.addEventListener('pointerup', onUp)
+  }
 
   return (
     <TooltipProvider>
       <div className="h-full flex flex-col bg-surface-0 select-none">
         <TitleBar />
+        {/* Full-viewport overlay during panel resize — prevents iframe from stealing events */}
+        {isResizing && <div className="fixed inset-0 z-50 cursor-col-resize" />}
         {/* Main panels */}
         <div className="flex-1 flex overflow-hidden">
           {!previewMode && (
@@ -425,8 +439,6 @@ function App() {
               <div
                 className="w-[7px] shrink-0 cursor-col-resize bg-transparent hover:bg-accent/40 transition-colors -ml-[4px] z-10"
                 onPointerDown={(e) => startDrag('left', e)}
-                onPointerMove={onResizeMove}
-                onPointerUp={onResizeUp}
               />
             </>
           )}
@@ -438,8 +450,6 @@ function App() {
               <div
                 className="w-[7px] shrink-0 cursor-col-resize bg-transparent hover:bg-accent/40 transition-colors -mr-[4px] z-10"
                 onPointerDown={(e) => startDrag('right', e)}
-                onPointerMove={onResizeMove}
-                onPointerUp={onResizeUp}
               />
               <div style={{ width: rightWidth }} className="shrink-0 border-l border-border">
                 <RightPanel />

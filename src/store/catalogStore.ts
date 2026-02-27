@@ -328,7 +328,8 @@ export function loadPatternsFromStorage() {
         useCatalogStore.getState().setLibraryIndex(data.libraryIndex)
       }
     }
-  } catch {
+  } catch (err) {
+    console.warn('Failed to load patterns from storage, resetting:', err)
     localStorage.removeItem(STORAGE_KEY)
   }
 }

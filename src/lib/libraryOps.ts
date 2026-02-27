@@ -46,7 +46,8 @@ export async function loadLibraryIndex(): Promise<LibraryMeta[]> {
     const raw = await readTextFile(indexPath)
     const parsed = JSON.parse(raw)
     return Array.isArray(parsed) ? parsed : []
-  } catch {
+  } catch (err) {
+    console.warn('Failed to load library index:', err)
     return []
   }
 }
@@ -153,8 +154,8 @@ export async function removeLibraryFile(meta: LibraryMeta): Promise<void> {
     if (await exists(filePath)) {
       await remove(filePath)
     }
-  } catch {
-    // Silently ignore if file doesn't exist
+  } catch (err) {
+    console.warn('Failed to remove library file:', err)
   }
 }
 
@@ -167,7 +168,8 @@ export async function listLibraryFiles(): Promise<string[]> {
     return entries
       .filter((e) => e.name?.endsWith('.cjl'))
       .map((e) => e.name!)
-  } catch {
+  } catch (err) {
+    console.warn('Failed to list library files:', err)
     return []
   }
 }
@@ -199,8 +201,8 @@ export async function rebuildLibraryIndex(): Promise<LibraryMeta[]> {
       }
       // Dedupe by name — keep last
       byName.set(parsed.name, meta)
-    } catch {
-      // Skip corrupt files
+    } catch (err) {
+      console.warn(`Skipping corrupt library file ${fileName}:`, err)
     }
   }
 

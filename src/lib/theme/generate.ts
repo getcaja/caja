@@ -71,14 +71,14 @@ export function getActiveTheme(): CajaTheme {
   try {
     const id = localStorage.getItem(THEME_STORAGE_KEY)
     if (id) return THEMES.find((t) => t.id === id) ?? DEFAULT_THEME
-  } catch { /* SSR / iframe without storage */ }
+  } catch { /* expected: SSR or iframe without localStorage access */ }
   return DEFAULT_THEME
 }
 
 /** Persist theme choice and apply to given documents */
 export function switchTheme(themeId: string, docs: Document[] = [document]): CajaTheme {
   const theme = THEMES.find((t) => t.id === themeId) ?? DEFAULT_THEME
-  try { localStorage.setItem(THEME_STORAGE_KEY, theme.id) } catch { /* ignore */ }
+  try { localStorage.setItem(THEME_STORAGE_KEY, theme.id) } catch { /* expected: SSR or iframe without localStorage */ }
   for (const doc of docs) applyTheme(theme, doc)
   return theme
 }

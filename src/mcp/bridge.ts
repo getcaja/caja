@@ -92,10 +92,11 @@ export function stopMcpBridge() {
   unlisten = []
 }
 
-// Clean up and restart on HMR so tool code changes take effect
+// Clean up and restart on HMR so tool code changes take effect.
+// Accept ./tools and ./resources so their updates propagate here.
 if (import.meta.hot) {
   import.meta.hot.dispose(() => stopMcpBridge())
-  import.meta.hot.accept(() => {
+  import.meta.hot.accept(['./tools', './resources'], () => {
     startMcpBridge()
   })
 }
