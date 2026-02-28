@@ -1,73 +1,37 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Dialog } from '../ui/Dialog'
-import { useFrameStore } from '../../store/frameStore'
-import { Check, Copy, Plus } from 'lucide-react'
+import { Check, Copy, ChevronDown, ChevronRight } from 'lucide-react'
 
 interface McpModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
-type Client = 'claude-code' | 'claude-desktop' | 'codex' | 'vscode'
+type Client = 'claude-code' | 'claude-desktop' | 'cursor' | 'vscode' | 'codex'
+
+const isTauri = '__TAURI_INTERNALS__' in window
 
 const CLIENTS: { id: Client; label: string }[] = [
   { id: 'claude-code', label: 'Claude Code' },
   { id: 'claude-desktop', label: 'Claude Desktop' },
-  { id: 'codex', label: 'Codex' },
+  { id: 'cursor', label: 'Cursor' },
   { id: 'vscode', label: 'VS Code' },
+  { id: 'codex', label: 'Codex' },
 ]
 
-function getConfig(client: Client): { snippet: string; instructions: string } {
-  switch (client) {
-    case 'claude-code':
-      return {
-        snippet: JSON.stringify({
-          mcpServers: {
-            caja: {
-              command: 'node',
-              args: ['src/mcp/server.mjs'],
-            },
-          },
-        }, null, 2),
-        instructions: 'Add to .mcp.json in your project root.\nCaja must be running when the MCP server starts.',
-      }
-    case 'claude-desktop':
-      return {
-        snippet: JSON.stringify({
-          mcpServers: {
-            caja: {
-              command: 'node',
-              args: ['/absolute/path/to/caja/src/mcp/server.mjs'],
-            },
-          },
-        }, null, 2),
-        instructions: 'Merge into ~/Library/Application Support/Claude/claude_desktop_config.json\nReplace the path with the absolute path to server.mjs.\nTip: copy this config and ask your AI assistant to install it for you.',
-      }
-    case 'codex':
-      return {
-        snippet: JSON.stringify({
-          mcpServers: {
-            caja: {
-              command: 'node',
-              args: ['src/mcp/server.mjs'],
-            },
-          },
-        }, null, 2),
-        instructions: 'Add to .codex/mcp.json in your project root.\nCaja must be running when the MCP server starts.',
-      }
-    case 'vscode':
-      return {
-        snippet: JSON.stringify({
-          servers: {
-            caja: {
-              command: 'node',
-              args: ['src/mcp/server.mjs'],
-            },
-          },
-        }, null, 2),
-        instructions: 'Add to .vscode/mcp.json in your project root.\nCaja must be running when the MCP server starts.',
-      }
+function getSnippet(client: Client, serverPath: string): string {
+  if (client === 'codex') {
+    return `[mcp_servers.caja]\ncommand = "node"\nargs = ["${serverPath}"]`
   }
+  const key = client === 'vscode' ? 'servers' : 'mcpServers'
+  return JSON.stringify({
+    [key]: {
+      caja: {
+        command: 'node',
+        args: [serverPath],
+      },
+    },
+  }, null, 2)
 }
 
 function CopyButton({ text }: { text: string }) {
@@ -90,10 +54,10 @@ function CopyButton({ text }: { text: string }) {
   )
 }
 
-async function installClaudeCode(): Promise<'installed' | 'already' | 'error'> {
+async function installMcp(client: Client): Promise<'installed' | 'already' | 'error'> {
   try {
     const { invoke } = await import('@tauri-apps/api/core')
-    const result: string = await invoke('install_mcp_claude_code')
+    const result: string = await invoke('install_mcp', { client })
     return result as 'installed' | 'already'
   } catch (err) {
     console.error('Failed to install MCP config:', err)
@@ -102,35 +66,33 @@ async function installClaudeCode(): Promise<'installed' | 'already' | 'error'> {
 }
 
 export function McpModal({ open, onOpenChange }: McpModalProps) {
-  const mcpConnected = useFrameStore((s) => s.mcpConnected)
   const [activeClient, setActiveClient] = useState<Client>('claude-code')
   const [installState, setInstallState] = useState<'idle' | 'installed' | 'already' | 'error'>('idle')
+  const [showManual, setShowManual] = useState(false)
+  const [serverPath, setServerPath] = useState<string | null>(null)
 
-  const config = getConfig(activeClient)
+  // Resolve the real server.mjs path once
+  useEffect(() => {
+    if (!isTauri || !open) return
+    import('@tauri-apps/api/core').then(({ invoke }) =>
+      invoke<string>('resolve_mcp_server_path').then(setServerPath).catch(() => {}),
+    )
+  }, [open])
+
+  const config = getSnippet(activeClient, serverPath ?? '/path/to/caja/src/mcp/server.mjs')
 
   const handleInstall = useCallback(async () => {
-    const result = await installClaudeCode()
+    const result = await installMcp(activeClient)
     setInstallState(result)
     setTimeout(() => setInstallState('idle'), 3000)
-  }, [])
+  }, [activeClient])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <div className="bg-surface-1 border border-border rounded-xl w-[480px] max-h-[80vh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 pt-5 pb-3">
-          <div className="flex items-center gap-2.5">
-            <h2 className="text-[14px] font-semibold text-text-primary">MCP Server</h2>
-            <div className="flex items-center gap-1.5 text-[11px]">
-              <div
-                className={`w-1.5 h-1.5 rounded-full ${mcpConnected ? 'bg-accent' : 'bg-text-muted'}`}
-              />
-              <span className={mcpConnected ? 'text-accent' : 'text-text-muted'}>
-                {mcpConnected ? 'Running' : 'Offline'}
-              </span>
-            </div>
-          </div>
-          <span className="text-[11px] text-text-muted">localhost:3334</span>
+        <div className="px-5 pt-5 pb-3">
+          <h2 className="text-[14px] font-semibold text-text-primary">MCP Server</h2>
         </div>
 
         {/* Description */}
@@ -144,8 +106,8 @@ export function McpModal({ open, onOpenChange }: McpModalProps) {
           {CLIENTS.map((c) => (
             <button
               key={c.id}
-              onClick={() => setActiveClient(c.id)}
-              className={`px-3 py-1.5 rounded-md text-[12px] transition-colors ${
+              onClick={() => { setActiveClient(c.id); setInstallState('idle') }}
+              className={`px-2.5 py-1.5 rounded-md text-[12px] transition-colors ${
                 activeClient === c.id
                   ? 'bg-surface-3 text-text-primary'
                   : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'
@@ -156,40 +118,48 @@ export function McpModal({ open, onOpenChange }: McpModalProps) {
           ))}
         </div>
 
-        {/* Config snippet */}
-        <div className="mx-5 mb-3 rounded-lg bg-surface-0 border border-border overflow-hidden">
-          <div className="flex items-center justify-between px-3 py-1.5 border-b border-border">
-            <span className="text-[11px] text-text-muted">Configuration</span>
-            <CopyButton text={config.snippet} />
-          </div>
-          <pre className="px-3 py-3 text-[11px] leading-relaxed text-text-secondary overflow-x-auto">
-            {config.snippet}
-          </pre>
-        </div>
-
-        {/* Install button (Claude Code only) */}
-        {activeClient === 'claude-code' && (
+        {/* Install button */}
+        {isTauri && (
           <div className="px-5 pb-3">
             <button
               onClick={handleInstall}
               disabled={installState !== 'idle'}
               className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-accent text-white text-[12px] font-medium hover:bg-accent-hover transition-colors disabled:opacity-60"
             >
-              {installState === 'idle' && <>Add to Claude Code</>}
-              {installState === 'installed' && <><Check size={14} /> Added to ~/.claude.json</>}
+              {installState === 'idle' && <>Add to {CLIENTS.find((c) => c.id === activeClient)!.label}</>}
+              {installState === 'installed' && <><Check size={14} /> Installed</>}
               {installState === 'already' && <><Check size={14} /> Already configured</>}
-              {installState === 'error' && <>Failed — copy config manually</>}
+              {installState === 'error' && <>Failed — try manual setup below</>}
             </button>
           </div>
         )}
 
-        {/* Instructions */}
+        {/* Manual setup (collapsible) */}
         <div className="px-5 pb-5">
-          <p className="text-[11px] text-text-muted leading-relaxed whitespace-pre-line">
-            {activeClient === 'claude-code'
-              ? 'Or copy the config above and add it manually.\nCaja must be running when Claude Code starts.'
-              : config.instructions}
-          </p>
+          <button
+            type="button"
+            onClick={() => setShowManual(!showManual)}
+            className="flex items-center gap-1 text-[11px] text-text-muted hover:text-text-secondary transition-colors mb-2"
+          >
+            {showManual ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+            Manual setup
+          </button>
+          {showManual && (
+            <div className="rounded-lg bg-surface-0 border border-border overflow-hidden">
+              <div className="flex items-center justify-between px-3 py-1.5 border-b border-border">
+                <span className="text-[11px] text-text-muted">Configuration</span>
+                <CopyButton text={config} />
+              </div>
+              <pre className="px-3 py-3 text-[11px] leading-relaxed text-text-secondary overflow-x-auto">
+                {config}
+              </pre>
+            </div>
+          )}
+          {!showManual && (
+            <p className="text-[11px] text-text-muted leading-relaxed">
+              Caja must be running when the MCP client starts.
+            </p>
+          )}
         </div>
       </div>
     </Dialog>
