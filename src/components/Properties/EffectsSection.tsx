@@ -1,3 +1,4 @@
+import { Eclipse, MousePointer2, Droplets, Layers } from 'lucide-react'
 import type { Frame } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { Section } from '../ui/Section'
@@ -10,23 +11,33 @@ export function EffectsSection({ frame }: { frame: Frame }) {
 
   return (
     <Section title="Effects">
-      <div className="flex flex-col gap-2.5">
-        <TokenInput
-          value={frame.boxShadow}
-          options={BOX_SHADOW_OPTIONS}
-          onChange={(v) => updateFrame(frame.id, { boxShadow: v as Frame['boxShadow'] })}
-          label="Shadow"
-          classPrefix="shadow"
-          initialValue="none"
-        />
-
-        <div className="flex gap-2">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <TokenInput
+            value={frame.boxShadow}
+            options={BOX_SHADOW_OPTIONS}
+            onChange={(v) => updateFrame(frame.id, { boxShadow: v as Frame['boxShadow'] })}
+            inlineLabel={<Eclipse size={12} />}
+            classPrefix="shadow"
+            initialValue="none"
+          />
+          <TokenInput
+            value={frame.cursor}
+            options={CURSOR_OPTIONS}
+            onChange={(v) => updateFrame(frame.id, { cursor: v as Frame['cursor'] })}
+            inlineLabel={<MousePointer2 size={12} />}
+            classPrefix="cursor"
+            initialValue="auto"
+          />
+          <div className="w-5 shrink-0" />
+        </div>
+        <div className="flex items-center gap-2">
           <TokenInput
             scale={BLUR_SCALE}
             value={frame.blur}
             onChange={(v) => updateFrame(frame.id, { blur: v })}
             min={0}
-            label="Blur"
+            inlineLabel={<Droplets size={12} />}
             classPrefix="blur"
             defaultValue={0}
           />
@@ -35,20 +46,12 @@ export function EffectsSection({ frame }: { frame: Frame }) {
             value={frame.backdropBlur}
             onChange={(v) => updateFrame(frame.id, { backdropBlur: v })}
             min={0}
-            label="Backdrop"
+            inlineLabel={<Layers size={12} />}
             classPrefix="backdrop-blur"
             defaultValue={0}
           />
+          <div className="w-5 shrink-0" />
         </div>
-
-        <TokenInput
-          value={frame.cursor}
-          options={CURSOR_OPTIONS}
-          onChange={(v) => updateFrame(frame.id, { cursor: v as Frame['cursor'] })}
-          label="Cursor"
-          classPrefix="cursor"
-          initialValue="auto"
-        />
       </div>
     </Section>
   )

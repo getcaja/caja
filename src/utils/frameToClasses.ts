@@ -224,7 +224,8 @@ export function frameToClasses(frame: Frame): string {
   if (frame.type === 'box') {
     if (frame.display === 'flex' || frame.display === 'inline-flex') {
       cls.push(frame.display === 'inline-flex' ? 'inline-flex' : 'flex')
-      cls.push(frame.direction === 'row' ? 'flex-row' : 'flex-col')
+      const dirMap: Record<string, string> = { row: 'flex-row', column: 'flex-col', 'row-reverse': 'flex-row-reverse', 'column-reverse': 'flex-col-reverse' }
+      cls.push(dirMap[frame.direction] ?? 'flex-col')
 
       const justifyMap = { start: '', center: 'justify-center', end: 'justify-end', between: 'justify-between', around: 'justify-around' }
       if (justifyMap[frame.justify]) cls.push(justifyMap[frame.justify])
@@ -289,6 +290,7 @@ export function frameToClasses(frame: Frame): string {
       }
     }
     if (frame.textAlign !== 'left') cls.push(`text-${frame.textAlign}`)
+    if (frame.textAlignVertical && frame.textAlignVertical !== 'start') cls.push(`content-${frame.textAlignVertical}`)
     if (frame.fontStyle === 'italic') cls.push('italic')
     if (frame.textDecoration === 'underline') cls.push('underline')
     else if (frame.textDecoration === 'line-through') cls.push('line-through')
@@ -301,8 +303,13 @@ export function frameToClasses(frame: Frame): string {
     }
     if (frame.textTransform !== 'none') cls.push(frame.textTransform)
     if (frame.whiteSpace !== 'normal') cls.push(`whitespace-${frame.whiteSpace}`)
-    // [Experimental] Google Fonts — utility class injected by GoogleFontsLoader
-    if (frame.fontFamily) cls.push(toGoogleFontClass(frame.fontFamily))
+    if (frame.fontFamily) {
+      if (frame.fontFamily === 'sans' || frame.fontFamily === 'serif' || frame.fontFamily === 'mono') {
+        cls.push(`font-${frame.fontFamily}`)
+      } else {
+        cls.push(toGoogleFontClass(frame.fontFamily))
+      }
+    }
   }
 
   // Image

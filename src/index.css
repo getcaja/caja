@@ -89,13 +89,13 @@ input[type=number] {
 @layer components {
   /* --- Inputs --- */
   .c-input {
-    @apply bg-surface-0 border border-border rounded-md px-2 py-1 text-[12px] text-text-primary outline-none;
+    @apply h-6 bg-surface-2 border border-transparent rounded px-2 text-[12px] text-text-primary outline-none;
   }
   .c-scale-input {
-    @apply bg-surface-0 border border-border rounded-md px-2 py-1 text-[12px] text-text-primary;
+    @apply h-6 bg-surface-2 border border-transparent rounded px-1 text-[12px] text-text-primary;
   }
   .c-textarea {
-    @apply bg-surface-0 border border-border rounded-md px-2 py-1.5 text-[12px] text-text-primary outline-none resize-none;
+    @apply bg-surface-2 border border-transparent rounded px-2 py-1 text-[12px] text-text-primary outline-none resize-none;
   }
 
   /* --- Labels --- */
@@ -108,7 +108,7 @@ input[type=number] {
 
   /* --- Section heading --- */
   .c-section-title {
-    @apply text-text-muted text-[12px] font-semibold;
+    @apply text-text-primary text-[12px] font-semibold;
   }
 
   /* --- Menus & popups --- */
@@ -137,7 +137,6 @@ input[type=number] {
   .c-scale-input input::placeholder,
   .c-textarea::placeholder {
     color: var(--color-text-muted);
-    opacity: 0.5;
   }
 
   /* --- Class pills (Advanced section) --- */

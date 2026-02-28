@@ -1,9 +1,15 @@
+import { useState } from 'react'
+import { Blend, Ellipsis, Link2, Upload } from 'lucide-react'
 import type { Frame } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { Section } from '../ui/Section'
-import { FillInput } from '../ui/FillInput'
-import { Select } from '../ui/Select'
+import { ColorInput } from '../ui/ColorInput'
 import { TokenInput } from '../ui/TokenInput'
+import { ToggleGroup } from '../ui/ToggleGroup'
+import { Popover } from '../ui/Popover'
+import { OPACITY_SCALE } from '../../data/scales'
+
+const lbl = (text: string) => <span className="text-[12px]">{text}</span>
 
 const BG_SIZE_OPTIONS = [
   { value: 'auto', label: 'Auto' },
@@ -30,62 +36,151 @@ const BG_REPEAT_OPTIONS = [
   { value: 'repeat-y', label: 'Repeat Y' },
 ]
 
+type FillMode = 'solid' | 'image'
+
 export function FillSection({ frame }: { frame: Frame }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
+  const [mode, setMode] = useState<FillMode>(frame.bgImage ? 'image' : 'solid')
+
+  const opacityActive = frame.opacity.mode === 'token'
+    ? frame.opacity.token !== '100'
+    : frame.opacity.value !== 100
+
+  const imagePropsActive = frame.bgSize !== 'auto'
+    || frame.bgPosition !== 'center'
+    || frame.bgRepeat !== 'repeat'
 
   return (
     <Section title="Fill">
-      <div className="flex flex-col gap-2.5">
-        <FillInput
-          color={frame.bg}
-          opacity={frame.opacity}
-          onColorChange={(v) => updateFrame(frame.id, { bg: v })}
-          onOpacityChange={(v) => updateFrame(frame.id, { opacity: v })}
-          label="Fill"
-          colorClassPrefix="bg"
-        />
-
-        <div className="flex flex-col gap-1.5">
-          <div className="flex items-center gap-1.5">
-            <span className="c-label">Bg Image</span>
-            <input
-              type="text"
-              value={frame.bgImage}
-              onChange={(e) => updateFrame(frame.id, { bgImage: e.target.value })}
-              placeholder="URL..."
-              className="flex-1 c-input"
-            />
-          </div>
-          {frame.bgImage && (
-            <>
+      <div className="flex flex-col gap-2">
+        {/* Mode toggle */}
+        <div className="flex items-center gap-2">
+          <ToggleGroup
+            value={mode}
+            options={[
+              { value: 'solid', label: 'Solid' },
+              { value: 'image', label: 'Image' },
+            ]}
+            onChange={(v) => {
+              setMode(v as FillMode)
+              if (v === 'solid') updateFrame(frame.id, { bgImage: '' })
+            }}
+            className="flex-1"
+          />
+          <Popover
+            trigger={
+              <button
+                type="button"
+                className={`w-5 h-5 shrink-0 flex items-center justify-center rounded ${
+                  opacityActive
+                    ? 'text-blue-400 bg-blue-400/10'
+                    : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'
+                }`}
+              >
+                <Blend size={12} />
+              </button>
+            }
+            align="end"
+          >
+            <div className="p-2 w-[200px]">
               <TokenInput
-                value={frame.bgSize}
-                options={BG_SIZE_OPTIONS}
-                onChange={(v) => updateFrame(frame.id, { bgSize: v as Frame['bgSize'] })}
-                label="Bg Size"
-                classPrefix="bg"
-                initialValue="auto"
+                scale={OPACITY_SCALE}
+                value={frame.opacity}
+                onChange={(v) => updateFrame(frame.id, { opacity: v })}
+                min={0}
+                unit="%"
+                classPrefix="opacity"
+                defaultValue={100}
+                label="Opacity"
               />
-              <div className="flex items-center gap-1.5">
-                <span className="c-label">Bg Pos</span>
-                <Select
+            </div>
+          </Popover>
+        </div>
+
+        {/* Solid mode */}
+        {mode === 'solid' && (
+          <div className="flex items-center gap-2">
+            <ColorInput
+              value={frame.bg}
+              onChange={(v) => updateFrame(frame.id, { bg: v })}
+              label="Color"
+              classPrefix="bg"
+            />
+            <div className="w-5 shrink-0" />
+          </div>
+        )}
+
+        {/* Image mode */}
+        {mode === 'image' && (
+          <div className="flex items-center gap-2">
+            <div className="flex-1 min-w-0">
+              <div
+                className="c-scale-input flex items-center gap-0.5 pr-6 overflow-hidden cursor-text relative"
+                onClick={(e) => { if (e.target === e.currentTarget) (e.currentTarget.querySelector('input') as HTMLInputElement)?.focus() }}
+              >
+                <span className="w-4 shrink-0 flex items-center justify-center text-text-muted">
+                  <Link2 size={12} />
+                </span>
+                <input
+                  type="text"
+                  value={frame.bgImage}
+                  onChange={(e) => updateFrame(frame.id, { bgImage: e.target.value })}
+                  placeholder="https://"
+                  className="flex-1 min-w-[20px] text-[12px] text-text-primary"
+                />
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-text-secondary hover:bg-surface-2"
+                >
+                  <Upload size={12} />
+                </button>
+              </div>
+            </div>
+            <Popover
+              trigger={
+                <button
+                  type="button"
+                  className={`w-5 h-5 shrink-0 flex items-center justify-center rounded ${
+                    imagePropsActive
+                      ? 'text-blue-400 bg-blue-400/10'
+                      : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'
+                  }`}
+                >
+                  <Ellipsis size={12} />
+                </button>
+              }
+              align="end"
+            >
+              <div className="flex flex-col gap-2 p-2 w-[200px]">
+                <TokenInput
+                  value={frame.bgSize}
+                  options={BG_SIZE_OPTIONS}
+                  onChange={(v) => updateFrame(frame.id, { bgSize: v as Frame['bgSize'] })}
+                  classPrefix="bg"
+                  initialValue="auto"
+                  inlineLabel={lbl('Sz')}
+                />
+                <TokenInput
                   value={frame.bgPosition}
                   options={BG_POSITION_OPTIONS}
                   onChange={(v) => updateFrame(frame.id, { bgPosition: v as Frame['bgPosition'] })}
-                  className="flex-1"
+                  classPrefix="bg"
+                  initialValue="center"
+                  inlineLabel={lbl('Ps')}
+                />
+                <TokenInput
+                  value={frame.bgRepeat}
+                  options={BG_REPEAT_OPTIONS}
+                  onChange={(v) => updateFrame(frame.id, { bgRepeat: v as Frame['bgRepeat'] })}
+                  classPrefix="bg"
+                  initialValue="repeat"
+                  inlineLabel={lbl('Rp')}
                 />
               </div>
-              <TokenInput
-                value={frame.bgRepeat}
-                options={BG_REPEAT_OPTIONS}
-                onChange={(v) => updateFrame(frame.id, { bgRepeat: v as Frame['bgRepeat'] })}
-                label="Bg Repeat"
-                classPrefix="bg"
-                initialValue="repeat"
-              />
-            </>
-          )}
-        </div>
+            </Popover>
+          </div>
+        )}
       </div>
     </Section>
   )

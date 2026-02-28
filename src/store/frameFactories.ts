@@ -5,6 +5,9 @@ import { generateId } from './frameStore'
 export function dvNum(v: number): DesignValue<number> {
   return { mode: 'custom', value: v }
 }
+export function dvTok(token: string, v: number): DesignValue<number> {
+  return { mode: 'token', token, value: v }
+}
 export function dvStr(v: string): DesignValue<string> {
   return { mode: 'custom', value: v }
 }
@@ -53,16 +56,17 @@ export function newFeatureDefaults() {
 
 export function defaultTextStyles(): TextStyles {
   return {
-    fontSize: dvNum(0),       // 0 = inherit from parent/body
-    fontWeight: dvNum(400),   // 400 = normal, no class emitted
+    fontSize: dvNum(16),
+    fontWeight: dvNum(400),
     lineHeight: dvNum(0),     // 0 = inherit
     textAlign: 'left',
+    textAlignVertical: 'start',
     fontStyle: 'normal',
     textDecoration: 'none',
     letterSpacing: dvNum(0),
     textTransform: 'none',
     whiteSpace: 'normal',
-    fontFamily: '',
+    fontFamily: 'sans',
   }
 }
 

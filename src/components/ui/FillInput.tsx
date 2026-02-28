@@ -90,7 +90,7 @@ export function FillInput({
         <span className="c-label">{label}</span>
         <div className="flex-1 min-w-0">
           <div
-            className="c-scale-input flex items-center gap-1.5 !px-1.5 overflow-hidden cursor-text"
+            className="group c-scale-input flex items-center gap-1.5 !px-1.5 overflow-hidden cursor-text"
             onClick={(e) => { if (e.target === e.currentTarget) hexRef.current?.focus() }}
           >
             <Popover
@@ -151,9 +151,9 @@ export function FillInput({
                   type="button"
                   tabIndex={-1}
                   onMouseDown={(e) => e.stopPropagation()}
-                  className="w-5 h-5 flex items-center justify-center rounded shrink-0 text-text-muted hover:text-text-secondary hover:bg-surface-2"
+                  className={`w-5 h-5 flex items-center justify-center rounded shrink-0 text-text-muted hover:text-text-secondary hover:bg-surface-2 transition-opacity ${showGrid ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}
                 >
-                  <Diamond size={11} />
+                  <Diamond size={12} />
                 </button>
               }
               align="end"

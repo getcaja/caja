@@ -123,7 +123,7 @@ export interface BoxElement extends BaseElement, TextStyles {
   display: BoxDisplay
 
   // Layout (only applies when display is flex or inline-flex)
-  direction: 'row' | 'column'
+  direction: 'row' | 'column' | 'row-reverse' | 'column-reverse'
   justify: 'start' | 'center' | 'end' | 'between' | 'around'
   align: 'start' | 'center' | 'end' | 'stretch'
   gap: DesignValue<number>
@@ -143,6 +143,7 @@ export interface TextStyles {
   fontWeight: DesignValue<number>
   lineHeight: DesignValue<number> // multiplier, e.g. 1.5
   textAlign: 'left' | 'center' | 'right'
+  textAlignVertical: 'start' | 'center' | 'end'
   fontStyle: 'normal' | 'italic'
   textDecoration: 'none' | 'underline' | 'line-through'
   letterSpacing: DesignValue<number>

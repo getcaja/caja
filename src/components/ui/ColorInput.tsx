@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
 import { Diamond } from 'lucide-react'
-import { HexColorPicker } from 'react-colorful'
 import { Popover } from './Popover'
 import { ColorGridPicker } from './ColorGridPicker'
 import type { DesignValue } from '../../types/frame'
@@ -21,7 +20,6 @@ export function ColorInput({
   const token = value.mode === 'token' ? value.token : null
   const colorValue = value.value
 
-  const [showPicker, setShowPicker] = useState(false)
   const [showGrid, setShowGrid] = useState(false)
   const [draft, setDraft] = useState(token ? '' : colorValue)
   const [focused, setFocused] = useState(false)
@@ -49,10 +47,6 @@ export function ColorInput({
     }
   }
 
-  const handlePickerChange = (hex: string) => {
-    onChange({ mode: 'custom', value: hex })
-  }
-
   const removeToken = () => {
     onChange({ mode: 'custom', value: colorValue })
     setDraft(colorValue)
@@ -70,90 +64,72 @@ export function ColorInput({
 
   const stableToken = showGrid ? committedTokenRef.current : token
   const displayValue = focused ? draft : (stableToken ? '' : colorValue)
+  const isActive = !!stableToken || (colorValue !== '' && colorValue !== '#000000')
 
   return (
-    <div className="flex items-center gap-1.5">
-      <span className="c-label">{label}</span>
-      <div className="relative flex-1 min-w-0">
-        <div
-          className="c-scale-input flex items-center gap-1.5 !px-1.5 overflow-hidden cursor-text"
-          onClick={(e) => { if (e.target === e.currentTarget) inputRef.current?.focus() }}
-        >
-          <Popover
-            open={showPicker}
-            onOpenChange={setShowPicker}
-            trigger={
-              <button
-                type="button"
-                tabIndex={-1}
-                className="w-4 h-4 rounded border border-border shrink-0 hover:border-border-accent"
-                style={{ backgroundColor: colorValue || 'transparent' }}
-                onMouseDown={(e) => e.stopPropagation()}
-              />
-            }
-          >
-            <div className="p-2">
-              <HexColorPicker
-                color={colorValue || '#000000'}
-                onChange={handlePickerChange}
-                style={{ width: 200, height: 160 }}
-              />
-            </div>
-          </Popover>
+    <div className="relative flex-1 min-w-0">
+      <div
+        className="group c-scale-input flex items-center gap-0.5 pr-6 overflow-hidden cursor-text relative"
+        onClick={(e) => { if (e.target === e.currentTarget) inputRef.current?.focus() }}
+      >
+        <span className="w-4 shrink-0 flex items-center justify-center">
+          <span
+            className="w-3 h-3 rounded-sm border border-border"
+            style={{ backgroundColor: colorValue || 'transparent' }}
+          />
+        </span>
 
-          {stableToken && (
+        {stableToken && (
+          <button
+            type="button"
+            tabIndex={-1}
+            onMouseDown={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              setShowGrid(true)
+            }}
+            className="flex items-center bg-surface-3 text-text-primary rounded px-1 text-[11px] leading-[18px] font-medium min-w-0 truncate cursor-pointer hover:bg-surface-3/80"
+          >
+            {stableToken}
+          </button>
+        )}
+
+        <input
+          ref={inputRef}
+          type="text"
+          value={displayValue}
+          onFocus={() => { setFocused(true); setDraft(stableToken ? '' : colorValue) }}
+          onBlur={() => commitDraft()}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={stableToken ? '' : '#000000'}
+          className={`flex-1 ${stableToken ? 'min-w-0' : 'min-w-[20px]'} text-[12px]`}
+        />
+
+        <Popover
+          open={showGrid}
+          onOpenChange={setShowGrid}
+          trigger={
             <button
               type="button"
               tabIndex={-1}
-              onMouseDown={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                setShowGrid(true)
-              }}
-              className="flex items-center gap-1 bg-surface-3 text-text-primary rounded px-1.5 text-[11px] leading-[18px] font-medium shrink-0 cursor-pointer hover:bg-surface-3/80"
+              onMouseDown={(e) => e.stopPropagation()}
+              className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-text-secondary hover:bg-surface-2 transition-opacity ${showGrid ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}
             >
-              <span className="w-2 h-2 rounded-sm shrink-0" style={{ backgroundColor: colorValue }} />
-              {classPrefix ? `${classPrefix}-${stableToken}` : stableToken}
+              <Diamond size={12} />
             </button>
-          )}
-
-          <input
-            ref={inputRef}
-            type="text"
-            value={displayValue}
-            onFocus={() => { setFocused(true); setDraft(stableToken ? '' : colorValue) }}
-            onBlur={() => commitDraft()}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={stableToken ? '' : 'transparent'}
-            className="flex-1 min-w-0 text-[12px]"
-          />
-
-          <Popover
-            open={showGrid}
-            onOpenChange={setShowGrid}
-            trigger={
-              <button
-                type="button"
-                tabIndex={-1}
-                onMouseDown={(e) => e.stopPropagation()}
-                className="w-5 h-5 flex items-center justify-center rounded shrink-0 text-text-muted hover:text-text-secondary hover:bg-surface-2"
-              >
-                <Diamond size={11} />
-              </button>
-            }
-            align="end"
-          >
-            <div className="p-2">
-              <ColorGridPicker
-                value={value}
-                onChange={onChange}
-                onCommit={() => setShowGrid(false)}
-                classPrefix={classPrefix}
-              />
-            </div>
-          </Popover>
-        </div>
+          }
+          align="end"
+        >
+          <div className="p-2">
+            <ColorGridPicker
+              value={value}
+              onChange={onChange}
+              onCommit={() => setShowGrid(false)}
+              classPrefix={classPrefix}
+            />
+          </div>
+        </Popover>
       </div>
     </div>
   )

@@ -10,9 +10,9 @@ export function PagePanel() {
   if (!page) return null
 
   return (
-    <div className="h-full bg-surface-1 p-3 overflow-y-auto">
+    <div className="h-full bg-surface-1 overflow-y-auto">
       {/* Header */}
-      <div className="-mx-3 px-3 border-b border-border pb-3 mb-3 flex items-center gap-2">
+      <div className="p-3 border-b border-border flex items-center gap-2">
         <span className="text-[12px] px-1.5 py-0.5 rounded-md font-medium bg-accent/15 text-accent">
           Page
         </span>
@@ -20,7 +20,7 @@ export function PagePanel() {
       </div>
 
       {/* Fields */}
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 px-3">
         <div className="flex flex-col gap-1">
           <span className="c-label">Name</span>
           <input

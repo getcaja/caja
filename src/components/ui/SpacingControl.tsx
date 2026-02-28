@@ -21,12 +21,6 @@ function detectMode(v: Spacing): SpacingMode {
   return 'sides'
 }
 
-const NEXT: Record<SpacingMode, SpacingMode> = {
-  all: 'axis',
-  axis: 'sides',
-  sides: 'all',
-}
-
 const ZERO: DesignValue<number> = { mode: 'custom', value: 0 }
 
 export function SpacingControl({
@@ -34,82 +28,71 @@ export function SpacingControl({
   onChange,
   label,
   classPrefix,
+  labelPrefix,
   scale = SPACING_SCALE,
 }: {
   value: Spacing
   onChange: (v: Partial<Spacing>) => void
   label: string
   classPrefix: string
+  labelPrefix?: string
   scale?: ScaleOption[]
 }) {
-  // Defensive: fill in missing sides from malformed frame data
   const value: Spacing = {
     top: rawValue?.top || ZERO,
     right: rawValue?.right || ZERO,
     bottom: rawValue?.bottom || ZERO,
     left: rawValue?.left || ZERO,
   }
-  const [mode, setMode] = useState<SpacingMode>(() => detectMode(value))
+  const [expanded, setExpanded] = useState(() => detectMode(value) === 'sides')
 
-  const cycle = () => {
-    const next = NEXT[mode]
-    setMode(next)
-    if (next === 'all') {
-      // Sync all sides to top value
-      const v = value.top
-      onChange({ top: v, right: { ...v }, bottom: { ...v }, left: { ...v } })
-    } else if (next === 'axis') {
-      // Sync H/V pairs
+  const toggle = () => {
+    if (expanded) {
+      // Collapsing → sync to axis pairs
       onChange({ right: { ...value.left }, bottom: { ...value.top } })
     }
-    // 'sides' — no sync needed, just expand
+    setExpanded(!expanded)
   }
 
+  const P = (labelPrefix ?? classPrefix).toUpperCase()
+  const txtLbl = (suffix: string) => <span className="text-[12px]">{P}{suffix}</span>
+
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex items-center justify-between">
-        <span className="text-text-muted text-[12px]">{label}</span>
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-2">
+        <TokenInput
+          scale={scale}
+          value={value.left}
+          onChange={(v) => expanded ? onChange({ left: v }) : onChange({ left: v, right: { ...v } })}
+          min={0}
+          classPrefix={expanded ? `${classPrefix}l` : `${classPrefix}x`}
+          inlineLabel={txtLbl(expanded ? 'l' : 'x')}
+        />
+        <TokenInput
+          scale={scale}
+          value={value.top}
+          onChange={(v) => expanded ? onChange({ top: v }) : onChange({ top: v, bottom: { ...v } })}
+          min={0}
+          classPrefix={expanded ? `${classPrefix}t` : `${classPrefix}y`}
+          inlineLabel={txtLbl(expanded ? 't' : 'y')}
+        />
         <button
-          className="w-5 h-5 flex items-center justify-center text-text-muted hover:text-accent hover:bg-accent/10 rounded transition-all shrink-0"
-          onClick={cycle}
-          title={mode === 'all' ? 'Split H / V' : mode === 'axis' ? 'Split per side' : 'Uniform'}
+          type="button"
+          className={`w-5 h-5 flex items-center justify-center rounded shrink-0 ${
+            expanded
+              ? 'text-blue-400 bg-blue-400/10'
+              : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'
+          }`}
+          onClick={toggle}
         >
           <Scan size={12} />
         </button>
       </div>
-      {mode === 'all' ? (
-        <TokenInput
-          scale={scale}
-          value={value.top}
-          onChange={(v) => onChange({ top: v, right: { ...v }, bottom: { ...v }, left: { ...v } })}
-          min={0}
-          classPrefix={classPrefix}
-        />
-      ) : mode === 'axis' ? (
-        <div className="grid grid-cols-[auto_1fr_auto_1fr] gap-1 items-center">
-          <span className="text-text-muted text-[11px]">H</span>
-          <TokenInput
-            scale={scale}
-            value={value.left}
-            onChange={(v) => onChange({ left: v, right: { ...v } })}
-            min={0}
-            classPrefix={`${classPrefix}x`}
-          />
-          <span className="text-text-muted text-[11px]">V</span>
-          <TokenInput
-            scale={scale}
-            value={value.top}
-            onChange={(v) => onChange({ top: v, bottom: { ...v } })}
-            min={0}
-            classPrefix={`${classPrefix}y`}
-          />
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 gap-1">
-          <TokenInput scale={scale} value={value.top} onChange={(v) => onChange({ top: v })} min={0} label="Top" classPrefix={`${classPrefix}t`} />
-          <TokenInput scale={scale} value={value.right} onChange={(v) => onChange({ right: v })} min={0} label="Right" classPrefix={`${classPrefix}r`} />
-          <TokenInput scale={scale} value={value.bottom} onChange={(v) => onChange({ bottom: v })} min={0} label="Bottom" classPrefix={`${classPrefix}b`} />
-          <TokenInput scale={scale} value={value.left} onChange={(v) => onChange({ left: v })} min={0} label="Left" classPrefix={`${classPrefix}l`} />
+      {expanded && (
+        <div className="flex items-center gap-2">
+          <TokenInput scale={scale} value={value.right} onChange={(v) => onChange({ right: v })} min={0} classPrefix={`${classPrefix}r`} inlineLabel={txtLbl('r')} />
+          <TokenInput scale={scale} value={value.bottom} onChange={(v) => onChange({ bottom: v })} min={0} classPrefix={`${classPrefix}b`} inlineLabel={txtLbl('b')} />
+          <div className="w-5 shrink-0" />
         </div>
       )}
     </div>

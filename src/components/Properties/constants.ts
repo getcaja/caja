@@ -44,7 +44,7 @@ export const INPUT_TYPE_OPTIONS = [
 ]
 
 export const OVERFLOW_OPTIONS = [
-  { value: 'visible', label: 'Visible' },
+  { value: 'visible', label: 'Default' },
   { value: 'hidden', label: 'Hidden' },
   { value: 'scroll', label: 'Scroll' },
 ]

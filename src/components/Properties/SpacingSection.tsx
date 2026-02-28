@@ -9,7 +9,7 @@ export function SpacingSection({ frame }: { frame: Frame }) {
 
   return (
     <Section title="Spacing">
-      <div className="flex flex-col gap-2.5">
+      <div className="flex flex-col gap-2">
         <SpacingControl
           value={frame.margin}
           onChange={(v) => updateSpacing(frame.id, 'margin', v)}

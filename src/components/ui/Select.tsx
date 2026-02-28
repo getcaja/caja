@@ -22,7 +22,7 @@ export function Select({ value, options, onChange, className }: SelectProps) {
 
       <RadixSelect.Portal>
         <RadixSelect.Content
-          className="bg-surface-2 border border-border-accent rounded-lg shadow-2xl z-50 overflow-hidden"
+          className="bg-surface-2 border border-border-accent rounded-lg shadow-2xl z-50 overflow-hidden min-w-[var(--radix-select-trigger-width)]"
           position="popper"
           sideOffset={4}
         >

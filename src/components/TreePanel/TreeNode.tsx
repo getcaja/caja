@@ -6,7 +6,7 @@ import { useCatalogStore } from '../../store/catalogStore'
 import { useTreeDnd, type DropPosition } from './TreeDndContext'
 import { useContextMenu } from './hooks/useContextMenu'
 import { useInlineEdit } from './hooks/useInlineEdit'
-import { ChevronRight, ChevronDown, Square, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse, Copy, Trash2, Group, SquarePlus, Eye, EyeOff, Link, Bookmark } from 'lucide-react'
+import { ChevronRight, ChevronDown, Frame as FrameIcon, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse, Copy, Trash2, Group, SquarePlus, Eye, EyeOff, Link, Bookmark } from 'lucide-react'
 
 interface TreeNodeProps {
   frame: Frame
@@ -155,7 +155,7 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
             : frame.type === 'input' ? <TextCursorInput size={12} />
             : frame.type === 'textarea' ? <AlignLeft size={12} />
             : frame.type === 'select' ? <ListCollapse size={12} />
-            : <Square size={12} />}
+            : <FrameIcon size={12} />}
         </span>
 
         {/* Color dot */}

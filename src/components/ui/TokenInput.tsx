@@ -13,6 +13,13 @@ export interface EnumOption {
 interface TokenInputBase {
   label?: string
   classPrefix?: string
+  inlineLabel?: React.ReactNode
+}
+
+interface AutoOption {
+  label: string
+  active: boolean
+  onToggle: () => void
 }
 
 interface TokenInputScale extends TokenInputBase {
@@ -23,6 +30,8 @@ interface TokenInputScale extends TokenInputBase {
   min?: number
   unit?: string
   defaultValue?: number
+  placeholder?: string
+  autoOption?: AutoOption
 }
 
 interface TokenInputEnum extends TokenInputBase {
@@ -49,7 +58,7 @@ interface NormalizedItem {
 }
 
 export function TokenInput(props: TokenInputProps) {
-  const { label, classPrefix } = props
+  const { label, classPrefix, inlineLabel } = props
   const isScale = 'scale' in props && props.scale !== undefined
   const startPreview = useFrameStore((s) => s.startPreview)
   const endPreview = useFrameStore((s) => s.endPreview)
@@ -64,13 +73,14 @@ export function TokenInput(props: TokenInputProps) {
   // --- Scale-only state ---
   const scaleProps = isScale ? (props as TokenInputScale) : null
   const scaleToken = scaleProps ? (scaleProps.value.mode === 'token' ? scaleProps.value.token : null) : null
+  const hasToken = scaleToken !== null
   const scaleNumeric = scaleProps ? scaleProps.value.value : 0
   const scaleMin = scaleProps?.min ?? 0
   const scaleUnit = scaleProps?.unit ?? 'px'
   const scaleResetValue = scaleProps ? (scaleProps.defaultValue ?? scaleMin) : 0
   const scaleIsUnset = scaleProps ? (scaleProps.value.mode === 'custom' && scaleProps.value.value === scaleResetValue) : false
 
-  const [draft, setDraft] = useState(scaleProps ? (scaleToken ? '' : (scaleIsUnset ? '' : String(scaleNumeric))) : '')
+  const [draft, setDraft] = useState(scaleProps ? (hasToken ? '' : (scaleIsUnset ? '' : String(scaleNumeric))) : '')
   const [focused, setFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -79,6 +89,11 @@ export function TokenInput(props: TokenInputProps) {
   const enumCurrentOpt = enumProps ? enumProps.options.find((o) => o.value === enumProps.value) : null
   const enumCurrentLabel = enumProps ? (enumCurrentOpt?.label ?? enumProps.value) : ''
   const enumIsInitial = enumProps ? (enumProps.initialValue !== undefined && enumProps.value === enumProps.initialValue) : false
+
+  // Is the field in an "active" (non-default) state?
+  const isActive = isScale
+    ? (!scaleIsUnset || scaleToken !== null || (scaleProps?.autoOption?.active ?? false))
+    : !enumIsInitial
 
   // --- Normalize items for dropdown ---
   const items: NormalizedItem[] = isScale
@@ -97,7 +112,7 @@ export function TokenInput(props: TokenInputProps) {
   useEffect(() => {
     if (!scaleProps || focused) return
     const unset = scaleProps.value.mode === 'custom' && scaleProps.value.value === scaleResetValue
-    setDraft(scaleToken ? '' : (unset ? '' : String(scaleNumeric)))
+    setDraft(hasToken ? '' : (unset ? '' : String(scaleNumeric)))
   }, [scaleNumeric, scaleToken, focused, scaleProps?.value.mode, scaleResetValue])
 
   // --- Scroll selected item into view ---
@@ -111,7 +126,7 @@ export function TokenInput(props: TokenInputProps) {
   const openDropdown = useCallback(() => {
     setShowDropdown(true)
     if (isScale) {
-      const idx = scaleToken ? scaleProps!.scale.findIndex((s) => s.token === scaleToken) : -1
+      const idx = hasToken ? scaleProps!.scale.findIndex((s) => s.token === scaleToken) : -1
       setSelectedIdx(idx)
     } else {
       const idx = enumProps!.options.findIndex((o) => o.value === enumProps!.value)
@@ -157,6 +172,7 @@ export function TokenInput(props: TokenInputProps) {
     originalRef.current = null
     if (isScale) {
       const opt = scaleProps!.scale[idx]
+      if (scaleProps!.autoOption?.active) scaleProps!.autoOption.onToggle()
       scaleProps!.onChange({ mode: 'token', token: opt.token, value: opt.value })
       setDraft('')
       setShowDropdown(false)
@@ -195,14 +211,14 @@ export function TokenInput(props: TokenInputProps) {
   const commitDraft = useCallback(() => {
     if (!scaleProps) return
     if (draft === '') {
-      if (scaleToken) return
+      if (hasToken) return
       scaleProps.onChange({ mode: 'custom', value: scaleResetValue })
       setDraft('')
       return
     }
     const n = Number(draft)
     if (isNaN(n)) {
-      setDraft(scaleToken ? '' : String(scaleNumeric))
+      setDraft(hasToken ? '' : String(scaleNumeric))
       return
     }
     const clamped = Math.max(scaleMin, n)
@@ -264,7 +280,7 @@ export function TokenInput(props: TokenInputProps) {
   const handleScaleKeyDown = (e: React.KeyboardEvent) => {
     if (showDropdown && handleDropdownKeyDown(e)) return
 
-    if (e.key === 'Backspace' && draft === '' && scaleToken) {
+    if (e.key === 'Backspace' && draft === '' && hasToken) {
       e.preventDefault()
       removeToken()
       return
@@ -276,9 +292,9 @@ export function TokenInput(props: TokenInputProps) {
       inputRef.current?.blur()
     } else if (e.key === 'Escape') {
       e.preventDefault()
-      setDraft(scaleToken ? '' : (scaleProps!.value.mode === 'custom' && scaleProps!.value.value === scaleResetValue ? '' : String(scaleNumeric)))
+      setDraft(hasToken ? '' : (scaleProps!.value.mode === 'custom' && scaleProps!.value.value === scaleResetValue ? '' : String(scaleNumeric)))
       inputRef.current?.blur()
-    } else if (e.key === 'ArrowUp' && !scaleToken) {
+    } else if (e.key === 'ArrowUp' && !hasToken) {
       e.preventDefault()
       const n = Math.max(scaleMin, scaleNumeric + 1)
       const match = scaleProps!.scale.find(s => s.value === n)
@@ -289,7 +305,7 @@ export function TokenInput(props: TokenInputProps) {
         scaleProps!.onChange({ mode: 'custom', value: n })
         setDraft(String(n))
       }
-    } else if (e.key === 'ArrowDown' && !scaleToken) {
+    } else if (e.key === 'ArrowDown' && !hasToken) {
       e.preventDefault()
       const n = Math.max(scaleMin, scaleNumeric - 1)
       const match = scaleProps!.scale.find(s => s.value === n)
@@ -318,7 +334,7 @@ export function TokenInput(props: TokenInputProps) {
   // --- Scale focus/blur ---
   const handleFocus = () => {
     setFocused(true)
-    if (!scaleToken) setDraft(scaleProps!.value.mode === 'custom' && scaleProps!.value.value === scaleResetValue ? '' : String(scaleNumeric))
+    if (!hasToken) setDraft(scaleProps!.value.mode === 'custom' && scaleProps!.value.value === scaleResetValue ? '' : String(scaleNumeric))
   }
 
   const handleBlur = () => {
@@ -331,12 +347,34 @@ export function TokenInput(props: TokenInputProps) {
   const enumCommittedValue = enumProps ? (originalRef.current as string | null) ?? enumProps.value : ''
 
   // --- Dropdown JSX (shared) ---
+  const autoOpt = scaleProps?.autoOption
   const dropdownJSX = showDropdown && (
     <div
       ref={dropdownRef}
       className="absolute left-0 right-0 top-full mt-1 z-50 bg-surface-2 border border-border-accent rounded-lg shadow-2xl overflow-y-auto max-h-[200px] py-1"
       onMouseLeave={revertPreview}
     >
+      {autoOpt && (
+        <button
+          onMouseDown={(e) => {
+            e.preventDefault()
+            autoOpt.onToggle()
+            setShowDropdown(false)
+            endPreview(true)
+            originalRef.current = null
+          }}
+          className={`w-full text-left px-3 py-1.5 text-[12px] flex items-center justify-between cursor-pointer border-b border-border mb-1 ${
+            autoOpt.active
+              ? 'bg-surface-3/60 text-text-primary'
+              : 'text-text-secondary hover:bg-surface-3/60 hover:text-text-primary'
+          }`}
+        >
+          <span className="flex items-center gap-1.5">
+            <span className="font-medium">{autoOpt.label}</span>
+            {autoOpt.active && <Check size={10} />}
+          </span>
+        </button>
+      )}
       {items.map((item, i) => (
         <button
           key={item.key}
@@ -370,15 +408,30 @@ export function TokenInput(props: TokenInputProps) {
   // --- Render ---
   return (
     <div className="flex items-center gap-1.5 min-w-0 flex-1">
-      {label && <span className="c-label">{label}</span>}
+      {label && !inlineLabel && <span className="c-label">{label}</span>}
       <div ref={containerRef} className="relative flex-1 min-w-0">
         {isScale ? (
           // Scale mode trigger
-          <div
-            className="c-scale-input flex items-center gap-1 pr-1 overflow-hidden cursor-text"
-            onClick={() => inputRef.current?.focus()}
-          >
-            {scaleToken && (
+          autoOpt?.active ? (
+            <div
+              className="group c-scale-input flex items-center gap-0.5 pr-6 overflow-hidden cursor-pointer relative"
+              tabIndex={0}
+              onClick={toggleDropdown}
+              onKeyDown={(e) => {
+                if (showDropdown && handleDropdownKeyDown(e)) return
+                if (e.key === 'Backspace' || e.key === 'Delete') {
+                  e.preventDefault()
+                  autoOpt.onToggle()
+                } else if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  toggleDropdown()
+                }
+              }}
+            >
+              {inlineLabel && (
+                <span className={`w-4 shrink-0 flex items-center justify-center ${isActive ? 'text-text-secondary' : 'text-text-muted'}`}>{inlineLabel}</span>
+              )}
+              <span className="flex-1 min-w-0 text-[12px] text-text-secondary pl-0.5">{autoOpt.label}</span>
               <button
                 type="button"
                 tabIndex={-1}
@@ -387,23 +440,45 @@ export function TokenInput(props: TokenInputProps) {
                   e.stopPropagation()
                   toggleDropdown()
                 }}
-                className="flex items-center bg-surface-3 text-text-primary rounded px-1.5 text-[11px] leading-[18px] font-medium shrink-0 cursor-pointer hover:bg-surface-3/80"
+                className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-text-secondary hover:bg-surface-2 transition-opacity ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
               >
-                {formatTokenLabel(classPrefix, scaleToken)}
+                <Diamond size={12} />
+              </button>
+            </div>
+          ) : (
+          <div
+            className="group c-scale-input flex items-center gap-0.5 pr-6 overflow-hidden cursor-text relative"
+            onClick={() => inputRef.current?.focus()}
+          >
+            {inlineLabel && (
+              <span className={`w-4 shrink-0 flex items-center justify-center ${isActive ? 'text-text-secondary' : 'text-text-muted'}`}>{inlineLabel}</span>
+            )}
+            {hasToken && (
+              <button
+                type="button"
+                tabIndex={-1}
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  toggleDropdown()
+                }}
+                className="flex items-center bg-surface-3 text-text-primary rounded px-1 text-[11px] leading-[18px] font-medium min-w-0 truncate cursor-pointer hover:bg-surface-3/80"
+              >
+                {scaleToken || `${scaleNumeric}${scaleUnit}`}
               </button>
             )}
 
             <input
               ref={inputRef}
               type="text"
-              inputMode={scaleToken ? undefined : 'numeric'}
+              inputMode={hasToken ? undefined : 'numeric'}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={handleScaleKeyDown}
               onFocus={handleFocus}
               onBlur={handleBlur}
-              placeholder={scaleToken ? '' : (scaleIsUnset ? String(scaleResetValue) : undefined)}
-              className="flex-1 min-w-[20px] text-[12px] text-text-primary"
+              placeholder={hasToken ? '' : (scaleIsUnset ? (scaleProps!.placeholder ?? String(scaleResetValue)) : undefined)}
+              className={`flex-1 ${hasToken ? 'min-w-0' : 'min-w-[20px]'} text-[12px] text-text-primary`}
             />
 
             <button
@@ -414,24 +489,35 @@ export function TokenInput(props: TokenInputProps) {
                 toggleDropdown()
                 inputRef.current?.focus()
               }}
-              className="w-5 h-5 flex items-center justify-center rounded shrink-0 text-text-muted hover:text-text-secondary hover:bg-surface-2"
+              className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-text-secondary hover:bg-surface-2 transition-opacity ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}
             >
-              <Diamond size={11} />
+              <Diamond size={12} />
             </button>
           </div>
+          )
         ) : (
           // Enum mode trigger
           <div
-            className="c-scale-input flex items-center gap-1 pr-1 cursor-pointer"
+            className="group c-scale-input flex items-center gap-0.5 pr-6 cursor-pointer relative"
             tabIndex={0}
             onClick={toggleDropdown}
             onKeyDown={handleEnumKeyDown}
           >
-            <span className={`flex-1 min-w-[20px] text-[12px] pl-0.5 truncate ${
-              enumIsInitial ? 'text-text-muted opacity-60' : 'text-text-primary'
-            }`}>
-              {enumCurrentLabel}
-            </span>
+            {inlineLabel && (
+              <span className={`w-4 shrink-0 flex items-center justify-center ${isActive ? 'text-text-secondary' : 'text-text-muted'}`}>{inlineLabel}</span>
+            )}
+            {enumIsInitial ? (
+              <span className="flex-1 min-w-0 text-[12px] pl-0.5 truncate text-text-muted">
+                {enumCurrentLabel}
+              </span>
+            ) : (
+              <>
+                <span className="flex items-center bg-surface-3 text-text-primary rounded px-1 text-[11px] leading-[18px] font-medium min-w-0 truncate">
+                  {formatTokenLabel(classPrefix, enumCurrentOpt?.token ?? enumCurrentOpt?.value ?? enumProps!.value)}
+                </span>
+                <span className="flex-1" />
+              </>
+            )}
             <button
               type="button"
               tabIndex={-1}
@@ -441,9 +527,9 @@ export function TokenInput(props: TokenInputProps) {
                 e.stopPropagation()
                 toggleDropdown()
               }}
-              className="w-5 h-5 flex items-center justify-center rounded shrink-0 text-text-muted hover:text-text-secondary hover:bg-surface-2"
+              className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-text-secondary hover:bg-surface-2 transition-opacity ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
             >
-              <Diamond size={11} />
+              <Diamond size={12} />
             </button>
           </div>
         )}

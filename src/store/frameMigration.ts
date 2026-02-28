@@ -74,12 +74,13 @@ export function migrateTextStyles(raw: Record<string, unknown>): TextStyles {
     fontWeight: migrateDVNum(raw.fontWeight, 400),
     lineHeight: migrateDVNum(raw.lineHeight, 0),
     textAlign: (raw.textAlign as TextStyles['textAlign']) || 'left',
+    textAlignVertical: (raw.textAlignVertical as TextStyles['textAlignVertical']) || 'start',
     fontStyle: (raw.fontStyle as TextStyles['fontStyle']) || 'normal',
     textDecoration: (raw.textDecoration as TextStyles['textDecoration']) || 'none',
     letterSpacing: migrateDVNum(raw.letterSpacing, 0),
     textTransform: (raw.textTransform as TextStyles['textTransform']) || 'none',
     whiteSpace: (raw.whiteSpace as TextStyles['whiteSpace']) || 'normal',
-    fontFamily: (raw.fontFamily as string) || '', // [Experimental] Google Fonts
+    fontFamily: (raw.fontFamily as string) || 'sans',
   }
 }
 

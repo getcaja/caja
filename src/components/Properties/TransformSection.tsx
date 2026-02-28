@@ -10,12 +10,12 @@ export function TransformSection({ frame }: { frame: Frame }) {
   return (
     <Section title="Transform" defaultCollapsed>
       <div className="flex flex-col gap-2">
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <TokenInput
             scale={ROTATE_SCALE}
             value={frame.rotate}
             onChange={(v) => updateFrame(frame.id, { rotate: v })}
-            label="Rotate"
+            inlineLabel="R"
             classPrefix="rotate"
             defaultValue={0}
           />
@@ -24,17 +24,18 @@ export function TransformSection({ frame }: { frame: Frame }) {
             value={frame.scaleVal}
             onChange={(v) => updateFrame(frame.id, { scaleVal: v })}
             min={0}
-            label="Scale"
+            inlineLabel="S"
             classPrefix="scale"
             defaultValue={100}
           />
+          <div className="w-5 shrink-0" />
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <TokenInput
             scale={SPACING_SCALE}
             value={frame.translateX}
             onChange={(v) => updateFrame(frame.id, { translateX: v })}
-            label="Move X"
+            inlineLabel="X"
             classPrefix="translate-x"
             defaultValue={0}
           />
@@ -42,10 +43,11 @@ export function TransformSection({ frame }: { frame: Frame }) {
             scale={SPACING_SCALE}
             value={frame.translateY}
             onChange={(v) => updateFrame(frame.id, { translateY: v })}
-            label="Move Y"
+            inlineLabel="Y"
             classPrefix="translate-y"
             defaultValue={0}
           />
+          <div className="w-5 shrink-0" />
         </div>
       </div>
     </Section>

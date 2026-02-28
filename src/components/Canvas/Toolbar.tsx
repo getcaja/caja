@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import {
   Monitor, Tablet, Smartphone,
   FilePlus, SquarePlus, LayoutGrid, Minus, Plus, Pencil, Eye,
-  Square, Type, Link, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ChevronDown,
+  Frame as FrameIcon, Type, Link, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ChevronDown,
 } from 'lucide-react'
 import { useFrameStore, isRootId, findInTree } from '../../store/frameStore'
 import { useCatalogStore } from '../../store/catalogStore'
@@ -18,7 +18,7 @@ const BREAKPOINTS = [
 ]
 
 const PRIMITIVES: { type: ElementType; icon: React.ReactNode; label: string }[] = [
-  { type: 'box', icon: <Square size={12} />, label: 'Frame' },
+  { type: 'box', icon: <FrameIcon size={12} />, label: 'Frame' },
   { type: 'text', icon: <Type size={12} />, label: 'Text' },
   { type: 'link', icon: <Link size={12} />, label: 'Link' },
   { type: 'image', icon: <ImageIcon size={12} />, label: 'Image' },

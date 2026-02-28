@@ -2,28 +2,14 @@ import type { Frame } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { Section } from '../ui/Section'
 import { TokenInput } from '../ui/TokenInput'
-import { InlineSizeControl } from '../ui/InlineSizeControl'
 import { SIZE_CONSTRAINT_SCALE } from '../../data/scales'
 
 export function SizeSection({ frame }: { frame: Frame }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
-  const updateSize = useFrameStore((s) => s.updateSize)
 
   return (
-    <Section title="Size">
+    <Section title="Size Constraints" defaultCollapsed>
       <div className="flex flex-col gap-2">
-        <InlineSizeControl
-          value={frame.width}
-          onChange={(v) => updateSize(frame.id, 'width', v)}
-          label="Width"
-          classPrefix="w"
-        />
-        <InlineSizeControl
-          value={frame.height}
-          onChange={(v) => updateSize(frame.id, 'height', v)}
-          label="Height"
-          classPrefix="h"
-        />
         <div className="flex gap-2">
           <TokenInput
             scale={SIZE_CONSTRAINT_SCALE}

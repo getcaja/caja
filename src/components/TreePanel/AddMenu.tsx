@@ -1,4 +1,4 @@
-import { Square, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ChevronDown, Link } from 'lucide-react'
+import { Frame, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ChevronDown, Link } from 'lucide-react'
 
 interface AddMenuProps {
   x: number
@@ -21,7 +21,7 @@ export function AddMenu({ x, y, onAdd, onClose }: AddMenuProps) {
         className="c-menu-item"
         onClick={() => onAdd('box')}
       >
-        <Square size={12} /> Frame
+        <Frame size={12} /> Frame
       </button>
       <button
         className="c-menu-item"

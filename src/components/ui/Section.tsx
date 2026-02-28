@@ -34,8 +34,8 @@ export function Section({
   }
 
   return (
-    <div className="-mx-3 px-3 border-b border-border pb-3 mb-3">
-      <div className="flex items-center mb-2">
+    <div className="p-3 border-b border-border">
+      <div className={`flex items-center${collapsed ? '' : ' mb-2'}`}>
         <span
           className={`inline-flex items-center gap-1 ${collapsible ? 'cursor-pointer select-none' : ''}`}
           onClick={toggle}
