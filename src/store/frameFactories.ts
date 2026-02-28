@@ -480,6 +480,19 @@ export function createSelect(overrides?: Partial<SelectElement>): SelectElement 
   }
 }
 
+/** Ensure a Spacing object has all 4 sides (fills missing sides with zero). */
+function ensureSpacing(s: unknown): Spacing | undefined {
+  if (!s || typeof s !== 'object') return undefined
+  const r = s as Record<string, unknown>
+  const zero: DesignValue<number> = { mode: 'custom', value: 0 }
+  return {
+    top: (r.top && typeof r.top === 'object' && 'mode' in r.top) ? r.top as DesignValue<number> : zero,
+    right: (r.right && typeof r.right === 'object' && 'mode' in r.right) ? r.right as DesignValue<number> : zero,
+    bottom: (r.bottom && typeof r.bottom === 'object' && 'mode' in r.bottom) ? r.bottom as DesignValue<number> : zero,
+    left: (r.left && typeof r.left === 'object' && 'mode' in r.left) ? r.left as DesignValue<number> : zero,
+  }
+}
+
 /** Normalize a potentially incomplete frame (e.g. from external JSON) by filling in
  *  missing fields with defaults based on its type. Recurses into children. */
 export function normalizeFrame(frame: Frame): Frame {
@@ -488,11 +501,15 @@ export function normalizeFrame(frame: Frame): Frame {
     input: createInput, textarea: createTextarea, select: createSelect, link: createLink,
   }
   const create = creators[frame.type] || creators.text
-  // Migrate old border format (pattern data / .caja files may have { width } instead of { top/right/bottom/left })
   const migrated: Record<string, unknown> = { ...frame }
+  // Migrate old border format (pattern data / .caja files may have { width } instead of { top/right/bottom/left })
   if (migrated.border && typeof migrated.border === 'object') {
     migrated.border = migrateBorder(migrated.border)
   }
+  // Ensure spacing objects have all 4 sides (prevents dvSame crash)
+  if (migrated.padding) migrated.padding = ensureSpacing(migrated.padding)
+  if (migrated.margin) migrated.margin = ensureSpacing(migrated.margin)
+  if (migrated.inset) migrated.inset = ensureSpacing(migrated.inset)
   if (frame.type === 'box') {
     const children = (frame as BoxElement).children?.map(normalizeFrame) || []
     return create({ ...migrated, children } as Partial<any>)

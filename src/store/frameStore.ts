@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Frame, BoxElement, TextElement, ImageElement, ButtonElement, InputElement, TextareaElement, SelectElement, Spacing, SizeValue, BorderRadius, Page } from '../types/frame'
+import type { Frame, BoxElement, TextElement, ImageElement, ButtonElement, InputElement, TextareaElement, SelectElement, DesignValue, Spacing, SizeValue, BorderRadius, Page } from '../types/frame'
 import { useCatalogStore } from './catalogStore'
 import {
   createBox, createText, createImage, createButton, createInput,
@@ -641,7 +641,12 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   updateSpacing: (id, field, values) =>
     set((state) => {
       const history = pushHistory(state)
-      const newRoot = updateInTree(state.root, id, (f) => ({ ...f, [field]: { ...f[field], ...values } })) as BoxElement
+      const ZERO: DesignValue<number> = { mode: 'custom', value: 0 }
+      const existing = (f: Frame) => {
+        const s = f[field] as Spacing | undefined
+        return { top: s?.top ?? ZERO, right: s?.right ?? ZERO, bottom: s?.bottom ?? ZERO, left: s?.left ?? ZERO }
+      }
+      const newRoot = updateInTree(state.root, id, (f) => ({ ...f, [field]: { ...existing(f), ...values } })) as BoxElement
       return { ...updateActiveRoot(state, newRoot), ...history }
     }),
 
