@@ -32,6 +32,14 @@
       "csp": null
     }
   },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/getcaja/caja/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDhERTFEMTg1RTA4NkU2MzUKUldRMTVvYmdoZEhoalpHOWRzU0FEUzViU2wvejV1TGpxTlpYWkJ1bkNrazZXdHkvR2tuM0p2SFoK"
+    }
+  },
   "bundle": {
     "active": true,
     "targets": "all",

@@ -299,6 +299,8 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_http::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .invoke_handler(tauri::generate_handler![mcp_respond, set_menu_check, set_window_title, install_mcp_claude_code])
         .setup(|app| {
@@ -309,8 +311,12 @@ pub fn run() {
                 icon: Some(icon),
                 ..Default::default()
             };
+            let check_updates_item = MenuItemBuilder::with_id("check-for-updates", "Check for Updates…")
+                .build(app)?;
+
             let app_menu = SubmenuBuilder::new(app, "Caja")
                 .about(Some(about))
+                .item(&check_updates_item)
                 .separator()
                 .services()
                 .separator()

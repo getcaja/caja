@@ -24,6 +24,8 @@
         { "url": "http://**" }
       ]
     },
-    "window-state:default"
+    "window-state:default",
+    "updater:default",
+    "process:default"
   ]
 }
