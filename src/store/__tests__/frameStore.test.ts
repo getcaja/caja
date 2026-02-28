@@ -642,8 +642,8 @@ describe('frameStore', () => {
       const homeId = store().pages[0].id
       store().duplicatePage(homeId)
       expect(store().pages).toHaveLength(2)
-      expect(store().pages[1].name).toBe('Home (Copy)')
-      expect(store().pages[1].route).toBe('/-copy')
+      expect(store().pages[1].name).toBe('Page 1 (Copy)')
+      expect(store().pages[1].route).toBe('/page-1-copy')
     })
 
     it('duplicated page has same number of children with new IDs', () => {
@@ -670,7 +670,7 @@ describe('frameStore', () => {
       store().addPage('Contact')
       store().reorderPages(2, 0)
       expect(store().pages[0].name).toBe('Contact')
-      expect(store().pages[1].name).toBe('Home')
+      expect(store().pages[1].name).toBe('Page 1')
       expect(store().pages[2].name).toBe('About')
     })
   })

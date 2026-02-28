@@ -27,3 +27,6 @@ src-tauri/target
 *.sln
 *.sw?
 test-results/
+
+# Internal docs (not for public repo)
+docs/ROADMAP-0.1.md
