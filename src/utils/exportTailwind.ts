@@ -40,6 +40,10 @@ export function exportToJSX(
   if (frame.type === 'button') {
     const content = escapeText(frame.content)
     const idAttr = resolveIdAttr(frame)
+    if (frame.href) {
+      const hrefAttr = ` href="${escapeAttr(frame.href)}"`
+      return `${pad}<a${idAttr}${hrefAttr} className="${classes}">${content}</a>\n`
+    }
     return `${pad}<button${idAttr} type="button" className="${classes}">${content}</button>\n`
   }
 

@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Eye, EyeOff, Plus, X, Check, Code } from 'lucide-react'
+import { Eye, EyeOff, Plus, X, Check, Code, Link } from 'lucide-react'
 import type { Frame, TextElement, ImageElement, ButtonElement, InputElement, TextareaElement, SelectElement, SelectOption } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { TokenInput } from '../ui/TokenInput'
 import { ToggleGroup } from '../ui/ToggleGroup'
+import { Select } from '../ui/Select'
 import { TYPE_BADGE_STYLES, TYPE_BADGE_LABELS, getBadgeKey, BOX_TAG_OPTIONS, TEXT_TAG_OPTIONS, INPUT_TYPE_OPTIONS } from './constants'
 import { isExternalUrl, isLocalAssetPath, downloadAsset } from '../../lib/assetOps'
 
@@ -35,6 +36,51 @@ function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: (v
       </span>
       <span className={`text-[12px] ${checked ? 'text-text-primary' : 'text-text-muted'}`}>{label}</span>
     </button>
+  )
+}
+
+function HrefPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const pages = useFrameStore((s) => s.pages)
+
+  const matchedPage = value ? pages.find(p => p.route === value) : null
+  const isCustom = !!value && !matchedPage
+  const selectValue = !value ? '__none__' : matchedPage ? value : '__custom__'
+
+  const options = [
+    { value: '__none__', label: 'None' },
+    ...pages.map(p => ({ value: p.route, label: `${p.name} (${p.route})` })),
+    { value: '__custom__', label: 'URL' },
+  ]
+
+  return (
+    <>
+      <div className="flex items-center gap-2">
+        <span className="text-text-muted/50 shrink-0"><Link size={12} /></span>
+        <Select
+          value={selectValue}
+          options={options}
+          onChange={(v) => {
+            if (v === '__none__') onChange('')
+            else if (v === '__custom__') onChange(value || 'https://')
+            else onChange(v)
+          }}
+          className="flex-1"
+        />
+        <div className="w-5 shrink-0" />
+      </div>
+      {isCustom && (
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="https://..."
+            className="flex-1 c-input"
+          />
+          <div className="w-5 shrink-0" />
+        </div>
+      )}
+    </>
   )
 }
 
@@ -137,16 +183,7 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
         return (
           <>
             {t.tag === 'a' && (
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={t.href || ''}
-                  onChange={(e) => updateFrame(frame.id, { href: e.target.value })}
-                  placeholder="https://..."
-                  className="flex-1 c-input"
-                />
-                <div className="w-5 shrink-0" />
-              </div>
+              <HrefPicker value={t.href || ''} onChange={(v) => updateFrame(frame.id, { href: v })} />
             )}
             <div className="flex items-start gap-2">
               <textarea
@@ -233,16 +270,19 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
       {frame.type === 'button' && (() => {
         const btn = frame as ButtonElement
         return (
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              value={btn.content}
-              onChange={(e) => updateFrame(frame.id, { content: e.target.value })}
-              placeholder="Button text..."
-              className="flex-1 c-input"
-            />
-            <div className="w-5 shrink-0" />
-          </div>
+          <>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={btn.content}
+                onChange={(e) => updateFrame(frame.id, { content: e.target.value })}
+                placeholder="Button text..."
+                className="flex-1 c-input"
+              />
+              <div className="w-5 shrink-0" />
+            </div>
+            <HrefPicker value={btn.href || ''} onChange={(v) => updateFrame(frame.id, { href: v })} />
+          </>
         )
       })()}
 

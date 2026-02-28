@@ -321,6 +321,7 @@ export function createButton(overrides?: Partial<ButtonElement>): ButtonElement 
     className: '',
     htmlId: '',
     content: 'Button',
+    href: '',
     ...defaultTextStyles(),
     padding: zeroSpacing(),
     margin: zeroSpacing(),
