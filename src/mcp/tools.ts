@@ -3,9 +3,9 @@
 
 import { useFrameStore, findInTree, cloneWithNewIds, normalizeFrame } from '../store/frameStore'
 import { useCatalogStore } from '../store/catalogStore'
-import type { PatternData } from '../store/catalogStore'
+import type { ComponentData } from '../store/catalogStore'
 import type { Frame, SizeValue } from '../types/frame'
-import type { LibraryMeta } from '../types/pattern'
+import type { LibraryMeta } from '../types/component'
 import type { CjlFileData } from '../lib/libraryOps'
 import type { ToolName } from './schema'
 import { parseTailwindClasses } from '../utils/parseTailwindClasses'
@@ -376,7 +376,7 @@ const handlers: Record<string, ToolHandler> = {
   list_patterns(params) {
     const { tag } = params as { tag?: string }
     const catalogStore = useCatalogStore.getState()
-    let all = catalogStore.allPatterns()
+    let all = catalogStore.allComponents()
     if (tag) all = all.filter((s) => s.tags.includes(tag))
     return {
       success: true,
@@ -397,10 +397,10 @@ const handlers: Record<string, ToolHandler> = {
     if (!resolvedId) return { success: false, error: 'pattern_id is required' }
 
     const catalogStore = useCatalogStore.getState()
-    // Look up pattern from library or internal catalog
+    // Look up component from library or internal catalog
     const pattern = library_id
-      ? catalogStore.getLibraryPattern(library_id, resolvedId)
-      : catalogStore.getPattern(resolvedId)
+      ? catalogStore.getLibraryComponent(library_id, resolvedId)
+      : catalogStore.getComponent(resolvedId)
     if (!pattern) return { success: false, error: `Pattern ${resolvedId} not found${library_id ? ` in library ${library_id}` : ''}` }
 
     const store = getStore()
@@ -469,7 +469,7 @@ const handlers: Record<string, ToolHandler> = {
 
     const catalogStore = useCatalogStore.getState()
     const cloned = cloneWithNewIds(frame)
-    const pattern = catalogStore.savePattern(name, tags || [], cloned)
+    const pattern = catalogStore.saveComponent(name, tags || [], cloned)
 
     // Collect named slots for the hint
     const slots: string[] = []
@@ -492,10 +492,10 @@ const handlers: Record<string, ToolHandler> = {
     if (!resolvedId) return { success: false, error: 'pattern_id is required' }
 
     const catalogStore = useCatalogStore.getState()
-    const pattern = catalogStore.getPattern(resolvedId)
+    const pattern = catalogStore.getComponent(resolvedId)
     if (!pattern) return { success: false, error: `Pattern ${resolvedId} not found` }
 
-    catalogStore.deletePattern(resolvedId)
+    catalogStore.deleteComponent(resolvedId)
     return { success: true, data: { deleted: resolvedId } }
   },
 
@@ -519,7 +519,7 @@ const handlers: Record<string, ToolHandler> = {
     const meta = catalogStore.libraryIndex.find((m) => m.id === library_id)
     if (!meta) return { success: false, error: `Library ${library_id} not found` }
 
-    const patterns = catalogStore.getLibraryPatterns(library_id)
+    const patterns = catalogStore.getLibraryComponents(library_id)
     return {
       success: true,
       data: patterns.map(({ id, name, tags, meta, createdAt }) => ({ id, name, tags, meta, createdAt })),
@@ -533,10 +533,10 @@ const handlers: Record<string, ToolHandler> = {
     if (!name) return { success: false, error: 'name is required' }
 
     const catalogStore = useCatalogStore.getState()
-    const patternData = catalogStore.getPatternData()
+    const patternData = catalogStore.getComponentData()
 
     if (!patternData.items.length) {
-      return { success: false, error: 'No internal patterns to export. Save patterns first with save_pattern.' }
+      return { success: false, error: 'No internal components to export. Save components first with save_pattern.' }
     }
 
     const id = crypto.randomUUID()
@@ -578,7 +578,7 @@ const handlers: Record<string, ToolHandler> = {
   async install_library(params) {
     const { name, author, description, version, patterns } = params as {
       name: string; author?: string; description?: string; version?: string
-      patterns: PatternData
+      patterns: ComponentData
     }
     if (!name) return { success: false, error: 'name is required' }
     if (!patterns || !Array.isArray(patterns.items)) {
@@ -588,7 +588,7 @@ const handlers: Record<string, ToolHandler> = {
     const id = crypto.randomUUID()
     const fileName = `${id}.cjl`
 
-    const patternData: PatternData = {
+    const patternData: ComponentData = {
       items: patterns.items,
       order: patterns.order || patterns.items.map((p) => p.id),
       categories: patterns.categories || [],
@@ -642,7 +642,7 @@ const handlers: Record<string, ToolHandler> = {
     const store = getStore()
     return {
       success: true,
-      data: store.pages.map((p) => ({
+      data: store.pages.filter((p) => !p.isComponentPage).map((p) => ({
         id: p.id,
         name: p.name,
         route: p.route,
@@ -673,7 +673,8 @@ const handlers: Record<string, ToolHandler> = {
   remove_page(params) {
     const { id } = params as { id: string }
     const store = getStore()
-    if (store.pages.length <= 1) return { success: false, error: 'Cannot remove the last page' }
+    const regularPages = store.pages.filter((p) => !p.isComponentPage)
+    if (regularPages.length <= 1) return { success: false, error: 'Cannot remove the last page' }
     const page = store.pages.find((p) => p.id === id)
     if (!page) return { success: false, error: `Page ${id} not found` }
     store.removePage(id)
