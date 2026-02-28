@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Eye, EyeOff, Plus, X, Check } from 'lucide-react'
+import { Eye, EyeOff, Plus, X, Check, Code } from 'lucide-react'
 import type { Frame, TextElement, ImageElement, ButtonElement, InputElement, TextareaElement, SelectElement, SelectOption } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { TokenInput } from '../ui/TokenInput'
@@ -124,7 +124,7 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
             value={currentTag}
             options={tagOptions}
             onChange={(v) => updateFrame(frame.id, { tag: v })}
-            inlineLabel="<>"
+            inlineLabel={<Code size={12} />}
             classPrefix="tag"
           />
           <div className="w-5 shrink-0" />

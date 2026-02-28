@@ -175,7 +175,7 @@ export function McpModal({ open, onOpenChange }: McpModalProps) {
               disabled={installState !== 'idle'}
               className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-accent text-white text-[12px] font-medium hover:bg-accent-hover transition-colors disabled:opacity-60"
             >
-              {installState === 'idle' && <><Plus size={14} /> Add to Claude Code</>}
+              {installState === 'idle' && <>Add to Claude Code</>}
               {installState === 'installed' && <><Check size={14} /> Added to ~/.claude.json</>}
               {installState === 'already' && <><Check size={14} /> Already configured</>}
               {installState === 'error' && <>Failed — copy config manually</>}

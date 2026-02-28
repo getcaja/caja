@@ -91,7 +91,6 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
 
   // Editor state classes (selection/hover via CSS outline, no layout impact)
   const stateClasses = [
-    isRoot && 'min-h-screen',
     isSelected && 'is-selected',
     isHovered && 'is-hovered',
     !previewMode && isEmpty && !isRoot && 'is-empty',

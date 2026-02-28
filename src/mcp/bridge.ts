@@ -18,6 +18,7 @@ let bridgeGen: number = ((window as any).__cajaBridgeGen as number) ?? 0
 // Serialize tool execution — mutations must run one at a time to avoid
 // Zustand state races when multiple MCP calls arrive in parallel.
 let toolQueue = Promise.resolve()
+let busyTimeout: ReturnType<typeof setTimeout> | null = null
 
 let unlisten: (() => void)[] = []
 
@@ -45,9 +46,20 @@ export async function startMcpBridge() {
       const { id, name, params } = event.payload
       if (handled.has(id)) return
       handled.add(id)
+      // Show spinner immediately; keep it visible until 2s after last tool completes
+      // (covers Claude's thinking time between sequential tool calls)
+      if (busyTimeout) clearTimeout(busyTimeout)
+      useFrameStore.setState({ mcpBusy: true })
       toolQueue = toolQueue.then(async () => {
-        const result = await executeTool(name, params)
-        await invoke('mcp_respond', { id, result: JSON.stringify(result) })
+        try {
+          const result = await executeTool(name, params)
+          await invoke('mcp_respond', { id, result: JSON.stringify(result) })
+        } finally {
+          if (busyTimeout) clearTimeout(busyTimeout)
+          busyTimeout = setTimeout(() => {
+            useFrameStore.setState({ mcpBusy: false })
+          }, 2000)
+        }
       })
     }
   )
@@ -96,6 +108,7 @@ export function stopMcpBridge() {
 // Accept ./tools and ./resources so their updates propagate here.
 if (import.meta.hot) {
   import.meta.hot.dispose(() => stopMcpBridge())
+  import.meta.hot.accept()
   import.meta.hot.accept(['./tools', './resources'], () => {
     startMcpBridge()
   })

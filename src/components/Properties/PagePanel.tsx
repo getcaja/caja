@@ -37,7 +37,7 @@ export function PagePanel() {
             type="text"
             value={page.route}
             onChange={(e) => setPageRoute(page.id, e.target.value)}
-            className="c-input font-mono"
+            className="c-input"
             placeholder="/page-route"
           />
         </div>

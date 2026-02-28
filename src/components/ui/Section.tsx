@@ -16,11 +16,13 @@ function readCollapsed(title: string, defaultCollapsed: boolean): boolean {
 export function Section({
   title,
   children,
+  icon,
   collapsible = true,
   defaultCollapsed = false,
 }: {
   title: string
   children: React.ReactNode
+  icon?: React.ReactNode
   collapsible?: boolean
   defaultCollapsed?: boolean
 }) {
@@ -46,6 +48,7 @@ export function Section({
               className={`text-text-muted transition-transform duration-150 ${collapsed ? '' : 'rotate-90'}`}
             />
           )}
+          {icon && <span className="text-text-muted">{icon}</span>}
           <span className="c-section-title">{title}</span>
         </span>
       </div>

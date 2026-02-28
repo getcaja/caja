@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useFrameStore } from '../../store/frameStore'
 import { McpModal } from '../McpModal/McpModal'
+import { Plug, Loader2 } from 'lucide-react'
 
 const TRAFFIC_LIGHT_WIDTH = 70
 const TITLE_BAR_HEIGHT = 38
@@ -9,6 +10,7 @@ export function TitleBar() {
   const filePath = useFrameStore((s) => s.filePath)
   const dirty = useFrameStore((s) => s.dirty)
   const mcpConnected = useFrameStore((s) => s.mcpConnected)
+  const mcpBusy = useFrameStore((s) => s.mcpBusy)
   const [showMcp, setShowMcp] = useState(false)
 
   const fileName = filePath ? filePath.split('/').pop()?.replace('.caja', '') : 'Untitled — Caja'
@@ -36,12 +38,14 @@ export function TitleBar() {
       <div className="flex items-center px-1 pr-2">
         <button
           onClick={() => setShowMcp(true)}
-          className="flex items-center gap-1.5 px-2.5 h-[24px] rounded-md text-[11px] text-text-muted hover:text-text-secondary hover:bg-surface-2 transition-colors"
+          className="w-6 h-6 flex items-center justify-center rounded-md text-text-muted hover:text-text-secondary hover:bg-surface-2 transition-colors"
+          title={mcpConnected ? 'MCP Connected' : 'MCP Offline'}
         >
-          <div
-            className={`w-1.5 h-1.5 rounded-full ${mcpConnected ? 'bg-accent' : 'bg-text-muted'}`}
-          />
-          <span>MCP</span>
+          {mcpBusy ? (
+            <Loader2 size={14} className="animate-spin" />
+          ) : (
+            <Plug size={14} />
+          )}
         </button>
       </div>
 

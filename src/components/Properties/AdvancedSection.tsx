@@ -1,5 +1,5 @@
 import { useState, useRef, useMemo, useCallback, useEffect } from 'react'
-import { X, Copy, Check } from 'lucide-react'
+import { X, Copy, Check, Plus } from 'lucide-react'
 import type { Frame } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { frameToClasses } from '../../utils/frameToClasses'
@@ -7,52 +7,6 @@ import { Section } from '../ui/Section'
 import { TAILWIND_CLASSES } from '../../data/tailwindClasses'
 
 const MAX_SUGGESTIONS = 8
-
-function ClassPill({
-  label,
-  computed,
-  onRemove,
-  draggable,
-  onDragStart,
-  onDragOver,
-  onDrop,
-  isDragOver,
-}: {
-  label: string
-  computed?: boolean
-  onRemove?: () => void
-  draggable?: boolean
-  onDragStart?: (e: React.DragEvent) => void
-  onDragOver?: (e: React.DragEvent) => void
-  onDrop?: (e: React.DragEvent) => void
-  isDragOver?: boolean
-}) {
-  return (
-    <span
-      draggable={draggable}
-      onDragStart={onDragStart}
-      onDragOver={onDragOver}
-      onDrop={onDrop}
-      className={`c-pill ${
-        computed
-          ? 'bg-surface-2 text-text-muted'
-          : 'bg-surface-3 text-text-primary'
-      } ${draggable ? 'cursor-grab active:cursor-grabbing' : ''} ${
-        isDragOver ? 'ring-1 ring-text-muted' : ''
-      }`}
-    >
-      {label}
-      {onRemove && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onRemove() }}
-          className="ml-0.5 w-4 h-4 flex items-center justify-center rounded hover:bg-destructive/20 hover:text-destructive text-current opacity-70 hover:opacity-100"
-        >
-          <X size={10} />
-        </button>
-      )}
-    </span>
-  )
-}
 
 function getSuggestions(draft: string, existingClasses: Set<string>): string[] {
   if (!draft) return []
@@ -64,14 +18,12 @@ function getSuggestions(draft: string, existingClasses: Set<string>): string[] {
   if (!search) return []
 
   const searchLower = search.toLowerCase()
-
   const prefixMatches: string[] = []
   const substringMatches: string[] = []
 
   for (const cls of TAILWIND_CLASSES) {
     const full = prefix + cls
     if (existingClasses.has(full)) continue
-
     if (cls.startsWith(searchLower)) {
       prefixMatches.push(full)
     } else if (cls.includes(searchLower)) {
@@ -86,8 +38,6 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
   const [copied, setCopied] = useState(false)
   const [draft, setDraft] = useState('')
-  const [dragIdx, setDragIdx] = useState<number | null>(null)
-  const [overIdx, setOverIdx] = useState<number | null>(null)
   const [selectedIdx, setSelectedIdx] = useState(0)
   const [showSuggestions, setShowSuggestions] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -108,13 +58,8 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
     [draft, existingSet],
   )
 
-  useEffect(() => {
-    setSelectedIdx(0)
-  }, [suggestions])
-
-  useEffect(() => {
-    setShowSuggestions(suggestions.length > 0 && draft.length > 0)
-  }, [suggestions, draft])
+  useEffect(() => { setSelectedIdx(0) }, [suggestions])
+  useEffect(() => { setShowSuggestions(suggestions.length > 0 && draft.length > 0) }, [suggestions, draft])
 
   const copyAll = () => {
     navigator.clipboard.writeText(allText)
@@ -135,14 +80,6 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
     updateFrame(frame.id, { tailwindClasses: manualClasses.filter((c) => c !== cls).join(' ') })
   }
 
-  const reorder = (from: number, to: number) => {
-    if (from === to) return
-    const arr = [...manualClasses]
-    const [moved] = arr.splice(from, 1)
-    arr.splice(to, 0, moved)
-    updateFrame(frame.id, { tailwindClasses: arr.join(' ') })
-  }
-
   const selectSuggestion = useCallback((cls: string) => {
     addClasses(cls)
     setDraft('')
@@ -152,39 +89,13 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (showSuggestions && suggestions.length > 0) {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault()
-        setSelectedIdx((i) => (i + 1) % suggestions.length)
-        return
-      }
-      if (e.key === 'ArrowUp') {
-        e.preventDefault()
-        setSelectedIdx((i) => (i - 1 + suggestions.length) % suggestions.length)
-        return
-      }
-      if (e.key === 'Enter') {
-        e.preventDefault()
-        selectSuggestion(suggestions[selectedIdx])
-        return
-      }
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        setShowSuggestions(false)
-        return
-      }
+      if (e.key === 'ArrowDown') { e.preventDefault(); setSelectedIdx((i) => (i + 1) % suggestions.length); return }
+      if (e.key === 'ArrowUp') { e.preventDefault(); setSelectedIdx((i) => (i - 1 + suggestions.length) % suggestions.length); return }
+      if (e.key === 'Enter') { e.preventDefault(); selectSuggestion(suggestions[selectedIdx]); return }
+      if (e.key === 'Escape') { e.preventDefault(); setShowSuggestions(false); return }
     }
-
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      addClasses(draft)
-      setDraft('')
-    }
-    if (e.key === 'Backspace' && draft === '' && manualClasses.length > 0) {
-      removeClass(manualClasses[manualClasses.length - 1])
-    }
-    if (e.key === 'Escape') {
-      inputRef.current?.blur()
-    }
+    if (e.key === 'Enter') { e.preventDefault(); addClasses(draft); setDraft('') }
+    if (e.key === 'Escape') { inputRef.current?.blur() }
   }
 
   useEffect(() => {
@@ -196,41 +107,58 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
   return (
     <Section title="Classes" defaultCollapsed>
       <div className="flex flex-col gap-2">
+        {/* Computed classes — read-only */}
         <div className="flex items-start gap-2">
+          <div className="flex-1 min-w-0 bg-surface-2 rounded px-1.5 py-1 flex flex-wrap gap-1 min-h-[24px]">
+            {computedClasses.map((cls, i) => (
+              <span key={i} className="c-pill bg-surface-3/60 text-text-muted">{cls}</span>
+            ))}
+            {computedClasses.length === 0 && (
+              <span className="text-[11px] text-text-muted py-0.5">No computed classes</span>
+            )}
+          </div>
+          {allText ? (
+            <button
+              onClick={copyAll}
+              className={`w-5 h-5 shrink-0 flex items-center justify-center rounded ${
+                copied ? 'text-blue-400 bg-blue-400/10' : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'
+              }`}
+              title="Copy all classes"
+            >
+              {copied ? <Check size={12} /> : <Copy size={12} />}
+            </button>
+          ) : (
+            <div className="w-5 shrink-0" />
+          )}
+        </div>
+
+        {/* Manual classes — editable */}
+        {manualClasses.length > 0 && (
+          <div className="bg-surface-2 rounded px-1.5 py-1 flex flex-wrap gap-1">
+            {manualClasses.map((cls, i) => (
+              <span key={`${i}-${cls}`} className="c-pill bg-surface-3 text-text-primary">
+                {cls}
+                <button
+                  onClick={() => removeClass(cls)}
+                  className="ml-0.5 w-4 h-4 flex items-center justify-center rounded hover:bg-destructive/20 hover:text-destructive text-current opacity-70 hover:opacity-100"
+                >
+                  <X size={10} />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Add input */}
+        <div className="flex items-center gap-2">
           <div className="relative flex-1 min-w-0">
             <div
-              className="c-input px-1.5 py-1.5 flex flex-wrap gap-1 min-h-[32px] cursor-text"
+              className="c-scale-input flex items-center gap-1 cursor-text"
               onClick={() => inputRef.current?.focus()}
-              onDragOver={(e) => e.preventDefault()}
             >
-              {computedClasses.map((cls, i) => (
-                <ClassPill key={`c-${i}`} label={cls} computed />
-              ))}
-              {manualClasses.map((cls, i) => (
-                <ClassPill
-                  key={`m-${i}-${cls}`}
-                  label={cls}
-                  onRemove={() => removeClass(cls)}
-                  draggable
-                  isDragOver={overIdx === i && dragIdx !== i}
-                  onDragStart={(e) => {
-                    setDragIdx(i)
-                    e.dataTransfer.effectAllowed = 'move'
-                  }}
-                  onDragOver={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    setOverIdx(i)
-                  }}
-                  onDrop={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    if (dragIdx !== null) reorder(dragIdx, i)
-                    setDragIdx(null)
-                    setOverIdx(null)
-                  }}
-                />
-              ))}
+              <span className="w-4 shrink-0 flex items-center justify-center text-text-muted/50">
+                <Plus size={12} />
+              </span>
               <input
                 ref={inputRef}
                 type="text"
@@ -243,11 +171,9 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
                     setShowSuggestions(false)
                   }, 150)
                 }}
-                onFocus={() => {
-                  if (suggestions.length > 0 && draft.length > 0) setShowSuggestions(true)
-                }}
-                placeholder={manualClasses.length === 0 && computedClasses.length === 0 ? 'Add classes...' : ''}
-                className="flex-1 min-w-[60px] bg-transparent text-[11px] text-text-primary placeholder:text-text-muted outline-none py-0.5"
+                onFocus={() => { if (suggestions.length > 0 && draft.length > 0) setShowSuggestions(true) }}
+                placeholder="New Class"
+                className="flex-1 min-w-[20px] text-[12px] text-text-primary"
               />
             </div>
 
@@ -259,10 +185,7 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
                 {suggestions.map((cls, i) => (
                   <button
                     key={cls}
-                    onMouseDown={(e) => {
-                      e.preventDefault()
-                      selectSuggestion(cls)
-                    }}
+                    onMouseDown={(e) => { e.preventDefault(); selectSuggestion(cls) }}
                     onMouseEnter={() => setSelectedIdx(i)}
                     className={`w-full text-left px-3 py-1.5 text-[12px] cursor-pointer ${
                       i === selectedIdx
@@ -276,21 +199,7 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
               </div>
             )}
           </div>
-          {allText ? (
-            <button
-              onClick={copyAll}
-              className={`w-5 h-5 shrink-0 flex items-center justify-center rounded ${
-                copied
-                  ? 'text-blue-400 bg-blue-400/10'
-                  : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'
-              }`}
-              title="Copy all classes"
-            >
-              {copied ? <Check size={12} /> : <Copy size={12} />}
-            </button>
-          ) : (
-            <div className="w-5 shrink-0" />
-          )}
+          <div className="w-5 shrink-0" />
         </div>
       </div>
     </Section>

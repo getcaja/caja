@@ -143,7 +143,9 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
           }}
           style={{ cursor: hasChildren ? 'pointer' : 'default' }}
         >
-          {hasChildren ? (isCollapsed ? <ChevronRight size={10} /> : <ChevronDown size={10} />) : null}
+          {isBox ? (
+            hasChildren ? (isCollapsed ? <ChevronRight size={10} /> : <ChevronDown size={10} />) : <ChevronRight size={10} className="opacity-50" />
+          ) : null}
         </span>
 
         {/* Type icon */}
@@ -170,7 +172,7 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
         {!isRoot && nameEdit.editing ? (
           <input {...nameEdit.inputProps} />
         ) : (
-          <span className="flex-1 text-[12px] truncate">{isRoot ? 'Body' : frame.name}</span>
+          <span className="flex-1 h-5 flex items-center text-[12px] truncate">{isRoot ? 'Body' : frame.name}</span>
         )}
 
         {/* Visibility toggle on hover */}

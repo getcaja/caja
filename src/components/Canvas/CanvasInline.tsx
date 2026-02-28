@@ -44,8 +44,7 @@ export function CanvasInline() {
   }, [])
 
   const onCanvasClick = useCallback(() => {
-    const { select, root: r } = useFrameStore.getState()
-    select(r.id)
+    useFrameStore.getState().select(null)
   }, [])
 
   // Measure scroll container for workspace dimensions (used for zoomed sizing)

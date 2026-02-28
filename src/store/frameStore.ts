@@ -256,6 +256,7 @@ interface FrameStore {
   canvasWidth: number | null
   canvasZoom: number
   mcpConnected: boolean
+  mcpBusy: boolean
   canvasDragId: string | null
   canvasDragOver: { parentId: string; index: number } | null
   patternDragFrame: Frame | null
@@ -411,6 +412,7 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   canvasWidth: initialViewPrefs.canvasWidth,
   canvasZoom: 1,
   mcpConnected: false,
+  mcpBusy: false,
   canvasDragId: null,
   canvasDragOver: null,
   patternDragFrame: null,

@@ -34,7 +34,7 @@ export function Properties() {
       {advancedMode && <EffectsSection frame={selected} />}
       {advancedMode && <TransformSection frame={selected} />}
       {advancedMode && <TransitionSection frame={selected} />}
-      {advancedMode && <AdvancedSection frame={selected} />}
+      <AdvancedSection frame={selected} />
     </div>
   )
 }
