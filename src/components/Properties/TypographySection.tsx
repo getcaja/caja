@@ -100,6 +100,7 @@ export function TypographySection({ frame }: { frame: TextStyles & { id: string 
             value={frame.lineHeight}
             onChange={(v) => updateFrame(frame.id, { lineHeight: v })}
             min={0.5}
+            defaultValue={0}
             unit=""
             placeholder="Auto"
             classPrefix="leading"
