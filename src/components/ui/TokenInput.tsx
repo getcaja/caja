@@ -14,6 +14,7 @@ interface TokenInputBase {
   label?: string
   classPrefix?: string
   inlineLabel?: React.ReactNode
+  tooltip?: string
 }
 
 interface AutoOption {
@@ -58,7 +59,7 @@ interface NormalizedItem {
 }
 
 export function TokenInput(props: TokenInputProps) {
-  const { label, classPrefix, inlineLabel } = props
+  const { label, classPrefix, inlineLabel, tooltip } = props
   const isScale = 'scale' in props && props.scale !== undefined
   const startPreview = useFrameStore((s) => s.startPreview)
   const endPreview = useFrameStore((s) => s.endPreview)
@@ -94,6 +95,11 @@ export function TokenInput(props: TokenInputProps) {
   const isActive = isScale
     ? (!scaleIsUnset || scaleToken !== null || (scaleProps?.autoOption?.active ?? false))
     : !enumIsInitial
+
+  // --- Inline label (with optional title tooltip) ---
+  const inlineLabelEl = inlineLabel ? (
+    <span title={tooltip} className={`w-4 shrink-0 flex items-center justify-center ${isActive ? 'text-text-secondary' : 'text-text-muted'}`}>{inlineLabel}</span>
+  ) : null
 
   // --- Normalize items for dropdown ---
   const items: NormalizedItem[] = isScale
@@ -450,9 +456,7 @@ export function TokenInput(props: TokenInputProps) {
             className="group c-scale-input flex items-center gap-0.5 pr-6 overflow-hidden cursor-text relative"
             onClick={() => inputRef.current?.focus()}
           >
-            {inlineLabel && (
-              <span className={`w-4 shrink-0 flex items-center justify-center ${isActive ? 'text-text-secondary' : 'text-text-muted'}`}>{inlineLabel}</span>
-            )}
+            {inlineLabelEl}
             {hasToken && (
               <button
                 type="button"
@@ -503,9 +507,7 @@ export function TokenInput(props: TokenInputProps) {
             onClick={toggleDropdown}
             onKeyDown={handleEnumKeyDown}
           >
-            {inlineLabel && (
-              <span className={`w-4 shrink-0 flex items-center justify-center ${isActive ? 'text-text-secondary' : 'text-text-muted'}`}>{inlineLabel}</span>
-            )}
+            {inlineLabelEl}
             {enumIsInitial ? (
               <span className="flex-1 min-w-0 text-[12px] pl-0.5 truncate text-text-muted">
                 {enumCurrentLabel}

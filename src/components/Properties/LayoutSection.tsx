@@ -91,6 +91,7 @@ export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolea
                   trigger={
                     <button
                       type="button"
+                      title="Display Options"
                       className={`w-5 h-5 flex items-center justify-center rounded shrink-0 ${
                         displayOptsActive
                           ? 'text-blue-400 bg-blue-400/10'
@@ -173,6 +174,7 @@ export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolea
             label="W"
             classPrefix="w"
             parentIsFlex={parentIsFlex}
+            tooltip="Width"
           />
           <SizeInput
             value={frame.height}
@@ -180,6 +182,7 @@ export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolea
             label="H"
             classPrefix="h"
             parentIsFlex={parentIsFlex}
+            tooltip="Height"
           />
           <Popover
             open={constraintsOpen}
@@ -187,6 +190,7 @@ export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolea
             trigger={
               <button
                 type="button"
+                title="Size Constraints"
                 className={`w-5 h-5 flex items-center justify-center rounded shrink-0 ${
                   constraintsActive || childPropsActive
                     ? 'text-blue-400 bg-blue-400/10'
@@ -342,6 +346,7 @@ export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolea
                     min={0}
                     classPrefix="gap"
                     inlineLabel={isRow ? <AlignHorizontalSpaceAround size={12} /> : <AlignVerticalSpaceAround size={12} />}
+                    tooltip="Gap"
                     autoOption={{
                       label: 'Auto',
                       active: isSpaceBetween,
@@ -359,6 +364,7 @@ export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolea
                     trigger={
                       <button
                         type="button"
+                        title="Flex Child"
                         className={`w-5 h-5 flex items-center justify-center rounded shrink-0 ${
                           childPropsActive
                             ? 'text-blue-400 bg-blue-400/10'
@@ -447,6 +453,7 @@ export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolea
                     classPrefix="grid-cols"
                     defaultValue={0}
                     placeholder="Auto"
+                    tooltip="Columns"
                   />
                   <TokenInput
                     scale={GRID_ROWS_SCALE}
@@ -457,6 +464,7 @@ export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolea
                     classPrefix="grid-rows"
                     defaultValue={0}
                     placeholder="Auto"
+                    tooltip="Rows"
                   />
                   <div className="w-5 shrink-0" />
                 </div>
@@ -468,6 +476,7 @@ export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolea
                     min={0}
                     inlineLabel={<LayoutGrid size={12} />}
                     classPrefix="gap"
+                    tooltip="Gap"
                   />
                   <div className="w-5 shrink-0" />
                 </div>
@@ -514,6 +523,7 @@ export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolea
             trigger={
               <button
                 type="button"
+                title="Overflow"
                 className={`w-5 h-5 shrink-0 flex items-center justify-center rounded ${
                   frame.overflow === 'scroll'
                     ? 'text-blue-400 bg-blue-400/10'

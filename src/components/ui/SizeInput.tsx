@@ -10,6 +10,7 @@ interface SizeInputProps {
   label: string           // "W" or "H"
   classPrefix?: string    // "w" or "h"
   parentIsFlex?: boolean  // show fit/full keywords
+  tooltip?: string        // tooltip for inline label
 }
 
 interface DropdownItem {
@@ -43,7 +44,7 @@ function getPillText(value: SizeValue, classPrefix?: string): string | null {
   return null
 }
 
-export function SizeInput({ value, onChange, label, classPrefix, parentIsFlex }: SizeInputProps) {
+export function SizeInput({ value, onChange, label, classPrefix, parentIsFlex, tooltip }: SizeInputProps) {
   const startPreview = useFrameStore((s) => s.startPreview)
   const endPreview = useFrameStore((s) => s.endPreview)
 
@@ -306,7 +307,7 @@ export function SizeInput({ value, onChange, label, classPrefix, parentIsFlex }:
         onClick={() => inputRef.current?.focus()}
       >
         {/* Inline label */}
-        <span className={`w-4 shrink-0 flex items-center justify-center ${value.mode !== 'default' ? 'text-text-secondary' : 'text-text-muted'}`}>{label}</span>
+        <span title={tooltip} className={`w-4 shrink-0 flex items-center justify-center ${value.mode !== 'default' ? 'text-text-secondary' : 'text-text-muted'}`}>{label}</span>
 
         {/* Pill for keyword or token */}
         {hasPill && (

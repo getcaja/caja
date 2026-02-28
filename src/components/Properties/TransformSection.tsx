@@ -19,6 +19,7 @@ export function TransformSection({ frame }: { frame: Frame }) {
             classPrefix="rotate"
             defaultValue={0}
             placeholder="0°"
+            tooltip="Rotate"
           />
           <TokenInput
             scale={SCALE_SCALE}
@@ -29,6 +30,7 @@ export function TransformSection({ frame }: { frame: Frame }) {
             classPrefix="scale"
             defaultValue={100}
             placeholder="100%"
+            tooltip="Scale"
           />
           <div className="w-5 shrink-0" />
         </div>
@@ -40,6 +42,7 @@ export function TransformSection({ frame }: { frame: Frame }) {
             inlineLabel="X"
             classPrefix="translate-x"
             defaultValue={0}
+            tooltip="Translate X"
           />
           <TokenInput
             scale={SPACING_SCALE}
@@ -48,6 +51,7 @@ export function TransformSection({ frame }: { frame: Frame }) {
             inlineLabel="Y"
             classPrefix="translate-y"
             defaultValue={0}
+            tooltip="Translate Y"
           />
           <div className="w-5 shrink-0" />
         </div>

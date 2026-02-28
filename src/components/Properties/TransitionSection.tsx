@@ -16,10 +16,10 @@ const TRANSITION_OPTIONS = [
 ]
 
 const EASE_OPTIONS = [
-  { value: 'linear', label: 'Linear' },
-  { value: 'in', label: 'In' },
-  { value: 'out', label: 'Out' },
-  { value: 'in-out', label: 'In Out' },
+  { value: 'linear', label: 'Linear', tooltip: 'Ease: Linear' },
+  { value: 'in', label: 'In', tooltip: 'Ease: In' },
+  { value: 'out', label: 'Out', tooltip: 'Ease: Out' },
+  { value: 'in-out', label: 'In Out', tooltip: 'Ease: In Out' },
 ]
 
 export function TransitionSection({ frame }: { frame: Frame }) {
@@ -36,6 +36,7 @@ export function TransitionSection({ frame }: { frame: Frame }) {
             inlineLabel={<Zap size={12} />}
             classPrefix="transition"
             initialValue="none"
+            tooltip="Transition"
           />
           <div className="w-5 shrink-0" />
         </div>
@@ -50,6 +51,7 @@ export function TransitionSection({ frame }: { frame: Frame }) {
                 inlineLabel={<Timer size={12} />}
                 classPrefix="duration"
                 defaultValue={0}
+                tooltip="Duration"
               />
               <div className="w-5 shrink-0" />
             </div>

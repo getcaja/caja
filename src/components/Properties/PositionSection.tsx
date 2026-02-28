@@ -88,6 +88,7 @@ export function PositionSection({ frame }: { frame: Frame }) {
             options={POSITION_OPTIONS}
             onChange={(v) => updateFrame(frame.id, { position: v as Frame['position'] })}
             className="flex-1"
+            tooltip="Position"
           />
           <div className="w-5 shrink-0" />
         </div>
@@ -107,6 +108,7 @@ export function PositionSection({ frame }: { frame: Frame }) {
                   min={0}
                   classPrefix="top"
                   inlineLabel={<PanelTop size={12} />}
+                  tooltip="Top"
                 />
                 <TokenInput
                   scale={SPACING_SCALE}
@@ -115,6 +117,7 @@ export function PositionSection({ frame }: { frame: Frame }) {
                   min={0}
                   classPrefix="bottom"
                   inlineLabel={<PanelBottom size={12} />}
+                  tooltip="Bottom"
                 />
               </div>
               <div className="flex flex-col gap-2 flex-1 min-w-0">
@@ -125,6 +128,7 @@ export function PositionSection({ frame }: { frame: Frame }) {
                   min={0}
                   classPrefix="right"
                   inlineLabel={<PanelRight size={12} />}
+                  tooltip="Right"
                 />
                 <TokenInput
                   scale={SPACING_SCALE}
@@ -133,6 +137,7 @@ export function PositionSection({ frame }: { frame: Frame }) {
                   min={0}
                   classPrefix="left"
                   inlineLabel={<PanelLeft size={12} />}
+                  tooltip="Left"
                 />
               </div>
               <div className="w-5 shrink-0" />

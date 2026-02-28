@@ -22,11 +22,11 @@ function allSidesZero(frame: Frame): boolean {
 
 const ONE_PX: DesignValue<number> = { mode: 'token', token: '', value: 1 }
 
-const STYLE_OPTIONS: { value: string; label: string }[] = [
-  { value: 'none', label: 'None' },
-  { value: 'solid', label: 'Solid' },
-  { value: 'dashed', label: 'Dashed' },
-  { value: 'dotted', label: 'Dotted' },
+const STYLE_OPTIONS: { value: string; label: string; tooltip?: string }[] = [
+  { value: 'none', label: 'None', tooltip: 'No Border' },
+  { value: 'solid', label: 'Solid', tooltip: 'Solid Border' },
+  { value: 'dashed', label: 'Dashed', tooltip: 'Dashed Border' },
+  { value: 'dotted', label: 'Dotted', tooltip: 'Dotted Border' },
 ]
 
 export function BorderSection({ frame }: { frame: Frame }) {
@@ -69,6 +69,7 @@ export function BorderSection({ frame }: { frame: Frame }) {
               onChange={(v) => updateFrame(frame.id, { border: { ...frame.border, color: v } })}
               label="Color"
               classPrefix="border"
+              tooltip="Border Color"
             />
             <div className="w-5 shrink-0" />
           </div>

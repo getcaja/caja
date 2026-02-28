@@ -35,8 +35,8 @@ export function BorderRadiusControl({
       <div className="flex items-center gap-2">
         {expanded ? (
           <>
-            <TokenInput scale={BORDER_RADIUS_SCALE} value={value.topLeft} onChange={(v) => onChange({ topLeft: v })} min={0} classPrefix="rounded-tl" inlineLabel={<SquareArrowUpLeft size={12} />} />
-            <TokenInput scale={BORDER_RADIUS_SCALE} value={value.topRight} onChange={(v) => onChange({ topRight: v })} min={0} classPrefix="rounded-tr" inlineLabel={<SquareArrowUpRight size={12} />} />
+            <TokenInput scale={BORDER_RADIUS_SCALE} value={value.topLeft} onChange={(v) => onChange({ topLeft: v })} min={0} classPrefix="rounded-tl" inlineLabel={<SquareArrowUpLeft size={12} />} tooltip="Top Left Radius" />
+            <TokenInput scale={BORDER_RADIUS_SCALE} value={value.topRight} onChange={(v) => onChange({ topRight: v })} min={0} classPrefix="rounded-tr" inlineLabel={<SquareArrowUpRight size={12} />} tooltip="Top Right Radius" />
           </>
         ) : (
           <TokenInput
@@ -46,10 +46,12 @@ export function BorderRadiusControl({
             min={0}
             classPrefix="rounded"
             inlineLabel={<Squircle size={12} />}
+            tooltip="Border Radius"
           />
         )}
         <button
           type="button"
+          title={expanded ? 'Collapse Corners' : 'Expand Corners'}
           className={`w-5 h-5 flex items-center justify-center rounded shrink-0 ${
             expanded
               ? 'text-blue-400 bg-blue-400/10'
@@ -62,8 +64,8 @@ export function BorderRadiusControl({
       </div>
       {expanded && (
         <div className="flex items-center gap-2">
-          <TokenInput scale={BORDER_RADIUS_SCALE} value={value.bottomLeft} onChange={(v) => onChange({ bottomLeft: v })} min={0} classPrefix="rounded-bl" inlineLabel={<SquareArrowDownLeft size={12} />} />
-          <TokenInput scale={BORDER_RADIUS_SCALE} value={value.bottomRight} onChange={(v) => onChange({ bottomRight: v })} min={0} classPrefix="rounded-br" inlineLabel={<SquareArrowDownRight size={12} />} />
+          <TokenInput scale={BORDER_RADIUS_SCALE} value={value.bottomLeft} onChange={(v) => onChange({ bottomLeft: v })} min={0} classPrefix="rounded-bl" inlineLabel={<SquareArrowDownLeft size={12} />} tooltip="Bottom Left Radius" />
+          <TokenInput scale={BORDER_RADIUS_SCALE} value={value.bottomRight} onChange={(v) => onChange({ bottomRight: v })} min={0} classPrefix="rounded-br" inlineLabel={<SquareArrowDownRight size={12} />} tooltip="Bottom Right Radius" />
           <div className="w-5 shrink-0" />
         </div>
       )}

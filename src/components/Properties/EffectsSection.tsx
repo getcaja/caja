@@ -20,6 +20,7 @@ export function EffectsSection({ frame }: { frame: Frame }) {
             inlineLabel={<Eclipse size={12} />}
             classPrefix="shadow"
             initialValue="none"
+            tooltip="Box Shadow"
           />
           <TokenInput
             value={frame.cursor}
@@ -28,6 +29,7 @@ export function EffectsSection({ frame }: { frame: Frame }) {
             inlineLabel={<MousePointer2 size={12} />}
             classPrefix="cursor"
             initialValue="auto"
+            tooltip="Cursor"
           />
           <div className="w-5 shrink-0" />
         </div>
@@ -41,6 +43,7 @@ export function EffectsSection({ frame }: { frame: Frame }) {
             classPrefix="blur"
             defaultValue={0}
             placeholder="None"
+            tooltip="Blur"
           />
           <TokenInput
             scale={BLUR_SCALE}
@@ -51,6 +54,7 @@ export function EffectsSection({ frame }: { frame: Frame }) {
             classPrefix="backdrop-blur"
             defaultValue={0}
             placeholder="None"
+            tooltip="Backdrop Blur"
           />
           <div className="w-5 shrink-0" />
         </div>

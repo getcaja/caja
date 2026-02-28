@@ -6,12 +6,14 @@ interface SelectProps {
   options: { value: string; label: string }[]
   onChange: (v: string) => void
   className?: string
+  tooltip?: string
 }
 
-export function Select({ value, options, onChange, className }: SelectProps) {
+export function Select({ value, options, onChange, className, tooltip }: SelectProps) {
   return (
     <RadixSelect.Root value={value} onValueChange={onChange}>
       <RadixSelect.Trigger
+        title={tooltip}
         className={`c-input flex items-center justify-between cursor-pointer ${className ?? ''}`}
       >
         <RadixSelect.Value />
