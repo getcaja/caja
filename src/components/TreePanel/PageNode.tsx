@@ -2,7 +2,7 @@ import type { Page } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { useContextMenu } from './hooks/useContextMenu'
 import { useInlineEdit } from './hooks/useInlineEdit'
-import { Folder, Check, Copy, Trash2 } from 'lucide-react'
+import { Check, Copy, Trash2 } from 'lucide-react'
 
 interface PageNodeProps {
   page: Page
@@ -35,8 +35,6 @@ export function PageNode({ page }: PageNodeProps) {
         onDoubleClick={() => nameEdit.start(page.name)}
         onContextMenu={ctxMenu.open}
       >
-        <Folder size={12} className="shrink-0" />
-
         {nameEdit.editing ? (
           <input {...nameEdit.inputProps} className="flex-1 h-5 bg-surface-2 border border-accent rounded px-1 text-[12px] font-semibold text-text-primary outline-none min-w-0" />
         ) : (
