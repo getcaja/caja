@@ -314,7 +314,13 @@ export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolea
                       const active = isSpaceBetween
                         ? currentA === a
                         : currentJ === j && currentA === a
-                      const lineSz = isRow ? 'w-[2px] h-[7px]' : 'w-[7px] h-[2px]'
+                      const jCls = { start: 'justify-start', center: 'justify-center', end: 'justify-end' }[j]
+                      const aCls = { start: 'items-start', center: 'items-center', end: 'items-end' }[a]
+                      const justifyCls = active && isSpaceBetween ? 'justify-between' : jCls
+                      const lineSz = active
+                        ? (isRow ? 'w-[1.5px] h-[6px]' : 'w-[6px] h-[1.5px]')
+                        : (isRow ? 'w-[1px] h-[4px]' : 'w-[4px] h-[1px]')
+                      const lineColor = active ? 'bg-accent' : 'bg-text-muted/25'
                       return (
                         <button
                           key={`${ri}-${ci}`}
@@ -324,20 +330,10 @@ export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolea
                             else updateFrame(frame.id, { justify: j, align: a })
                           }}
                         >
-                          <div className="w-full h-full flex items-center justify-center">
-                            {active ? (
-                              isSpaceBetween ? (
-                                <div className={`${lineSz} bg-accent rounded-full`} />
-                              ) : (
-                                <div className={`w-[14px] h-[14px] flex ${isRow ? 'flex-row' : 'flex-col'} ${{ start: 'justify-start', center: 'justify-center', end: 'justify-end' }[j]} ${{ start: 'items-start', center: 'items-center', end: 'items-end' }[a]} gap-[1px] p-[1.5px]`}>
-                                  <div className={`${lineSz} bg-accent rounded-full`} />
-                                  <div className={`${lineSz} bg-accent rounded-full`} />
-                                  <div className={`${lineSz} bg-accent rounded-full`} />
-                                </div>
-                              )
-                            ) : (
-                              <div className="w-[3px] h-[3px] rounded-full bg-surface-3" />
-                            )}
+                          <div className={`w-full h-full flex ${isRow ? 'flex-row' : 'flex-col'} ${justifyCls} ${aCls} gap-[1px] p-[2px]`}>
+                            <div className={`${lineSz} ${lineColor} rounded-full`} />
+                            <div className={`${lineSz} ${lineColor} rounded-full`} />
+                            <div className={`${lineSz} ${lineColor} rounded-full`} />
                           </div>
                         </button>
                       )
