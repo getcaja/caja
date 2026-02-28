@@ -7,7 +7,7 @@ import { ExportModal } from './components/Export/ExportModal'
 import { TooltipProvider } from './components/ui/Tooltip'
 import { saveFile, saveFileAs, openFile } from './lib/fileOps'
 import { saveLibrary } from './lib/libraryOps'
-import { useCatalogStore, loadPatternsFromStorage } from './store/catalogStore'
+import { useCatalogStore, loadComponentsFromStorage } from './store/catalogStore'
 import { ExportLibraryModal } from './components/TreePanel/ExportLibraryModal'
 import { WorkspaceDndProvider } from './components/TreePanel/WorkspaceDndContext'
 
@@ -104,7 +104,7 @@ function App() {
   const handleSave = useCallback(async () => {
     if (!isTauri) return
     const store = useFrameStore.getState()
-    const snippets = useCatalogStore.getState().getPatternData()
+    const snippets = useCatalogStore.getState().getComponentData()
     const path = await saveFile(store.pages, store.activePageId, snippets, store.filePath)
     if (path) {
       store.setFilePath(path)
@@ -115,7 +115,7 @@ function App() {
   const handleSaveAs = useCallback(async () => {
     if (!isTauri) return
     const store = useFrameStore.getState()
-    const snippets = useCatalogStore.getState().getPatternData()
+    const snippets = useCatalogStore.getState().getComponentData()
     const path = await saveFileAs(store.pages, store.activePageId, snippets)
     if (path) {
       store.setFilePath(path)
@@ -144,7 +144,7 @@ function App() {
         const root = migrateToInternalRoot(data.root as Record<string, unknown>, 'page-1')
         useFrameStore.getState().loadFromFile(root, result.path)
       }
-      useCatalogStore.getState().loadPatterns((data.patterns ?? data.snippets) as import('./store/catalogStore').PatternData | undefined)
+      useCatalogStore.getState().loadComponents((data.patterns ?? data.snippets) as import('./store/catalogStore').ComponentData | undefined)
       // Restore blob URLs from local asset files after file load
       import('./lib/assetOps').then(({ restoreAllAssets }) => {
         restoreAllAssets(useFrameStore.getState().pages).catch((err) => console.warn('Asset restore failed:', err))
@@ -158,7 +158,7 @@ function App() {
     import('./lib/assetOps').then(({ restoreAllAssets }) => {
       restoreAllAssets(useFrameStore.getState().pages).catch((err) => console.warn('Asset restore failed:', err))
     })
-    loadPatternsFromStorage()
+    loadComponentsFromStorage()
     startMcpBridge()
 
     // Load installed libraries (Tauri only)
@@ -218,7 +218,7 @@ function App() {
           case 'save-library': {
             const lastExport = useCatalogStore.getState().lastExport
             if (lastExport) {
-              const data = useCatalogStore.getState().getPatternData()
+              const data = useCatalogStore.getState().getComponentData()
               saveLibrary(data, {
                 name: lastExport.name,
                 author: lastExport.author || undefined,

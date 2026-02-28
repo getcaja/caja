@@ -47,7 +47,7 @@ function PatternDragGhost({ id }: { id: string }) {
 
   const patternName = useCatalogStore((s) => {
     if (isCategory) return null
-    const internal = s.patterns.find((p) => p.id === id)
+    const internal = s.components.find((p) => p.id === id)
     if (internal) return internal.name
     for (const [, lib] of s.libraries) {
       const p = lib.items?.find((p) => p.id === id)
@@ -199,7 +199,7 @@ export function WorkspaceDndProvider({ children }: { children: React.ReactNode }
     const store = useFrameStore.getState()
     store.setCanvasDrag(null)
     store.setCanvasDragOver(null)
-    store.setPatternDragFrame(null)
+    store.setComponentDragFrame(null)
   }, [])
 
   const handleDragStart = useCallback(({ active }: DragStartEvent) => {
@@ -210,9 +210,9 @@ export function WorkspaceDndProvider({ children }: { children: React.ReactNode }
     overRef.current = { id: null, position: null }
 
     if (type === 'pattern') {
-      // Pattern drag — set patternDragFrame for canvas insertion
+      // Component drag — set componentDragFrame for canvas insertion
       const catalog = useCatalogStore.getState()
-      const internalPatterns = catalog.allPatterns()
+      const internalPatterns = catalog.allComponents()
 
       let pattern = internalPatterns.find((p) => p.id === id)
       let origin: { libraryId?: string; patternId?: string } | undefined
@@ -231,7 +231,7 @@ export function WorkspaceDndProvider({ children }: { children: React.ReactNode }
       }
 
       if (pattern && origin) {
-        useFrameStore.getState().setPatternDragFrame(pattern.frame, origin)
+        useFrameStore.getState().setComponentDragFrame(pattern.frame, origin)
       }
     }
     // category: no special start logic
@@ -313,14 +313,14 @@ export function WorkspaceDndProvider({ children }: { children: React.ReactNode }
     cancelAnimationFrame(resolveRafRef.current)
 
     const store = useFrameStore.getState()
-    const { patternDragFrame, patternDragOrigin } = store
+    const { componentDragFrame, componentDragOrigin } = store
 
-    // Pattern canvas drop: synchronous resolve at final position
-    if (aType === 'pattern' && patternDragFrame && isInsideCanvas(px, py)) {
+    // Component canvas drop: synchronous resolve at final position
+    if (aType === 'pattern' && componentDragFrame && isInsideCanvas(px, py)) {
       const result = resolvePatternCanvasDrop(px, py)
       cleanupDrag()
       if (result) {
-        store.insertFrameAt(result.parentId, patternDragFrame, result.index, patternDragOrigin ?? undefined)
+        store.insertFrameAt(result.parentId, componentDragFrame, result.index, componentDragOrigin ?? undefined)
       }
       return
     }
@@ -351,33 +351,33 @@ export function WorkspaceDndProvider({ children }: { children: React.ReactNode }
       }
     } else {
       if (isTargetRoot && zone === 'inside') {
-        catalog.updatePatternTags(dragId, [])
-        const all = catalog.allPatterns()
+        catalog.updateComponentTags(dragId, [])
+        const all = catalog.allComponents()
         const uncategorized = all.filter((s) => s.tags.length === 0)
         const last = uncategorized.length > 0 ? uncategorized[uncategorized.length - 1].id : null
         if (last && last !== dragId) {
-          catalog.movePattern(dragId, last, 'after')
+          catalog.moveComponent(dragId, last, 'after')
         }
       } else if (isTargetCat && zone === 'inside') {
         const targetTag = targetId.slice('__cat:'.length)
-        const all = catalog.allPatterns()
+        const all = catalog.allComponents()
         const items = all.filter((s) => s.tags[0] === targetTag)
         const last = items.length > 0 ? items[items.length - 1].id : null
         if (last && last !== dragId) {
-          catalog.movePattern(dragId, last, 'after')
+          catalog.moveComponent(dragId, last, 'after')
         }
-        catalog.updatePatternTags(dragId, [targetTag])
+        catalog.updateComponentTags(dragId, [targetTag])
       } else if (isTargetCat) {
         const targetTag = targetId.slice('__cat:'.length)
-        const all = catalog.allPatterns()
+        const all = catalog.allComponents()
         const items = all.filter((s) => s.tags[0] === targetTag)
         if (zone === 'before' && items.length > 0) {
-          catalog.movePattern(dragId, items[0].id, 'before')
+          catalog.moveComponent(dragId, items[0].id, 'before')
         } else if (zone === 'after' && items.length > 0) {
-          catalog.movePattern(dragId, items[items.length - 1].id, 'after')
+          catalog.moveComponent(dragId, items[items.length - 1].id, 'after')
         }
       } else {
-        catalog.movePattern(dragId, targetId, zone as 'before' | 'after')
+        catalog.moveComponent(dragId, targetId, zone as 'before' | 'after')
       }
     }
   }, [cleanupDrag])

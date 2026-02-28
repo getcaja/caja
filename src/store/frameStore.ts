@@ -257,10 +257,10 @@ interface FrameStore {
   mcpBusy: boolean
   canvasDragId: string | null
   canvasDragOver: { parentId: string; index: number } | null
-  patternDragFrame: Frame | null
-  patternDragOrigin: { libraryId?: string; patternId?: string } | null
+  componentDragFrame: Frame | null
+  componentDragOrigin: { libraryId?: string; patternId?: string } | null
   clipboard: Frame[]
-  treePanelTab: 'layers' | 'patterns' | 'libraries'
+  treePanelTab: 'layers' | 'components' | 'libraries'
   _lastDuplicateMap: Record<string, string> | null
   _previewSnapshot: BoxElement | null
   mcpHighlightIds: Set<string>
@@ -313,8 +313,8 @@ interface FrameStore {
   setCanvasZoom: (zoom: number) => void
   setCanvasDrag: (id: string | null) => void
   setCanvasDragOver: (over: { parentId: string; index: number } | null) => void
-  setPatternDragFrame: (frame: Frame | null, origin?: { libraryId?: string; patternId?: string } | null) => void
-  setTreePanelTab: (tab: 'layers' | 'patterns' | 'libraries') => void
+  setComponentDragFrame: (frame: Frame | null, origin?: { libraryId?: string; patternId?: string } | null) => void
+  setTreePanelTab: (tab: 'layers' | 'components' | 'libraries') => void
   expandToFrame: (id: string) => void
   addMcpHighlight: (id: string) => void
   advancedMode: boolean
@@ -403,8 +403,8 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   mcpBusy: false,
   canvasDragId: null,
   canvasDragOver: null,
-  patternDragFrame: null,
-  patternDragOrigin: null,
+  componentDragFrame: null,
+  componentDragOrigin: null,
   clipboard: [] as Frame[],
   treePanelTab: 'layers' as const,
   advancedMode: initialViewPrefs.advancedMode,
@@ -738,7 +738,7 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
       selectedId: null, selectedIds: new Set(), past: {}, future: {},
       collapsedIds: new Set(), hoveredId: null,
     })
-    useCatalogStore.getState().resetPatterns()
+    useCatalogStore.getState().resetComponents()
   },
 
   loadFromStorage: () => {
@@ -823,7 +823,7 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
     if (prev && over && prev.parentId === over.parentId && prev.index === over.index) return {}
     return { canvasDragOver: over }
   }),
-  setPatternDragFrame: (frame, origin) => set({ patternDragFrame: frame, patternDragOrigin: origin ?? null }),
+  setComponentDragFrame: (frame, origin) => set({ componentDragFrame: frame, componentDragOrigin: origin ?? null }),
   setTreePanelTab: (tab) => set({ treePanelTab: tab }),
   setAdvancedMode: (value) => set((s) => {
     saveViewPrefs({ previewMode: s.previewMode, canvasWidth: s.canvasWidth, advancedMode: value })

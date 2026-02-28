@@ -1,43 +1,67 @@
 import { create } from 'zustand'
-import type { Pattern, LibraryMeta } from '../types/pattern'
+import type { Component, LibraryMeta, ComponentData } from '../types/component'
 import type { Frame } from '../types/frame'
 
 const STORAGE_KEY = 'caja-snippets-state' // keep legacy key for backward compat
 
-export interface PatternData {
-  items: Pattern[]
-  order: string[]
-  categories: string[]
-}
+/** @deprecated Use ComponentData */
+export type PatternData = ComponentData
+export type { ComponentData }
 
 interface CatalogStore {
-  // --- Internal patterns (per-file, read-write) ---
-  patterns: Pattern[]
-  order: string[] // ordered pattern IDs — controls display order
-  emptyCategories: string[] // manually created categories with no patterns yet
-  highlightId: string | null // selected/highlighted pattern in the panel
+  // --- Internal components (per-file, read-write) ---
+  components: Component[]
+  /** @deprecated Use components */
+  patterns: Component[]
+  order: string[] // ordered component IDs — controls display order
+  emptyCategories: string[] // manually created categories with no components yet
+  highlightId: string | null // selected/highlighted component in the panel
 
   // --- Library system (app-level, read-only) ---
   libraryIndex: LibraryMeta[]           // lightweight metadata for installed libs
-  libraries: Map<string, PatternData>   // loaded library data (lazy-loaded)
+  libraries: Map<string, ComponentData>   // loaded library data (lazy-loaded)
   activeLibraryId: string | null         // null = no library selected; libraryId when viewing a library
 
-  // --- Internal pattern operations ---
-  allPatterns: () => Pattern[]
-  getPattern: (id: string) => Pattern | undefined
-  savePattern: (name: string, tags: string[], frame: Frame) => Pattern
-  deletePattern: (id: string) => boolean
-  renamePattern: (id: string, name: string) => void
-  updatePatternTags: (id: string, tags: string[]) => void
-  movePattern: (patternId: string, targetId: string | null, position: 'before' | 'after' | 'inside') => void
-  importPatterns: (patterns: Pattern[]) => void
+  // --- Internal component operations ---
+  allComponents: () => Component[]
+  getComponent: (id: string) => Component | undefined
+  saveComponent: (name: string, tags: string[], frame: Frame) => Component
+  deleteComponent: (id: string) => boolean
+  renameComponent: (id: string, name: string) => void
+  updateComponentTags: (id: string, tags: string[]) => void
+  moveComponent: (componentId: string, targetId: string | null, position: 'before' | 'after' | 'inside') => void
+  importComponents: (components: Component[]) => void
   addEmptyCategory: (name: string) => void
   removeEmptyCategory: (name: string) => void
   moveCategory: (tag: string, targetTag: string, position: 'before' | 'after') => void
   setHighlightId: (id: string | null) => void
+  resetComponents: () => void
+  loadComponents: (data: ComponentData | undefined) => void
+  getComponentData: () => ComponentData
+
+  // Backward-compatible aliases
+  /** @deprecated Use allComponents */
+  allPatterns: () => Component[]
+  /** @deprecated Use getComponent */
+  getPattern: (id: string) => Component | undefined
+  /** @deprecated Use saveComponent */
+  savePattern: (name: string, tags: string[], frame: Frame) => Component
+  /** @deprecated Use deleteComponent */
+  deletePattern: (id: string) => boolean
+  /** @deprecated Use renameComponent */
+  renamePattern: (id: string, name: string) => void
+  /** @deprecated Use updateComponentTags */
+  updatePatternTags: (id: string, tags: string[]) => void
+  /** @deprecated Use moveComponent */
+  movePattern: (componentId: string, targetId: string | null, position: 'before' | 'after' | 'inside') => void
+  /** @deprecated Use importComponents */
+  importPatterns: (components: Component[]) => void
+  /** @deprecated Use resetComponents */
   resetPatterns: () => void
-  loadPatterns: (data: PatternData | undefined) => void
-  getPatternData: () => PatternData
+  /** @deprecated Use loadComponents */
+  loadPatterns: (data: ComponentData | undefined) => void
+  /** @deprecated Use getComponentData */
+  getPatternData: () => ComponentData
 
   // --- Export memory (per-session, no persistence) ---
   lastExport: { path: string; name: string; author: string; description: string; version: string } | null
@@ -45,16 +69,30 @@ interface CatalogStore {
 
   // --- Library operations ---
   setActiveLibraryId: (id: string | null) => void
-  installLibrary: (meta: LibraryMeta, data: PatternData) => void
+  installLibrary: (meta: LibraryMeta, data: ComponentData) => void
   removeLibrary: (id: string) => void
-  getLibraryPatterns: (libraryId: string) => Pattern[]
-  getLibraryPattern: (libraryId: string, patternId: string) => Pattern | undefined
+  getLibraryComponents: (libraryId: string) => Component[]
+  getLibraryComponent: (libraryId: string, componentId: string) => Component | undefined
+  /** @deprecated Use getLibraryComponents */
+  getLibraryPatterns: (libraryId: string) => Component[]
+  /** @deprecated Use getLibraryComponent */
+  getLibraryPattern: (libraryId: string, componentId: string) => Component | undefined
   setLibraryIndex: (index: LibraryMeta[]) => void
-  setLibraryData: (libraryId: string, data: PatternData) => void
+  setLibraryData: (libraryId: string, data: ComponentData) => void
 }
 
-export const useCatalogStore = create<CatalogStore>((set, get) => {
-  function ensureOrder(order: string[], all: Pattern[]): string[] {
+export const useCatalogStore = create<CatalogStore>((_set, get) => {
+  // Auto-sync: whenever `components` is written, mirror it to `patterns` (backward-compat alias)
+  const set: typeof _set = (partial, replace) => {
+    _set((state) => {
+      const next = typeof partial === 'function' ? partial(state) : partial
+      if (next && typeof next === 'object' && 'components' in next) {
+        return { ...next, patterns: (next as { components: Component[] }).components }
+      }
+      return next
+    }, replace)
+  }
+  function ensureOrder(order: string[], all: Component[]): string[] {
     const existing = new Set(order)
     const allIds = all.map((s) => s.id)
     const missing = allIds.filter((id) => !existing.has(id))
@@ -62,7 +100,144 @@ export const useCatalogStore = create<CatalogStore>((set, get) => {
     return [...valid, ...missing]
   }
 
+  // --- Core implementations ---
+  function allComponentsImpl(): Component[] {
+    const { components, order } = get()
+    const map = new Map(components.map((s) => [s.id, s]))
+    const ordered: Component[] = []
+    for (const id of order) {
+      const s = map.get(id)
+      if (s) ordered.push(s)
+    }
+    for (const s of components) {
+      if (!order.includes(s.id)) ordered.push(s)
+    }
+    return ordered
+  }
+
+  function saveComponentImpl(name: string, tags: string[], frame: Frame): Component {
+    const component: Component = {
+      id: crypto.randomUUID(),
+      name,
+      tags,
+      frame,
+      meta: {},
+      createdAt: new Date().toISOString(),
+    }
+    set((state) => {
+      const next = [...state.components, component]
+      const nextOrder = [...state.order, component.id]
+      return { components: next, order: nextOrder, highlightId: component.id }
+    })
+    return component
+  }
+
+  function deleteComponentImpl(id: string): boolean {
+    set((state) => {
+      const next = state.components.filter((s) => s.id !== id)
+      const nextOrder = state.order.filter((oid) => oid !== id)
+      return { components: next, order: nextOrder }
+    })
+    return true
+  }
+
+  function renameComponentImpl(id: string, name: string): void {
+    set((state) => ({
+      components: state.components.map((s) => s.id === id ? { ...s, name } : s),
+    }))
+  }
+
+  function updateComponentTagsImpl(id: string, tags: string[]): void {
+    set((state) => ({
+      components: state.components.map((s) => s.id === id ? { ...s, tags } : s),
+    }))
+  }
+
+  function moveComponentImpl(componentId: string, targetId: string | null, position: 'before' | 'after' | 'inside'): void {
+    const all = allComponentsImpl()
+    const component = all.find((s) => s.id === componentId)
+    if (!component) return
+
+    let newTag: string | null = null
+    if (position === 'inside' && targetId) {
+      const target = all.find((s) => s.id === targetId)
+      if (target) newTag = target.tags[0] || null
+    } else if (targetId) {
+      const target = all.find((s) => s.id === targetId)
+      if (target) newTag = target.tags[0] || null
+    }
+
+    const currentTag = component.tags[0] || null
+    if (newTag !== currentTag) {
+      updateComponentTagsImpl(componentId, newTag ? [newTag] : [])
+    }
+
+    set((state) => {
+      const order = state.order.filter((id) => id !== componentId)
+      if (!targetId) {
+        order.push(componentId)
+      } else {
+        const targetIdx = order.indexOf(targetId)
+        if (targetIdx === -1) {
+          order.push(componentId)
+        } else if (position === 'before') {
+          order.splice(targetIdx, 0, componentId)
+        } else {
+          order.splice(targetIdx + 1, 0, componentId)
+        }
+      }
+      return { order }
+    })
+  }
+
+  function importComponentsImpl(incoming: Component[]): void {
+    set((state) => {
+      const existingIds = new Set(state.components.map((s) => s.id))
+      const novel = incoming.filter((s) => !existingIds.has(s.id))
+      const next = [...state.components, ...novel]
+      const nextOrder = [...state.order, ...novel.map((s) => s.id)]
+      return { components: next, order: nextOrder }
+    })
+  }
+
+  function resetComponentsImpl(): void {
+    localStorage.removeItem(STORAGE_KEY)
+    set({ components: [], order: [], emptyCategories: [], highlightId: null })
+  }
+
+  function loadComponentsImpl(data: ComponentData | undefined): void {
+    if (!data) {
+      set({ components: [], order: [], emptyCategories: [], highlightId: null })
+      return
+    }
+    const items = data.items || []
+    const order = ensureOrder(data.order || [], items)
+    const categories = data.categories || []
+    set({ components: items, order, emptyCategories: categories, highlightId: null })
+  }
+
+  function getComponentDataImpl(): ComponentData {
+    return {
+      items: get().components,
+      order: get().order,
+      categories: get().emptyCategories,
+    }
+  }
+
+  function getLibraryComponentsImpl(libraryId: string): Component[] {
+    const libData = get().libraries.get(libraryId)
+    if (!libData) return []
+    return libData.items || []
+  }
+
+  function getLibraryComponentImpl(libraryId: string, componentId: string): Component | undefined {
+    const libData = get().libraries.get(libraryId)
+    if (!libData) return undefined
+    return (libData.items || []).find((p) => p.id === componentId)
+  }
+
   return {
+    components: [],
     patterns: [],
     order: [],
     emptyCategories: [],
@@ -77,110 +252,31 @@ export const useCatalogStore = create<CatalogStore>((set, get) => {
     lastExport: null,
     setLastExport: (config) => set({ lastExport: config }),
 
-    allPatterns: () => {
-      const { patterns, order } = get()
-      const map = new Map(patterns.map((s) => [s.id, s]))
-      const ordered: Pattern[] = []
-      for (const id of order) {
-        const s = map.get(id)
-        if (s) ordered.push(s)
-      }
-      // Append any not in order (safety)
-      for (const s of patterns) {
-        if (!order.includes(s.id)) ordered.push(s)
-      }
-      return ordered
-    },
+    // New names
+    allComponents: allComponentsImpl,
+    getComponent: (id) => get().components.find((s) => s.id === id),
+    saveComponent: saveComponentImpl,
+    deleteComponent: deleteComponentImpl,
+    renameComponent: renameComponentImpl,
+    updateComponentTags: updateComponentTagsImpl,
+    moveComponent: moveComponentImpl,
+    importComponents: importComponentsImpl,
+    resetComponents: resetComponentsImpl,
+    loadComponents: loadComponentsImpl,
+    getComponentData: getComponentDataImpl,
 
-    getPattern: (id) => get().patterns.find((s) => s.id === id),
-
-    savePattern: (name, tags, frame) => {
-      const pattern: Pattern = {
-        id: crypto.randomUUID(),
-        name,
-        tags,
-        frame,
-        meta: {},
-        createdAt: new Date().toISOString(),
-      }
-      set((state) => {
-        const next = [...state.patterns, pattern]
-        const nextOrder = [...state.order, pattern.id]
-        return { patterns: next, order: nextOrder, highlightId: pattern.id }
-      })
-      return pattern
-    },
-
-    deletePattern: (id) => {
-      set((state) => {
-        const next = state.patterns.filter((s) => s.id !== id)
-        const nextOrder = state.order.filter((oid) => oid !== id)
-        return { patterns: next, order: nextOrder }
-      })
-      return true
-    },
-
-    renamePattern: (id, name) => {
-      set((state) => ({
-        patterns: state.patterns.map((s) => s.id === id ? { ...s, name } : s),
-      }))
-    },
-
-    updatePatternTags: (id, tags) => {
-      set((state) => ({
-        patterns: state.patterns.map((s) => s.id === id ? { ...s, tags } : s),
-      }))
-    },
-
-    movePattern: (patternId, targetId, position) => {
-      const all = get().allPatterns()
-      const pattern = all.find((s) => s.id === patternId)
-      if (!pattern) return
-
-      // Determine new tag
-      let newTag: string | null = null
-      if (position === 'inside' && targetId) {
-        const target = all.find((s) => s.id === targetId)
-        if (target) newTag = target.tags[0] || null
-      } else if (targetId) {
-        const target = all.find((s) => s.id === targetId)
-        if (target) newTag = target.tags[0] || null
-      }
-
-      // Update tag if changed
-      const currentTag = pattern.tags[0] || null
-      if (newTag !== currentTag) {
-        get().updatePatternTags(patternId, newTag ? [newTag] : [])
-      }
-
-      // Reorder
-      set((state) => {
-        const order = state.order.filter((id) => id !== patternId)
-        if (!targetId) {
-          order.push(patternId)
-        } else {
-          const targetIdx = order.indexOf(targetId)
-          if (targetIdx === -1) {
-            order.push(patternId)
-          } else if (position === 'before') {
-            order.splice(targetIdx, 0, patternId)
-          } else {
-            order.splice(targetIdx + 1, 0, patternId)
-          }
-        }
-        return { order }
-      })
-    },
-
-    importPatterns: (incoming) => {
-      set((state) => {
-        const existingIds = new Set(state.patterns.map((s) => s.id))
-        const novel = incoming.filter((s) => !existingIds.has(s.id))
-        const next = [...state.patterns, ...novel]
-        const nextOrder = [...state.order, ...novel.map((s) => s.id)]
-        return { patterns: next, order: nextOrder }
-      })
-    },
+    // Backward-compatible aliases
+    allPatterns: allComponentsImpl,
+    getPattern: (id) => get().components.find((s) => s.id === id),
+    savePattern: saveComponentImpl,
+    deletePattern: deleteComponentImpl,
+    renamePattern: renameComponentImpl,
+    updatePatternTags: updateComponentTagsImpl,
+    movePattern: moveComponentImpl,
+    importPatterns: importComponentsImpl,
+    resetPatterns: resetComponentsImpl,
+    loadPatterns: loadComponentsImpl,
+    getPatternData: getComponentDataImpl,
 
     addEmptyCategory: (name) => {
       set((state) => {
@@ -199,7 +295,7 @@ export const useCatalogStore = create<CatalogStore>((set, get) => {
 
     moveCategory: (tag, targetTag, position) => {
       if (tag === targetTag) return
-      const all = get().allPatterns()
+      const all = allComponentsImpl()
 
       const dragIds = all.filter((s) => s.tags[0] === tag).map((s) => s.id)
       const targetIds = all.filter((s) => s.tags[0] === targetTag).map((s) => s.id)
@@ -229,28 +325,6 @@ export const useCatalogStore = create<CatalogStore>((set, get) => {
 
     setHighlightId: (id) => set({ highlightId: id }),
 
-    resetPatterns: () => {
-      localStorage.removeItem(STORAGE_KEY)
-      set({ patterns: [], order: [], emptyCategories: [], highlightId: null })
-    },
-
-    loadPatterns: (data) => {
-      if (!data) {
-        set({ patterns: [], order: [], emptyCategories: [], highlightId: null })
-        return
-      }
-      const items = data.items || []
-      const order = ensureOrder(data.order || [], items)
-      const categories = data.categories || []
-      set({ patterns: items, order, emptyCategories: categories, highlightId: null })
-    },
-
-    getPatternData: () => ({
-      items: get().patterns,
-      order: get().order,
-      categories: get().emptyCategories,
-    }),
-
     // --- Library operations ---
 
     setActiveLibraryId: (id) => set({ activeLibraryId: id }),
@@ -269,7 +343,6 @@ export const useCatalogStore = create<CatalogStore>((set, get) => {
         const newIndex = state.libraryIndex.filter((m) => m.id !== id)
         const newLibraries = new Map(state.libraries)
         newLibraries.delete(id)
-        // If we were viewing the removed library, switch to next available or null
         let newActiveLibraryId = state.activeLibraryId
         if (state.activeLibraryId === id) {
           newActiveLibraryId = newIndex.length > 0 ? newIndex[0].id : null
@@ -278,17 +351,11 @@ export const useCatalogStore = create<CatalogStore>((set, get) => {
       })
     },
 
-    getLibraryPatterns: (libraryId) => {
-      const libData = get().libraries.get(libraryId)
-      if (!libData) return []
-      return libData.items || []
-    },
-
-    getLibraryPattern: (libraryId, patternId) => {
-      const libData = get().libraries.get(libraryId)
-      if (!libData) return undefined
-      return (libData.items || []).find((p) => p.id === patternId)
-    },
+    getLibraryComponents: getLibraryComponentsImpl,
+    getLibraryComponent: getLibraryComponentImpl,
+    // Backward-compatible aliases
+    getLibraryPatterns: getLibraryComponentsImpl,
+    getLibraryPattern: getLibraryComponentImpl,
 
     setLibraryIndex: (index) => set({ libraryIndex: index }),
 
@@ -302,13 +369,13 @@ export const useCatalogStore = create<CatalogStore>((set, get) => {
   }
 })
 
-// Auto-save patterns + libraryIndex to localStorage
-let patternSaveTimeout: ReturnType<typeof setTimeout>
+// Auto-save components + libraryIndex to localStorage
+let componentSaveTimeout: ReturnType<typeof setTimeout>
 useCatalogStore.subscribe((state) => {
-  clearTimeout(patternSaveTimeout)
-  patternSaveTimeout = setTimeout(() => {
+  clearTimeout(componentSaveTimeout)
+  componentSaveTimeout = setTimeout(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      items: state.patterns,
+      items: state.components,
       order: state.order,
       categories: state.emptyCategories,
       libraryIndex: state.libraryIndex,
@@ -316,20 +383,22 @@ useCatalogStore.subscribe((state) => {
   }, 500)
 })
 
-// Load patterns + libraryIndex from localStorage on startup (called from App.tsx loadFromStorage flow)
-export function loadPatternsFromStorage() {
+// Load components + libraryIndex from localStorage on startup (called from App.tsx loadFromStorage flow)
+export function loadComponentsFromStorage() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
       const data = JSON.parse(raw)
-      useCatalogStore.getState().loadPatterns(data)
-      // Restore libraryIndex cache — gives instant display while Tauri disk load happens async
+      useCatalogStore.getState().loadComponents(data)
       if (Array.isArray(data.libraryIndex) && data.libraryIndex.length > 0) {
         useCatalogStore.getState().setLibraryIndex(data.libraryIndex)
       }
     }
   } catch (err) {
-    console.warn('Failed to load patterns from storage, resetting:', err)
+    console.warn('Failed to load components from storage, resetting:', err)
     localStorage.removeItem(STORAGE_KEY)
   }
 }
+
+/** @deprecated Use loadComponentsFromStorage */
+export const loadPatternsFromStorage = loadComponentsFromStorage

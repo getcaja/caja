@@ -34,7 +34,7 @@ export function ExportLibraryModal({ open, onOpenChange }: ExportLibraryModalPro
     if (!name.trim()) return
     setExporting(true)
     try {
-      const data = useCatalogStore.getState().getPatternData()
+      const data = useCatalogStore.getState().getComponentData()
       const path = await exportLibrary(data, {
         name: name.trim(),
         author: author.trim() || undefined,

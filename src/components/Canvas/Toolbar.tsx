@@ -174,20 +174,20 @@ export function Toolbar() {
                 if (store.selectedId) {
                   const frame = findInTree(store.root, store.selectedId)
                   if (frame) {
-                    useCatalogStore.getState().savePattern(frame.name || 'Pattern', [], frame)
-                    store.setTreePanelTab('patterns')
+                    useCatalogStore.getState().saveComponent(frame.name || 'Component', [], frame)
+                    store.setTreePanelTab('components')
                     return
                   }
                 }
                 // No selection — just toggle the tab
-                if (treePanelTab !== 'patterns') {
-                  store.setTreePanelTab('patterns')
+                if (treePanelTab !== 'components') {
+                  store.setTreePanelTab('components')
                 } else {
                   store.setTreePanelTab('elements')
                 }
               }}
-              className={`${btnIcon} ${treePanelTab === 'patterns' ? 'bg-surface-3 text-text-primary' : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'}`}
-              title={selectedId ? 'Save selected as pattern' : 'Patterns'}
+              className={`${btnIcon} ${treePanelTab === 'components' ? 'bg-surface-3 text-text-primary' : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'}`}
+              title={selectedId ? 'Save selected as component' : 'Components'}
             >
               <Component size={14} />
             </button>

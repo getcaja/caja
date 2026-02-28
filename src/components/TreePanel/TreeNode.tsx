@@ -218,13 +218,13 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
                   const store = useFrameStore.getState()
                   const f = findInTree(store.root, frame.id)
                   if (f) {
-                    useCatalogStore.getState().savePattern(f.name || 'Pattern', [], f)
-                    store.setTreePanelTab('patterns')
+                    useCatalogStore.getState().saveComponent(f.name || 'Component', [], f)
+                    store.setTreePanelTab('components')
                   }
                   ctxMenu.close()
                 }}
               >
-                <Bookmark size={12} /> Save as Pattern
+                <Bookmark size={12} /> Save as Component
               </button>
             </>
           )}

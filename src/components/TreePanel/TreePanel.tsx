@@ -83,8 +83,8 @@ export function TreePanel({ onExportLibrary }: TreePanelProps) {
     if (!selectedId) return
     const frame = findInTree(root, selectedId)
     if (!frame) return
-    useCatalogStore.getState().savePattern(frame.name || 'Pattern', [], frame)
-    setTab('patterns')
+    useCatalogStore.getState().saveComponent(frame.name || 'Component', [], frame)
+    setTab('components')
     patternMenu.close()
   }
 
@@ -94,7 +94,7 @@ export function TreePanel({ onExportLibrary }: TreePanelProps) {
   }
 
   const handlePatternsTab = () => {
-    setTab('patterns')
+    setTab('components')
   }
 
   const handleLibrariesTab = () => {
@@ -116,10 +116,10 @@ export function TreePanel({ onExportLibrary }: TreePanelProps) {
             Layers
           </button>
           <button
-            className={`text-[12px] font-semibold px-1.5 py-0.5 rounded transition-colors ${tab === 'patterns' ? 'text-text-primary bg-surface-2' : 'text-text-muted hover:text-text-secondary'}`}
+            className={`text-[12px] font-semibold px-1.5 py-0.5 rounded transition-colors ${tab === 'components' ? 'text-text-primary bg-surface-2' : 'text-text-muted hover:text-text-secondary'}`}
             onClick={handlePatternsTab}
           >
-            Patterns
+            Components
           </button>
           <button
             className={`text-[12px] font-semibold px-1.5 py-0.5 rounded transition-colors ${tab === 'libraries' ? 'text-text-primary bg-surface-2' : 'text-text-muted hover:text-text-secondary'}`}
@@ -138,7 +138,7 @@ export function TreePanel({ onExportLibrary }: TreePanelProps) {
             <Plus size={14} />
           </button>
         )}
-        {tab === 'patterns' && (
+        {tab === 'components' && (
           <button
             ref={patternBtnRef}
             className="w-5 h-5 c-icon-btn hover:text-accent hover:bg-accent/10"
@@ -193,7 +193,7 @@ export function TreePanel({ onExportLibrary }: TreePanelProps) {
             disabled={!selectedId}
             onClick={handleSaveSelectedAsPattern}
           >
-            <Code size={12} /> Save selected as pattern
+            <Code size={12} /> Save selected as component
           </button>
           <button
             className="c-menu-item"
@@ -237,7 +237,7 @@ export function TreePanel({ onExportLibrary }: TreePanelProps) {
         </TreeDndProvider>
       )}
 
-      {tab === 'patterns' && (
+      {tab === 'components' && (
         <div className="flex-1 flex flex-col overflow-hidden">
           <PatternsPanel ref={patternPanelRef} source={{ type: 'internal' }} />
         </div>
