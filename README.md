@@ -1,73 +1,70 @@
-# React + TypeScript + Vite
+<p align="center">
+  <img src="caja-icon.png" alt="Caja" width="80" />
+</p>
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+<h1 align="center">Caja</h1>
 
-Currently, two official plugins are available:
+<p align="center">
+  Visual layout editor for building UI with Tailwind CSS
+</p>
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+<p align="center">
+  <a href="https://github.com/getcaja/caja/releases">Download</a> &middot;
+  <a href="https://github.com/getcaja/caja/issues">Issues</a>
+</p>
 
-## React Compiler
+---
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+![Caja Screenshot](Screenshot.png)
 
-## Expanding the ESLint configuration
+## What is Caja?
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Caja is a native desktop design tool for building real UIs visually. Design with flexbox, grid, spacing, and typography — everything outputs clean, production-ready HTML + Tailwind CSS.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- **Visual layout** — Flexbox and grid controls, spacing, sizing, and responsive design
+- **Tailwind native** — Every property maps to real Tailwind classes. What you see is what you export
+- **AI-powered** — Built-in MCP server lets Claude Code design directly in Caja
+- **Native macOS app** — Fast, offline, local file storage. Built with Tauri
+- **Multi-page** — Create full sites with multiple pages and routing
+- **Patterns** — Save and reuse component patterns with override slots
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Getting Started
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Download
+
+Grab the latest release from the [Releases page](https://github.com/getcaja/caja/releases).
+
+### Build from Source
+
+```bash
+git clone https://github.com/getcaja/caja.git
+cd caja
+npm install
+npm run tauri:dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+**Requirements:** Node.js 18+, Rust 1.70+
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### Claude Code Integration
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Caja includes a built-in MCP server. Click the plug icon in the title bar or run:
+
 ```
+Ask Claude: "Design a landing page in Caja"
+```
+
+All 33+ MCP tools are available — create frames, style with Tailwind, manage pages, export patterns, and more.
+
+## Tech Stack
+
+- **Frontend:** React 19, TypeScript, Tailwind CSS v4
+- **Desktop:** Tauri v2 (Rust)
+- **UI:** Radix primitives, Lucide icons
+- **AI:** Model Context Protocol (MCP)
+
+## License
+
+MIT
+
+</content>
+</invoke>
