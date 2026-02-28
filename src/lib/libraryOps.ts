@@ -1,8 +1,8 @@
 import { save, open } from '@tauri-apps/plugin-dialog'
 import { readTextFile, writeTextFile, exists, mkdir, remove, readDir } from '@tauri-apps/plugin-fs'
 import { appDataDir, join } from '@tauri-apps/api/path'
-import type { PatternData } from '../store/catalogStore'
-import type { LibraryMeta } from '../types/pattern'
+import type { ComponentData } from '../store/catalogStore'
+import type { LibraryMeta } from '../types/component'
 
 const LIBRARIES_DIR = 'libraries'
 const INDEX_FILE = 'library-index.json'
@@ -14,7 +14,7 @@ export interface CjlFileData {
   author?: string
   description?: string
   libraryVersion?: string
-  patterns: PatternData
+  patterns: ComponentData
 }
 
 // --- Path helpers ---
@@ -60,7 +60,7 @@ export async function saveLibraryIndex(index: LibraryMeta[]): Promise<void> {
 // --- Library file operations ---
 
 /** Open file dialog to import a .cjl library. Returns meta + data, or null if cancelled. */
-export async function importLibrary(): Promise<{ meta: LibraryMeta; data: PatternData } | null> {
+export async function importLibrary(): Promise<{ meta: LibraryMeta; data: ComponentData } | null> {
   const path = await open({
     filters: [{ name: 'Caja Library', extensions: ['cjl'] }],
     multiple: false,
@@ -98,7 +98,7 @@ export async function importLibrary(): Promise<{ meta: LibraryMeta; data: Patter
 
 /** Export internal patterns as a .cjl library file. Returns the save path or null if cancelled. */
 export async function exportLibrary(
-  data: PatternData,
+  data: ComponentData,
   meta: { name: string; author?: string; description?: string; version?: string }
 ): Promise<string | null> {
   const path = await save({
@@ -122,7 +122,7 @@ export async function exportLibrary(
 
 /** Save (overwrite) a .cjl library file to a known path — no file dialog. */
 export async function saveLibrary(
-  data: PatternData,
+  data: ComponentData,
   meta: { name: string; author?: string; description?: string; version?: string },
   path: string
 ): Promise<void> {
@@ -138,7 +138,7 @@ export async function saveLibrary(
 }
 
 /** Load library data from app data dir by meta. */
-export async function loadLibraryData(meta: LibraryMeta): Promise<PatternData> {
+export async function loadLibraryData(meta: LibraryMeta): Promise<ComponentData> {
   const dir = await getLibrariesDir()
   const filePath = await join(dir, meta.filePath)
   const content = await readTextFile(filePath)

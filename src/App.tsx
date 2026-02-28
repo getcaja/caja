@@ -92,7 +92,8 @@ function App() {
     const fileName = filePath ? filePath.split('/').pop() : 'Untitled'
     const activePage = pages.find((p) => p.id === activePageId)
     const pageName = activePage?.name || ''
-    const pageLabel = pages.length > 1 && pageName ? ` — ${pageName}` : ''
+    const regularPages = pages.filter((p) => !p.isComponentPage)
+    const pageLabel = regularPages.length > 1 && pageName ? ` — ${pageName}` : ''
     const title = `${fileName}${pageLabel} · Caja`
     if (title === lastTitleRef.current) return
     lastTitleRef.current = title
@@ -136,6 +137,7 @@ function App() {
           name: p.name as string,
           route: p.route as string,
           root: migrateToInternalRoot(p.root as Record<string, unknown>, p.id as string),
+          ...(p.isComponentPage ? { isComponentPage: true as const } : {}),
         }))
         const activePageId = (data.activePageId as string) || pages[0].id
         useFrameStore.getState().loadFromFileMulti(pages, activePageId, result.path)
