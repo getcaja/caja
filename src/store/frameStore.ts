@@ -320,6 +320,15 @@ interface FrameStore {
   advancedMode: boolean
   setAdvancedMode: (value: boolean) => void
 
+  // Component system
+  getComponentPage: () => Page | undefined
+  ensureComponentPage: () => Page
+  createComponent: (frameId: string) => string | null  // returns componentId or null
+  insertInstance: (componentId: string, parentId: string, index?: number) => string | null  // returns instance frame id
+  detachInstance: (frameId: string) => void
+  resetInstance: (frameId: string) => void
+  propagateComponent: (componentId: string) => void
+
   // Page management
   addPage: (name?: string, route?: string) => void
   removePage: (id: string) => void
@@ -380,6 +389,31 @@ function updateActiveRoot(state: { pages: Page[]; activePageId: string }, newRoo
     root: newRoot,
     pages: state.pages.map((p) => p.id === state.activePageId ? { ...p, root: newRoot } : p),
   }
+}
+
+export const COMPONENT_PAGE_ID = '__components__'
+
+// Update a specific page's root in the pages array
+function updatePageRoot(pages: Page[], pageId: string, newRoot: BoxElement): Page[] {
+  return pages.map((p) => p.id === pageId ? { ...p, root: newRoot } : p)
+}
+
+// Collect all instances of a component across all pages (except the component page)
+function collectInstances(pages: Page[], componentId: string): { pageId: string; frameId: string }[] {
+  const results: { pageId: string; frameId: string }[] = []
+  function walk(frame: Frame, pageId: string) {
+    if (frame._componentId === componentId) {
+      results.push({ pageId, frameId: frame.id })
+    }
+    if (frame.type === 'box') {
+      for (const child of frame.children) walk(child, pageId)
+    }
+  }
+  for (const page of pages) {
+    if (page.isComponentPage) continue
+    walk(page.root, page.id)
+  }
+  return results
 }
 
 const initialPageId = 'page-1'
@@ -889,11 +923,181 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
     }
   })(),
 
+  // --- Component system ---
+
+  getComponentPage: () => {
+    return get().pages.find((p) => p.isComponentPage)
+  },
+
+  ensureComponentPage: () => {
+    const state = get()
+    const existing = state.pages.find((p) => p.isComponentPage)
+    if (existing) return existing
+
+    const root = createInternalRoot(COMPONENT_PAGE_ID)
+    const page: Page = {
+      id: COMPONENT_PAGE_ID,
+      name: 'Components',
+      route: '/__components__',
+      root,
+      isComponentPage: true,
+    }
+    set({ pages: [...state.pages, page] })
+    return page
+  },
+
+  createComponent: (frameId) => {
+    const state = get()
+    const frame = findInTree(state.root, frameId)
+    if (!frame || isRootId(frameId)) return null
+
+    // Ensure components page exists
+    const compPage = get().ensureComponentPage()
+
+    // Clone frame as master (gets new IDs)
+    const master = cloneWithNewIds(normalizeFrame(frame))
+    const componentId = master.id
+
+    // Add master to components page root
+    const compPageRoot = get().pages.find((p) => p.isComponentPage)!.root
+    const newCompRoot = addChildInTree(compPageRoot, compPageRoot.id, master) as BoxElement
+
+    // Replace original frame with a minimal instance (just _componentId + layout props)
+    const history = pushHistory(state)
+    const instance: Frame = {
+      ...cloneTree(frame),
+      _componentId: componentId,
+      _overrides: {},
+    }
+    const newRoot = updateInTree(state.root, frameId, () => instance) as BoxElement
+
+    const pages = updatePageRoot(
+      updatePageRoot(get().pages, COMPONENT_PAGE_ID, newCompRoot),
+      state.activePageId, newRoot,
+    )
+
+    set({
+      root: newRoot,
+      pages,
+      dirty: true,
+      ...history,
+    })
+
+    return componentId
+  },
+
+  insertInstance: (componentId, parentId, index) => {
+    const state = get()
+
+    // Find master in components page
+    const compPage = state.pages.find((p) => p.isComponentPage)
+    if (!compPage) return null
+    const master = findInTree(compPage.root, componentId)
+    if (!master) return null
+
+    // Clone master and mark as instance
+    const cloned = cloneWithNewIds(normalizeFrame(master))
+    cloned._componentId = componentId
+    cloned._overrides = {}
+
+    const history = pushHistory(state)
+    const parent = findInTree(state.root, parentId)
+    if (!parent || parent.type !== 'box') return null
+
+    const insertIdx = index ?? (parent as BoxElement).children.length
+    const newRoot = insertChildInTree(state.root, parentId, cloned, insertIdx) as BoxElement
+
+    set({
+      ...updateActiveRoot(state, newRoot),
+      selectedId: cloned.id,
+      selectedIds: new Set([cloned.id]),
+      ...history,
+    })
+
+    return cloned.id
+  },
+
+  detachInstance: (frameId) => set((state) => {
+    const frame = findInTree(state.root, frameId)
+    if (!frame || !frame._componentId) return {}
+
+    const history = pushHistory(state)
+    const newRoot = updateInTree(state.root, frameId, (f) => {
+      const detached = { ...f }
+      delete detached._componentId
+      delete detached._overrides
+      return detached as Frame
+    }) as BoxElement
+
+    return { ...updateActiveRoot(state, newRoot), ...history }
+  }),
+
+  resetInstance: (frameId) => set((state) => {
+    const frame = findInTree(state.root, frameId)
+    if (!frame || !frame._componentId) return {}
+
+    const history = pushHistory(state)
+    const newRoot = updateInTree(state.root, frameId, (f) => ({
+      ...f,
+      _overrides: {},
+    } as Frame)) as BoxElement
+
+    return { ...updateActiveRoot(state, newRoot), ...history }
+  }),
+
+  propagateComponent: (componentId) => {
+    // Find master
+    const state = get()
+    const compPage = state.pages.find((p) => p.isComponentPage)
+    if (!compPage) return
+
+    const master = findInTree(compPage.root, componentId)
+    if (!master) return
+
+    // Find all instances across all pages
+    const instances = collectInstances(state.pages, componentId)
+    if (instances.length === 0) return
+
+    // For each instance, rebuild its tree from master + overrides
+    let pages = [...state.pages]
+    let currentRoot = state.root
+
+    for (const { pageId, frameId } of instances) {
+      const page = pages.find((p) => p.id === pageId)
+      if (!page) continue
+
+      const instanceFrame = findInTree(page.root, frameId)
+      if (!instanceFrame) continue
+
+      // Re-clone master with new IDs for this instance's children
+      const freshClone = cloneWithNewIds(normalizeFrame(master))
+
+      // Rebuild instance: keep instance's own ID, position, and _componentId/_overrides
+      const rebuilt: Frame = {
+        ...freshClone,
+        id: instanceFrame.id,
+        name: instanceFrame.name,
+        _componentId: componentId,
+        _overrides: instanceFrame._overrides || {},
+      }
+
+      const newPageRoot = updateInTree(page.root, frameId, () => rebuilt) as BoxElement
+      pages = updatePageRoot(pages, pageId, newPageRoot)
+
+      if (pageId === state.activePageId) {
+        currentRoot = newPageRoot
+      }
+    }
+
+    set({ pages, root: currentRoot, dirty: true })
+  },
+
   // --- Page management ---
 
   addPage: (name, route) => set((state) => {
     const id = generatePageId()
-    const pageName = name || `Page ${state.pages.length + 1}`
+    const regularPages = state.pages.filter((p) => !p.isComponentPage)
+    const pageName = name || `Page ${regularPages.length + 1}`
     const pageRoute = route || `/${pageName.toLowerCase().replace(/\s+/g, '-')}`
     const newRoot = createInternalRoot(id)
     const page: Page = { id, name: pageName, route: pageRoute, root: newRoot }
@@ -911,11 +1115,13 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   }),
 
   removePage: (id) => set((state) => {
-    if (state.pages.length <= 1) return {} // min 1 page
+    if (id === COMPONENT_PAGE_ID) return {} // never remove components page
+    const regularPages = state.pages.filter((p) => !p.isComponentPage)
+    if (regularPages.length <= 1) return {} // min 1 regular page
     const pages = state.pages.filter((p) => p.id !== id)
     const wasActive = state.activePageId === id
     if (wasActive) {
-      const newActive = pages[0]
+      const newActive = pages.find((p) => !p.isComponentPage) || pages[0]
       // Clean up undo stacks for removed page
       const { [id]: _pastRemoved, ...pastRest } = state.past
       const { [id]: _futureRemoved, ...futureRest } = state.future
