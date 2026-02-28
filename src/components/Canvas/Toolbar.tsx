@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import {
   Monitor, Tablet, Smartphone,
-  FilePlus, SquarePlus, LayoutGrid, Minus, Plus, Pencil, Eye,
+  Plus, Component, Minus, Pencil, Eye, Folder,
   Frame as FrameIcon, Type, Link, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ChevronDown,
 } from 'lucide-react'
 import { useFrameStore, isRootId, findInTree } from '../../store/frameStore'
@@ -144,27 +144,28 @@ export function Toolbar() {
           transition: 'max-width 200ms ease, opacity 150ms ease',
         }}>
           <div className="flex items-center gap-0.5 py-1 pl-1.5 pr-1">
-            <button
-              onClick={() => { addPage(); useFrameStore.getState().setTreePanelTab('elements') }}
-              className={btnMuted}
-              title="New page"
-            >
-              <FilePlus size={14} />
-            </button>
-
             <DropdownButton
-              icon={<SquarePlus size={14} />}
-              title="Add element"
-              menu={PRIMITIVES.map((item) => (
+              icon={<Plus size={14} />}
+              title="Add"
+              menu={<>
                 <button
-                  key={item.type}
                   className="c-menu-item"
-                  onClick={() => handleInsert(item.type)}
+                  onClick={() => { addPage(); useFrameStore.getState().setTreePanelTab('elements') }}
                 >
-                  {item.icon}
-                  {item.label}
+                  <Folder size={12} /> Page
                 </button>
-              ))}
+                <div className="border-t border-border my-1" />
+                {PRIMITIVES.map((item) => (
+                  <button
+                    key={item.type}
+                    className="c-menu-item"
+                    onClick={() => handleInsert(item.type)}
+                  >
+                    {item.icon}
+                    {item.label}
+                  </button>
+                ))}
+              </>}
             />
 
             <button
@@ -188,7 +189,7 @@ export function Toolbar() {
               className={`${btnIcon} ${treePanelTab === 'patterns' ? 'bg-surface-3 text-text-primary' : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'}`}
               title={selectedId ? 'Save selected as pattern' : 'Patterns'}
             >
-              <LayoutGrid size={14} />
+              <Component size={14} />
             </button>
           </div>
           <Divider />
