@@ -385,18 +385,18 @@ pub fn run() {
                 .accelerator("CmdOrCtrl+Shift+A")
                 .build(app)?;
 
-            let theme_default = CheckMenuItemBuilder::with_id("theme-default-dark", "Default Dark")
+            let theme_system = CheckMenuItemBuilder::with_id("theme-system", "System")
                 .checked(true)
                 .build(app)?;
-            let theme_dracula = CheckMenuItemBuilder::with_id("theme-dracula", "Dracula")
+            let theme_dark = CheckMenuItemBuilder::with_id("theme-default-dark", "Dark")
                 .build(app)?;
-            let theme_catppuccin = CheckMenuItemBuilder::with_id("theme-catppuccin-mocha", "Catppuccin Mocha")
+            let theme_light = CheckMenuItemBuilder::with_id("theme-default-light", "Light")
                 .build(app)?;
 
             let themes_submenu = SubmenuBuilder::new(app, "Theme")
-                .item(&theme_default)
-                .item(&theme_dracula)
-                .item(&theme_catppuccin)
+                .item(&theme_system)
+                .item(&theme_dark)
+                .item(&theme_light)
                 .build()?;
 
             let view_menu = SubmenuBuilder::new(app, "View")
@@ -502,7 +502,7 @@ pub fn run() {
             let id = event.id().0.as_str();
 
             // Theme radio items — uncheck siblings, emit theme-change
-            let theme_ids = ["theme-default-dark", "theme-dracula", "theme-catppuccin-mocha"];
+            let theme_ids = ["theme-system", "theme-default-dark", "theme-default-light"];
             if theme_ids.contains(&id) {
                 use tauri::menu::MenuItemKind;
                 // Walk: menu > View submenu > Theme submenu > check items

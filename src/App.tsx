@@ -14,7 +14,7 @@ import { WorkspaceDndProvider } from './components/TreePanel/WorkspaceDndContext
 import { startMcpBridge, stopMcpBridge } from './mcp/bridge'
 import { TitleBar } from './components/TitleBar/TitleBar'
 import { ZOOM_LEVELS } from './components/Canvas/ZoomBar'
-import { switchTheme, getActiveTheme } from './lib/theme'
+import { switchTheme, getThemePreference } from './lib/theme'
 import { checkForUpdates } from './lib/updater'
 
 const LEFT_MIN = 150
@@ -171,9 +171,9 @@ function App() {
         safeMenuSync(invoke, 'toggle-right-panel', true)
         safeMenuSync(invoke, 'toggle-advanced-mode', advancedMode)
         // Sync theme radio checks
-        const activeId = getActiveTheme().id
-        for (const tid of ['default-dark', 'dracula', 'catppuccin-mocha']) {
-          safeMenuSync(invoke, `theme-${tid}`, tid === activeId)
+        const pref = getThemePreference()
+        for (const tid of ['system', 'default-dark', 'default-light']) {
+          safeMenuSync(invoke, `theme-${tid}`, tid === pref)
         }
       }).catch((err) => console.warn('Failed to load Tauri core for menu sync:', err))
     }
@@ -255,6 +255,16 @@ function App() {
     })
     return () => { active = false; unlisteners.forEach((fn) => fn()) }
   }, [handleOpen, handleSave, handleSaveAs])
+
+  // Re-apply theme when system color scheme changes (only matters when preference is 'system')
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: light)')
+    const onChange = () => {
+      if (getThemePreference() === 'system') switchTheme('system')
+    }
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
 
   // Keyboard shortcuts
   useEffect(() => {

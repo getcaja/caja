@@ -1,5 +1,5 @@
 export { ThemeColor } from './ThemeColor'
 export type { CajaTheme } from './types'
-export { DEFAULT_THEME, DRACULA_THEME, CATPPUCCIN_MOCHA_THEME, THEMES } from './types'
+export { DEFAULT_DARK, DEFAULT_LIGHT, THEMES } from './types'
 export type { ThemeTokens } from './generate'
-export { deriveTokens, generateThemeCSS, applyTheme, getActiveTheme, switchTheme } from './generate'
+export { deriveTokens, generateThemeCSS, applyTheme, getActiveTheme, getThemePreference, switchTheme } from './generate'
