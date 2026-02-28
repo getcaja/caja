@@ -81,6 +81,7 @@ export function TypographySection({ frame }: { frame: TextStyles & { id: string 
             }}
             min={1}
             defaultValue={16}
+            placeholder="16"
             classPrefix="text"
             inlineLabel={lbl('S')}
           />

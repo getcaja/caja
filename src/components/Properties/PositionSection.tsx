@@ -148,6 +148,7 @@ export function PositionSection({ frame }: { frame: Frame }) {
                   label="Z-Index"
                   classPrefix="z"
                   defaultValue={0}
+                  placeholder="Auto"
                 />
                 <div className="w-5 shrink-0" />
               </div>
