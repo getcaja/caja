@@ -69,16 +69,16 @@ export const CURSOR_OPTIONS = [
 ]
 
 export const TEXT_TRANSFORM_OPTIONS = [
-  { value: 'none', label: 'None' },
-  { value: 'uppercase', label: 'AA' },
-  { value: 'lowercase', label: 'aa' },
-  { value: 'capitalize', label: 'Aa' },
+  { value: 'none', label: 'None', tooltip: 'No Transform' },
+  { value: 'uppercase', label: 'AA', tooltip: 'Uppercase' },
+  { value: 'lowercase', label: 'aa', tooltip: 'Lowercase' },
+  { value: 'capitalize', label: 'Aa', tooltip: 'Capitalize' },
 ]
 
 export const WHITE_SPACE_OPTIONS = [
-  { value: 'normal', label: 'Wrap' },
-  { value: 'nowrap', label: 'No Wrap' },
-  { value: 'pre-wrap', label: 'Pre Wrap' },
+  { value: 'normal', label: 'Wrap', tooltip: 'Wrap Text' },
+  { value: 'nowrap', label: 'No Wrap', tooltip: 'No Wrap' },
+  { value: 'pre-wrap', label: 'Pre Wrap', tooltip: 'Preserve Whitespace' },
 ]
 
 export const ALIGN_SELF_OPTIONS = [

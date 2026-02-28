@@ -37,6 +37,7 @@ export function TypographySection({ frame }: { frame: TextStyles & { id: string 
             classPrefix="font"
             initialValue="sans"
             inlineLabel={<Type size={12} />}
+            tooltip="Font Family"
           />
           <button
             type="button"
@@ -53,6 +54,7 @@ export function TypographySection({ frame }: { frame: TextStyles & { id: string 
             onChange={(v) => updateFrame(frame.id, { color: v })}
             label="Color"
             classPrefix="text"
+            tooltip="Text Color"
           />
           <div className="w-5 shrink-0" />
         </div>
@@ -67,6 +69,7 @@ export function TypographySection({ frame }: { frame: TextStyles & { id: string 
             defaultValue={400}
             placeholder="Regular"
             inlineLabel={lbl('W')}
+            tooltip="Font Weight"
           />
           <TokenInput
             scale={FONT_SIZE_SCALE}
@@ -84,6 +87,7 @@ export function TypographySection({ frame }: { frame: TextStyles & { id: string 
             placeholder="16"
             classPrefix="text"
             inlineLabel={lbl('S')}
+            tooltip="Font Size"
           />
           <div className="w-5 shrink-0" />
         </div>
@@ -99,6 +103,7 @@ export function TypographySection({ frame }: { frame: TextStyles & { id: string 
             placeholder="Auto"
             classPrefix="leading"
             inlineLabel={<MoveVertical size={12} />}
+            tooltip="Line Height"
           />
           <TokenInput
             scale={LETTER_SPACING_SCALE}
@@ -110,6 +115,7 @@ export function TypographySection({ frame }: { frame: TextStyles & { id: string 
             placeholder="Auto"
             classPrefix="tracking"
             inlineLabel={<MoveHorizontal size={12} />}
+            tooltip="Letter Spacing"
           />
           <div className="w-5 shrink-0" />
         </div>
@@ -119,9 +125,9 @@ export function TypographySection({ frame }: { frame: TextStyles & { id: string 
           <ToggleGroup
             value={frame.textAlign}
             options={[
-              { value: 'left', label: <AlignLeft size={12} /> },
-              { value: 'center', label: <AlignCenter size={12} /> },
-              { value: 'right', label: <AlignRight size={12} /> },
+              { value: 'left', label: <AlignLeft size={12} />, tooltip: 'Align Left' },
+              { value: 'center', label: <AlignCenter size={12} />, tooltip: 'Align Center' },
+              { value: 'right', label: <AlignRight size={12} />, tooltip: 'Align Right' },
             ]}
             onChange={(v) => updateFrame(frame.id, { textAlign: v as TextStyles['textAlign'] })}
             className="flex-1"
@@ -129,9 +135,9 @@ export function TypographySection({ frame }: { frame: TextStyles & { id: string 
           <ToggleGroup
             value={frame.textAlignVertical}
             options={[
-              { value: 'start', label: 'Top' },
-              { value: 'center', label: 'Mid' },
-              { value: 'end', label: 'Bot' },
+              { value: 'start', label: 'Top', tooltip: 'Align Top' },
+              { value: 'center', label: 'Mid', tooltip: 'Align Middle' },
+              { value: 'end', label: 'Bot', tooltip: 'Align Bottom' },
             ]}
             onChange={(v) => updateFrame(frame.id, { textAlignVertical: v as TextStyles['textAlignVertical'] })}
             className="flex-1"

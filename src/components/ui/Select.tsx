@@ -1,24 +1,30 @@
 import * as RadixSelect from '@radix-ui/react-select'
 import { ChevronDown, Check } from 'lucide-react'
+import { Tooltip } from './Tooltip'
 
 interface SelectProps {
   value: string
   options: { value: string; label: string }[]
   onChange: (v: string) => void
   className?: string
+  tooltip?: string
 }
 
-export function Select({ value, options, onChange, className }: SelectProps) {
+export function Select({ value, options, onChange, className, tooltip }: SelectProps) {
+  const trigger = (
+    <RadixSelect.Trigger
+      className={`c-input flex items-center justify-between cursor-pointer ${className ?? ''}`}
+    >
+      <RadixSelect.Value />
+      <RadixSelect.Icon>
+        <ChevronDown size={10} className="text-text-muted" />
+      </RadixSelect.Icon>
+    </RadixSelect.Trigger>
+  )
+
   return (
     <RadixSelect.Root value={value} onValueChange={onChange}>
-      <RadixSelect.Trigger
-        className={`c-input flex items-center justify-between cursor-pointer ${className ?? ''}`}
-      >
-        <RadixSelect.Value />
-        <RadixSelect.Icon>
-          <ChevronDown size={10} className="text-text-muted" />
-        </RadixSelect.Icon>
-      </RadixSelect.Trigger>
+      {tooltip ? <Tooltip content={tooltip}>{trigger}</Tooltip> : trigger}
 
       <RadixSelect.Portal>
         <RadixSelect.Content

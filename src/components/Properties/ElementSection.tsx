@@ -172,6 +172,7 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
             onChange={(v) => updateFrame(frame.id, { tag: v })}
             inlineLabel={<Code size={12} />}
             classPrefix="tag"
+            tooltip="HTML Tag"
           />
           <div className="w-5 shrink-0" />
         </div>
@@ -252,10 +253,10 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
               <ToggleGroup
                 value={img.objectFit}
                 options={[
-                  { value: 'cover', label: 'Cover' },
-                  { value: 'contain', label: 'Contain' },
-                  { value: 'fill', label: 'Fill' },
-                  { value: 'none', label: 'None' },
+                  { value: 'cover', label: 'Cover', tooltip: 'Object Fit: Cover' },
+                  { value: 'contain', label: 'Contain', tooltip: 'Object Fit: Contain' },
+                  { value: 'fill', label: 'Fill', tooltip: 'Object Fit: Fill' },
+                  { value: 'none', label: 'None', tooltip: 'Object Fit: None' },
                 ]}
                 onChange={(v) => updateFrame(frame.id, { objectFit: v as ImageElement['objectFit'] })}
                 className="flex-1"
@@ -299,6 +300,7 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
                 onChange={(v) => updateFrame(frame.id, { inputType: v as InputElement['inputType'] })}
                 inlineLabel="Ty"
                 classPrefix="type"
+                tooltip="Input Type"
               />
               <div className="w-5 shrink-0" />
             </div>

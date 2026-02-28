@@ -58,8 +58,8 @@ export function FillSection({ frame }: { frame: Frame }) {
           <ToggleGroup
             value={mode}
             options={[
-              { value: 'solid', label: 'Solid' },
-              { value: 'image', label: 'Image' },
+              { value: 'solid', label: 'Solid', tooltip: 'Solid Color' },
+              { value: 'image', label: 'Image', tooltip: 'Background Image' },
             ]}
             onChange={(v) => {
               setMode(v as FillMode)
@@ -105,6 +105,7 @@ export function FillSection({ frame }: { frame: Frame }) {
               onChange={(v) => updateFrame(frame.id, { bg: v })}
               label="Color"
               classPrefix="bg"
+              tooltip="Background Color"
             />
             <div className="w-5 shrink-0" />
           </div>
@@ -160,6 +161,7 @@ export function FillSection({ frame }: { frame: Frame }) {
                   classPrefix="bg"
                   initialValue="auto"
                   inlineLabel={lbl('Sz')}
+                  tooltip="Background Size"
                 />
                 <TokenInput
                   value={frame.bgPosition}
@@ -168,6 +170,7 @@ export function FillSection({ frame }: { frame: Frame }) {
                   classPrefix="bg"
                   initialValue="center"
                   inlineLabel={lbl('Ps')}
+                  tooltip="Background Position"
                 />
                 <TokenInput
                   value={frame.bgRepeat}
@@ -176,6 +179,7 @@ export function FillSection({ frame }: { frame: Frame }) {
                   classPrefix="bg"
                   initialValue="repeat"
                   inlineLabel={lbl('Rp')}
+                  tooltip="Background Repeat"
                 />
               </div>
             </Popover>

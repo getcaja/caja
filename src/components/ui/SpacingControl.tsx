@@ -57,6 +57,14 @@ export function SpacingControl({
 
   const P = (labelPrefix ?? classPrefix).toUpperCase()
   const txtLbl = (suffix: string) => <span className="text-[12px]">{P}{suffix}</span>
+  const tooltipMap: Record<string, string> = {
+    x: `${label} Left & Right`,
+    y: `${label} Top & Bottom`,
+    l: `${label} Left`,
+    t: `${label} Top`,
+    r: `${label} Right`,
+    b: `${label} Bottom`,
+  }
 
   return (
     <div className="flex flex-col gap-2">
@@ -68,6 +76,7 @@ export function SpacingControl({
           min={0}
           classPrefix={expanded ? `${classPrefix}l` : `${classPrefix}x`}
           inlineLabel={txtLbl(expanded ? 'l' : 'x')}
+          tooltip={tooltipMap[expanded ? 'l' : 'x']}
         />
         <TokenInput
           scale={scale}
@@ -76,6 +85,7 @@ export function SpacingControl({
           min={0}
           classPrefix={expanded ? `${classPrefix}t` : `${classPrefix}y`}
           inlineLabel={txtLbl(expanded ? 't' : 'y')}
+          tooltip={tooltipMap[expanded ? 't' : 'y']}
         />
         <button
           type="button"
@@ -91,8 +101,8 @@ export function SpacingControl({
       </div>
       {expanded && (
         <div className="flex items-center gap-2">
-          <TokenInput scale={scale} value={value.right} onChange={(v) => onChange({ right: v })} min={0} classPrefix={`${classPrefix}r`} inlineLabel={txtLbl('r')} />
-          <TokenInput scale={scale} value={value.bottom} onChange={(v) => onChange({ bottom: v })} min={0} classPrefix={`${classPrefix}b`} inlineLabel={txtLbl('b')} />
+          <TokenInput scale={scale} value={value.right} onChange={(v) => onChange({ right: v })} min={0} classPrefix={`${classPrefix}r`} inlineLabel={txtLbl('r')} tooltip={tooltipMap.r} />
+          <TokenInput scale={scale} value={value.bottom} onChange={(v) => onChange({ bottom: v })} min={0} classPrefix={`${classPrefix}b`} inlineLabel={txtLbl('b')} tooltip={tooltipMap.b} />
           <div className="w-5 shrink-0" />
         </div>
       )}

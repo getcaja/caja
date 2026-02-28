@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Diamond } from 'lucide-react'
 import { Popover } from './Popover'
+import { Tooltip } from './Tooltip'
 import { ColorGridPicker } from './ColorGridPicker'
 import type { DesignValue } from '../../types/frame'
 
@@ -11,11 +12,13 @@ export function ColorInput({
   onChange,
   label,
   classPrefix,
+  tooltip,
 }: {
   value: DesignValue<string>
   onChange: (v: DesignValue<string>) => void
   label: string
   classPrefix?: string
+  tooltip?: string
 }) {
   const token = value.mode === 'token' ? value.token : null
   const colorValue = value.value
@@ -72,12 +75,23 @@ export function ColorInput({
         className="group c-scale-input flex items-center gap-0.5 pr-6 overflow-hidden cursor-text relative"
         onClick={(e) => { if (e.target === e.currentTarget) inputRef.current?.focus() }}
       >
-        <span className="w-4 shrink-0 flex items-center justify-center">
-          <span
-            className="w-3 h-3 rounded-sm border border-border"
-            style={{ backgroundColor: colorValue || 'transparent' }}
-          />
-        </span>
+        {tooltip ? (
+          <Tooltip content={tooltip}>
+            <span className="w-4 shrink-0 flex items-center justify-center">
+              <span
+                className="w-3 h-3 rounded-sm border border-border"
+                style={{ backgroundColor: colorValue || 'transparent' }}
+              />
+            </span>
+          </Tooltip>
+        ) : (
+          <span className="w-4 shrink-0 flex items-center justify-center">
+            <span
+              className="w-3 h-3 rounded-sm border border-border"
+              style={{ backgroundColor: colorValue || 'transparent' }}
+            />
+          </span>
+        )}
 
         {stableToken && (
           <button
