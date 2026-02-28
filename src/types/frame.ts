@@ -177,6 +177,7 @@ export interface ButtonElement extends BaseElement, TextStyles {
   type: 'button'
 
   content: string
+  href: string // when set, renders as <a> instead of <button>
 }
 
 export type InputType = 'text' | 'email' | 'password' | 'number' | 'search' | 'tel' | 'url' | 'date' | 'time' | 'checkbox' | 'radio' | 'range'

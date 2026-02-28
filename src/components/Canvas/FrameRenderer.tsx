@@ -33,7 +33,7 @@ export function resolveTag(frame: Frame): keyof React.JSX.IntrinsicElements {
       return (tag === 'body' ? 'div' : tag) as keyof React.JSX.IntrinsicElements
     }
     case 'text': return (frame.tag || 'p') as keyof React.JSX.IntrinsicElements
-    case 'button': return 'button'
+    case 'button': return frame.href ? 'a' : 'button'
     case 'image': return frame.src ? 'img' : 'div'
     case 'input': return 'input'
     case 'textarea': return 'textarea'
@@ -251,9 +251,10 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
         sel?.addRange(range)
         return
       }
-      if (e.metaKey && isText && frame.tag === 'a' && frame.href) {
+      const frameHref = (isText && frame.tag === 'a' && frame.href) || (isButton && frame.href)
+      if (e.metaKey && frameHref) {
         const { pages, setActivePage } = useFrameStore.getState()
-        const targetPage = pages.find((p) => p.route === frame.href)
+        const targetPage = pages.find((p) => p.route === frameHref)
         if (targetPage) {
           setActivePage(targetPage.id)
           return
@@ -339,7 +340,7 @@ export function FrameRenderer({ frame }: FrameRendererProps) {
       data-frame-id={frame.id}
       className={`${tailwind} ${stateClasses}`}
       {...editorHandlers}
-      {...(isText && frame.tag === 'a' && frame.href
+      {...(((isText && frame.tag === 'a') || (isButton && frame.href)) && frame.href
         ? previewMode
           ? { href: frame.href }
           : { 'data-navigable': true }

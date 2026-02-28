@@ -35,10 +35,12 @@ export function CanvasInline() {
     const href = anchor.getAttribute('href')
     if (!href) return
 
+    // Always prevent default — never let the browser navigate the editor window
+    e.preventDefault()
+
     const { pages, setActivePage } = useFrameStore.getState()
     const targetPage = pages.find((p) => p.route === href)
     if (targetPage) {
-      e.preventDefault()
       setActivePage(targetPage.id)
     }
   }, [])
