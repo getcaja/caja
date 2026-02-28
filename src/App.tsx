@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef, type ReactNode } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useFrameStore, isRootId } from './store/frameStore'
 import { TreePanel } from './components/TreePanel/TreePanel'
 import { Canvas } from './components/Canvas/Canvas'
@@ -15,8 +15,7 @@ import { startMcpBridge, stopMcpBridge } from './mcp/bridge'
 import { TitleBar } from './components/TitleBar/TitleBar'
 import { ZOOM_LEVELS } from './components/Canvas/ZoomBar'
 import { switchTheme, getActiveTheme } from './lib/theme'
-import { checkForUpdates, relaunchApp, type UpdateStatus } from './lib/updater'
-import * as Dialog from '@radix-ui/react-dialog'
+import { checkForUpdates } from './lib/updater'
 
 const LEFT_MIN = 150
 const LEFT_MAX = 400
@@ -57,8 +56,6 @@ function safeMenuSync(invoke: (cmd: string, args?: Record<string, unknown>) => P
 function App() {
   const [showExport, setShowExport] = useState(false)
   const [showExportLibrary, setShowExportLibrary] = useState(false)
-  const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null)
-  const [showUpdater, setShowUpdater] = useState(false)
   const initial = useRef(loadPanelState())
   const [leftWidth, setLeftWidth] = useState(initial.current.leftWidth)
   const [rightWidth, setRightWidth] = useState(initial.current.rightWidth)
@@ -209,8 +206,7 @@ function App() {
             setShowExport(true)
             break
           case 'check-for-updates':
-            setShowUpdater(true)
-            checkForUpdates(setUpdateStatus)
+            checkForUpdates()
             break
           case 'save-library': {
             const lastExport = useCatalogStore.getState().lastExport
@@ -464,61 +460,8 @@ function App() {
         <ExportModal open={showExport} onOpenChange={setShowExport} />
         <ExportLibraryModal open={showExportLibrary} onOpenChange={setShowExportLibrary} />
 
-        {/* Updater dialog */}
-        <UpdateDialog
-          open={showUpdater}
-          onOpenChange={(open) => { setShowUpdater(open); if (!open) setUpdateStatus(null) }}
-          status={updateStatus}
-        />
       </div>
     </TooltipProvider>
-  )
-}
-
-function UpdateDialog({ open, onOpenChange, status }: { open: boolean; onOpenChange: (o: boolean) => void; status: UpdateStatus | null }) {
-  let content: ReactNode
-  if (!status || status.state === 'checking') {
-    content = <p className="text-text-secondary">Checking for updates...</p>
-  } else if (status.state === 'up-to-date') {
-    content = <p className="text-text-secondary">You're on the latest version.</p>
-  } else if (status.state === 'available') {
-    content = <p className="text-text-secondary">Downloading v{status.version}...</p>
-  } else if (status.state === 'downloading') {
-    const pct = Math.round(status.progress * 100)
-    content = (
-      <div className="flex flex-col gap-2">
-        <p className="text-text-secondary">Downloading... {pct}%</p>
-        <div className="h-1.5 bg-surface-2 rounded-full overflow-hidden">
-          <div className="h-full bg-accent rounded-full transition-all" style={{ width: `${pct}%` }} />
-        </div>
-      </div>
-    )
-  } else if (status.state === 'ready') {
-    content = (
-      <div className="flex flex-col gap-3">
-        <p className="text-text-secondary">Update downloaded. Restart to apply.</p>
-        <button
-          className="h-7 px-3 bg-accent text-white text-[12px] font-medium rounded hover:bg-accent-hover transition-colors"
-          onClick={() => relaunchApp()}
-        >
-          Restart Now
-        </button>
-      </div>
-    )
-  } else if (status.state === 'error') {
-    content = <p className="text-destructive text-[12px]">{status.message}</p>
-  }
-
-  return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[320px] bg-surface-1 border border-border rounded-lg p-5 flex flex-col gap-3">
-          <Dialog.Title className="text-[13px] font-semibold text-text-primary">Check for Updates</Dialog.Title>
-          <div className="text-[12px]">{content}</div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
   )
 }
 
