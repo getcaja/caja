@@ -28,7 +28,9 @@ export function uniformBorderRadius(v: number): BorderRadius {
   return { topLeft: dvNum(v), topRight: dvNum(v), bottomRight: dvNum(v), bottomLeft: dvNum(v) }
 }
 
-export const defaultBorder: Border = { top: dvNum(0), right: dvNum(0), bottom: dvNum(0), left: dvNum(0), color: dvStr(''), style: 'none' }
+export function defaultBorder(): Border {
+  return { top: dvNum(0), right: dvNum(0), bottom: dvNum(0), left: dvNum(0), color: dvStr(''), style: 'none' }
+}
 
 // New CSS feature defaults — shared across all create functions
 export function newFeatureDefaults() {
@@ -163,6 +165,7 @@ export function createInternalRoot(pageId: string, children: Frame[] = []): BoxE
     wrap: false,
     gridCols: dvNum(0),
     gridRows: dvNum(0),
+    ...defaultTextStyles(),
     padding: zeroSpacing(),
     margin: zeroSpacing(),
     width: { mode: 'default', value: dvNum(0) },
@@ -171,8 +174,9 @@ export function createInternalRoot(pageId: string, children: Frame[] = []): BoxE
     shrink: dvNum(1),
     overflow: 'visible',
     opacity: dvNum(100),
+    color: dvStr(''),
     bg: { mode: 'token', token: 'white', value: '#ffffff' },
-    border: { ...defaultBorder },
+    border: defaultBorder(),
     borderRadius: zeroBorderRadius(),
     tailwindClasses: '',
     boxShadow: 'none',
@@ -216,7 +220,7 @@ export function createBox(overrides?: Partial<BoxElement>): BoxElement {
     opacity: dvNum(100),
     color: dvStr(''),
     bg: dvStr(''),
-    border: { ...defaultBorder },
+    border: defaultBorder(),
     borderRadius: zeroBorderRadius(),
     tailwindClasses: '',
     boxShadow: 'none',
@@ -255,7 +259,7 @@ export function createText(overrides?: Partial<TextElement>): TextElement {
     opacity: dvNum(100),
     color: dvStr(''),
     bg: dvStr(''),
-    border: { ...defaultBorder },
+    border: defaultBorder(),
     borderRadius: zeroBorderRadius(),
     tailwindClasses: '',
     boxShadow: 'none',
@@ -292,7 +296,7 @@ export function createImage(overrides?: Partial<ImageElement>): ImageElement {
     opacity: dvNum(100),
     color: dvStr(''),
     bg: dvStr(''),
-    border: { ...defaultBorder },
+    border: defaultBorder(),
     borderRadius: zeroBorderRadius(),
     tailwindClasses: '',
     boxShadow: 'none',
@@ -328,7 +332,7 @@ export function createButton(overrides?: Partial<ButtonElement>): ButtonElement 
     opacity: dvNum(100),
     color: dvStr(''),
     bg: dvStr(''),
-    border: { ...defaultBorder },
+    border: defaultBorder(),
     borderRadius: zeroBorderRadius(),
     tailwindClasses: '',
     boxShadow: 'none',
@@ -373,7 +377,7 @@ export function createInput(overrides?: Partial<InputElement>): InputElement {
     opacity: dvNum(100),
     color: dvStr(''),
     bg: dvStr(''),
-    border: { ...defaultBorder },
+    border: defaultBorder(),
     borderRadius: zeroBorderRadius(),
     tailwindClasses: '',
     boxShadow: 'none',
@@ -411,7 +415,7 @@ export function createTextarea(overrides?: Partial<TextareaElement>): TextareaEl
     opacity: dvNum(100),
     color: dvStr(''),
     bg: dvStr(''),
-    border: { ...defaultBorder },
+    border: defaultBorder(),
     borderRadius: zeroBorderRadius(),
     tailwindClasses: '',
     boxShadow: 'none',
@@ -461,7 +465,7 @@ export function createSelect(overrides?: Partial<SelectElement>): SelectElement 
     opacity: dvNum(100),
     color: dvStr(''),
     bg: dvStr(''),
-    border: { ...defaultBorder },
+    border: defaultBorder(),
     borderRadius: zeroBorderRadius(),
     tailwindClasses: '',
     boxShadow: 'none',
