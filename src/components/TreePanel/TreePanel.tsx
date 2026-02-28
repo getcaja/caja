@@ -216,7 +216,7 @@ export function TreePanel({ onExportLibrary }: TreePanelProps) {
           <div className="flex-1 overflow-y-auto flex flex-col">
             {/* Page list */}
             <div className="px-1 pt-1 pb-0.5 flex flex-col gap-0.5">
-              {pages.map((page) => (
+              {pages.filter((p) => !p.isComponentPage).map((page) => (
                 <PageNode key={page.id} page={page} />
               ))}
             </div>

@@ -110,19 +110,34 @@ export function buildOverlayRules(state: {
   canvasDragId: string | null
   showDragGuides: boolean
   dragTargetParentId: string | null
+  instanceIds?: string[]
 }): string[] {
-  const { selectedId, hoveredId, showSel, showHov, canvasDragId, showDragGuides, dragTargetParentId } = state
+  const { selectedId, hoveredId, showSel, showHov, canvasDragId, showDragGuides, dragTargetParentId, instanceIds } = state
   const rules: string[] = []
+  const COMPONENT_COLOR = '#a855f7' // purple-500
+
+  // Component instance outlines (purple dotted, when not selected/hovered)
+  if (instanceIds && instanceIds.length > 0) {
+    for (const iid of instanceIds) {
+      if (iid === selectedId || iid === hoveredId) continue
+      rules.push(`[data-frame-id="${iid}"] { outline: 1px dotted ${COMPONENT_COLOR} !important; outline-offset: -1px !important; }`)
+    }
+  }
 
   if (showSel && selectedId) {
-    rules.push(`[data-frame-id="${selectedId}"] { outline: 2px solid var(--color-accent) !important; outline-offset: -2px !important; }`)
+    // Use purple for selected instances
+    const isInstance = instanceIds?.includes(selectedId)
+    const color = isInstance ? COMPONENT_COLOR : 'var(--color-accent)'
+    rules.push(`[data-frame-id="${selectedId}"] { outline: 2px solid ${color} !important; outline-offset: -2px !important; }`)
     const exc = canvasDragId ? `:not([data-frame-id="${canvasDragId}"])` : ''
-    rules.push(`[data-frame-id="${selectedId}"] > [data-frame-id]${exc} { outline: 1px dotted var(--color-accent) !important; outline-offset: -1px; }`)
+    rules.push(`[data-frame-id="${selectedId}"] > [data-frame-id]${exc} { outline: 1px dotted ${color} !important; outline-offset: -1px; }`)
   }
 
   if (showHov && hoveredId) {
-    rules.push(`[data-frame-id="${hoveredId}"] { outline: 1px solid var(--color-accent) !important; outline-offset: -1px !important; }`)
-    rules.push(`[data-frame-id="${hoveredId}"] > [data-frame-id] { outline: 1px dotted var(--color-accent) !important; outline-offset: -1px; }`)
+    const isInstance = instanceIds?.includes(hoveredId)
+    const color = isInstance ? COMPONENT_COLOR : 'var(--color-accent)'
+    rules.push(`[data-frame-id="${hoveredId}"] { outline: 1px solid ${color} !important; outline-offset: -1px !important; }`)
+    rules.push(`[data-frame-id="${hoveredId}"] > [data-frame-id] { outline: 1px dotted ${color} !important; outline-offset: -1px; }`)
   }
 
   if (showDragGuides && dragTargetParentId) {
@@ -160,6 +175,20 @@ export function SelectionOverlay() {
   })
   const showHov = !previewMode && !!hoveredId && hoveredId !== selectedId && !hovIsDescOfSel && !canvasDragId
 
+  // Collect component instance IDs for purple outlines
+  const instanceIds = useFrameStore((s) => {
+    if (s.previewMode) return []
+    const ids: string[] = []
+    function walk(frame: import('../../types/frame').Frame) {
+      if (frame._componentId) ids.push(frame.id)
+      if (frame.type === 'box') {
+        for (const child of frame.children) walk(child)
+      }
+    }
+    walk(s.root)
+    return ids
+  })
+
   const dragTargetParentId = canvasDragOver?.parentId ?? null
   const showDragGuides = !previewMode && !!canvasDragId && !!dragTargetParentId
 
@@ -170,7 +199,7 @@ export function SelectionOverlay() {
     setLineRect(computeLineRect(doc, canvasDragOver))
   }, [isLineMode, canvasDragOver?.parentId, canvasDragOver?.index, canvasDragId, doc])
 
-  const rules = buildOverlayRules({ selectedId, hoveredId, showSel, showHov, canvasDragId, showDragGuides, dragTargetParentId })
+  const rules = buildOverlayRules({ selectedId, hoveredId, showSel, showHov, canvasDragId, showDragGuides, dragTargetParentId, instanceIds })
 
   return (
     <>

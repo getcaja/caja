@@ -6,7 +6,7 @@ import { useCatalogStore } from '../../store/catalogStore'
 import { useTreeDnd, type DropPosition } from './TreeDndContext'
 import { useContextMenu } from './hooks/useContextMenu'
 import { useInlineEdit } from './hooks/useInlineEdit'
-import { ChevronRight, ChevronDown, Frame as FrameIcon, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse, Copy, Trash2, Group, SquarePlus, Eye, EyeOff, Link, Bookmark } from 'lucide-react'
+import { ChevronRight, ChevronDown, Frame as FrameIcon, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse, Copy, Trash2, Group, SquarePlus, Eye, EyeOff, Link, Bookmark, Diamond, Pencil, RotateCcw, Unlink } from 'lucide-react'
 
 interface TreeNodeProps {
   frame: Frame
@@ -54,6 +54,7 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
   const isDragging = dndActive !== null && String(dndActive.id) === frame.id
   const isOver = overId === frame.id && !isDragging
 
+  const isInstance = !!frame._componentId
   const isLeaf = frame.type !== 'box'
   const addTargetId = isLeaf ? parentId : frame.id
 
@@ -148,9 +149,10 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
           ) : null}
         </span>
 
-        {/* Type icon */}
-        <span className="shrink-0">
-          {frame.type === 'text' && 'tag' in frame && frame.tag === 'a' ? <Link size={12} />
+        {/* Type icon — diamond for component instances */}
+        <span className={`shrink-0 ${isInstance ? 'text-purple-400' : ''}`}>
+          {isInstance ? <Diamond size={12} />
+            : frame.type === 'text' && 'tag' in frame && frame.tag === 'a' ? <Link size={12} />
             : frame.type === 'text' ? <Type size={12} />
             : frame.type === 'image' ? <ImageIcon size={12} />
             : frame.type === 'button' ? <RectangleHorizontal size={12} />
@@ -172,7 +174,7 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
         {!isRoot && nameEdit.editing ? (
           <input {...nameEdit.inputProps} />
         ) : (
-          <span className="flex-1 h-5 flex items-center text-[12px] truncate">{isRoot ? 'Body' : frame.name}</span>
+          <span className={`flex-1 h-5 flex items-center text-[12px] truncate ${isInstance ? 'text-purple-400' : ''}`}>{isRoot ? 'Body' : frame.name}</span>
         )}
 
         {/* Visibility toggle on hover */}
@@ -212,20 +214,60 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
               >
                 <Group size={12} /> Wrap in Frame
               </button>
-              <button
-                className="c-menu-item"
-                onClick={() => {
-                  const store = useFrameStore.getState()
-                  const f = findInTree(store.root, frame.id)
-                  if (f) {
-                    useCatalogStore.getState().saveComponent(f.name || 'Component', [], f)
-                    store.setTreePanelTab('components')
-                  }
-                  ctxMenu.close()
-                }}
-              >
-                <Bookmark size={12} /> Save as Component
-              </button>
+              {!isInstance && (
+                <button
+                  className="c-menu-item"
+                  onClick={() => {
+                    const store = useFrameStore.getState()
+                    const f = findInTree(store.root, frame.id)
+                    if (f) {
+                      useCatalogStore.getState().saveComponent(f.name || 'Component', [], f)
+                      store.setTreePanelTab('components')
+                    }
+                    ctxMenu.close()
+                  }}
+                >
+                  <Bookmark size={12} /> Save as Component
+                </button>
+              )}
+              {isInstance && (
+                <>
+                  <button
+                    className="c-menu-item"
+                    onClick={() => {
+                      const store = useFrameStore.getState()
+                      // Navigate to Components tab to edit master
+                      const compPage = store.pages.find((p) => p.isComponentPage)
+                      if (compPage && frame._componentId) {
+                        store.setTreePanelTab('components')
+                        store.setActivePage(compPage.id)
+                        store.select(frame._componentId)
+                      }
+                      ctxMenu.close()
+                    }}
+                  >
+                    <Pencil size={12} /> Edit Master
+                  </button>
+                  <button
+                    className="c-menu-item"
+                    onClick={() => {
+                      useFrameStore.getState().resetInstance(frame.id)
+                      ctxMenu.close()
+                    }}
+                  >
+                    <RotateCcw size={12} /> Reset Instance
+                  </button>
+                  <button
+                    className="c-menu-item"
+                    onClick={() => {
+                      useFrameStore.getState().detachInstance(frame.id)
+                      ctxMenu.close()
+                    }}
+                  >
+                    <Unlink size={12} /> Detach Instance
+                  </button>
+                </>
+              )}
             </>
           )}
           {addTargetId && (
