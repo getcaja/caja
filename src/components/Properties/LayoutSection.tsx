@@ -299,9 +299,9 @@ export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolea
             {/* Flex: 3x3 grid + gap + overflow — follows W|H column alignment */}
             {isFlex && (
               <div className="flex gap-2 items-start">
-                <div className="flex-1 min-w-0 self-stretch">
+                <div className="flex-1 min-w-0">
                   <div
-                    className="grid gap-[2px] bg-surface-2 rounded p-1 w-full h-full"
+                    className="grid gap-[2px] bg-surface-2 rounded p-1 w-full h-[56px]"
                     style={{
                       gridTemplateColumns: 'repeat(3, 1fr)',
                       gridTemplateRows: 'repeat(3, 1fr)',
@@ -314,27 +314,20 @@ export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolea
                       const active = isSpaceBetween
                         ? currentA === a
                         : currentJ === j && currentA === a
-                      const jCls = { start: 'justify-start', center: 'justify-center', end: 'justify-end' }[j]
-                      const aCls = { start: 'items-start', center: 'items-center', end: 'items-end' }[a]
-                      const justifyCls = active && isSpaceBetween ? 'justify-between' : jCls
-                      const lineSz = active
-                        ? (isRow ? 'w-[1.5px] h-[6px]' : 'w-[6px] h-[1.5px]')
-                        : (isRow ? 'w-[1px] h-[4px]' : 'w-[4px] h-[1px]')
-                      const lineColor = active ? 'bg-accent' : 'bg-text-muted/25'
                       return (
                         <button
                           key={`${ri}-${ci}`}
-                          className="rounded-sm hover:bg-surface-3/50"
+                          className="flex items-center justify-center group"
                           onClick={() => {
                             if (isSpaceBetween) updateFrame(frame.id, { align: a })
                             else updateFrame(frame.id, { justify: j, align: a })
                           }}
                         >
-                          <div className={`w-full h-full flex ${isRow ? 'flex-row' : 'flex-col'} ${justifyCls} ${aCls} gap-[1px] p-[2px]`}>
-                            <div className={`${lineSz} ${lineColor} rounded-full`} />
-                            <div className={`${lineSz} ${lineColor} rounded-full`} />
-                            <div className={`${lineSz} ${lineColor} rounded-full`} />
-                          </div>
+                          {active ? (
+                            <div className={`${isRow ? 'w-[2px] h-[8px]' : 'w-[8px] h-[2px]'} bg-accent rounded-full`} />
+                          ) : (
+                            <div className="w-[3px] h-[3px] rounded-full bg-text-muted/25 group-hover:bg-text-muted/50" />
+                          )}
                         </button>
                       )
                     })
@@ -450,7 +443,7 @@ export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolea
                     value={boxFrame!.gridCols}
                     onChange={(v) => updateFrame(frame.id, { gridCols: v })}
                     min={0}
-                    label="Columns"
+                    inlineLabel={<span className="text-[12px]">C</span>}
                     classPrefix="grid-cols"
                     defaultValue={0}
                     placeholder="Auto"
@@ -460,7 +453,7 @@ export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolea
                     value={boxFrame!.gridRows}
                     onChange={(v) => updateFrame(frame.id, { gridRows: v })}
                     min={0}
-                    label="Rows"
+                    inlineLabel={<span className="text-[12px]">R</span>}
                     classPrefix="grid-rows"
                     defaultValue={0}
                     placeholder="Auto"
@@ -473,7 +466,7 @@ export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolea
                     value={boxFrame!.gap}
                     onChange={(v) => updateFrame(frame.id, { gap: v })}
                     min={0}
-                    label="Gap"
+                    inlineLabel={<LayoutGrid size={12} />}
                     classPrefix="gap"
                   />
                   <div className="w-5 shrink-0" />
