@@ -8,8 +8,8 @@ vi.stubGlobal('localStorage', {
   removeItem: (key: string) => storage.delete(key),
 })
 
-import { useCatalogStore, type PatternData } from '../catalogStore'
-import type { Pattern, LibraryMeta } from '../../types/pattern'
+import { useCatalogStore, type ComponentData } from '../catalogStore'
+import type { Component, LibraryMeta } from '../../types/component'
 import type { Frame, BoxElement, TextElement } from '../../types/frame'
 
 // --- Helpers ---
@@ -34,7 +34,7 @@ function makeFrame(name = 'test'): Frame {
   } as TextElement
 }
 
-function makePattern(overrides?: Partial<Pattern>): Pattern {
+function makeComponent(overrides?: Partial<Component>): Component {
   return {
     id: crypto.randomUUID(),
     name: 'Test Pattern',
@@ -56,7 +56,7 @@ function makeLibraryMeta(overrides?: Partial<LibraryMeta>): LibraryMeta {
   }
 }
 
-function makePatternData(patterns: Pattern[]): PatternData {
+function makeComponentData(patterns: Pattern[]): ComponentData {
   return {
     items: patterns,
     order: patterns.map((p) => p.id),
@@ -178,9 +178,9 @@ describe('catalogStore', () => {
 
   describe('load and reset', () => {
     it('loadPatterns with valid data', () => {
-      const p1 = makePattern({ name: 'Hero' })
-      const p2 = makePattern({ name: 'Footer' })
-      const data: PatternData = {
+      const p1 = makeComponent({ name: 'Hero' })
+      const p2 = makeComponent({ name: 'Footer' })
+      const data: ComponentData = {
         items: [p1, p2],
         order: [p2.id, p1.id],
         categories: ['layout'],
@@ -204,7 +204,7 @@ describe('catalogStore', () => {
     })
 
     it('loadPatterns handles empty order array', () => {
-      const p = makePattern()
+      const p = makeComponent()
       useCatalogStore.getState().loadPatterns({
         items: [p],
         order: [],
@@ -225,14 +225,14 @@ describe('catalogStore', () => {
     })
   })
 
-  describe('getPatternData round-trip', () => {
-    it('save → getPatternData → loadPatterns preserves data', () => {
+  describe('getComponentData round-trip', () => {
+    it('save → getComponentData → loadPatterns preserves data', () => {
       const store = useCatalogStore.getState()
       store.savePattern('Hero', ['layout'], makeFrame())
       store.savePattern('Card', ['content'], makeFrame())
       store.addEmptyCategory('forms')
 
-      const data = useCatalogStore.getState().getPatternData()
+      const data = useCatalogStore.getState().getComponentData()
       expect(data.items).toHaveLength(2)
       expect(data.order).toHaveLength(2)
       expect(data.categories).toEqual(['forms'])
@@ -271,8 +271,8 @@ describe('catalogStore', () => {
   describe('library operations', () => {
     it('installLibrary adds library to index and data', () => {
       const meta = makeLibraryMeta({ name: 'UI Kit' })
-      const patterns = [makePattern({ name: 'Button' })]
-      const data = makePatternData(patterns)
+      const patterns = [makeComponent({ name: 'Button' })]
+      const data = makeComponentData(patterns)
 
       useCatalogStore.getState().installLibrary(meta, data)
       const store = useCatalogStore.getState()
@@ -284,8 +284,8 @@ describe('catalogStore', () => {
 
     it('installLibrary replaces existing library with same id', () => {
       const meta = makeLibraryMeta({ name: 'UI Kit v1' })
-      const data1 = makePatternData([makePattern({ name: 'Button v1' })])
-      const data2 = makePatternData([makePattern({ name: 'Button v2' })])
+      const data1 = makeComponentData([makeComponent({ name: 'Button v1' })])
+      const data2 = makeComponentData([makeComponent({ name: 'Button v2' })])
 
       useCatalogStore.getState().installLibrary(meta, data1)
       useCatalogStore.getState().installLibrary(meta, data2)
@@ -297,7 +297,7 @@ describe('catalogStore', () => {
 
     it('removeLibrary removes from index and data', () => {
       const meta = makeLibraryMeta()
-      useCatalogStore.getState().installLibrary(meta, makePatternData([]))
+      useCatalogStore.getState().installLibrary(meta, makeComponentData([]))
 
       useCatalogStore.getState().removeLibrary(meta.id)
       const store = useCatalogStore.getState()
@@ -308,8 +308,8 @@ describe('catalogStore', () => {
     it('removeLibrary switches to next library if viewing removed library', () => {
       const meta1 = makeLibraryMeta({ name: 'Lib 1' })
       const meta2 = makeLibraryMeta({ name: 'Lib 2' })
-      useCatalogStore.getState().installLibrary(meta1, makePatternData([]))
-      useCatalogStore.getState().installLibrary(meta2, makePatternData([]))
+      useCatalogStore.getState().installLibrary(meta1, makeComponentData([]))
+      useCatalogStore.getState().installLibrary(meta2, makeComponentData([]))
       useCatalogStore.getState().setActiveLibraryId(meta1.id)
       expect(useCatalogStore.getState().activeLibraryId).toBe(meta1.id)
 
@@ -319,7 +319,7 @@ describe('catalogStore', () => {
 
     it('removeLibrary sets null when no libraries remain', () => {
       const meta = makeLibraryMeta()
-      useCatalogStore.getState().installLibrary(meta, makePatternData([]))
+      useCatalogStore.getState().installLibrary(meta, makeComponentData([]))
       useCatalogStore.getState().setActiveLibraryId(meta.id)
 
       useCatalogStore.getState().removeLibrary(meta.id)
@@ -339,8 +339,8 @@ describe('catalogStore', () => {
 
     it('getLibraryPatterns returns patterns for a specific library', () => {
       const meta = makeLibraryMeta()
-      const patterns = [makePattern({ name: 'A' }), makePattern({ name: 'B' })]
-      useCatalogStore.getState().installLibrary(meta, makePatternData(patterns))
+      const patterns = [makeComponent({ name: 'A' }), makeComponent({ name: 'B' })]
+      useCatalogStore.getState().installLibrary(meta, makeComponentData(patterns))
 
       const result = useCatalogStore.getState().getLibraryPatterns(meta.id)
       expect(result).toHaveLength(2)
@@ -352,8 +352,8 @@ describe('catalogStore', () => {
 
     it('getLibraryPattern finds a specific pattern in a library', () => {
       const meta = makeLibraryMeta()
-      const p = makePattern({ name: 'Target' })
-      useCatalogStore.getState().installLibrary(meta, makePatternData([p]))
+      const p = makeComponent({ name: 'Target' })
+      useCatalogStore.getState().installLibrary(meta, makeComponentData([p]))
 
       const result = useCatalogStore.getState().getLibraryPattern(meta.id, p.id)
       expect(result?.name).toBe('Target')
@@ -361,7 +361,7 @@ describe('catalogStore', () => {
 
     it('getLibraryPattern returns undefined for missing pattern', () => {
       const meta = makeLibraryMeta()
-      useCatalogStore.getState().installLibrary(meta, makePatternData([]))
+      useCatalogStore.getState().installLibrary(meta, makeComponentData([]))
       expect(useCatalogStore.getState().getLibraryPattern(meta.id, 'nope')).toBeUndefined()
     })
   })
@@ -369,7 +369,7 @@ describe('catalogStore', () => {
   describe('isolation — CRUD does not affect libraries', () => {
     it('savePattern does not modify library data', () => {
       const meta = makeLibraryMeta()
-      const libData = makePatternData([makePattern({ name: 'Lib Item' })])
+      const libData = makeComponentData([makeComponent({ name: 'Lib Item' })])
       useCatalogStore.getState().installLibrary(meta, libData)
 
       useCatalogStore.getState().savePattern('Internal', [], makeFrame())
@@ -381,8 +381,8 @@ describe('catalogStore', () => {
 
     it('deletePattern does not affect library data', () => {
       const meta = makeLibraryMeta()
-      const libPattern = makePattern({ name: 'Lib' })
-      useCatalogStore.getState().installLibrary(meta, makePatternData([libPattern]))
+      const libPattern = makeComponent({ name: 'Lib' })
+      useCatalogStore.getState().installLibrary(meta, makeComponentData([libPattern]))
 
       const internal = useCatalogStore.getState().savePattern('Internal', [], makeFrame())
       useCatalogStore.getState().deletePattern(internal.id)
@@ -392,7 +392,7 @@ describe('catalogStore', () => {
 
     it('resetPatterns does not affect library data', () => {
       const meta = makeLibraryMeta()
-      useCatalogStore.getState().installLibrary(meta, makePatternData([makePattern()]))
+      useCatalogStore.getState().installLibrary(meta, makeComponentData([makeComponent()]))
       useCatalogStore.getState().savePattern('Card', [], makeFrame())
 
       useCatalogStore.getState().resetPatterns()
@@ -407,7 +407,7 @@ describe('catalogStore', () => {
       const existing = store.savePattern('Existing', [], makeFrame())
       const incoming = [
         existing, // duplicate
-        makePattern({ name: 'New' }),
+        makeComponent({ name: 'New' }),
       ]
 
       useCatalogStore.getState().importPatterns(incoming)
@@ -425,11 +425,11 @@ describe('catalogStore', () => {
 
     it('setLibraryData adds or replaces library data', () => {
       const id = 'lib-1'
-      const data = makePatternData([makePattern({ name: 'X' })])
+      const data = makeComponentData([makeComponent({ name: 'X' })])
       useCatalogStore.getState().setLibraryData(id, data)
       expect(useCatalogStore.getState().libraries.get(id)!.items[0].name).toBe('X')
 
-      const data2 = makePatternData([makePattern({ name: 'Y' })])
+      const data2 = makeComponentData([makeComponent({ name: 'Y' })])
       useCatalogStore.getState().setLibraryData(id, data2)
       expect(useCatalogStore.getState().libraries.get(id)!.items[0].name).toBe('Y')
     })

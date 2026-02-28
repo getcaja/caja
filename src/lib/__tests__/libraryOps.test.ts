@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { PatternData } from '../../store/catalogStore'
-import type { LibraryMeta } from '../../types/pattern'
+import type { ComponentData } from '../../store/catalogStore'
+import type { LibraryMeta } from '../../types/component'
 import type { CjlFileData } from '../libraryOps'
 
 // We test the .cjl format structure directly (serialization/parsing) without
 // importing libraryOps (which depends on Tauri FS APIs). This validates the
 // data contract that importLibrary/exportLibrary rely on.
 
-function makePatternData(): PatternData {
+function makeComponentData(): ComponentData {
   return {
     items: [
       {
@@ -32,7 +32,7 @@ describe('.cjl file format', () => {
       author: 'Alice',
       description: 'A set of UI components',
       libraryVersion: '1.0.0',
-      patterns: makePatternData(),
+      patterns: makeComponentData(),
     }
 
     const json = JSON.stringify(cjl, null, 2)
@@ -50,7 +50,7 @@ describe('.cjl file format', () => {
   })
 
   it('round-trip: create → serialize → parse → verify', () => {
-    const original = makePatternData()
+    const original = makeComponentData()
     const cjl: CjlFileData = {
       version: 1,
       name: 'Test Lib',
@@ -79,7 +79,7 @@ describe('.cjl file format', () => {
   })
 
   it('detects malformed files: missing name', () => {
-    const bad = { version: 1, patterns: makePatternData() }
+    const bad = { version: 1, patterns: makeComponentData() }
     const parsed = bad as Partial<CjlFileData>
     expect(parsed.name).toBeUndefined()
     // importLibrary would throw: "Invalid .cjl file: missing name or patterns"
@@ -98,7 +98,7 @@ describe('.cjl file format', () => {
       author: 'Bob',
       description: 'desc',
       libraryVersion: '2.0',
-      patterns: makePatternData(),
+      patterns: makeComponentData(),
     }
 
     const meta: LibraryMeta = {

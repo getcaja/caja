@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import type { PatternData } from '../../store/catalogStore'
+import type { ComponentData } from '../../store/catalogStore'
 
 // fileOps.ts depends on Tauri dialog/fs APIs — we test the file format contract
 // directly to verify backward compatibility of the CajaFileData shape.
@@ -7,12 +7,12 @@ import type { PatternData } from '../../store/catalogStore'
 interface CajaFileData {
   pages: unknown[]
   activePageId: string
-  patterns?: PatternData   // new — written on save
-  snippets?: PatternData   // legacy read-only
+  patterns?: ComponentData   // new — written on save
+  snippets?: ComponentData   // legacy read-only
   root?: unknown
 }
 
-function makePatternData(): PatternData {
+function makeComponentData(): ComponentData {
   return {
     items: [{
       id: 'p1', name: 'Card', tags: ['layout'],
@@ -29,7 +29,7 @@ describe('CajaFileData backward compatibility', () => {
     const fileContent: Record<string, unknown> = {
       pages: [],
       activePageId: 'page-1',
-      snippets: makePatternData(),
+      snippets: makeComponentData(),
     }
     const data = fileContent as CajaFileData
     const loaded = data.patterns ?? data.snippets
@@ -42,7 +42,7 @@ describe('CajaFileData backward compatibility', () => {
     const fileContent: Record<string, unknown> = {
       pages: [],
       activePageId: 'page-1',
-      patterns: makePatternData(),
+      patterns: makeComponentData(),
     }
     const data = fileContent as CajaFileData
     const loaded = data.patterns ?? data.snippets
@@ -51,9 +51,9 @@ describe('CajaFileData backward compatibility', () => {
   })
 
   it('load file with both fields — "patterns" takes precedence', () => {
-    const oldData = makePatternData()
+    const oldData = makeComponentData()
     oldData.items[0].name = 'Old Card'
-    const newData = makePatternData()
+    const newData = makeComponentData()
     newData.items[0].name = 'New Card'
 
     const fileContent: Record<string, unknown> = {
@@ -78,7 +78,7 @@ describe('CajaFileData backward compatibility', () => {
   })
 
   it('save always writes "patterns" field, never "snippets"', () => {
-    const patterns = makePatternData()
+    const patterns = makeComponentData()
     const saved: CajaFileData = {
       pages: [],
       activePageId: 'page-1',
@@ -92,7 +92,7 @@ describe('CajaFileData backward compatibility', () => {
   })
 
   it('round-trip: save with patterns → reload → data matches', () => {
-    const original = makePatternData()
+    const original = makeComponentData()
     const saved: CajaFileData = {
       pages: [{ id: 'page-1', name: 'Home', route: '/' }] as any,
       activePageId: 'page-1',
