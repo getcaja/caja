@@ -40,6 +40,7 @@ export function EffectsSection({ frame }: { frame: Frame }) {
             inlineLabel={<Droplets size={12} />}
             classPrefix="blur"
             defaultValue={0}
+            placeholder="None"
           />
           <TokenInput
             scale={BLUR_SCALE}
@@ -49,6 +50,7 @@ export function EffectsSection({ frame }: { frame: Frame }) {
             inlineLabel={<Layers size={12} />}
             classPrefix="backdrop-blur"
             defaultValue={0}
+            placeholder="None"
           />
           <div className="w-5 shrink-0" />
         </div>

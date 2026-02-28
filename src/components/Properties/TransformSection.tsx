@@ -18,6 +18,7 @@ export function TransformSection({ frame }: { frame: Frame }) {
             inlineLabel="R"
             classPrefix="rotate"
             defaultValue={0}
+            placeholder="0°"
           />
           <TokenInput
             scale={SCALE_SCALE}
@@ -27,6 +28,7 @@ export function TransformSection({ frame }: { frame: Frame }) {
             inlineLabel="S"
             classPrefix="scale"
             defaultValue={100}
+            placeholder="100%"
           />
           <div className="w-5 shrink-0" />
         </div>

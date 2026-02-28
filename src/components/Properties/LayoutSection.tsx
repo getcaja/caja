@@ -274,6 +274,7 @@ export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolea
                         label="Col Span"
                         classPrefix="col-span"
                         defaultValue={0}
+                        placeholder="Auto"
                       />
                       <TokenInput
                         scale={ROW_SPAN_SCALE}
@@ -283,6 +284,7 @@ export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolea
                         label="Row Span"
                         classPrefix="row-span"
                         defaultValue={0}
+                        placeholder="Auto"
                       />
                     </>
                   )}
@@ -421,6 +423,7 @@ export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolea
                             label="Col Span"
                             classPrefix="col-span"
                             defaultValue={0}
+                            placeholder="Auto"
                           />
                           <TokenInput
                             scale={ROW_SPAN_SCALE}
@@ -430,6 +433,7 @@ export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolea
                             label="Row Span"
                             classPrefix="row-span"
                             defaultValue={0}
+                            placeholder="Auto"
                           />
                         </>
                       )}
@@ -453,6 +457,7 @@ export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolea
                     label="Columns"
                     classPrefix="grid-cols"
                     defaultValue={0}
+                    placeholder="Auto"
                   />
                   <TokenInput
                     scale={GRID_ROWS_SCALE}
@@ -462,6 +467,7 @@ export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolea
                     label="Rows"
                     classPrefix="grid-rows"
                     defaultValue={0}
+                    placeholder="Auto"
                   />
                   <div className="w-5 shrink-0" />
                 </div>
