@@ -106,7 +106,7 @@ export function TreePanel({ onExportLibrary }: TreePanelProps) {
   }
 
   return (
-    <div className="h-full bg-surface-1 flex flex-col">
+    <div className="h-full bg-surface-1/80 flex flex-col">
       <div className="px-4 py-2.5 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-1">
           <button
@@ -175,6 +175,7 @@ export function TreePanel({ onExportLibrary }: TreePanelProps) {
           x={menuPos.x}
           y={menuPos.y}
           onAdd={handleAdd}
+          onAddPage={addPage}
           onClose={() => setShowAdd(false)}
         />
       )}
@@ -223,8 +224,11 @@ export function TreePanel({ onExportLibrary }: TreePanelProps) {
             {/* Separator */}
             <div className="border-t border-border my-1" />
 
-            {/* Active page tree */}
-            <div className="flex-1 overflow-y-auto py-0.5 px-1">
+            {/* Active page tree — click empty space to deselect */}
+            <div
+              className="flex-1 overflow-y-auto py-0.5 px-1"
+              onClick={(e) => { if (e.target === e.currentTarget) useFrameStore.getState().select(null) }}
+            >
               {activePage && (
                 <TreeNode frame={activePage.root} depth={0} isRoot />
               )}

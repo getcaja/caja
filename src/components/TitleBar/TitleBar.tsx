@@ -15,7 +15,7 @@ export function TitleBar() {
 
   return (
     <div
-      className="relative flex items-center bg-surface-0 border-b border-border select-none"
+      className="relative flex items-center bg-surface-0/60 backdrop-blur-md border-b border-border select-none"
       data-tauri-drag-region
       style={{ height: TITLE_BAR_HEIGHT, paddingLeft: TRAFFIC_LIGHT_WIDTH }}
     >

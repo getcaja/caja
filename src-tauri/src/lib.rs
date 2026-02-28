@@ -394,11 +394,14 @@ pub fn run() {
 
             app.set_menu(menu)?;
 
-            // Position traffic lights after window-state restoration
+            // Position traffic lights + apply vibrancy after window-state restoration
             #[cfg(target_os = "macos")]
             if let Some(window) = app.get_webview_window("main") {
                 let ns_win = window.ns_window().unwrap() as cocoa::base::id;
                 position_traffic_lights(ns_win);
+
+                use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial, NSVisualEffectState};
+                let _ = apply_vibrancy(&window, NSVisualEffectMaterial::Sidebar, Some(NSVisualEffectState::Active), None);
             }
 
             // ── MCP HTTP Bridge ──

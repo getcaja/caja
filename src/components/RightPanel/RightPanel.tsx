@@ -6,7 +6,7 @@ export function RightPanel() {
   const selectedId = useFrameStore((s) => s.selectedIds[0] ?? null)
 
   return (
-    <div className="h-full bg-surface-1">
+    <div className="h-full bg-surface-1/80">
       <ErrorBoundary fallback="inline" resetKey={selectedId}>
         <Properties />
       </ErrorBoundary>

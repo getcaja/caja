@@ -1,13 +1,14 @@
-import { Frame, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ChevronDown, Link } from 'lucide-react'
+import { Frame, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ChevronDown, Link, Folder } from 'lucide-react'
 
 interface AddMenuProps {
   x: number
   y: number
   onAdd: (type: 'box' | 'text' | 'image' | 'button' | 'input' | 'textarea' | 'select' | 'link') => void
+  onAddPage: () => void
   onClose: () => void
 }
 
-export function AddMenu({ x, y, onAdd, onClose }: AddMenuProps) {
+export function AddMenu({ x, y, onAdd, onAddPage, onClose }: AddMenuProps) {
   return (
     <>
       {/* Backdrop catches clicks outside menu (including on iframe) */}
@@ -17,6 +18,13 @@ export function AddMenu({ x, y, onAdd, onClose }: AddMenuProps) {
         style={{ left: x, top: y }}
         onClick={(e) => e.stopPropagation()}
       >
+      <button
+        className="c-menu-item"
+        onClick={() => { onAddPage(); onClose() }}
+      >
+        <Folder size={12} /> Page
+      </button>
+      <div className="border-t border-border my-1" />
       <button
         className="c-menu-item"
         onClick={() => onAdd('box')}

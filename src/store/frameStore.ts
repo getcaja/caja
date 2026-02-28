@@ -393,7 +393,7 @@ function updateActiveRoot(state: { pages: Page[]; activePageId: string }, newRoo
 
 const initialPageId = 'page-1'
 const initialRoot = createInternalRoot(initialPageId)
-const initialPages: Page[] = [{ id: initialPageId, name: 'Home', route: '/', root: initialRoot }]
+const initialPages: Page[] = [{ id: initialPageId, name: 'Page 1', route: '/page-1', root: initialRoot }]
 
 export const useFrameStore = create<FrameStore>((set, get) => ({
   root: initialRoot,
@@ -733,7 +733,7 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   newFile: () => {
     const pageId = 'page-1'
     const root = createInternalRoot(pageId)
-    const pages: Page[] = [{ id: pageId, name: 'Home', route: '/', root }]
+    const pages: Page[] = [{ id: pageId, name: 'Page 1', route: '/page-1', root }]
     nextId = 1
     nextPageId = 2
     localStorage.removeItem('caja-state')
@@ -773,7 +773,7 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
           const root = migrateToInternalRoot(parsed.root, pageId)
           nextId = maxIdInTree(root) + 1
           nextPageId = 2
-          const pages: Page[] = [{ id: pageId, name: 'Home', route: '/', root }]
+          const pages: Page[] = [{ id: pageId, name: 'Page 1', route: '/page-1', root }]
           set({ pages, activePageId: pageId, root, past: {}, future: {} })
         }
       }
@@ -789,7 +789,7 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
     root.id = rootIdForPage(pageId)
     nextId = maxIdInTree(root) + 1
     nextPageId = 2
-    const pages: Page[] = [{ id: pageId, name: 'Home', route: '/', root }]
+    const pages: Page[] = [{ id: pageId, name: 'Page 1', route: '/page-1', root }]
     set({ pages, activePageId: pageId, root, filePath, dirty: false, selectedId: null, selectedIds: new Set(), past: {}, future: {} })
   },
 

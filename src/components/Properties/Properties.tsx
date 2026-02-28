@@ -24,7 +24,7 @@ export function Properties() {
   const hasTextStyles = 'fontSize' in selected
 
   return (
-    <div key={selected.id} className="h-full bg-surface-1 overflow-y-auto">
+    <div key={selected.id} className="h-full overflow-y-auto">
       <ElementSection frame={selected} isRoot={isRoot} />
       <PositionSection frame={selected} />
       <LayoutSection frame={selected} isRoot={isRoot} />

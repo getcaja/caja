@@ -4,11 +4,11 @@
   --font-mono: SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, monospace;
   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 
-  /* Surfaces — pure neutral grays */
-  --color-surface-0: #111111;
-  --color-surface-1: #1b1b1b;
-  --color-surface-2: #262626;
-  --color-surface-3: #3f3f3f;
+  /* Surfaces — translucent for vibrancy */
+  --color-surface-0: #191919;
+  --color-surface-1: #222222;
+  --color-surface-2: rgb(255 255 255 / 0.15);
+  --color-surface-3: rgb(255 255 255 / 0.14);
 
   /* Accent — single color for the entire UI */
   --color-accent: #0c8ce9;
@@ -19,9 +19,9 @@
   --color-text-secondary: #a1a1a1;
   --color-text-muted: #717171;
 
-  /* Borders */
-  --color-border: #323232;
-  --color-border-accent: #3e3e3e;
+  /* Borders — white with low opacity for vibrancy compatibility */
+  --color-border: rgb(255 255 255 / 0.08);
+  --color-border-accent: rgb(255 255 255 / 0.12);
 
   /* Semantic */
   --color-destructive: #ef4444;
@@ -34,12 +34,23 @@ html, body, #root {
   height: 100%;
   margin: 0;
   overflow: hidden;
-  background-color: var(--color-surface-0);
+  background-color: transparent;
   color: var(--color-text-primary);
   font-family: var(--font-sans);
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Window chrome border — simulates the subtle edge Figma/native apps show */
+#root::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.15);
+  pointer-events: none;
+  z-index: 9999;
 }
 
 /* Selection */
@@ -48,21 +59,9 @@ html, body, #root {
   color: inherit;
 }
 
-/* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: var(--color-surface-3);
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-muted);
-}
+/* Scrollbar — use native macOS overlay scrollbars.
+   Do NOT set ::-webkit-scrollbar here — it forces classic
+   (space-reserving) scrollbars, breaking the native overlay behavior. */
 
 /* Hide number spinners */
 input[type=number]::-webkit-inner-spin-button,

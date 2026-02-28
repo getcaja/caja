@@ -421,7 +421,7 @@ function App() {
 
   return (
     <TooltipProvider>
-      <div className="h-full flex flex-col bg-surface-0 select-none">
+      <div className="h-full flex flex-col select-none">
         <TitleBar />
         {/* Full-viewport overlay during panel resize — prevents canvas from stealing events */}
         {isResizing && <div className="fixed inset-0 z-50 cursor-col-resize" />}
@@ -429,29 +429,25 @@ function App() {
         <div className="flex-1 flex overflow-hidden">
           <WorkspaceDndProvider>
             {!previewMode && (
-              <>
-                <div style={{ width: leftWidth }} className="shrink-0 border-r border-border">
-                  <TreePanel onExportLibrary={() => setShowExportLibrary(true)} />
-                </div>
+              <div style={{ width: leftWidth }} className="shrink-0 border-r border-border relative">
+                <TreePanel onExportLibrary={() => setShowExportLibrary(true)} />
                 <div
-                  className="w-[7px] shrink-0 cursor-col-resize bg-transparent hover:bg-accent/40 transition-colors -ml-[4px] z-10"
+                  className="absolute top-0 -right-[3px] bottom-0 w-[7px] cursor-col-resize hover:bg-accent/40 transition-colors z-10"
                   onPointerDown={(e) => startDrag('left', e)}
                 />
-              </>
+              </div>
             )}
             <div className="flex-1 flex flex-col overflow-hidden">
               <Canvas />
             </div>
             {!previewMode && (
-              <>
+              <div style={{ width: rightWidth }} className="shrink-0 border-l border-border relative">
                 <div
-                  className="w-[7px] shrink-0 cursor-col-resize bg-transparent hover:bg-accent/40 transition-colors -mr-[4px] z-10"
+                  className="absolute top-0 -left-[3px] bottom-0 w-[7px] cursor-col-resize hover:bg-accent/40 transition-colors z-10"
                   onPointerDown={(e) => startDrag('right', e)}
                 />
-                <div style={{ width: rightWidth }} className="shrink-0 border-l border-border">
-                  <RightPanel />
-                </div>
-              </>
+                <RightPanel />
+              </div>
             )}
           </WorkspaceDndProvider>
         </div>

@@ -10,7 +10,7 @@ export function PagePanel() {
   if (!page) return null
 
   return (
-    <div className="h-full bg-surface-1 overflow-y-auto">
+    <div className="h-full overflow-y-auto">
       {/* Header */}
       <div className="p-3 border-b border-border flex items-center gap-2">
         <span className="text-[12px] px-1.5 py-0.5 rounded-md font-medium bg-accent/15 text-accent">

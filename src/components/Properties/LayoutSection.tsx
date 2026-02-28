@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Ellipsis, Square, SquareArrowDown, SquareArrowRight, LayoutGrid, AlignHorizontalSpaceAround, AlignVerticalSpaceAround, Check } from 'lucide-react'
+import { Ellipsis, Square, ArrowDown, ArrowRight, LayoutGrid, AlignHorizontalSpaceAround, AlignVerticalSpaceAround, Check } from 'lucide-react'
 import type { Frame, BoxElement } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { Section } from '../ui/Section'
@@ -63,8 +63,8 @@ export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolea
                 value={displayMode}
                 options={[
                   { value: 'block', label: <Square size={14} />, tooltip: 'Block' },
-                  { value: 'flex-col', label: <SquareArrowDown size={14} />, tooltip: 'Vertical' },
-                  { value: 'flex-row', label: <SquareArrowRight size={14} />, tooltip: 'Horizontal' },
+                  { value: 'flex-col', label: <ArrowDown size={14} />, tooltip: 'Vertical' },
+                  { value: 'flex-row', label: <ArrowRight size={14} />, tooltip: 'Horizontal' },
                   { value: 'grid', label: <LayoutGrid size={14} />, tooltip: 'Grid' },
                 ]}
                 onChange={(v) => {
