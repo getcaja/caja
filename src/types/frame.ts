@@ -107,6 +107,11 @@ interface BaseElement {
 
   // Origin tracking — populated when inserting from a pattern source (passive, informational)
   _origin?: { libraryId?: string; patternId?: string }
+
+  // Reserved for v0.2 component system — not used in 0.1.
+  // Ensures patterns/libraries created in 0.1 are forward-compatible.
+  _componentId?: string                        // ID of the component definition this frame is an instance of
+  _componentProps?: Record<string, unknown>     // Override props for the component instance
 }
 
 export type BoxTag = 'body' | 'div' | 'section' | 'nav' | 'header' | 'footer' | 'main' | 'article' | 'aside' | 'ul' | 'ol' | 'li' | 'form'
