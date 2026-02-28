@@ -200,70 +200,92 @@ fn set_menu_check(app: AppHandle, id: String, checked: bool) -> Result<(), Strin
 }
 
 // ── macOS Traffic Light Positioning ──
-// setTitle() and window-state restoration reset traffic light position.
-// We re-apply via objc on every relevant window event.
+// Tauri's trafficLightPosition in tauri.conf.json handles startup + resize natively.
+// But setTitle() resets position (tauri-apps/tauri#13044), so we re-apply via objc.
+// Values must match trafficLightPosition { x: 13, y: 16 } in tauri.conf.json.
 
 #[cfg(target_os = "macos")]
-const TRAFFIC_LIGHT_X: f64 = 13.0;
-#[cfg(target_os = "macos")]
-const TRAFFIC_LIGHT_Y: f64 = 24.0;
-
-#[cfg(target_os = "macos")]
-fn position_traffic_lights(ns_window: cocoa::base::id) {
-    use cocoa::appkit::{NSView, NSWindow, NSWindowButton};
-    use cocoa::foundation::NSRect;
-
+fn reposition_traffic_lights_after_title(ns_window: cocoa::base::id) {
+    // Same nudge trick: resize by 1pt and back to trigger TAO's native repositioning.
     unsafe {
-        let close = ns_window.standardWindowButton_(NSWindowButton::NSWindowCloseButton);
-        let miniaturize = ns_window.standardWindowButton_(NSWindowButton::NSWindowMiniaturizeButton);
-        let zoom = ns_window.standardWindowButton_(NSWindowButton::NSWindowZoomButton);
-
-        let title_bar_container = close.superview().superview();
-
-        let close_rect: NSRect = msg_send![close, frame];
-        let button_height = close_rect.size.height;
-
-        let title_bar_height = button_height + TRAFFIC_LIGHT_Y;
-        let mut title_bar_rect = NSView::frame(title_bar_container);
-        title_bar_rect.size.height = title_bar_height;
-        title_bar_rect.origin.y = NSView::frame(ns_window).size.height - title_bar_height;
-        let _: () = msg_send![title_bar_container, setFrame: title_bar_rect];
-
-        let buttons = vec![close, miniaturize, zoom];
-        let space_between = NSView::frame(miniaturize).origin.x - NSView::frame(close).origin.x;
-        let button_y = (title_bar_height - button_height) / 2.0;
-
-        for (i, button) in buttons.into_iter().enumerate() {
-            let mut rect: NSRect = NSView::frame(button);
-            rect.origin.x = TRAFFIC_LIGHT_X + (i as f64 * space_between);
-            rect.origin.y = button_y;
-            button.setFrameOrigin(rect.origin);
-        }
+        let frame: cocoa::foundation::NSRect = msg_send![ns_window, frame];
+        let mut nudged = frame;
+        nudged.size.height += 1.0;
+        let _: () = msg_send![ns_window, setFrame: nudged display: false];
+        let _: () = msg_send![ns_window, setFrame: frame display: false];
     }
+}
+
+// Tauri command: install Caja MCP config into ~/.claude.json
+#[tauri::command]
+fn install_mcp_claude_code() -> Result<String, String> {
+    // 1. Resolve server.mjs path
+    let server_path = {
+        let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
+        let dev_path = cwd.join("../src/mcp/server.mjs");
+        if let Ok(canonical) = dev_path.canonicalize() {
+            canonical.to_string_lossy().to_string()
+        } else if let Ok(exe) = std::env::current_exe() {
+            if let Some(dir) = exe.parent() {
+                let path = dir.join("../Resources/src/mcp/server.mjs");
+                path.canonicalize()
+                    .map(|p| p.to_string_lossy().to_string())
+                    .map_err(|_| "Could not locate server.mjs".to_string())?
+            } else {
+                return Err("Could not locate server.mjs".into());
+            }
+        } else {
+            return Err("Could not locate server.mjs".into());
+        }
+    };
+
+    // 2. Read or create ~/.claude.json
+    let home = std::env::var("HOME").map_err(|_| "HOME not set".to_string())?;
+    let config_path = std::path::PathBuf::from(&home).join(".claude.json");
+
+    let mut config: serde_json::Value = if config_path.exists() {
+        let raw = std::fs::read_to_string(&config_path).map_err(|e| e.to_string())?;
+        serde_json::from_str(&raw).unwrap_or(serde_json::json!({}))
+    } else {
+        serde_json::json!({})
+    };
+
+    // 3. Check if already configured
+    if config.get("mcpServers")
+        .and_then(|s| s.get("caja"))
+        .is_some()
+    {
+        return Ok("already".into());
+    }
+
+    // 4. Merge caja server config
+    let servers = config.as_object_mut().unwrap()
+        .entry("mcpServers")
+        .or_insert(serde_json::json!({}));
+    servers.as_object_mut().unwrap().insert(
+        "caja".into(),
+        serde_json::json!({
+            "command": "node",
+            "args": [server_path]
+        }),
+    );
+
+    // 5. Write back
+    let json = serde_json::to_string_pretty(&config).map_err(|e| e.to_string())?;
+    std::fs::write(&config_path, json).map_err(|e| e.to_string())?;
+
+    Ok("installed".into())
 }
 
 // Tauri command: set window title + reposition traffic lights (setTitle resets them)
 #[tauri::command]
 fn set_window_title(app: AppHandle, title: String) {
-    #[cfg(target_os = "macos")]
-    {
-        use cocoa::appkit::NSWindow;
-        use cocoa::base::nil;
-        use cocoa::foundation::NSString;
-
-        if let Some(window) = app.get_webview_window("main") {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.set_title(&title);
+        #[cfg(target_os = "macos")]
+        {
             let ns_window = window.ns_window().unwrap() as cocoa::base::id;
-            unsafe {
-                let ns_title = cocoa::foundation::NSString::alloc(nil).init_str(&title);
-                NSWindow::setTitle_(ns_window, ns_title);
-                position_traffic_lights(ns_window);
-            }
-        }
-    }
-    #[cfg(not(target_os = "macos"))]
-    {
-        if let Some(window) = app.get_webview_window("main") {
-            let _ = window.set_title(&title);
+            reposition_traffic_lights_after_title(ns_window);
         }
     }
 }
@@ -278,7 +300,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
-        .invoke_handler(tauri::generate_handler![mcp_respond, set_menu_check, set_window_title])
+        .invoke_handler(tauri::generate_handler![mcp_respond, set_menu_check, set_window_title, install_mcp_claude_code])
         .setup(|app| {
             // ── Native Menu ──
             let icon = Image::from_bytes(include_bytes!("../icons/128x128@2x.png"))
@@ -394,14 +416,31 @@ pub fn run() {
 
             app.set_menu(menu)?;
 
-            // Position traffic lights + apply vibrancy after window-state restoration
+            // Apply vibrancy (traffic light positioning handled by trafficLightPosition in tauri.conf.json)
             #[cfg(target_os = "macos")]
             if let Some(window) = app.get_webview_window("main") {
-                let ns_win = window.ns_window().unwrap() as cocoa::base::id;
-                position_traffic_lights(ns_win);
-
                 use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial, NSVisualEffectState};
                 let _ = apply_vibrancy(&window, NSVisualEffectMaterial::Sidebar, Some(NSVisualEffectState::Active), None);
+
+                // window-state plugin restores geometry after setup, resetting traffic lights.
+                // Nudge the window size after a delay to trigger Tauri/TAO's native repositioning.
+                let app_handle = app.handle().clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_millis(200));
+                    let h = app_handle.clone();
+                    let _ = app_handle.run_on_main_thread(move || {
+                        if let Some(w) = h.get_webview_window("main") {
+                            let ns = w.ns_window().unwrap() as cocoa::base::id;
+                            unsafe {
+                                let frame: cocoa::foundation::NSRect = msg_send![ns, frame];
+                                let mut nudged = frame;
+                                nudged.size.height += 1.0;
+                                let _: () = msg_send![ns, setFrame: nudged display: false];
+                                let _: () = msg_send![ns, setFrame: frame display: false];
+                            }
+                        }
+                    });
+                });
             }
 
             // ── MCP HTTP Bridge ──
@@ -447,13 +486,7 @@ pub fn run() {
                 }
                 tauri::WindowEvent::Resized(..)
                 | tauri::WindowEvent::ThemeChanged(..)
-                | tauri::WindowEvent::Focused(true) => {
-                    #[cfg(target_os = "macos")]
-                    {
-                        let ns_win = window.ns_window().unwrap() as cocoa::base::id;
-                        position_traffic_lights(ns_win);
-                    }
-                }
+                | tauri::WindowEvent::Focused(true) => {}
                 _ => {}
             }
         })

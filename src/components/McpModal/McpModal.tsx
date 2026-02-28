@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { Dialog } from '../ui/Dialog'
 import { useFrameStore } from '../../store/frameStore'
-import { Check, Copy } from 'lucide-react'
+import { Check, Copy, Plus } from 'lucide-react'
 
 interface McpModalProps {
   open: boolean
@@ -90,11 +90,29 @@ function CopyButton({ text }: { text: string }) {
   )
 }
 
+async function installClaudeCode(): Promise<'installed' | 'already' | 'error'> {
+  try {
+    const { invoke } = await import('@tauri-apps/api/core')
+    const result: string = await invoke('install_mcp_claude_code')
+    return result as 'installed' | 'already'
+  } catch (err) {
+    console.error('Failed to install MCP config:', err)
+    return 'error'
+  }
+}
+
 export function McpModal({ open, onOpenChange }: McpModalProps) {
   const mcpConnected = useFrameStore((s) => s.mcpConnected)
   const [activeClient, setActiveClient] = useState<Client>('claude-code')
+  const [installState, setInstallState] = useState<'idle' | 'installed' | 'already' | 'error'>('idle')
 
   const config = getConfig(activeClient)
+
+  const handleInstall = useCallback(async () => {
+    const result = await installClaudeCode()
+    setInstallState(result)
+    setTimeout(() => setInstallState('idle'), 3000)
+  }, [])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -149,10 +167,28 @@ export function McpModal({ open, onOpenChange }: McpModalProps) {
           </pre>
         </div>
 
+        {/* Install button (Claude Code only) */}
+        {activeClient === 'claude-code' && (
+          <div className="px-5 pb-3">
+            <button
+              onClick={handleInstall}
+              disabled={installState !== 'idle'}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-accent text-white text-[12px] font-medium hover:bg-accent-hover transition-colors disabled:opacity-60"
+            >
+              {installState === 'idle' && <><Plus size={14} /> Add to Claude Code</>}
+              {installState === 'installed' && <><Check size={14} /> Added to ~/.claude.json</>}
+              {installState === 'already' && <><Check size={14} /> Already configured</>}
+              {installState === 'error' && <>Failed — copy config manually</>}
+            </button>
+          </div>
+        )}
+
         {/* Instructions */}
         <div className="px-5 pb-5">
           <p className="text-[11px] text-text-muted leading-relaxed whitespace-pre-line">
-            {config.instructions}
+            {activeClient === 'claude-code'
+              ? 'Or copy the config above and add it manually.\nCaja must be running when Claude Code starts.'
+              : config.instructions}
           </p>
         </div>
       </div>
