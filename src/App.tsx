@@ -78,23 +78,28 @@ function App() {
   const reorderFrame = useFrameStore((s) => s.reorderFrame)
   const selectedId = useFrameStore((s) => s.selectedId)
   const filePath = useFrameStore((s) => s.filePath)
-  const dirty = useFrameStore((s) => s.dirty)
   const previewMode = useFrameStore((s) => s.previewMode)
   const activePageId = useFrameStore((s) => s.activePageId)
   const pages = useFrameStore((s) => s.pages)
 
   // Update window title with file name + active page
+  // NOTE: dirty state is excluded — each setTitle() triggers a macOS traffic-light
+  // reposition (±1pt resize hack) which causes visible flicker when editing rapidly.
+  // The custom TitleBar already shows a dirty dot indicator.
+  const lastTitleRef = useRef('')
   useEffect(() => {
     if (!isTauri) return
     const fileName = filePath ? filePath.split('/').pop() : 'Untitled'
     const activePage = pages.find((p) => p.id === activePageId)
     const pageName = activePage?.name || ''
     const pageLabel = pages.length > 1 && pageName ? ` — ${pageName}` : ''
-    const title = dirty ? `${fileName}${pageLabel} — Edited · Caja` : `${fileName}${pageLabel} · Caja`
+    const title = `${fileName}${pageLabel} · Caja`
+    if (title === lastTitleRef.current) return
+    lastTitleRef.current = title
     import('@tauri-apps/api/core').then(({ invoke }) => {
       invoke('set_window_title', { title })
     }).catch((err) => console.warn('Failed to set window title:', err))
-  }, [filePath, dirty, activePageId, pages])
+  }, [filePath, activePageId, pages])
 
   const handleSave = useCallback(async () => {
     if (!isTauri) return
