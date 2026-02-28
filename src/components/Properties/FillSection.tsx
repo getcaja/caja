@@ -71,6 +71,7 @@ export function FillSection({ frame }: { frame: Frame }) {
             trigger={
               <button
                 type="button"
+                title="Opacity"
                 className={`w-5 h-5 shrink-0 flex items-center justify-center rounded ${
                   opacityActive
                     ? 'text-blue-400 bg-blue-400/10'
@@ -142,6 +143,7 @@ export function FillSection({ frame }: { frame: Frame }) {
               trigger={
                 <button
                   type="button"
+                  title="Image Properties"
                   className={`w-5 h-5 shrink-0 flex items-center justify-center rounded ${
                     imagePropsActive
                       ? 'text-blue-400 bg-blue-400/10'

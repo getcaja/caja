@@ -91,6 +91,7 @@ export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolea
                   trigger={
                     <button
                       type="button"
+                      title="Display Options"
                       className={`w-5 h-5 flex items-center justify-center rounded shrink-0 ${
                         displayOptsActive
                           ? 'text-blue-400 bg-blue-400/10'
@@ -189,6 +190,7 @@ export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolea
             trigger={
               <button
                 type="button"
+                title="Size Constraints"
                 className={`w-5 h-5 flex items-center justify-center rounded shrink-0 ${
                   constraintsActive || childPropsActive
                     ? 'text-blue-400 bg-blue-400/10'
@@ -362,6 +364,7 @@ export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolea
                     trigger={
                       <button
                         type="button"
+                        title="Flex Child"
                         className={`w-5 h-5 flex items-center justify-center rounded shrink-0 ${
                           childPropsActive
                             ? 'text-blue-400 bg-blue-400/10'
@@ -520,6 +523,7 @@ export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolea
             trigger={
               <button
                 type="button"
+                title="Overflow"
                 className={`w-5 h-5 shrink-0 flex items-center justify-center rounded ${
                   frame.overflow === 'scroll'
                     ? 'text-blue-400 bg-blue-400/10'

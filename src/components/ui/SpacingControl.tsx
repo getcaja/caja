@@ -89,6 +89,7 @@ export function SpacingControl({
         />
         <button
           type="button"
+          title={expanded ? 'Collapse Sides' : 'Expand Sides'}
           className={`w-5 h-5 flex items-center justify-center rounded shrink-0 ${
             expanded
               ? 'text-blue-400 bg-blue-400/10'

@@ -3,7 +3,6 @@ import { Diamond, Check } from 'lucide-react'
 import type { SizeValue, DesignValue } from '../../types/frame'
 import { SIZE_CONSTRAINT_SCALE, type ScaleOption } from '../../data/scales'
 import { useFrameStore } from '../../store/frameStore'
-import { Tooltip } from './Tooltip'
 
 interface SizeInputProps {
   value: SizeValue
@@ -308,13 +307,7 @@ export function SizeInput({ value, onChange, label, classPrefix, parentIsFlex, t
         onClick={() => inputRef.current?.focus()}
       >
         {/* Inline label */}
-        {tooltip ? (
-          <Tooltip content={tooltip}>
-            <span className={`w-4 shrink-0 flex items-center justify-center ${value.mode !== 'default' ? 'text-text-secondary' : 'text-text-muted'}`}>{label}</span>
-          </Tooltip>
-        ) : (
-          <span className={`w-4 shrink-0 flex items-center justify-center ${value.mode !== 'default' ? 'text-text-secondary' : 'text-text-muted'}`}>{label}</span>
-        )}
+        <span title={tooltip} className={`w-4 shrink-0 flex items-center justify-center ${value.mode !== 'default' ? 'text-text-secondary' : 'text-text-muted'}`}>{label}</span>
 
         {/* Pill for keyword or token */}
         {hasPill && (

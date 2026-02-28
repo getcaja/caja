@@ -3,7 +3,6 @@ import { Diamond, Check } from 'lucide-react'
 import type { ScaleOption } from '../../data/scales'
 import type { DesignValue } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
-import { Tooltip } from './Tooltip'
 
 export interface EnumOption {
   value: string
@@ -97,13 +96,10 @@ export function TokenInput(props: TokenInputProps) {
     ? (!scaleIsUnset || scaleToken !== null || (scaleProps?.autoOption?.active ?? false))
     : !enumIsInitial
 
-  // --- Inline label (with optional tooltip) ---
-  const inlineLabelEl = inlineLabel ? (() => {
-    const el = (
-      <span className={`w-4 shrink-0 flex items-center justify-center ${isActive ? 'text-text-secondary' : 'text-text-muted'}`}>{inlineLabel}</span>
-    )
-    return tooltip ? <Tooltip content={tooltip}>{el}</Tooltip> : el
-  })() : null
+  // --- Inline label (with optional title tooltip) ---
+  const inlineLabelEl = inlineLabel ? (
+    <span title={tooltip} className={`w-4 shrink-0 flex items-center justify-center ${isActive ? 'text-text-secondary' : 'text-text-muted'}`}>{inlineLabel}</span>
+  ) : null
 
   // --- Normalize items for dropdown ---
   const items: NormalizedItem[] = isScale
