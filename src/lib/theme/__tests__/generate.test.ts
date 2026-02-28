@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { deriveTokens, generateThemeCSS } from '../generate'
 import { ThemeColor } from '../ThemeColor'
-import { DEFAULT_THEME } from '../types'
+import { DEFAULT_DARK } from '../types'
 
 /** Parse a CSS color and return RGB tuple */
 function rgb(css: string): [number, number, number] {
@@ -26,7 +26,7 @@ function expectColorMatch(actual: string, expected: string, tolerance = 1) {
 }
 
 describe('deriveTokens', () => {
-  const tokens = deriveTokens(DEFAULT_THEME)
+  const tokens = deriveTokens(DEFAULT_DARK)
 
   it('surface-0 matches input', () => {
     expectColorMatch(tokens['surface-0'], '#111111')
@@ -86,7 +86,7 @@ describe('deriveTokens', () => {
 })
 
 describe('generateThemeCSS', () => {
-  const css = generateThemeCSS(DEFAULT_THEME)
+  const css = generateThemeCSS(DEFAULT_DARK)
 
   it('wraps in :root {}', () => {
     expect(css).toMatch(/^:root \{/)

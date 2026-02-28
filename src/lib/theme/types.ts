@@ -10,9 +10,9 @@ export interface CajaTheme {
   }
 }
 
-export const DEFAULT_THEME: CajaTheme = {
+export const DEFAULT_DARK: CajaTheme = {
   id: 'default-dark',
-  label: 'Default Dark',
+  label: 'Dark',
   dark: true,
   base: {
     surface: '#111111',
@@ -22,28 +22,16 @@ export const DEFAULT_THEME: CajaTheme = {
   },
 }
 
-export const DRACULA_THEME: CajaTheme = {
-  id: 'dracula',
-  label: 'Dracula',
-  dark: true,
+export const DEFAULT_LIGHT: CajaTheme = {
+  id: 'default-light',
+  label: 'Light',
+  dark: false,
   base: {
-    surface: '#282a36',
-    text: '#f8f8f2',
-    accent: '#bd93f9',
-    destructive: '#ff5555',
+    surface: '#ffffff',
+    text: '#1a1a1a',
+    accent: '#0c8ce9',
+    destructive: '#ef4444',
   },
 }
 
-export const CATPPUCCIN_MOCHA_THEME: CajaTheme = {
-  id: 'catppuccin-mocha',
-  label: 'Catppuccin Mocha',
-  dark: true,
-  base: {
-    surface: '#1e1e2e',
-    text: '#cdd6f4',
-    accent: '#89b4fa',
-    destructive: '#f38ba8',
-  },
-}
-
-export const THEMES: CajaTheme[] = [DEFAULT_THEME, DRACULA_THEME, CATPPUCCIN_MOCHA_THEME]
+export const THEMES: CajaTheme[] = [DEFAULT_DARK, DEFAULT_LIGHT]
