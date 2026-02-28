@@ -216,51 +216,46 @@ fn reposition_traffic_lights_after_title(ns_window: cocoa::base::id) {
     }
 }
 
-// Tauri command: install Caja MCP config into ~/.claude.json
-#[tauri::command]
-fn install_mcp_claude_code() -> Result<String, String> {
-    // 1. Resolve server.mjs path
-    let server_path = {
-        let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
-        let dev_path = cwd.join("../src/mcp/server.mjs");
-        if let Ok(canonical) = dev_path.canonicalize() {
-            canonical.to_string_lossy().to_string()
-        } else if let Ok(exe) = std::env::current_exe() {
-            if let Some(dir) = exe.parent() {
-                let path = dir.join("../Resources/src/mcp/server.mjs");
-                path.canonicalize()
-                    .map(|p| p.to_string_lossy().to_string())
-                    .map_err(|_| "Could not locate server.mjs".to_string())?
-            } else {
-                return Err("Could not locate server.mjs".into());
-            }
-        } else {
-            return Err("Could not locate server.mjs".into());
-        }
-    };
+// ── MCP Install Command ──
 
-    // 2. Read or create ~/.claude.json
-    let home = std::env::var("HOME").map_err(|_| "HOME not set".to_string())?;
-    let config_path = std::path::PathBuf::from(&home).join(".claude.json");
+fn resolve_server_path() -> Result<String, String> {
+    let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
+    let dev_path = cwd.join("../src/mcp/server.mjs");
+    if let Ok(canonical) = dev_path.canonicalize() {
+        return Ok(canonical.to_string_lossy().to_string());
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            let path = dir.join("../Resources/src/mcp/server.mjs");
+            if let Ok(canonical) = path.canonicalize() {
+                return Ok(canonical.to_string_lossy().to_string());
+            }
+        }
+    }
+    Err("Could not locate server.mjs".into())
+}
+
+/// Merge caja entry into a JSON config file.
+/// `servers_key` is the top-level key ("mcpServers" or "servers").
+fn install_json_config(config_path: &std::path::Path, servers_key: &str, server_path: &str) -> Result<String, String> {
+    // Ensure parent directory exists
+    if let Some(parent) = config_path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
 
     let mut config: serde_json::Value = if config_path.exists() {
-        let raw = std::fs::read_to_string(&config_path).map_err(|e| e.to_string())?;
+        let raw = std::fs::read_to_string(config_path).map_err(|e| e.to_string())?;
         serde_json::from_str(&raw).unwrap_or(serde_json::json!({}))
     } else {
         serde_json::json!({})
     };
 
-    // 3. Check if already configured
-    if config.get("mcpServers")
-        .and_then(|s| s.get("caja"))
-        .is_some()
-    {
+    if config.get(servers_key).and_then(|s| s.get("caja")).is_some() {
         return Ok("already".into());
     }
 
-    // 4. Merge caja server config
     let servers = config.as_object_mut().unwrap()
-        .entry("mcpServers")
+        .entry(servers_key)
         .or_insert(serde_json::json!({}));
     servers.as_object_mut().unwrap().insert(
         "caja".into(),
@@ -270,11 +265,79 @@ fn install_mcp_claude_code() -> Result<String, String> {
         }),
     );
 
-    // 5. Write back
     let json = serde_json::to_string_pretty(&config).map_err(|e| e.to_string())?;
-    std::fs::write(&config_path, json).map_err(|e| e.to_string())?;
-
+    std::fs::write(config_path, json).map_err(|e| e.to_string())?;
     Ok("installed".into())
+}
+
+/// Append caja entry to Codex TOML config.
+fn install_codex_toml(config_path: &std::path::Path, server_path: &str) -> Result<String, String> {
+    if let Some(parent) = config_path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+
+    let content = if config_path.exists() {
+        std::fs::read_to_string(config_path).map_err(|e| e.to_string())?
+    } else {
+        String::new()
+    };
+
+    if content.contains("[mcp_servers.caja]") {
+        return Ok("already".into());
+    }
+
+    let block = format!(
+        "\n[mcp_servers.caja]\ncommand = \"node\"\nargs = [\"{}\"]\n",
+        server_path.replace('\\', "\\\\").replace('"', "\\\"")
+    );
+
+    let mut new_content = content;
+    if !new_content.is_empty() && !new_content.ends_with('\n') {
+        new_content.push('\n');
+    }
+    new_content.push_str(&block);
+
+    std::fs::write(config_path, new_content).map_err(|e| e.to_string())?;
+    Ok("installed".into())
+}
+
+#[tauri::command]
+fn resolve_mcp_server_path() -> Result<String, String> {
+    resolve_server_path()
+}
+
+#[tauri::command]
+fn install_mcp(client: String) -> Result<String, String> {
+    let server_path = resolve_server_path()?;
+    let home = std::env::var("HOME").map_err(|_| "HOME not set".to_string())?;
+    let home = std::path::PathBuf::from(&home);
+
+    match client.as_str() {
+        "claude-code" => {
+            install_json_config(&home.join(".claude.json"), "mcpServers", &server_path)
+        }
+        "claude-desktop" => {
+            install_json_config(
+                &home.join("Library/Application Support/Claude/claude_desktop_config.json"),
+                "mcpServers",
+                &server_path,
+            )
+        }
+        "cursor" => {
+            install_json_config(&home.join(".cursor/mcp.json"), "mcpServers", &server_path)
+        }
+        "vscode" => {
+            install_json_config(
+                &home.join("Library/Application Support/Code/User/mcp.json"),
+                "servers",
+                &server_path,
+            )
+        }
+        "codex" => {
+            install_codex_toml(&home.join(".codex/config.toml"), &server_path)
+        }
+        _ => Err(format!("Unknown client: {}", client)),
+    }
 }
 
 // Tauri command: set window title + reposition traffic lights (setTitle resets them)
@@ -302,7 +365,7 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
-        .invoke_handler(tauri::generate_handler![mcp_respond, set_menu_check, set_window_title, install_mcp_claude_code])
+        .invoke_handler(tauri::generate_handler![mcp_respond, set_menu_check, set_window_title, install_mcp, resolve_mcp_server_path])
         .setup(|app| {
             // ── Native Menu ──
             let icon = Image::from_bytes(include_bytes!("../icons/128x128@2x.png"))
