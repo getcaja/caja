@@ -176,8 +176,9 @@ export function SelectionOverlay() {
   const showHov = !previewMode && !!hoveredId && hoveredId !== selectedId && !hovIsDescOfSel && !canvasDragId
 
   // Collect component instance IDs for purple outlines
-  const instanceIds = useFrameStore((s) => {
-    if (s.previewMode) return []
+  // Returns a joined string to avoid new-array-per-call (React 19 useSyncExternalStore)
+  const instanceIdsStr = useFrameStore((s) => {
+    if (s.previewMode) return ''
     const ids: string[] = []
     function walk(frame: import('../../types/frame').Frame) {
       if (frame._componentId) ids.push(frame.id)
@@ -186,8 +187,9 @@ export function SelectionOverlay() {
       }
     }
     walk(s.root)
-    return ids
+    return ids.join(',')
   })
+  const instanceIds = instanceIdsStr ? instanceIdsStr.split(',') : undefined
 
   const dragTargetParentId = canvasDragOver?.parentId ?? null
   const showDragGuides = !previewMode && !!canvasDragId && !!dragTargetParentId

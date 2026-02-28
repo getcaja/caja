@@ -80,7 +80,7 @@ function isInsideCanvas(px: number, py: number): boolean {
   return px >= rect.left && px <= rect.right && py >= rect.top && py <= rect.bottom
 }
 
-function resolvePatternCanvasDrop(px: number, py: number) {
+function resolveComponentCanvasDrop(px: number, py: number) {
   const root = useFrameStore.getState().root
   return resolveCanvasDrop(document, px, py, '__snippet__', root, null)
 }
@@ -260,7 +260,7 @@ export function WorkspaceDndProvider({ children }: { children: React.ReactNode }
           if (aType === 'pattern') {
             cancelAnimationFrame(resolveRafRef.current)
             resolveRafRef.current = requestAnimationFrame(() => {
-              const result = resolvePatternCanvasDrop(px, py)
+              const result = resolveComponentCanvasDrop(px, py)
               useFrameStore.getState().setCanvasDragOver(result)
             })
           }
@@ -317,10 +317,16 @@ export function WorkspaceDndProvider({ children }: { children: React.ReactNode }
 
     // Component canvas drop: synchronous resolve at final position
     if (aType === 'pattern' && componentDragFrame && isInsideCanvas(px, py)) {
-      const result = resolvePatternCanvasDrop(px, py)
+      const result = resolveComponentCanvasDrop(px, py)
       cleanupDrag()
       if (result) {
-        store.insertFrameAt(result.parentId, componentDragFrame, result.index, componentDragOrigin ?? undefined)
+        // Mark as instance so the frame links back to the component
+        const frameWithLink = {
+          ...componentDragFrame,
+          _componentId: componentDragOrigin?.patternId ?? dragId,
+          _overrides: {},
+        }
+        store.insertFrameAt(result.parentId, frameWithLink, result.index, componentDragOrigin ?? undefined)
       }
       return
     }
