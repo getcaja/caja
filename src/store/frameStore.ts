@@ -250,8 +250,6 @@ interface FrameStore {
   collapsedIds: Set<string>
   filePath: string | null
   dirty: boolean
-  showSpacingOverlays: boolean
-  showOverlayValues: boolean
   previewMode: boolean
   canvasWidth: number | null
   canvasZoom: number
@@ -309,10 +307,6 @@ interface FrameStore {
   loadFromFileMulti: (pages: Page[], activePageId: string, filePath: string) => void
   setFilePath: (path: string | null) => void
   markClean: () => void
-  toggleSpacingOverlays: () => void
-  toggleOverlayValues: () => void
-  setSpacingOverlays: (value: boolean) => void
-  setOverlayValues: (value: boolean) => void
   togglePreviewMode: () => void
   setPreviewMode: (value: boolean) => void
   setCanvasWidth: (width: number | null) => void
@@ -339,8 +333,6 @@ interface FrameStore {
 const VIEW_PREFS_KEY = 'caja-view-prefs'
 
 interface ViewPrefs {
-  showSpacingOverlays: boolean
-  showOverlayValues: boolean
   previewMode: boolean
   canvasWidth: number | null
   advancedMode: boolean
@@ -352,15 +344,13 @@ function loadViewPrefs(): ViewPrefs {
     if (raw) {
       const parsed = JSON.parse(raw)
       return {
-        showSpacingOverlays: parsed.showSpacingOverlays ?? true,
-        showOverlayValues: parsed.showOverlayValues ?? false,
         previewMode: parsed.previewMode ?? false,
         canvasWidth: parsed.canvasWidth ?? null,
         advancedMode: parsed.advancedMode ?? false,
       }
     }
   } catch (err) { console.warn('Failed to load view preferences:', err) }
-  return { showSpacingOverlays: true, showOverlayValues: false, previewMode: false, canvasWidth: null, advancedMode: false }
+  return { previewMode: false, canvasWidth: null, advancedMode: false }
 }
 
 function saveViewPrefs(prefs: ViewPrefs) {
@@ -406,8 +396,6 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   collapsedIds: new Set(),
   filePath: null,
   dirty: false,
-  showSpacingOverlays: initialViewPrefs.showSpacingOverlays,
-  showOverlayValues: initialViewPrefs.showOverlayValues,
   previewMode: initialViewPrefs.previewMode,
   canvasWidth: initialViewPrefs.canvasWidth,
   canvasZoom: 1,
@@ -814,35 +802,17 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
 
   setFilePath: (path) => set({ filePath: path }),
   markClean: () => set({ dirty: false }),
-  toggleSpacingOverlays: () => set((s) => {
-    const next = !s.showSpacingOverlays
-    saveViewPrefs({ showSpacingOverlays: next, showOverlayValues: s.showOverlayValues, previewMode: s.previewMode, canvasWidth: s.canvasWidth, advancedMode: s.advancedMode })
-    return { showSpacingOverlays: next }
-  }),
-  toggleOverlayValues: () => set((s) => {
-    const next = !s.showOverlayValues
-    saveViewPrefs({ showSpacingOverlays: s.showSpacingOverlays, showOverlayValues: next, previewMode: s.previewMode, canvasWidth: s.canvasWidth, advancedMode: s.advancedMode })
-    return { showOverlayValues: next }
-  }),
-  setSpacingOverlays: (value) => set((s) => {
-    saveViewPrefs({ showSpacingOverlays: value, showOverlayValues: s.showOverlayValues, previewMode: s.previewMode, canvasWidth: s.canvasWidth, advancedMode: s.advancedMode })
-    return { showSpacingOverlays: value }
-  }),
-  setOverlayValues: (value) => set((s) => {
-    saveViewPrefs({ showSpacingOverlays: s.showSpacingOverlays, showOverlayValues: value, previewMode: s.previewMode, canvasWidth: s.canvasWidth, advancedMode: s.advancedMode })
-    return { showOverlayValues: value }
-  }),
   togglePreviewMode: () => set((s) => {
     const next = !s.previewMode
-    saveViewPrefs({ showSpacingOverlays: s.showSpacingOverlays, showOverlayValues: s.showOverlayValues, previewMode: next, canvasWidth: s.canvasWidth, advancedMode: s.advancedMode })
+    saveViewPrefs({ previewMode: next, canvasWidth: s.canvasWidth, advancedMode: s.advancedMode })
     return { previewMode: next, ...(next ? { selectedId: null, hoveredId: null } : {}) }
   }),
   setPreviewMode: (value) => set((s) => {
-    saveViewPrefs({ showSpacingOverlays: s.showSpacingOverlays, showOverlayValues: s.showOverlayValues, previewMode: value, canvasWidth: s.canvasWidth, advancedMode: s.advancedMode })
+    saveViewPrefs({ previewMode: value, canvasWidth: s.canvasWidth, advancedMode: s.advancedMode })
     return { previewMode: value, ...(value ? { selectedId: null, hoveredId: null } : {}) }
   }),
   setCanvasWidth: (width) => set((s) => {
-    saveViewPrefs({ showSpacingOverlays: s.showSpacingOverlays, showOverlayValues: s.showOverlayValues, previewMode: s.previewMode, canvasWidth: width, advancedMode: s.advancedMode })
+    saveViewPrefs({ previewMode: s.previewMode, canvasWidth: width, advancedMode: s.advancedMode })
     return { canvasWidth: width }
   }),
   setCanvasZoom: (zoom) => set({ canvasZoom: zoom }),
@@ -856,7 +826,7 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   setPatternDragFrame: (frame, origin) => set({ patternDragFrame: frame, patternDragOrigin: origin ?? null }),
   setTreePanelTab: (tab) => set({ treePanelTab: tab }),
   setAdvancedMode: (value) => set((s) => {
-    saveViewPrefs({ showSpacingOverlays: s.showSpacingOverlays, showOverlayValues: s.showOverlayValues, previewMode: s.previewMode, canvasWidth: s.canvasWidth, advancedMode: value })
+    saveViewPrefs({ previewMode: s.previewMode, canvasWidth: s.canvasWidth, advancedMode: value })
     return { advancedMode: value }
   }),
 

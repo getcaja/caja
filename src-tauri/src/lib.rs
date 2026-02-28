@@ -372,11 +372,13 @@ pub fn run() {
                 .select_all()
                 .build()?;
 
-            let spacing_overlays_item = CheckMenuItemBuilder::with_id("toggle-spacing-overlays", "Spacing Overlays")
-                .accelerator("CmdOrCtrl+Shift+O")
+            let toggle_left_panel = CheckMenuItemBuilder::with_id("toggle-left-panel", "Left Panel")
+                .checked(true)
+                .accelerator("CmdOrCtrl+\\")
                 .build(app)?;
-            let overlay_values_item = CheckMenuItemBuilder::with_id("toggle-overlay-values", "Overlay Values")
-                .accelerator("CmdOrCtrl+Shift+V")
+            let toggle_right_panel = CheckMenuItemBuilder::with_id("toggle-right-panel", "Right Panel")
+                .checked(true)
+                .accelerator("CmdOrCtrl+Shift+\\")
                 .build(app)?;
 
             let advanced_mode_item = CheckMenuItemBuilder::with_id("toggle-advanced-mode", "Advanced Mode")
@@ -398,8 +400,8 @@ pub fn run() {
                 .build()?;
 
             let view_menu = SubmenuBuilder::new(app, "View")
-                .item(&spacing_overlays_item)
-                .item(&overlay_values_item)
+                .item(&toggle_left_panel)
+                .item(&toggle_right_panel)
                 .separator()
                 .item(&advanced_mode_item)
                 .separator()
@@ -525,7 +527,7 @@ pub fn run() {
 
             // For check menu items, emit their new checked state
             match id {
-                "toggle-spacing-overlays" | "toggle-overlay-values" | "toggle-advanced-mode" => {
+                "toggle-left-panel" | "toggle-right-panel" | "toggle-advanced-mode" => {
                     use tauri::menu::MenuItemKind;
                     if let Some(menu) = app.menu() {
                         for item in menu.items().unwrap_or_default() {

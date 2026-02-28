@@ -59,6 +59,8 @@ function App() {
   const initial = useRef(loadPanelState())
   const [leftWidth, setLeftWidth] = useState(initial.current.leftWidth)
   const [rightWidth, setRightWidth] = useState(initial.current.rightWidth)
+  const [leftCollapsed, setLeftCollapsed] = useState(false)
+  const [rightCollapsed, setRightCollapsed] = useState(false)
 
   // Persist panel state on change
   useEffect(() => {
@@ -164,9 +166,9 @@ function App() {
     // Sync initial view prefs to native menu check states
     if (isTauri) {
       import('@tauri-apps/api/core').then(({ invoke }) => {
-        const { showSpacingOverlays, showOverlayValues, advancedMode } = useFrameStore.getState()
-        safeMenuSync(invoke, 'toggle-spacing-overlays', showSpacingOverlays)
-        safeMenuSync(invoke, 'toggle-overlay-values', showOverlayValues)
+        const { advancedMode } = useFrameStore.getState()
+        safeMenuSync(invoke, 'toggle-left-panel', true)
+        safeMenuSync(invoke, 'toggle-right-panel', true)
         safeMenuSync(invoke, 'toggle-advanced-mode', advancedMode)
         // Sync theme radio checks
         const activeId = getActiveTheme().id
@@ -240,13 +242,12 @@ function App() {
       // Check menu events (View toggles) — payload is [id, checked]
       listen<[string, boolean]>('menu-check-event', (e) => {
         const [id, checked] = e.payload
-        const store = useFrameStore.getState()
-        if (id === 'toggle-spacing-overlays') {
-          store.setSpacingOverlays(checked)
-        } else if (id === 'toggle-overlay-values') {
-          store.setOverlayValues(checked)
+        if (id === 'toggle-left-panel') {
+          setLeftCollapsed(!checked)
+        } else if (id === 'toggle-right-panel') {
+          setRightCollapsed(!checked)
         } else if (id === 'toggle-advanced-mode') {
-          store.setAdvancedMode(checked)
+          useFrameStore.getState().setAdvancedMode(checked)
         }
       }).then((fn) => {
         if (active) unlisteners.push(fn); else fn()
@@ -338,22 +339,22 @@ function App() {
         e.preventDefault()
         handleOpen()
       }
-      // View toggles (keyboard shortcut — also sync native menu check state)
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'o') {
+      // Panel toggles
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === '\\') {
         e.preventDefault()
-        useFrameStore.getState().toggleSpacingOverlays()
-        if (isTauri) {
-          const checked = useFrameStore.getState().showSpacingOverlays
-          import('@tauri-apps/api/core').then(({ invoke }) => safeMenuSync(invoke, 'toggle-spacing-overlays', checked))
-        }
+        setLeftCollapsed((v) => {
+          const next = !v
+          if (isTauri) import('@tauri-apps/api/core').then(({ invoke }) => safeMenuSync(invoke, 'toggle-left-panel', !next))
+          return next
+        })
       }
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'v') {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '\\') {
         e.preventDefault()
-        useFrameStore.getState().toggleOverlayValues()
-        if (isTauri) {
-          const checked = useFrameStore.getState().showOverlayValues
-          import('@tauri-apps/api/core').then(({ invoke }) => safeMenuSync(invoke, 'toggle-overlay-values', checked))
-        }
+        setRightCollapsed((v) => {
+          const next = !v
+          if (isTauri) import('@tauri-apps/api/core').then(({ invoke }) => safeMenuSync(invoke, 'toggle-right-panel', !next))
+          return next
+        })
       }
       // Advanced mode toggle
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'a') {
@@ -432,7 +433,7 @@ function App() {
         {/* Main panels */}
         <div className="flex-1 flex overflow-hidden">
           <WorkspaceDndProvider>
-            {!previewMode && (
+            {!previewMode && !leftCollapsed && (
               <div style={{ width: leftWidth }} className="shrink-0 border-r border-border relative">
                 <TreePanel onExportLibrary={() => setShowExportLibrary(true)} />
                 <div
@@ -444,7 +445,7 @@ function App() {
             <div className="flex-1 flex flex-col overflow-hidden">
               <Canvas />
             </div>
-            {!previewMode && (
+            {!previewMode && !rightCollapsed && (
               <div style={{ width: rightWidth }} className="shrink-0 border-l border-border relative">
                 <div
                   className="absolute top-0 -left-[3px] bottom-0 w-[7px] cursor-col-resize hover:bg-accent/40 transition-colors z-10"
