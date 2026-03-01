@@ -11,10 +11,10 @@ function DesignBar() {
   const prevZoom = [...ZOOM_LEVELS].reverse().find((z) => z < canvasZoom - 0.001)
   const nextZoom = ZOOM_LEVELS.find((z) => z > canvasZoom + 0.001)
 
-  const btn = 'h-6 w-6 flex items-center justify-center rounded text-text-muted hover:text-text-secondary hover:bg-surface-2 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-text-muted'
+  const btn = 'w-5 h-5 flex items-center justify-center shrink-0 rounded text-text-muted hover:text-text-secondary hover:bg-surface-2 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-text-muted'
 
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border shrink-0">
+    <div className="flex items-center gap-1 px-4 py-1.5 border-b border-border shrink-0">
       <button
         onClick={() => {
           const store = useFrameStore.getState()
@@ -62,7 +62,10 @@ export function RightPanel() {
   return (
     <div className="h-full bg-surface-1/80 flex flex-col">
       <DesignBar />
-      <div className="flex-1 overflow-y-auto">
+      <div
+        className="flex-1 overflow-y-auto"
+        onClick={(e) => { if (e.target === e.currentTarget) useFrameStore.getState().select(useFrameStore.getState().root.id) }}
+      >
         <ErrorBoundary fallback="inline" resetKey={selectedId}>
           <Properties />
         </ErrorBoundary>

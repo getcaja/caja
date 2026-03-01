@@ -16,19 +16,20 @@ export function Properties() {
   const multiCount = useFrameStore((s) => s.selectedIds.size)
   const rootId = useFrameStore((s) => s.getRootId())
   const advancedMode = useFrameStore((s) => s.advancedMode)
-  const tab = useFrameStore((s) => s.treePanelTab)
+  const pageSelected = useFrameStore((s) => s.pageSelected)
 
   if (multiCount > 1) return null
 
   if (!selected) {
-    return tab === 'layers' ? <PagePanel /> : null
+    if (pageSelected) return <PagePanel />
+    return null
   }
 
   const isRoot = selected.id === rootId
   const hasTextStyles = 'fontSize' in selected
 
   return (
-    <div key={selected.id} className="h-full overflow-y-auto">
+    <div key={selected.id} className="">
       <ElementSection frame={selected} isRoot={isRoot} />
       <PositionSection frame={selected} />
       <LayoutSection frame={selected} isRoot={isRoot} />

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { ChevronRight, ChevronDown } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import { INPUT_CLASS } from './hooks/useInlineEdit'
 
 export interface TreeRowProps {
@@ -23,12 +23,12 @@ export interface TreeRowProps {
   chevron?: 'expanded' | 'collapsed' | 'leaf' | 'none'
   onChevronClick?: () => void
   trailing?: React.ReactNode
+  indent?: number
   isDragging?: boolean
   dropPosition?: 'before' | 'after' | 'inside' | null
   className?: string
   rowRef?: React.Ref<HTMLDivElement>
   dndProps?: Record<string, unknown>
-  colorDot?: string
   selectionStyle?: 'accent' | 'neutral'
 }
 
@@ -52,12 +52,12 @@ export function TreeRow({
   chevron,
   onChevronClick,
   trailing,
+  indent,
   isDragging,
   dropPosition,
   className,
   rowRef,
   dndProps,
-  colorDot,
   selectionStyle = 'accent',
 }: TreeRowProps) {
   const internalRef = useRef<HTMLDivElement>(null)
@@ -81,35 +81,32 @@ export function TreeRow({
     dropIndicator = (
       <div
         className="absolute left-0 right-0 top-0 h-[2px] bg-accent z-10 pointer-events-none"
-        style={{ marginLeft: depth * 16 + 8 }}
+        style={{ marginLeft: indent ?? (depth * 16 + 16) }}
       />
     )
   } else if (dropPosition === 'after') {
     dropIndicator = (
       <div
         className="absolute left-0 right-0 bottom-0 h-[2px] bg-accent z-10 pointer-events-none"
-        style={{ marginLeft: depth * 16 + 8 }}
+        style={{ marginLeft: indent ?? (depth * 16 + 16) }}
       />
     )
   }
 
-  // Chevron rendering
+  // Chevron — absolute positioned, visible on hover (always visible when collapsed)
   let chevronEl: React.ReactNode = null
-  if (chevron && chevron !== 'none') {
+  if (chevron === 'expanded' || chevron === 'collapsed') {
+    const isExpanded = chevron === 'expanded'
     chevronEl = (
-      <span
-        className={`w-3.5 h-4 flex items-center justify-center shrink-0 text-text-muted select-none ${chevron !== 'leaf' ? 'cursor-pointer' : ''}`}
+      <ChevronRight
+        size={12}
+        className={`absolute top-1/2 -translate-y-1/2 text-text-muted cursor-pointer select-none opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto ${isExpanded ? 'rotate-90' : ''}`}
+        style={{ left: depth * 16 + 4 }}
         onClick={(e: React.MouseEvent) => {
-          if (chevron !== 'leaf') {
-            e.stopPropagation()
-            onChevronClick?.()
-          }
+          e.stopPropagation()
+          onChevronClick?.()
         }}
-      >
-        {chevron === 'expanded' ? <ChevronDown size={10} /> :
-         chevron === 'collapsed' ? <ChevronRight size={10} /> :
-         <ChevronRight size={10} className="opacity-50" />}
-      </span>
+      />
     )
   }
 
@@ -119,14 +116,14 @@ export function TreeRow({
       <div
         ref={rowRef ?? internalRef}
         {...(dndProps ?? {})}
-        className={`flex items-center gap-1.5 py-1 cursor-default group ${
+        className={`relative flex items-center gap-1 py-1 cursor-default group ${
           isSelected
             ? `${selectionStyle === 'neutral' ? 'tree-node-selected-neutral' : isMulti ? 'tree-node-multi-selected' : 'tree-node-selected'} text-text-primary`
             : dropPosition === 'inside'
               ? 'bg-[var(--color-accent)]/10 outline outline-1 outline-[var(--color-accent)]/40'
               : 'hover:bg-[var(--color-accent)]/8 text-text-secondary hover:text-text-primary'
         } ${className ?? ''}`}
-        style={{ paddingLeft: depth * 16 + 8, paddingRight: 8 }}
+        style={{ paddingLeft: indent ?? (depth * 16 + 16), paddingRight: 16 }}
         onClick={onClick}
         onDoubleClick={onDoubleClick}
         onContextMenu={onContextMenu}
@@ -135,16 +132,8 @@ export function TreeRow({
       >
         {chevronEl}
 
-        {/* Type icon */}
-        {icon && <span className="shrink-0">{icon}</span>}
-
-        {/* Color dot */}
-        {colorDot && (
-          <span
-            className="w-2 h-2 rounded-full shrink-0"
-            style={{ backgroundColor: colorDot }}
-          />
-        )}
+        {/* Type icon — fixed width slot */}
+        {icon && <span className="w-4 h-4 flex items-center justify-center shrink-0">{icon}</span>}
 
         {/* Name / inline edit */}
         {editing ? (

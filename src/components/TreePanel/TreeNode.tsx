@@ -164,7 +164,6 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
         className={rowClassName}
         rowRef={setNodeRef}
         dndProps={{ ...listeners, ...attributes }}
-        colorDot={frame.bg?.value || undefined}
       />
 
       {/* Right-click context menu (fixed position) */}

@@ -93,7 +93,7 @@ export function CanvasInline() {
       store.addChild(store.root.id, 'box')
       return
     }
-    store.select(null)
+    store.select(store.root.id)
   }, [])
 
   const ctxMenu = useCanvasContextMenu()

@@ -26,18 +26,19 @@ export function PageNode({ page }: PageNodeProps) {
   const handleClick = () => {
     if (!isActive) setActivePage(page.id)
     select(null)
+    useFrameStore.setState({ pageSelected: true })
   }
 
   return (
     <>
       <TreeRow
         id={page.id}
-        depth={1}
+        depth={0}
+        indent={16}
         name={page.name}
         nameClassName="font-semibold"
-        isSelected={isActive}
+        isSelected={false}
         isMulti={false}
-        selectionStyle="neutral"
         editing={nameEdit.editing}
         editValue={nameEdit.value}
         onEditChange={nameEdit.setValue}
@@ -46,7 +47,6 @@ export function PageNode({ page }: PageNodeProps) {
         onClick={handleClick}
         onDoubleClick={() => nameEdit.start(page.name)}
         onContextMenu={ctxMenu.open}
-        chevron="none"
         trailing={isActive ? <span className="w-5 h-5 flex items-center justify-center shrink-0"><Check size={12} className="text-text-secondary" /></span> : undefined}
       />
 

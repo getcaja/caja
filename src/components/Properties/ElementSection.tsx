@@ -136,7 +136,7 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
   }
 
   return (
-    <div className="p-3 border-b border-border flex flex-col gap-2">
+    <div className="px-4 py-3 border-b border-border flex flex-col gap-2">
       {/* Header: badge + name + eye */}
       <div className="flex items-center gap-2">
         <span className={`text-[12px] px-1.5 py-0.5 rounded-md font-medium ${TYPE_BADGE_STYLES[key]}`}>

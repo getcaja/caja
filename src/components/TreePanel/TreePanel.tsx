@@ -10,27 +10,27 @@ import { ComponentIOModal } from './ComponentIOModal'
 import { PageNode } from './PageNode'
 import { useContextMenu } from './hooks/useContextMenu'
 import { useTreeKeyboard } from './hooks/useTreeKeyboard'
-import { Plus, X, ChevronRight } from 'lucide-react'
+import { Plus, X, ChevronRight, ChevronsDownUp, ChevronsUpDown } from 'lucide-react'
 
-function TreeSection({ label, collapsed, onToggle, children }: {
+function TreeSection({ label, collapsed, onToggle, trailing, children }: {
   label: string
   collapsed: boolean
   onToggle: () => void
+  trailing?: React.ReactNode
   children?: React.ReactNode
 }) {
   return (
-    <div className="py-1.5 border-b border-border">
-      <div className={`px-2${collapsed ? '' : ' mb-1'}`}>
-        <span
-          className="inline-flex items-center gap-1 cursor-pointer select-none"
-          onClick={onToggle}
-        >
+    <div className="py-3 border-b border-border">
+      <div className={`px-4${collapsed ? '' : ' mb-2'}`}>
+        <div className="relative flex items-center group/section cursor-pointer select-none" onClick={onToggle}>
           <ChevronRight
             size={12}
-            className={`text-text-muted transition-transform duration-150 ${collapsed ? '' : 'rotate-90'}`}
+            className={`absolute -left-3 top-1/2 -translate-y-1/2 text-text-muted opacity-0 pointer-events-none group-hover/section:opacity-100 group-hover/section:pointer-events-auto ${collapsed ? '' : 'rotate-90'}`}
           />
           <span className="c-section-title">{label}</span>
-        </span>
+          <span className="flex-1" />
+          <span onClick={(e) => e.stopPropagation()}>{trailing}</span>
+        </div>
       </div>
       {!collapsed && children}
     </div>
@@ -44,6 +44,9 @@ export function TreePanel() {
   const selectedId = useFrameStore((s) => s.selectedId)
   const addChild = useFrameStore((s) => s.addChild)
   const addPage = useFrameStore((s) => s.addPage)
+  const collapseAll = useFrameStore((s) => s.collapseAll)
+  const expandAll = useFrameStore((s) => s.expandAll)
+  const collapsedIds = useFrameStore((s) => s.collapsedIds)
   const tab = useFrameStore((s) => s.treePanelTab)
   const setTab = useFrameStore((s) => s.setTreePanelTab)
   const editingComponentId = useFrameStore((s) => s.editingComponentId)
@@ -246,7 +249,7 @@ export function TreePanel() {
             className="w-5 h-5 shrink-0 c-icon-btn hover:text-text-primary hover:bg-surface-2"
             title="Close"
           >
-            <X size={14} />
+            <X size={12} />
           </button>
         </div>
         <TreeDndProvider>
@@ -263,16 +266,16 @@ export function TreePanel() {
 
   return (
     <div className="h-full bg-surface-1/80 flex flex-col">
-      <div className="pl-5 pr-2 py-2.5 border-b border-border flex items-center justify-between">
+      <div className="pl-2.5 pr-4 py-2.5 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-1">
           <button
-            className={`text-[12px] font-semibold px-1.5 py-0.5 rounded transition-colors ${tab === 'layers' ? 'text-text-primary' : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'}`}
+            className={`text-[12px] font-semibold px-1.5 py-0.5 rounded ${tab === 'layers' ? 'text-text-primary' : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'}`}
             onClick={() => setTab('layers')}
           >
             File
           </button>
           <button
-            className={`text-[12px] font-semibold px-1.5 py-0.5 rounded transition-colors ${tab === 'components' ? 'text-text-primary' : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'}`}
+            className={`text-[12px] font-semibold px-1.5 py-0.5 rounded ${tab === 'components' ? 'text-text-primary' : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'}`}
             onClick={handleAssetsTab}
           >
             Assets
@@ -285,7 +288,7 @@ export function TreePanel() {
             onClick={openAddMenu}
             title="Add element"
           >
-            <Plus size={14} />
+            <Plus size={12} />
           </button>
         )}
         {tab === 'components' && (
@@ -295,7 +298,7 @@ export function TreePanel() {
             onClick={openComponentMenu}
             title="Add"
           >
-            <Plus size={14} />
+            <Plus size={12} />
           </button>
         )}
       </div>
@@ -342,9 +345,25 @@ export function TreePanel() {
 
       {tab === 'layers' && (
         <TreeDndProvider>
-          <div className="flex-1 overflow-y-auto flex flex-col">
+          <div
+            className="flex-1 overflow-y-auto flex flex-col"
+            onClick={(e) => { if (e.target === e.currentTarget) useFrameStore.getState().select(useFrameStore.getState().root.id) }}
+          >
             {/* Pages section */}
-            <TreeSection label="Pages" collapsed={pagesCollapsed} onToggle={() => setPagesCollapsed((v) => !v)}>
+            <TreeSection
+              label="Pages"
+              collapsed={pagesCollapsed}
+              onToggle={() => setPagesCollapsed((v) => !v)}
+              trailing={
+                <button
+                  className="w-5 h-5 c-icon-btn text-text-muted hover:text-accent hover:bg-accent/10"
+                  onClick={() => addPage()}
+                  title="Add page"
+                >
+                  <Plus size={12} />
+                </button>
+              }
+            >
               <div className="pb-0.5 flex flex-col gap-0.5">
                 {pages.filter((p) => !p.isComponentPage).map((page) => (
                   <PageNode key={page.id} page={page} />
@@ -353,10 +372,23 @@ export function TreePanel() {
             </TreeSection>
 
             {/* Layers section */}
-            <TreeSection label="Layers" collapsed={layersCollapsed} onToggle={() => setLayersCollapsed((v) => !v)}>
+            <TreeSection
+              label="Layers"
+              collapsed={layersCollapsed}
+              onToggle={() => setLayersCollapsed((v) => !v)}
+              trailing={
+                <button
+                  className="w-5 h-5 c-icon-btn text-text-muted hover:text-accent hover:bg-accent/10"
+                  onClick={() => collapsedIds.size > 0 ? expandAll() : collapseAll()}
+                  title={collapsedIds.size > 0 ? 'Expand all' : 'Collapse all'}
+                >
+                  {collapsedIds.size > 0 ? <ChevronsUpDown size={12} /> : <ChevronsDownUp size={12} />}
+                </button>
+              }
+            >
               <div
                 className="flex-1 overflow-y-auto pb-0.5"
-                onClick={(e) => { if (e.target === e.currentTarget) useFrameStore.getState().select(null) }}
+                onClick={(e) => { if (e.target === e.currentTarget) useFrameStore.getState().select(useFrameStore.getState().root.id) }}
               >
                 {activePage && (
                   <TreeNode frame={activePage.root} depth={0} isRoot />

@@ -246,6 +246,7 @@ interface FrameStore {
   activePageId: string
   selectedId: string | null
   selectedIds: Set<string>
+  pageSelected: boolean
   hoveredId: string | null
   collapsedIds: Set<string>
   filePath: string | null
@@ -574,6 +575,7 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   activePageId: initialPageId,
   selectedId: null,
   selectedIds: new Set<string>(),
+  pageSelected: false,
   hoveredId: null,
   collapsedIds: new Set(initialViewPrefs.collapsedIds),
   filePath: null,
@@ -601,7 +603,7 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   past: {},
   future: {},
 
-  select: (id) => set({ selectedId: id, selectedIds: new Set(id ? [id] : []) }),
+  select: (id) => set({ selectedId: id, selectedIds: new Set(id ? [id] : []), pageSelected: false }),
 
   selectMulti: (id) => set((state) => {
     const next = new Set(state.selectedIds)
