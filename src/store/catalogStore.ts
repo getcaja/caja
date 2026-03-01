@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Component, LibraryMeta, ComponentData } from '../types/component'
+import type { Component, ComponentData } from '../types/component'
 import type { Frame } from '../types/frame'
 
 const STORAGE_KEY = 'caja-components-state'
@@ -22,11 +22,6 @@ interface CatalogStore {
   undo: () => void
   redo: () => void
 
-  // --- Library system (app-level, read-only) ---
-  libraryIndex: LibraryMeta[]           // lightweight metadata for installed libs
-  libraries: Map<string, ComponentData>   // loaded library data (lazy-loaded)
-  activeLibraryId: string | null         // null = no library selected; libraryId when viewing a library
-
   // --- Internal component operations ---
   allComponents: () => Component[]
   getComponent: (id: string) => Component | undefined
@@ -48,19 +43,6 @@ interface CatalogStore {
   resetComponents: () => void
   loadComponents: (data: ComponentData | undefined) => void
   getComponentData: () => ComponentData
-
-  // --- Export memory (per-session, no persistence) ---
-  lastExport: { path: string; name: string; author: string; description: string; version: string } | null
-  setLastExport: (config: { path: string; name: string; author: string; description: string; version: string }) => void
-
-  // --- Library operations ---
-  setActiveLibraryId: (id: string | null) => void
-  installLibrary: (meta: LibraryMeta, data: ComponentData) => void
-  removeLibrary: (id: string) => void
-  getLibraryComponents: (libraryId: string) => Component[]
-  getLibraryComponent: (libraryId: string, componentId: string) => Component | undefined
-  setLibraryIndex: (index: LibraryMeta[]) => void
-  setLibraryData: (libraryId: string, data: ComponentData) => void
 }
 
 const MAX_CATALOG_HISTORY = 50
@@ -267,33 +249,12 @@ export const useCatalogStore = create<CatalogStore>((_set, get) => {
     }
   }
 
-  function getLibraryComponentsImpl(libraryId: string): Component[] {
-    const libData = get().libraries.get(libraryId)
-    if (!libData) return []
-    return libData.items || []
-  }
-
-  function getLibraryComponentImpl(libraryId: string, componentId: string): Component | undefined {
-    const libData = get().libraries.get(libraryId)
-    if (!libData) return undefined
-    return (libData.items || []).find((p) => p.id === componentId)
-  }
-
   return {
     components: [],
     order: [],
     emptyCategories: [],
     highlightId: null,
     highlightIds: new Set(),
-
-    // Library state
-    libraryIndex: [],
-    libraries: new Map(),
-    activeLibraryId: null,
-
-    // Export memory
-    lastExport: null,
-    setLastExport: (config) => set({ lastExport: config }),
 
     // Undo / redo
     _past: [],
@@ -429,49 +390,10 @@ export const useCatalogStore = create<CatalogStore>((_set, get) => {
       const end = Math.max(anchorIdx, targetIdx)
       return { highlightIds: new Set(visibleOrder.slice(start, end + 1)) }
     }),
-
-    // --- Library operations ---
-
-    setActiveLibraryId: (id) => set({ activeLibraryId: id }),
-
-    installLibrary: (meta, data) => {
-      set((state) => {
-        const newIndex = [...state.libraryIndex.filter((m) => m.id !== meta.id), meta]
-        const newLibraries = new Map(state.libraries)
-        newLibraries.set(meta.id, data)
-        return { libraryIndex: newIndex, libraries: newLibraries }
-      })
-    },
-
-    removeLibrary: (id) => {
-      set((state) => {
-        const newIndex = state.libraryIndex.filter((m) => m.id !== id)
-        const newLibraries = new Map(state.libraries)
-        newLibraries.delete(id)
-        let newActiveLibraryId = state.activeLibraryId
-        if (state.activeLibraryId === id) {
-          newActiveLibraryId = newIndex.length > 0 ? newIndex[0].id : null
-        }
-        return { libraryIndex: newIndex, libraries: newLibraries, activeLibraryId: newActiveLibraryId }
-      })
-    },
-
-    getLibraryComponents: getLibraryComponentsImpl,
-    getLibraryComponent: getLibraryComponentImpl,
-
-    setLibraryIndex: (index) => set({ libraryIndex: index }),
-
-    setLibraryData: (libraryId, data) => {
-      set((state) => {
-        const newLibraries = new Map(state.libraries)
-        newLibraries.set(libraryId, data)
-        return { libraries: newLibraries }
-      })
-    },
   }
 })
 
-// Auto-save components + libraryIndex to localStorage
+// Auto-save components to localStorage
 let componentSaveTimeout: ReturnType<typeof setTimeout>
 useCatalogStore.subscribe((state) => {
   clearTimeout(componentSaveTimeout)
@@ -480,25 +402,20 @@ useCatalogStore.subscribe((state) => {
       items: state.components,
       order: state.order,
       categories: state.emptyCategories,
-      libraryIndex: state.libraryIndex,
     }))
   }, 500)
 })
 
-// Load components + libraryIndex from localStorage on startup (called from App.tsx loadFromStorage flow)
+// Load components from localStorage on startup (called from App.tsx loadFromStorage flow)
 export function loadComponentsFromStorage() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
       const data = JSON.parse(raw)
       useCatalogStore.getState().loadComponents(data)
-      if (Array.isArray(data.libraryIndex) && data.libraryIndex.length > 0) {
-        useCatalogStore.getState().setLibraryIndex(data.libraryIndex)
-      }
     }
   } catch (err) {
     console.warn('Failed to load components from storage, resetting:', err)
     localStorage.removeItem(STORAGE_KEY)
   }
 }
-

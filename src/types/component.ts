@@ -14,20 +14,8 @@ export interface Component {
   createdAt: string // ISO date
 }
 
-/** Lightweight metadata for an installed library (persisted in library-index.json) */
-export interface LibraryMeta {
-  id: string
-  name: string
-  author?: string
-  version?: string
-  description?: string
-  importedAt: string   // ISO date
-  filePath: string     // path within app data dir
-}
-
 export interface ComponentData {
   items: Component[]
   order: string[]
   categories: string[]
 }
-

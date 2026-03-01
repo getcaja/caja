@@ -6,14 +6,13 @@ import { RightPanel } from './components/RightPanel/RightPanel'
 import { ExportModal } from './components/Export/ExportModal'
 import { TooltipProvider } from './components/ui/Tooltip'
 import { saveFile, saveFileAs, openFile } from './lib/fileOps'
-import { saveLibrary } from './lib/libraryOps'
 import { useCatalogStore, loadComponentsFromStorage } from './store/catalogStore'
-import { ExportLibraryModal } from './components/TreePanel/ExportLibraryModal'
 import { WorkspaceDndProvider } from './components/TreePanel/WorkspaceDndContext'
 
 import { startMcpBridge, stopMcpBridge } from './mcp/bridge'
 import { TitleBar } from './components/TitleBar/TitleBar'
 import { ZOOM_LEVELS } from './components/Canvas/ZoomBar'
+import { canvasZoomTo } from './components/Canvas/CanvasInline'
 import { switchTheme, getThemePreference } from './lib/theme'
 import { checkForUpdates } from './lib/updater'
 
@@ -55,7 +54,6 @@ function safeMenuSync(invoke: (cmd: string, args?: Record<string, unknown>) => P
 
 function App() {
   const [showExport, setShowExport] = useState(false)
-  const [showExportLibrary, setShowExportLibrary] = useState(false)
   const initial = useRef(loadPanelState())
   const [leftWidth, setLeftWidth] = useState(initial.current.leftWidth)
   const [rightWidth, setRightWidth] = useState(initial.current.rightWidth)
@@ -159,13 +157,6 @@ function App() {
     loadComponentsFromStorage()
     startMcpBridge()
 
-    // Load installed libraries (Tauri only)
-    if (isTauri) {
-      import('./components/TreePanel/ManageLibrariesModal').then(({ initializeLibraries }) => {
-        initializeLibraries().catch((err) => console.warn('Library initialization failed:', err))
-      }).catch((err) => console.warn('Failed to load library module:', err))
-    }
-
     // Sync initial view prefs to native menu check states
     if (isTauri) {
       import('@tauri-apps/api/core').then(({ invoke }) => {
@@ -212,24 +203,6 @@ function App() {
             break
           case 'check-for-updates':
             checkForUpdates()
-            break
-          case 'save-library': {
-            const lastExport = useCatalogStore.getState().lastExport
-            if (lastExport) {
-              const data = useCatalogStore.getState().getComponentData()
-              saveLibrary(data, {
-                name: lastExport.name,
-                author: lastExport.author || undefined,
-                description: lastExport.description || undefined,
-                version: lastExport.version || undefined,
-              }, lastExport.path).catch((err) => console.error('Failed to save library:', err))
-            } else {
-              setShowExportLibrary(true)
-            }
-            break
-          }
-          case 'export-library':
-            setShowExportLibrary(true)
             break
           case 'collapse-all':
             useFrameStore.getState().collapseAll()
@@ -281,8 +254,8 @@ function App() {
       const key = e.key.toLowerCase()
       if ((e.metaKey || e.ctrlKey) && key === 'z' && !e.shiftKey) {
         e.preventDefault()
-        const { treePanelTab, editingComponentId } = useFrameStore.getState()
-        if ((treePanelTab === 'components' || treePanelTab === 'libraries') && !editingComponentId) {
+        const { editingComponentId } = useFrameStore.getState()
+        if (editingComponentId) {
           useCatalogStore.getState().undo()
         } else {
           undo()
@@ -290,12 +263,29 @@ function App() {
       }
       if ((e.metaKey || e.ctrlKey) && key === 'z' && e.shiftKey) {
         e.preventDefault()
-        const { treePanelTab, editingComponentId } = useFrameStore.getState()
-        if ((treePanelTab === 'components' || treePanelTab === 'libraries') && !editingComponentId) {
+        const { editingComponentId } = useFrameStore.getState()
+        if (editingComponentId) {
           useCatalogStore.getState().redo()
         } else {
           redo()
         }
+      }
+      // Group / Ungroup
+      if ((e.metaKey || e.ctrlKey) && key === 'g' && !e.shiftKey) {
+        e.preventDefault()
+        const s = useFrameStore.getState()
+        const allIds = new Set(s.selectedIds)
+        if (s.selectedId) allIds.add(s.selectedId)
+        if (allIds.size > 1) {
+          s.wrapSelectedInFrame()
+        } else if (allIds.size === 1) {
+          s.wrapInFrame([...allIds][0])
+        }
+      }
+      if ((e.metaKey || e.ctrlKey) && key === 'g' && e.shiftKey) {
+        e.preventDefault()
+        const s = useFrameStore.getState()
+        if (s.selectedId) s.ungroupFrame(s.selectedId)
       }
       if ((e.metaKey || e.ctrlKey) && e.key === 's' && !e.shiftKey) {
         e.preventDefault()
@@ -341,22 +331,46 @@ function App() {
         e.preventDefault()
         useFrameStore.getState().togglePreviewMode()
       }
+      // Canvas tool shortcuts — only when no modifier and not typing in an input
+      if (!e.metaKey && !e.ctrlKey && !e.altKey) {
+        const tag = (e.target as HTMLElement).tagName
+        const isEditable = (e.target as HTMLElement).isContentEditable
+        if (tag !== 'INPUT' && tag !== 'TEXTAREA' && !isEditable) {
+          if (key === 'f' && !e.shiftKey) {
+            e.preventDefault()
+            const s = useFrameStore.getState()
+            if (!s.previewMode) s.setCanvasTool('frame')
+          }
+          if (key === 't') {
+            e.preventDefault()
+            const s = useFrameStore.getState()
+            if (!s.previewMode) s.setCanvasTool('text')
+          }
+          if (key === 'v' || key === 'escape') {
+            const s = useFrameStore.getState()
+            if (s.canvasTool !== 'pointer') {
+              e.preventDefault()
+              s.setCanvasTool('pointer')
+            }
+          }
+        }
+      }
       // Zoom: Cmd+= / Cmd+- / Cmd+0
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && (e.key === '=' || e.key === '+')) {
         e.preventDefault()
-        const { canvasZoom, setCanvasZoom } = useFrameStore.getState()
-        const idx = ZOOM_LEVELS.indexOf(canvasZoom)
-        if (idx < ZOOM_LEVELS.length - 1) setCanvasZoom(ZOOM_LEVELS[idx + 1])
+        const { canvasZoom } = useFrameStore.getState()
+        const next = ZOOM_LEVELS.find((z) => z > canvasZoom + 0.001)
+        if (next != null) canvasZoomTo(next)
       }
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === '-') {
         e.preventDefault()
-        const { canvasZoom, setCanvasZoom } = useFrameStore.getState()
-        const idx = ZOOM_LEVELS.indexOf(canvasZoom)
-        if (idx > 0) setCanvasZoom(ZOOM_LEVELS[idx - 1])
+        const { canvasZoom } = useFrameStore.getState()
+        const prev = [...ZOOM_LEVELS].reverse().find((z) => z < canvasZoom - 0.001)
+        if (prev != null) canvasZoomTo(prev)
       }
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === '0') {
         e.preventDefault()
-        useFrameStore.getState().setCanvasZoom(1)
+        canvasZoomTo(1)
       }
     }
 
@@ -405,7 +419,7 @@ function App() {
           <WorkspaceDndProvider>
             {!previewMode && !leftCollapsed && (
               <div style={{ width: leftWidth }} className="shrink-0 border-r border-border relative">
-                <TreePanel onExportLibrary={() => setShowExportLibrary(true)} />
+                <TreePanel />
                 <div
                   className="absolute top-0 -right-[3px] bottom-0 w-[7px] cursor-col-resize hover:bg-accent/40 transition-colors z-10"
                   onPointerDown={(e) => startDrag('left', e)}
@@ -427,9 +441,8 @@ function App() {
           </WorkspaceDndProvider>
         </div>
 
-        {/* Export modals */}
+        {/* Export modal */}
         <ExportModal open={showExport} onOpenChange={setShowExport} />
-        <ExportLibraryModal open={showExportLibrary} onOpenChange={setShowExportLibrary} />
 
       </div>
     </TooltipProvider>

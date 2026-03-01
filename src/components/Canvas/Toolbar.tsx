@@ -1,12 +1,10 @@
 import { useState, useRef } from 'react'
 import {
   Monitor, Tablet, Smartphone,
-  Plus, Component, Minus, Pencil, Eye, Folder,
-  Frame as FrameIcon, Type, Link, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ChevronDown,
+  Plus, MousePointer2, Type, Eye, Folder,
+  Frame as FrameIcon, Link, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ChevronDown,
 } from 'lucide-react'
-import { useFrameStore, isRootId, findInTree } from '../../store/frameStore'
-import { useCatalogStore } from '../../store/catalogStore'
-import { ZOOM_LEVELS } from './ZoomBar'
+import { useFrameStore, isRootId } from '../../store/frameStore'
 import type { Frame } from '../../types/frame'
 
 type ElementType = 'box' | 'text' | 'image' | 'button' | 'input' | 'textarea' | 'select' | 'link'
@@ -58,7 +56,7 @@ function DropdownButton({ icon, title, isActive, menu, children }: {
     setOpen((p) => !p)
   }
 
-  const btnIconCls = 'w-7 h-7 flex items-center justify-center rounded-md transition-colors'
+  const btnIconCls = 'w-7 h-7 flex items-center justify-center rounded-md'
 
   return (
     <>
@@ -96,22 +94,18 @@ function Divider() {
 export function Toolbar() {
   const previewMode = useFrameStore((s) => s.previewMode)
   const setPreviewMode = useFrameStore((s) => s.setPreviewMode)
+  const canvasTool = useFrameStore((s) => s.canvasTool)
+  const setCanvasTool = useFrameStore((s) => s.setCanvasTool)
   const canvasWidth = useFrameStore((s) => s.canvasWidth)
   const setCanvasWidth = useFrameStore((s) => s.setCanvasWidth)
-  const canvasZoom = useFrameStore((s) => s.canvasZoom)
-  const setCanvasZoom = useFrameStore((s) => s.setCanvasZoom)
   const addChild = useFrameStore((s) => s.addChild)
   const getSelected = useFrameStore((s) => s.getSelected)
   const selectedId = useFrameStore((s) => s.selectedId)
   const addPage = useFrameStore((s) => s.addPage)
-  const treePanelTab = useFrameStore((s) => s.treePanelTab)
 
   // Current responsive icon
   const currentBp = BREAKPOINTS.find((bp) => bp.width === canvasWidth) ?? BREAKPOINTS[0]
   const CurrentIcon = currentBp.icon
-
-  // Zoom helpers
-  const zoomIdx = ZOOM_LEVELS.indexOf(canvasZoom)
 
   const handleInsert = (type: ElementType) => {
     let parentId = useFrameStore.getState().root.id
@@ -129,8 +123,7 @@ export function Toolbar() {
     useFrameStore.getState().setTreePanelTab('elements')
   }
 
-  const btnIcon = 'w-7 h-7 flex items-center justify-center rounded-md transition-colors'
-  const btnMuted = `${btnIcon} text-text-muted hover:text-text-secondary hover:bg-surface-2`
+  const btnIcon = 'w-7 h-7 flex items-center justify-center rounded-md'
 
   return (
     // No transform on this wrapper — flexbox centering so fixed/absolute children work correctly
@@ -167,30 +160,6 @@ export function Toolbar() {
                 ))}
               </>}
             />
-
-            <button
-              onClick={() => {
-                const store = useFrameStore.getState()
-                if (store.selectedId) {
-                  const frame = findInTree(store.root, store.selectedId)
-                  if (frame) {
-                    useCatalogStore.getState().saveComponent(frame.name || 'Component', [], frame)
-                    store.setTreePanelTab('components')
-                    return
-                  }
-                }
-                // No selection — just toggle the tab
-                if (treePanelTab !== 'components') {
-                  store.setTreePanelTab('components')
-                } else {
-                  store.setTreePanelTab('elements')
-                }
-              }}
-              className={`${btnIcon} ${treePanelTab === 'components' ? 'bg-surface-3 text-text-primary' : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'}`}
-              title={selectedId ? 'Save selected as component' : 'Components'}
-            >
-              <Component size={14} />
-            </button>
           </div>
           <Divider />
         </div>
@@ -199,23 +168,37 @@ export function Toolbar() {
         <div className="flex items-center gap-0.5 py-1 px-1">
           <div className="flex items-center bg-surface-0/50 rounded-md">
             <button
-              onClick={() => setPreviewMode(false)}
-              className={`${btnIcon} ${!previewMode ? 'bg-surface-3 text-text-primary' : 'text-text-muted hover:text-text-secondary'}`}
-              title="Edit mode"
+              onClick={() => { setPreviewMode(false); setCanvasTool('pointer') }}
+              className={`${btnIcon} ${!previewMode && canvasTool === 'pointer' ? 'bg-surface-3 text-text-primary' : 'text-text-muted hover:text-text-secondary'}`}
+              title="Pointer (V)"
             >
-              <Pencil size={14} />
+              <MousePointer2 size={14} />
             </button>
             <button
-              onClick={() => setPreviewMode(true)}
+              onClick={() => { setPreviewMode(false); setCanvasTool('frame') }}
+              className={`${btnIcon} ${!previewMode && canvasTool === 'frame' ? 'bg-surface-3 text-text-primary' : 'text-text-muted hover:text-text-secondary'}`}
+              title="Frame (F)"
+            >
+              <FrameIcon size={14} />
+            </button>
+            <button
+              onClick={() => { setPreviewMode(false); setCanvasTool('text') }}
+              className={`${btnIcon} ${!previewMode && canvasTool === 'text' ? 'bg-surface-3 text-text-primary' : 'text-text-muted hover:text-text-secondary'}`}
+              title="Text (T)"
+            >
+              <Type size={14} />
+            </button>
+            <button
+              onClick={() => { setPreviewMode(true); setCanvasTool('pointer') }}
               className={`${btnIcon} ${previewMode ? 'bg-surface-3 text-text-primary' : 'text-text-muted hover:text-text-secondary'}`}
-              title="Preview mode (⌘⇧P)"
+              title="Preview (⌘⇧P)"
             >
               <Eye size={14} />
             </button>
           </div>
         </div>
 
-        {/* Section 3: Viewport + Zoom */}
+        {/* Section 3: Viewport */}
         <div style={{
           display: 'flex', alignItems: 'center', overflow: 'hidden',
           maxWidth: previewMode ? 0 : 300, opacity: previewMode ? 0 : 1,
@@ -242,26 +225,6 @@ export function Toolbar() {
                 )
               })}
             />
-
-            <button
-              onClick={() => zoomIdx > 0 && setCanvasZoom(ZOOM_LEVELS[zoomIdx - 1])}
-              disabled={zoomIdx <= 0}
-              className="p-1 rounded-md text-text-muted hover:text-text-secondary hover:bg-surface-2 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-text-muted transition-colors"
-              title="Zoom out (⌘−)"
-            >
-              <Minus size={12} />
-            </button>
-            <span className="text-[11px] text-text-secondary min-w-[36px] text-center tabular-nums">
-              {Math.round(canvasZoom * 100)}%
-            </span>
-            <button
-              onClick={() => zoomIdx < ZOOM_LEVELS.length - 1 && setCanvasZoom(ZOOM_LEVELS[zoomIdx + 1])}
-              disabled={zoomIdx >= ZOOM_LEVELS.length - 1}
-              className="p-1 rounded-md text-text-muted hover:text-text-secondary hover:bg-surface-2 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-text-muted transition-colors"
-              title="Zoom in (⌘+)"
-            >
-              <Plus size={12} />
-            </button>
           </div>
         </div>
       </div>

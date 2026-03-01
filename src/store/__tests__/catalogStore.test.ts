@@ -9,8 +9,8 @@ vi.stubGlobal('localStorage', {
 })
 
 import { useCatalogStore, type ComponentData } from '../catalogStore'
-import type { Component, LibraryMeta } from '../../types/component'
-import type { Frame, BoxElement, TextElement } from '../../types/frame'
+import type { Component } from '../../types/component'
+import type { Frame, TextElement } from '../../types/frame'
 
 // --- Helpers ---
 
@@ -46,32 +46,8 @@ function makeComponent(overrides?: Partial<Component>): Component {
   }
 }
 
-function makeLibraryMeta(overrides?: Partial<LibraryMeta>): LibraryMeta {
-  return {
-    id: crypto.randomUUID(),
-    name: 'Test Library',
-    importedAt: new Date().toISOString(),
-    filePath: 'test-lib.cjl',
-    ...overrides,
-  }
-}
-
-function makeComponentData(components: Component[]): ComponentData {
-  return {
-    items: components,
-    order: components.map((p) => p.id),
-    categories: [],
-  }
-}
-
 function resetStore() {
-  const store = useCatalogStore.getState()
-  store.loadComponents(undefined)
-  store.setActiveLibraryId(null)
-  // Clear libraries
-  for (const meta of store.libraryIndex) {
-    store.removeLibrary(meta.id)
-  }
+  useCatalogStore.getState().loadComponents(undefined)
 }
 
 // --- Tests ---
@@ -268,139 +244,6 @@ describe('catalogStore', () => {
     })
   })
 
-  describe('library operations', () => {
-    it('installLibrary adds library to index and data', () => {
-      const meta = makeLibraryMeta({ name: 'UI Kit' })
-      const components = [makeComponent({ name: 'Button' })]
-      const data = makeComponentData(components)
-
-      useCatalogStore.getState().installLibrary(meta, data)
-      const store = useCatalogStore.getState()
-
-      expect(store.libraryIndex).toHaveLength(1)
-      expect(store.libraryIndex[0].name).toBe('UI Kit')
-      expect(store.libraries.get(meta.id)).toBe(data)
-    })
-
-    it('installLibrary replaces existing library with same id', () => {
-      const meta = makeLibraryMeta({ name: 'UI Kit v1' })
-      const data1 = makeComponentData([makeComponent({ name: 'Button v1' })])
-      const data2 = makeComponentData([makeComponent({ name: 'Button v2' })])
-
-      useCatalogStore.getState().installLibrary(meta, data1)
-      useCatalogStore.getState().installLibrary(meta, data2)
-
-      const store = useCatalogStore.getState()
-      expect(store.libraryIndex).toHaveLength(1)
-      expect(store.libraries.get(meta.id)!.items[0].name).toBe('Button v2')
-    })
-
-    it('removeLibrary removes from index and data', () => {
-      const meta = makeLibraryMeta()
-      useCatalogStore.getState().installLibrary(meta, makeComponentData([]))
-
-      useCatalogStore.getState().removeLibrary(meta.id)
-      const store = useCatalogStore.getState()
-      expect(store.libraryIndex).toHaveLength(0)
-      expect(store.libraries.has(meta.id)).toBe(false)
-    })
-
-    it('removeLibrary switches to next library if viewing removed library', () => {
-      const meta1 = makeLibraryMeta({ name: 'Lib 1' })
-      const meta2 = makeLibraryMeta({ name: 'Lib 2' })
-      useCatalogStore.getState().installLibrary(meta1, makeComponentData([]))
-      useCatalogStore.getState().installLibrary(meta2, makeComponentData([]))
-      useCatalogStore.getState().setActiveLibraryId(meta1.id)
-      expect(useCatalogStore.getState().activeLibraryId).toBe(meta1.id)
-
-      useCatalogStore.getState().removeLibrary(meta1.id)
-      expect(useCatalogStore.getState().activeLibraryId).toBe(meta2.id)
-    })
-
-    it('removeLibrary sets null when no libraries remain', () => {
-      const meta = makeLibraryMeta()
-      useCatalogStore.getState().installLibrary(meta, makeComponentData([]))
-      useCatalogStore.getState().setActiveLibraryId(meta.id)
-
-      useCatalogStore.getState().removeLibrary(meta.id)
-      expect(useCatalogStore.getState().activeLibraryId).toBeNull()
-    })
-
-    it('setActiveLibraryId changes active library', () => {
-      useCatalogStore.getState().setActiveLibraryId('lib-123')
-      expect(useCatalogStore.getState().activeLibraryId).toBe('lib-123')
-    })
-
-    it('setActiveLibraryId accepts null', () => {
-      useCatalogStore.getState().setActiveLibraryId('lib-123')
-      useCatalogStore.getState().setActiveLibraryId(null)
-      expect(useCatalogStore.getState().activeLibraryId).toBeNull()
-    })
-
-    it('getLibraryComponents returns components for a specific library', () => {
-      const meta = makeLibraryMeta()
-      const components = [makeComponent({ name: 'A' }), makeComponent({ name: 'B' })]
-      useCatalogStore.getState().installLibrary(meta, makeComponentData(components))
-
-      const result = useCatalogStore.getState().getLibraryComponents(meta.id)
-      expect(result).toHaveLength(2)
-    })
-
-    it('getLibraryComponents returns empty for missing library', () => {
-      expect(useCatalogStore.getState().getLibraryComponents('nope')).toEqual([])
-    })
-
-    it('getLibraryComponent finds a specific component in a library', () => {
-      const meta = makeLibraryMeta()
-      const p = makeComponent({ name: 'Target' })
-      useCatalogStore.getState().installLibrary(meta, makeComponentData([p]))
-
-      const result = useCatalogStore.getState().getLibraryComponent(meta.id, p.id)
-      expect(result?.name).toBe('Target')
-    })
-
-    it('getLibraryComponent returns undefined for missing component', () => {
-      const meta = makeLibraryMeta()
-      useCatalogStore.getState().installLibrary(meta, makeComponentData([]))
-      expect(useCatalogStore.getState().getLibraryComponent(meta.id, 'nope')).toBeUndefined()
-    })
-  })
-
-  describe('isolation — CRUD does not affect libraries', () => {
-    it('saveComponent does not modify library data', () => {
-      const meta = makeLibraryMeta()
-      const libData = makeComponentData([makeComponent({ name: 'Lib Item' })])
-      useCatalogStore.getState().installLibrary(meta, libData)
-
-      useCatalogStore.getState().saveComponent('Internal', [], makeFrame())
-
-      const lib = useCatalogStore.getState().libraries.get(meta.id)
-      expect(lib!.items).toHaveLength(1)
-      expect(lib!.items[0].name).toBe('Lib Item')
-    })
-
-    it('deleteComponent does not affect library data', () => {
-      const meta = makeLibraryMeta()
-      const libComp = makeComponent({ name: 'Lib' })
-      useCatalogStore.getState().installLibrary(meta, makeComponentData([libComp]))
-
-      const internal = useCatalogStore.getState().saveComponent('Internal', [], makeFrame())
-      useCatalogStore.getState().deleteComponent(internal.id)
-
-      expect(useCatalogStore.getState().getLibraryComponents(meta.id)).toHaveLength(1)
-    })
-
-    it('resetComponents does not affect library data', () => {
-      const meta = makeLibraryMeta()
-      useCatalogStore.getState().installLibrary(meta, makeComponentData([makeComponent()]))
-      useCatalogStore.getState().saveComponent('Card', [], makeFrame())
-
-      useCatalogStore.getState().resetComponents()
-      expect(useCatalogStore.getState().allComponents()).toHaveLength(0)
-      expect(useCatalogStore.getState().getLibraryComponents(meta.id)).toHaveLength(1)
-    })
-  })
-
   describe('importComponents', () => {
     it('imports novel components and skips duplicates', () => {
       const store = useCatalogStore.getState()
@@ -413,25 +256,6 @@ describe('catalogStore', () => {
       useCatalogStore.getState().importComponents(incoming)
       expect(useCatalogStore.getState().allComponents()).toHaveLength(2)
       expect(useCatalogStore.getState().allComponents().map((p) => p.name)).toContain('New')
-    })
-  })
-
-  describe('setLibraryIndex / setLibraryData', () => {
-    it('setLibraryIndex replaces the index', () => {
-      const index = [makeLibraryMeta({ name: 'A' }), makeLibraryMeta({ name: 'B' })]
-      useCatalogStore.getState().setLibraryIndex(index)
-      expect(useCatalogStore.getState().libraryIndex).toHaveLength(2)
-    })
-
-    it('setLibraryData adds or replaces library data', () => {
-      const id = 'lib-1'
-      const data = makeComponentData([makeComponent({ name: 'X' })])
-      useCatalogStore.getState().setLibraryData(id, data)
-      expect(useCatalogStore.getState().libraries.get(id)!.items[0].name).toBe('X')
-
-      const data2 = makeComponentData([makeComponent({ name: 'Y' })])
-      useCatalogStore.getState().setLibraryData(id, data2)
-      expect(useCatalogStore.getState().libraries.get(id)!.items[0].name).toBe('Y')
     })
   })
 })

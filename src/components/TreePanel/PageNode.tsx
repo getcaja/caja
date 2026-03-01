@@ -3,7 +3,7 @@ import { useFrameStore } from '../../store/frameStore'
 import { useContextMenu } from './hooks/useContextMenu'
 import { useInlineEdit } from './hooks/useInlineEdit'
 import { TreeRow } from './TreeRow'
-import { Check, Copy, File, Trash2 } from 'lucide-react'
+import { Check, Copy, Trash2 } from 'lucide-react'
 
 interface PageNodeProps {
   page: Page
@@ -32,14 +32,12 @@ export function PageNode({ page }: PageNodeProps) {
     <>
       <TreeRow
         id={page.id}
-        depth={0}
-        icon={<File size={12} />}
+        depth={1}
         name={page.name}
         nameClassName="font-semibold"
         isSelected={isActive}
         isMulti={false}
-        mergeTop={false}
-        mergeBottom={false}
+        selectionStyle="neutral"
         editing={nameEdit.editing}
         editValue={nameEdit.value}
         onEditChange={nameEdit.setValue}
@@ -49,7 +47,7 @@ export function PageNode({ page }: PageNodeProps) {
         onDoubleClick={() => nameEdit.start(page.name)}
         onContextMenu={ctxMenu.open}
         chevron="none"
-        trailing={isActive ? <Check size={12} className="shrink-0 text-text-secondary" /> : undefined}
+        trailing={isActive ? <span className="w-5 h-5 flex items-center justify-center shrink-0"><Check size={12} className="text-text-secondary" /></span> : undefined}
       />
 
       {ctxMenu.backdrop}

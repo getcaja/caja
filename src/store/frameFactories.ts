@@ -201,7 +201,7 @@ export function createBox(overrides?: Partial<BoxElement>): BoxElement {
     className: '',
     htmlId: '',
     tag: overrides?.tag || 'div',
-    display: 'block',
+    display: 'flex',
     direction: 'column',
     justify: 'start',
     align: 'stretch',

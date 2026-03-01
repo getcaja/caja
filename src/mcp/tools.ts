@@ -3,15 +3,10 @@
 
 import { useFrameStore, findInTree, cloneWithNewIds, normalizeFrame } from '../store/frameStore'
 import { useCatalogStore } from '../store/catalogStore'
-import type { ComponentData } from '../store/catalogStore'
 import type { Frame, SizeValue } from '../types/frame'
-import type { LibraryMeta } from '../types/component'
-import type { CjlFileData } from '../lib/libraryOps'
 import type { ToolName } from './schema'
 import { parseTailwindClasses } from '../utils/parseTailwindClasses'
-import { ensureLibrariesDir, saveLibraryIndex } from '../lib/libraryOps'
-import { writeTextFile } from '@tauri-apps/plugin-fs'
-import { join } from '@tauri-apps/api/path'
+import { exportLibrary } from '../lib/libraryOps'
 import { downloadAsset, isExternalUrl } from '../lib/assetOps'
 import {
   sanitizeDVNum, sanitizeSpacingValues, sanitizeBorderRadius,
@@ -358,7 +353,7 @@ const handlers: Record<string, ToolHandler> = {
     if (allSuccess) {
       const response: ToolResult = { success: true, data: { count: results.length, ids } }
       // Include full results for read-only operations so data isn't lost
-      const READ_TOOLS = new Set(['list_components', 'list_library_components', 'get_tree', 'get_selected'])
+      const READ_TOOLS = new Set(['list_components', 'get_tree', 'get_selected'])
       const readResults: Record<number, unknown> = {}
       for (let i = 0; i < operations.length; i++) {
         if (READ_TOOLS.has(operations[i].tool) && results[i]?.data != null) {
@@ -396,20 +391,17 @@ const handlers: Record<string, ToolHandler> = {
   },
 
   insert_component(params) {
-    const { component_id, parent_id, index, overrides, library_id } = params as {
+    const { component_id, parent_id, index, overrides } = params as {
       component_id: string
       parent_id: string
       index?: number
       overrides?: Record<string, { properties?: Record<string, unknown>; classes?: string }>
-      library_id?: string
     }
     if (!component_id) return { success: false, error: 'component_id is required' }
 
     const catalogStore = useCatalogStore.getState()
-    const component = library_id
-      ? catalogStore.getLibraryComponent(library_id, component_id)
-      : catalogStore.getComponent(component_id)
-    if (!component) return { success: false, error: `Component ${component_id} not found${library_id ? ` in library ${library_id}` : ''}` }
+    const component = catalogStore.getComponent(component_id)
+    if (!component) return { success: false, error: `Component ${component_id} not found` }
 
     const store = getStore()
     const parent = findInTree(store.root, parent_id)
@@ -417,7 +409,7 @@ const handlers: Record<string, ToolHandler> = {
       return { success: false, error: `Parent ${parent_id} not found or is not a box` }
     }
 
-    const origin = { libraryId: library_id || 'internal', componentId: component.id }
+    const origin = { libraryId: 'internal', componentId: component.id }
     const normalizedFrame = normalizeFrame(component.frame)
     if (index !== undefined) {
       store.insertFrameAt(parent_id, normalizedFrame, index, origin)
@@ -518,31 +510,6 @@ const handlers: Record<string, ToolHandler> = {
 
   // --- Library tools ---
 
-  list_libraries() {
-    const catalogStore = useCatalogStore.getState()
-    return {
-      success: true,
-      data: catalogStore.libraryIndex.map(({ id, name, author, version, description, importedAt }) => ({
-        id, name, author, version, description, importedAt,
-      })),
-    }
-  },
-
-  list_library_components(params) {
-    const { library_id } = params as { library_id: string }
-    if (!library_id) return { success: false, error: 'library_id is required' }
-
-    const catalogStore = useCatalogStore.getState()
-    const meta = catalogStore.libraryIndex.find((m) => m.id === library_id)
-    if (!meta) return { success: false, error: `Library ${library_id} not found` }
-
-    const components = catalogStore.getLibraryComponents(library_id)
-    return {
-      success: true,
-      data: components.map(({ id, name, tags, meta, createdAt }) => ({ id, name, tags, meta, createdAt })),
-    }
-  },
-
   async export_library(params) {
     const { name, author, description, version } = params as {
       name: string; author?: string; description?: string; version?: string
@@ -556,92 +523,12 @@ const handlers: Record<string, ToolHandler> = {
       return { success: false, error: 'No internal components to export. Save components first with save_component.' }
     }
 
-    const id = crypto.randomUUID()
-    const fileName = `${id}.cjl`
-
-    const cjl: CjlFileData = {
-      version: 1,
-      name,
-      author,
-      description,
-      libraryVersion: version,
-      components: componentData,
-    }
-
-    const dir = await ensureLibrariesDir()
-    const filePath = await join(dir, fileName)
-    await writeTextFile(filePath, JSON.stringify(cjl, null, 2))
-
-    const meta: LibraryMeta = {
-      id,
-      name,
-      author,
-      version,
-      description,
-      importedAt: new Date().toISOString(),
-      filePath: fileName,
-    }
-
-    catalogStore.installLibrary(meta, componentData)
-    await saveLibraryIndex([...catalogStore.libraryIndex])
+    const path = await exportLibrary(componentData, { name, author, description, version })
+    if (!path) return { success: false, error: 'Export cancelled' }
 
     return {
       success: true,
-      data: { id, name, componentCount: componentData.items.length },
-      hint: `Library installed. Use list_library_components({ library_id: "${id}" }) to see components, or insert_component({ component_id: "...", parent_id: "...", library_id: "${id}" }) to stamp from it.`,
-    }
-  },
-
-  async install_library(params) {
-    const { name, author, description, version, components } = params as {
-      name: string; author?: string; description?: string; version?: string
-      components: ComponentData
-    }
-    if (!name) return { success: false, error: 'name is required' }
-    if (!components || !Array.isArray(components.items)) {
-      return { success: false, error: 'components.items array is required' }
-    }
-
-    const id = crypto.randomUUID()
-    const fileName = `${id}.cjl`
-
-    const componentData: ComponentData = {
-      items: components.items,
-      order: components.order || components.items.map((c) => c.id),
-      categories: components.categories || [],
-    }
-
-    const cjl: CjlFileData = {
-      version: 1,
-      name,
-      author,
-      description,
-      libraryVersion: version,
-      components: componentData,
-    }
-
-    const dir = await ensureLibrariesDir()
-    const filePath = await join(dir, fileName)
-    await writeTextFile(filePath, JSON.stringify(cjl, null, 2))
-
-    const meta: LibraryMeta = {
-      id,
-      name,
-      author,
-      version,
-      description,
-      importedAt: new Date().toISOString(),
-      filePath: fileName,
-    }
-
-    const catalogStore = useCatalogStore.getState()
-    catalogStore.installLibrary(meta, componentData)
-    await saveLibraryIndex([...catalogStore.libraryIndex])
-
-    return {
-      success: true,
-      data: { id, name, componentCount: componentData.items.length },
-      hint: `Library installed. Use list_library_components({ library_id: "${id}" }) to browse, or insert_component with library_id to stamp components.`,
+      data: { path, name, componentCount: componentData.items.length },
     }
   },
 

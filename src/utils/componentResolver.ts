@@ -9,7 +9,6 @@ import { useCatalogStore } from '../store/catalogStore'
  * Lookup order:
  * 1. Components page (masters created via createComponent)
  * 2. catalogStore (components saved via "Save as Component")
- * 3. Library data (installed .cjl libraries)
  *
  * If the frame is not an instance, returns it unchanged.
  */
@@ -24,22 +23,12 @@ export function resolveInstance(
     ? findInTree(componentPageRoot, frame._componentId)
     : null
 
-  // Fallback: look in catalogStore (internal components + libraries)
+  // Fallback: look in catalogStore (internal components)
   if (!master) {
     const catalog = useCatalogStore.getState()
-    // Check internal components
     const comp = catalog.getComponent(frame._componentId)
     if (comp) {
       master = comp.frame
-    } else {
-      // Check libraries
-      for (const [libId] of catalog.libraries) {
-        const libComp = catalog.getLibraryComponent(libId, frame._componentId)
-        if (libComp) {
-          master = libComp.frame
-          break
-        }
-      }
     }
   }
 

@@ -2,13 +2,12 @@ import { useState, useMemo, useCallback, useEffect, useRef, forwardRef, useImper
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { useFrameStore, findInTree, cloneWithNewIds, normalizeFrame } from '../../store/frameStore'
 import { useCatalogStore } from '../../store/catalogStore'
-import { ChevronDown, Diamond, Folder } from 'lucide-react'
+import { ChevronDown, ChevronRight, Diamond, Folder } from 'lucide-react'
 import type { Component } from '../../types/component'
 import { ComponentPreview } from './ComponentPreview'
 import { useComponentsData } from './useComponentsData'
 import { ComponentContextMenu } from './ComponentContextMenu'
 import { useWorkspaceDnd } from './WorkspaceDndContext'
-import { useTreeMerge } from './hooks/useTreeMerge'
 import { TreeRow } from './TreeRow'
 
 export type ComponentSource =
@@ -241,8 +240,6 @@ export const ComponentsPanel = forwardRef<ComponentsPanelHandle, ComponentsPanel
     return order
   }, [uncategorized, allTags, categorized, collapsedTags])
 
-  const { mergeTop, mergeBottom } = useTreeMerge(highlightIds, visibleOrder)
-
   const handleClick = useCallback((id: string, e: React.MouseEvent) => {
     if (e.shiftKey) highlightRange(id, visibleOrder)
     else if (e.metaKey) highlightMulti(id)
@@ -271,16 +268,12 @@ export const ComponentsPanel = forwardRef<ComponentsPanelHandle, ComponentsPanel
               editValue={editValue}
               isHighlighted={highlightIds.has(s.id)}
               isMulti={highlightIds.size > 1}
-              mergeTop={mergeTop.has(s.id)}
-              mergeBottom={mergeBottom.has(s.id)}
               onClick={(e) => handleClick(s.id, e)}
               onEditChange={setEditValue}
               onEditCommit={commitComponentRename}
               onEditCancel={() => setEditingId(null)}
-              onDoubleClick={() => {
-                if (onEditComponent) { onEditComponent(s.id); return }
-                if (!readOnly) startComponentRename(s)
-              }}
+              onDoubleClick={() => { if (!readOnly) startComponentRename(s) }}
+              onEnterEditMode={onEditComponent ? () => onEditComponent(s.id) : undefined}
               onContextMenu={(x, y) => setContextMenu({ x, y, type: 'component', component: s })}
               onPreviewEnter={onPreviewEnter}
               onPreviewLeave={onPreviewLeave}
@@ -304,8 +297,6 @@ export const ComponentsPanel = forwardRef<ComponentsPanelHandle, ComponentsPanel
                 editCategoryValue={editCategoryValue}
                 isHighlighted={highlightIds.has(`__cat:${tag}`)}
                 isMulti={highlightIds.size > 1}
-                mergeTop={mergeTop.has(`__cat:${tag}`)}
-                mergeBottom={mergeBottom.has(`__cat:${tag}`)}
                 onToggle={() => toggleTag(tag)}
                 onClick={(e) => handleClick(`__cat:${tag}`, e)}
                 onEditChange={setEditCategoryValue}
@@ -329,16 +320,12 @@ export const ComponentsPanel = forwardRef<ComponentsPanelHandle, ComponentsPanel
                     editValue={editValue}
                     isHighlighted={highlightIds.has(s.id)}
                     isMulti={highlightIds.size > 1}
-                    mergeTop={mergeTop.has(s.id)}
-                    mergeBottom={mergeBottom.has(s.id)}
                     onClick={(e) => handleClick(s.id, e)}
                     onEditChange={setEditValue}
                     onEditCommit={commitComponentRename}
                     onEditCancel={() => setEditingId(null)}
-                    onDoubleClick={() => {
-                      if (onEditComponent) { onEditComponent(s.id); return }
-                      if (!readOnly) startComponentRename(s)
-                    }}
+                    onDoubleClick={() => { if (!readOnly) startComponentRename(s) }}
+                    onEnterEditMode={onEditComponent ? () => onEditComponent(s.id) : undefined}
                     onContextMenu={(x, y) => setContextMenu({ x, y, type: 'component', component: s })}
                     onPreviewEnter={onPreviewEnter}
                     onPreviewLeave={onPreviewLeave}
@@ -357,8 +344,6 @@ export const ComponentsPanel = forwardRef<ComponentsPanelHandle, ComponentsPanel
               name=""
               isSelected={false}
               isMulti={false}
-              mergeTop={false}
-              mergeBottom={false}
               editing={true}
               editValue={editCategoryValue}
               onEditChange={setEditCategoryValue}
@@ -419,7 +404,7 @@ export const ComponentsPanel = forwardRef<ComponentsPanelHandle, ComponentsPanel
 
 function CategoryRow({
   tag, items, readOnly, isCollapsed, isEditingCat, editCategoryValue,
-  isHighlighted, isMulti, mergeTop, mergeBottom,
+  isHighlighted, isMulti,
   onToggle, onClick, onEditChange, onEditCommit, onEditCancel,
   onDoubleClick, onDeleteCategory, onContextMenu, children,
 }: {
@@ -431,8 +416,6 @@ function CategoryRow({
   editCategoryValue: string
   isHighlighted: boolean
   isMulti?: boolean
-  mergeTop?: boolean
-  mergeBottom?: boolean
   onToggle: () => void
   onClick: (e: React.MouseEvent) => void
   onEditChange: (v: string) => void
@@ -478,8 +461,6 @@ function CategoryRow({
         name={tag}
         isSelected={isHighlighted}
         isMulti={isMulti ?? false}
-        mergeTop={mergeTop ?? false}
-        mergeBottom={mergeBottom ?? false}
         editing={isEditingCat}
         editValue={editCategoryValue}
         onEditChange={onEditChange}
@@ -507,9 +488,9 @@ function CategoryRow({
 
 function ComponentRow({
   component, depth, readOnly, isEditing, editValue,
-  isHighlighted, isMulti, mergeTop, mergeBottom,
+  isHighlighted, isMulti,
   onClick, onEditChange, onEditCommit, onEditCancel, onDoubleClick,
-  onContextMenu, onPreviewEnter, onPreviewLeave,
+  onEnterEditMode, onContextMenu, onPreviewEnter, onPreviewLeave,
 }: {
   component: Component
   depth: number
@@ -518,13 +499,12 @@ function ComponentRow({
   editValue: string
   isHighlighted: boolean
   isMulti?: boolean
-  mergeTop?: boolean
-  mergeBottom?: boolean
   onClick: (e: React.MouseEvent) => void
   onEditChange: (v: string) => void
   onEditCommit: () => void
   onEditCancel: () => void
   onDoubleClick: () => void
+  onEnterEditMode?: () => void
   onContextMenu: (x: number, y: number) => void
   onPreviewEnter?: (component: Component, y: number) => void
   onPreviewLeave?: () => void
@@ -570,8 +550,6 @@ function ComponentRow({
         name={component.name}
         isSelected={isHighlighted}
         isMulti={isMulti ?? false}
-        mergeTop={mergeTop ?? false}
-        mergeBottom={mergeBottom ?? false}
         editing={isEditing}
         editValue={editValue}
         onEditChange={onEditChange}
@@ -582,7 +560,15 @@ function ComponentRow({
         onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onContextMenu(e.clientX, e.clientY) }}
         isDragging={isDragging}
         dropPosition={isOver ? overPosition : null}
-        trailing={<div className="w-5 shrink-0" />}
+        trailing={onEnterEditMode ? (
+          <button
+            className="w-5 h-5 c-icon-btn shrink-0 hidden group-hover:flex text-text-muted hover:text-text-secondary"
+            onClick={(e) => { e.stopPropagation(); onEnterEditMode() }}
+            title="Edit component"
+          >
+            <ChevronRight size={12} />
+          </button>
+        ) : <div className="w-5 shrink-0" />}
         rowRef={mergedRef}
         dndProps={{ ...listeners, ...attributes }}
       />

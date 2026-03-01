@@ -233,14 +233,13 @@ export const toolSchemas = {
 
   insert_component: {
     name: 'insert_component',
-    description: 'Insert a component into the tree. Clones the component frame with new IDs and adds it as a child of parent_id. Use overrides to customize cloned children by name (e.g. set content, classes) without extra update calls. Use library_id to insert from an external library.',
+    description: 'Insert a component into the tree. Clones the component frame with new IDs and adds it as a child of parent_id. Use overrides to customize cloned children by name (e.g. set content, classes) without extra update calls.',
     inputSchema: {
       type: 'object' as const,
       properties: {
         component_id: { type: 'string', description: 'ID of the component to insert' },
         parent_id: { type: 'string', description: 'ID of the parent box to insert into' },
         index: { type: 'number', description: 'Position index within the parent. If omitted, appends at the end.' },
-        library_id: { type: 'string', description: 'Optional library ID to insert from an external library instead of internal components' },
         overrides: {
           type: 'object',
           description: 'Map of frame name → patch. Each patch can have "properties" (object) and/or "classes" (Tailwind string). Matches children by name in the cloned tree. Example: { "price": { "properties": { "content": "$49" } }, "cta": { "classes": "bg-violet-600" } }',
@@ -289,7 +288,7 @@ export const toolSchemas = {
 
   new_file: {
     name: 'new_file',
-    description: 'Reset the project to a blank state (equivalent to File > New). Clears all pages, frames, and internal components. Libraries are preserved.',
+    description: 'Reset the project to a blank state (equivalent to File > New). Clears all pages, frames, and internal components.',
     inputSchema: {
       type: 'object' as const,
       properties: {},
@@ -342,31 +341,9 @@ export const toolSchemas = {
   },
 
   // --- Library tools ---
-  list_libraries: {
-    name: 'list_libraries',
-    description: 'List installed component libraries. Returns lightweight metadata (id, name, author, version, description) for each library.',
-    inputSchema: {
-      type: 'object' as const,
-      properties: {},
-    },
-  },
-
-  list_library_components: {
-    name: 'list_library_components',
-    description: 'List components from a specific installed library. Returns component metadata without full frame data.',
-    inputSchema: {
-      type: 'object' as const,
-      properties: {
-        library_id: { type: 'string', description: 'ID of the library to list components from' },
-        tag: { type: 'string', description: 'Optional tag to filter by' },
-      },
-      required: ['library_id'],
-    },
-  },
-
   export_library: {
     name: 'export_library',
-    description: 'Package all internal components into a new installed library. The library is persisted as a .cjl file and added to the library index. Returns the new library ID and component count.',
+    description: 'Package all internal components into a .cjl file via save dialog. Returns the file path and component count.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -376,31 +353,6 @@ export const toolSchemas = {
         version: { type: 'string', description: 'Optional version string (e.g. "1.0.0")' },
       },
       required: ['name'],
-    },
-  },
-
-  install_library: {
-    name: 'install_library',
-    description: 'Install a library from inline JSON data. The data should contain components in the same format as a .cjl file. The library is persisted and added to the library index.',
-    inputSchema: {
-      type: 'object' as const,
-      properties: {
-        name: { type: 'string', description: 'Name for the library' },
-        author: { type: 'string', description: 'Optional author name' },
-        description: { type: 'string', description: 'Optional description' },
-        version: { type: 'string', description: 'Optional version string' },
-        components: {
-          type: 'object',
-          description: 'Component data: { items: Component[], order: string[], categories: string[] }',
-          properties: {
-            items: { type: 'array', description: 'Array of component objects' },
-            order: { type: 'array', items: { type: 'string' }, description: 'Ordered component IDs' },
-            categories: { type: 'array', items: { type: 'string' }, description: 'Category names' },
-          },
-          required: ['items'],
-        },
-      },
-      required: ['name', 'components'],
     },
   },
   upload_asset: {

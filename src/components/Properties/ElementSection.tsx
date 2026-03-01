@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Eye, EyeOff, Plus, X, Check, Code, Link } from 'lucide-react'
+import { Eye, EyeOff, Plus, X, Check, Code, Link, Pencil, RotateCcw, Unlink } from 'lucide-react'
 import type { Frame, TextElement, ImageElement, ButtonElement, InputElement, TextareaElement, SelectElement, SelectOption } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { TokenInput } from '../ui/TokenInput'
@@ -456,6 +456,42 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
           />
           <div className="w-5 shrink-0" />
         </div>
+      )}
+
+      {/* Component instance actions */}
+      {isInstance && frame._componentId && (
+        <>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="flex-1 h-6 px-1.5 text-[12px] rounded flex items-center justify-center gap-1 bg-surface-2 text-text-muted hover:text-text-secondary hover:bg-surface-3"
+              onClick={() => {
+                const cid = frame._componentId
+                if (cid) useFrameStore.getState().enterComponentEditMode(cid)
+              }}
+            >
+              <Pencil size={10} /> Edit Master
+            </button>
+            <div className="w-5 shrink-0" />
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="flex-1 h-6 px-1.5 text-[12px] rounded flex items-center justify-center gap-1 bg-surface-2 text-text-muted hover:text-text-secondary hover:bg-surface-3"
+              onClick={() => useFrameStore.getState().resetInstance(frame.id)}
+            >
+              <RotateCcw size={10} /> Reset
+            </button>
+            <button
+              type="button"
+              className="flex-1 h-6 px-1.5 text-[12px] rounded flex items-center justify-center gap-1 bg-surface-2 text-text-muted hover:text-text-secondary hover:bg-surface-3"
+              onClick={() => useFrameStore.getState().detachInstance(frame.id)}
+            >
+              <Unlink size={10} /> Detach
+            </button>
+            <div className="w-5 shrink-0" />
+          </div>
+        </>
       )}
     </div>
   )

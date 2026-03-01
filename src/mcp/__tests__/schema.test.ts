@@ -16,24 +16,32 @@ describe('MCP schema', () => {
     }
   })
 
-  describe('library tools exist', () => {
-    it('has list_libraries schema', () => {
-      expect(toolSchemas.list_libraries).toBeDefined()
-      expect(toolSchemas.list_libraries.name).toBe('list_libraries')
-    })
-
-    it('has list_library_components schema', () => {
-      expect(toolSchemas.list_library_components).toBeDefined()
-      expect(toolSchemas.list_library_components.name).toBe('list_library_components')
-      expect(toolSchemas.list_library_components.inputSchema.required).toContain('library_id')
+  describe('export_library tool exists', () => {
+    it('has export_library schema', () => {
+      expect(toolSchemas.export_library).toBeDefined()
+      expect(toolSchemas.export_library.name).toBe('export_library')
+      expect(toolSchemas.export_library.inputSchema.required).toContain('name')
     })
   })
 
-  describe('insert_component includes library_id param', () => {
-    it('has library_id in properties', () => {
+  describe('insert_component does not have library_id param', () => {
+    it('has no library_id in properties', () => {
       const props = toolSchemas.insert_component.inputSchema.properties
-      expect(props.library_id).toBeDefined()
-      expect(props.library_id.type).toBe('string')
+      expect(props).not.toHaveProperty('library_id')
+    })
+  })
+
+  describe('library tools removed', () => {
+    it('does not have list_libraries', () => {
+      expect(toolSchemas).not.toHaveProperty('list_libraries')
+    })
+
+    it('does not have list_library_components', () => {
+      expect(toolSchemas).not.toHaveProperty('list_library_components')
+    })
+
+    it('does not have install_library', () => {
+      expect(toolSchemas).not.toHaveProperty('install_library')
     })
   })
 

@@ -1,43 +1,13 @@
-import { createContext, useContext, useRef, useCallback, useMemo } from 'react'
+import { useRef, useCallback, useMemo } from 'react'
 import { useDraggable, useDroppable, useDndContext } from '@dnd-kit/core'
 import type { Frame } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { useTreeDnd } from './TreeDndContext'
 import { useContextMenu } from './hooks/useContextMenu'
 import { useInlineEdit } from './hooks/useInlineEdit'
-import { useTreeMerge, type TreeMergeState } from './hooks/useTreeMerge'
 import { TreeRow } from './TreeRow'
-import { Frame as FrameIcon, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse, Copy, Trash2, Group, SquarePlus, Eye, EyeOff, Link, Bookmark, Diamond, Pencil, RotateCcw, Unlink } from 'lucide-react'
-
-/* ── Tree merge context ─────────────────────────────────────
- * Wraps useTreeMerge with a React context so TreeNodes don't
- * each need to independently compute visible order. */
-
-const EMPTY_MERGE: TreeMergeState = { mergeTop: new Set(), mergeBottom: new Set() }
-const TreeMergeContext = createContext<TreeMergeState>(EMPTY_MERGE)
-
-export function TreeMergeProvider({ children }: { children: React.ReactNode }) {
-  const root = useFrameStore((s) => s.root)
-  const selectedIds = useFrameStore((s) => s.selectedIds)
-  const collapsedIds = useFrameStore((s) => s.collapsedIds)
-
-  const visibleOrder = useMemo(() => {
-    const order: string[] = []
-    function walk(frame: Frame) {
-      if (frame.hidden) return
-      order.push(frame.id)
-      if (frame.type === 'box' && !collapsedIds.has(frame.id)) {
-        for (const child of frame.children) walk(child)
-      }
-    }
-    walk(root)
-    return order
-  }, [root, collapsedIds])
-
-  const mergeState = useTreeMerge(selectedIds, visibleOrder)
-
-  return <TreeMergeContext.Provider value={mergeState}>{children}</TreeMergeContext.Provider>
-}
+import { Frame as FrameIcon, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse, Eye, EyeOff, Link, Diamond } from 'lucide-react'
+import { FrameContextMenu } from '../shared/FrameContextMenu'
 
 interface TreeNodeProps {
   frame: Frame
@@ -55,10 +25,6 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
   const select = useFrameStore((s) => s.select)
   const hover = useFrameStore((s) => s.hover)
   const toggleCollapse = useFrameStore((s) => s.toggleCollapse)
-  const addChild = useFrameStore((s) => s.addChild)
-  const removeFrame = useFrameStore((s) => s.removeFrame)
-  const duplicateFrame = useFrameStore((s) => s.duplicateFrame)
-  const wrapInFrame = useFrameStore((s) => s.wrapInFrame)
   const renameFrame = useFrameStore((s) => s.renameFrame)
   const toggleHidden = useFrameStore((s) => s.toggleHidden)
 
@@ -71,7 +37,6 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
 
   const isSelected = selectedId === frame.id || selectedIds.has(frame.id)
   const isMulti = selectedIds.size > 1
-  const merge = useContext(TreeMergeContext)
 
   const isBox = frame.type === 'box'
   const hasChildren = isBox && frame.children.length > 0
@@ -85,9 +50,6 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
   const isOnComponentPage = useFrameStore((s) => s.pages.find((p) => p.id === s.activePageId)?.isComponentPage ?? false)
   const editingComponentId = useFrameStore((s) => s.editingComponentId)
   const isMaster = isOnComponentPage && !editingComponentId && !isRoot && parentId !== null
-  const isLeaf = frame.type !== 'box'
-  const addTargetId = isLeaf ? parentId : frame.id
-
   /* ── dnd-kit hooks ──────────────────────────────────────── */
 
   const { setNodeRef: setDraggableRef, listeners, attributes } = useDraggable({
@@ -174,8 +136,6 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
         nameClassName={nameClass}
         isSelected={isSelected}
         isMulti={isMulti}
-        mergeTop={merge.mergeTop.has(frame.id)}
-        mergeBottom={merge.mergeBottom.has(frame.id)}
         editing={!isRoot && nameEdit.editing}
         editValue={nameEdit.value}
         onEditChange={nameEdit.setValue}
@@ -188,10 +148,6 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
         }}
         onDoubleClick={() => {
           if (isRoot) return
-          if (isInstance && frame._componentId) {
-            useFrameStore.getState().enterComponentEditMode(frame._componentId)
-            return
-          }
           nameEdit.start(frame.name)
         }}
         onContextMenu={(e) => {
@@ -215,155 +171,14 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
       {ctxMenu.backdrop}
       {ctxMenu.menu && (
         <div
-          className="fixed c-menu-popup min-w-[160px] z-50"
+          className="fixed c-menu-popup min-w-[180px] z-50"
           style={{ left: ctxMenu.menu.x, top: ctxMenu.menu.y }}
           onClick={(e) => e.stopPropagation()}
         >
-          {!isRoot && (
-            <>
-              <button
-                className="c-menu-item"
-                onClick={() => { duplicateFrame(frame.id); ctxMenu.close() }}
-              >
-                <Copy size={12} /> Duplicate
-              </button>
-              <button
-                className="c-menu-item"
-                onClick={() => {
-                  if (selectedIds.size > 1) {
-                    useFrameStore.getState().wrapSelectedInFrame()
-                  } else {
-                    wrapInFrame(frame.id)
-                  }
-                  ctxMenu.close()
-                }}
-              >
-                <Group size={12} /> Group
-              </button>
-              {!isInstance && !isMaster && (
-                <button
-                  className="c-menu-item"
-                  onClick={() => {
-                    useFrameStore.getState().createComponent(frame.id)
-                    ctxMenu.close()
-                  }}
-                >
-                  <Bookmark size={12} /> Save as Component
-                </button>
-              )}
-              {isMaster && (
-                <button
-                  className="c-menu-item"
-                  onClick={() => {
-                    const store = useFrameStore.getState()
-                    store.setTreePanelTab('layers')
-                    requestAnimationFrame(() => {
-                      useFrameStore.getState().insertInstance(frame.id, useFrameStore.getState().root.id)
-                    })
-                    ctxMenu.close()
-                  }}
-                >
-                  <Copy size={12} /> Insert Instance
-                </button>
-              )}
-              {isInstance && (
-                <>
-                  <button
-                    className="c-menu-item"
-                    onClick={() => {
-                      if (!frame._componentId) { ctxMenu.close(); return }
-                      useFrameStore.getState().enterComponentEditMode(frame._componentId)
-                      ctxMenu.close()
-                    }}
-                  >
-                    <Pencil size={12} /> Edit Master
-                  </button>
-                  <button
-                    className="c-menu-item"
-                    onClick={() => {
-                      useFrameStore.getState().resetInstance(frame.id)
-                      ctxMenu.close()
-                    }}
-                  >
-                    <RotateCcw size={12} /> Reset Instance
-                  </button>
-                  <button
-                    className="c-menu-item"
-                    onClick={() => {
-                      useFrameStore.getState().detachInstance(frame.id)
-                      ctxMenu.close()
-                    }}
-                  >
-                    <Unlink size={12} /> Detach Instance
-                  </button>
-                </>
-              )}
-            </>
-          )}
-          {addTargetId && (
-            <>
-              <div className="border-t border-border my-1" />
-              <button
-                className="c-menu-item"
-                onClick={() => { addChild(addTargetId, 'box'); ctxMenu.close() }}
-              >
-                <SquarePlus size={12} /> Add Frame
-              </button>
-              <button
-                className="c-menu-item"
-                onClick={() => { addChild(addTargetId, 'text'); ctxMenu.close() }}
-              >
-                <Type size={12} /> Add Text
-              </button>
-              <button
-                className="c-menu-item"
-                onClick={() => { addChild(addTargetId, 'link'); ctxMenu.close() }}
-              >
-                <Link size={12} /> Add Link
-              </button>
-              <button
-                className="c-menu-item"
-                onClick={() => { addChild(addTargetId, 'image'); ctxMenu.close() }}
-              >
-                <ImageIcon size={12} /> Add Image
-              </button>
-              <button
-                className="c-menu-item"
-                onClick={() => { addChild(addTargetId, 'button'); ctxMenu.close() }}
-              >
-                <RectangleHorizontal size={12} /> Add Button
-              </button>
-              <button
-                className="c-menu-item"
-                onClick={() => { addChild(addTargetId, 'input'); ctxMenu.close() }}
-              >
-                <TextCursorInput size={12} /> Add Input
-              </button>
-              <button
-                className="c-menu-item"
-                onClick={() => { addChild(addTargetId, 'textarea'); ctxMenu.close() }}
-              >
-                <AlignLeft size={12} /> Add Textarea
-              </button>
-              <button
-                className="c-menu-item"
-                onClick={() => { addChild(addTargetId, 'select'); ctxMenu.close() }}
-              >
-                <ListCollapse size={12} /> Add Select
-              </button>
-            </>
-          )}
-          {!isRoot && (
-            <>
-              <div className="border-t border-border my-1" />
-              <button
-                className="c-menu-item"
-                onClick={() => { removeFrame(frame.id); ctxMenu.close() }}
-              >
-                <Trash2 size={12} /> Delete
-              </button>
-            </>
-          )}
+          <FrameContextMenu
+            frameId={frame.id}
+            close={ctxMenu.close}
+          />
         </div>
       )}
 

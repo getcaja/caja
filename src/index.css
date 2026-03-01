@@ -157,16 +157,15 @@ input[type=number] {
   box-shadow: none !important;
 }
 
-/* Tree node selected state — single selection */
-.tree-node-selected {
-  background: color-mix(in srgb, var(--color-accent) 15%, transparent);
-  outline: 1px solid color-mix(in srgb, var(--color-accent) 50%, transparent);
-  outline-offset: -1px;
-}
-
-/* Tree node selected state — multi selection (merged group look) */
+/* Tree node selected state */
+.tree-node-selected,
 .tree-node-multi-selected {
   background: color-mix(in srgb, var(--color-accent) 15%, transparent);
+}
+
+/* Tree node selected state — neutral (for pages) */
+.tree-node-selected-neutral {
+  background: var(--color-surface-2);
 }
 
 /* TokenInput — reset the inner input */

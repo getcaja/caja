@@ -260,12 +260,14 @@ interface FrameStore {
   componentDragFrame: Frame | null
   componentDragOrigin: { libraryId?: string; componentId?: string } | null
   clipboard: Frame[]
-  treePanelTab: 'layers' | 'components' | 'libraries'
+  treePanelTab: 'layers' | 'components'
   _layersPageId: string | null  // remembers last Layers page when switching to Components tab
   _lastDuplicateMap: Record<string, string> | null
   _previewSnapshot: BoxElement | null
   editingComponentId: string | null
-  _beforeEditState: { pageId: string; tab: 'layers' | 'components' | 'libraries' } | null
+  _beforeEditState: { pageId: string; tab: 'layers' | 'components' } | null
+  canvasTool: 'pointer' | 'frame' | 'text'
+  pendingTextEdit: string | null
   mcpHighlightIds: Set<string>
 
   past: Record<string, BoxElement[]>
@@ -292,6 +294,7 @@ interface FrameStore {
   duplicateFrame: (id: string) => void
   wrapInFrame: (id: string) => void
   wrapSelectedInFrame: () => void
+  ungroupFrame: (id: string) => void
   moveFrame: (frameId: string, newParentId: string, index: number) => void
   moveFrames: (ids: string[], newParentId: string, index: number) => void
   reorderFrame: (frameId: string, direction: 'up' | 'down') => void
@@ -323,8 +326,10 @@ interface FrameStore {
   setCanvasDrag: (id: string | null) => void
   setCanvasDragOver: (over: { parentId: string; index: number } | null) => void
   setComponentDragFrame: (frame: Frame | null, origin?: { libraryId?: string; componentId?: string } | null) => void
-  setTreePanelTab: (tab: 'layers' | 'components' | 'libraries') => void
+  setTreePanelTab: (tab: 'layers' | 'components') => void
   expandToFrame: (id: string) => void
+  setCanvasTool: (tool: 'pointer' | 'frame' | 'text') => void
+  clearPendingTextEdit: () => void
   addMcpHighlight: (id: string) => void
   advancedMode: boolean
   setAdvancedMode: (value: boolean) => void
@@ -576,6 +581,8 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   previewMode: initialViewPrefs.previewMode,
   canvasWidth: initialViewPrefs.canvasWidth,
   canvasZoom: 1,
+  canvasTool: 'pointer',
+  pendingTextEdit: null,
   mcpConnected: false,
   mcpBusy: false,
   canvasDragId: null,
@@ -941,6 +948,37 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
       return { ...updateActiveRoot(state, newRoot), selectedId: wrapper.id, selectedIds: new Set([wrapper.id]), ...history }
     }),
 
+  ungroupFrame: (id) =>
+    set((state) => {
+      if (isRootId(id)) return {}
+      if (isChildOfInstance(state.root, id)) return {}
+      const target = findInTree(state.root, id)
+      if (!target || target.type !== 'box') return {}
+      const parent = findParent(state.root, id) as BoxElement | null
+      if (!parent) return {}
+      const children = (target as BoxElement).children
+      if (children.length === 0) return {}
+      // Replace the wrapper with its children at the same position
+      const newChildren: Frame[] = []
+      for (const c of parent.children) {
+        if (c.id === id) {
+          newChildren.push(...children)
+        } else {
+          newChildren.push(c)
+        }
+      }
+      function replaceParent(node: Frame): Frame {
+        if (node.id === parent!.id && node.type === 'box') {
+          return { ...node, children: newChildren }
+        }
+        return withChildren(node, getChildren(node).map(replaceParent))
+      }
+      const history = pushHistory(state)
+      const newRoot = replaceParent(state.root) as BoxElement
+      const childIds = new Set(children.map((c) => c.id))
+      return { ...updateActiveRoot(state, newRoot), selectedId: children[0]?.id ?? null, selectedIds: childIds, ...history }
+    }),
+
   moveFrame: (frameId, newParentId, index) =>
     set((state) => {
       if (isRootId(frameId)) return {}
@@ -1209,17 +1247,19 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   togglePreviewMode: () => set((s) => {
     const next = !s.previewMode
     saveViewPrefs({ previewMode: next, canvasWidth: s.canvasWidth, advancedMode: s.advancedMode })
-    return { previewMode: next, ...(next ? { selectedId: null, hoveredId: null } : {}) }
+    return { previewMode: next, canvasTool: 'pointer' as const, ...(next ? { selectedId: null, hoveredId: null } : {}) }
   }),
   setPreviewMode: (value) => set((s) => {
     saveViewPrefs({ previewMode: value, canvasWidth: s.canvasWidth, advancedMode: s.advancedMode })
-    return { previewMode: value, ...(value ? { selectedId: null, hoveredId: null } : {}) }
+    return { previewMode: value, canvasTool: 'pointer' as const, ...(value ? { selectedId: null, hoveredId: null } : {}) }
   }),
   setCanvasWidth: (width) => set((s) => {
     saveViewPrefs({ previewMode: s.previewMode, canvasWidth: width, advancedMode: s.advancedMode })
     return { canvasWidth: width }
   }),
   setCanvasZoom: (zoom) => set({ canvasZoom: zoom }),
+  setCanvasTool: (tool) => set({ canvasTool: tool }),
+  clearPendingTextEdit: () => set({ pendingTextEdit: null }),
   setCanvasDrag: (id) => set({ canvasDragId: id }),
   setCanvasDragOver: (over) => set((state) => {
     const prev = state.canvasDragOver
@@ -1354,11 +1394,30 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
 
   enterComponentEditMode: (componentId) => {
     const state = get()
-    const compPage = state.pages.find((p) => p.isComponentPage)
-    if (!compPage || compPage.root.type !== 'box') return
-    // Verify the component exists on the component page
-    const master = compPage.root.children.find((c) => c.id === componentId)
-    if (!master) return
+
+    // Look for master on the component page
+    let compPage = state.pages.find((p) => p.isComponentPage)
+    let master = compPage?.root.type === 'box'
+      ? compPage.root.children.find((c) => c.id === componentId)
+      : null
+
+    // If master not on component page, check catalog and create it there
+    if (!master) {
+      const catalogComp = useCatalogStore.getState().getComponent(componentId)
+      if (!catalogComp) return // component doesn't exist anywhere
+      // Use cloneTree to preserve child IDs (instances reference them for overrides)
+      const masterFrame = normalizeFrame(cloneTree(catalogComp.frame))
+      masterFrame.id = componentId
+      get().addComponentMaster(masterFrame)
+      // Re-read state after addComponentMaster
+      compPage = get().pages.find((p) => p.isComponentPage)
+      master = compPage?.root.type === 'box'
+        ? compPage.root.children.find((c) => c.id === componentId)
+        : null
+      if (!master || !compPage) return
+    }
+
+    if (!compPage) return
 
     set({
       _beforeEditState: { pageId: state.activePageId, tab: state.treePanelTab },

@@ -278,14 +278,13 @@ server.tool(
     component_id: z.string().describe('ID of the component to insert'),
     parent_id: z.string().describe('ID of the parent box to insert into'),
     index: z.number().optional().describe('Position index within the parent. If omitted, appends at the end.'),
-    library_id: z.string().optional().describe('Optional library ID to insert from an external library instead of internal components'),
     overrides: z.record(z.string(), z.object({
       properties: z.record(z.string(), z.unknown()).optional(),
       classes: z.string().optional(),
     })).optional().describe('Map of frame name → patch. Matches children by name in the cloned tree. Example: { "price": { "properties": { "content": "$49" } }, "cta": { "classes": "bg-violet-600" } }'),
   },
-  async ({ component_id, parent_id, index, library_id, overrides }) => {
-    const result = await callTool('insert_component', { component_id, parent_id, index, library_id, overrides })
+  async ({ component_id, parent_id, index, overrides }) => {
+    const result = await callTool('insert_component', { component_id, parent_id, index, overrides })
     return { content: [{ type: 'text', text: JSON.stringify(result) }] }
   }
 )
@@ -319,31 +318,8 @@ server.tool(
 // ── Library tools ──
 
 server.tool(
-  'list_libraries',
-  'List installed component libraries. Returns lightweight metadata (id, name, author, version, description) for each library.',
-  {},
-  async () => {
-    const result = await callTool('list_libraries', {})
-    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
-  }
-)
-
-server.tool(
-  'list_library_components',
-  'List components from a specific installed library. Returns component metadata without full frame data.',
-  {
-    library_id: z.string().describe('ID of the library to list components from'),
-    tag: z.string().optional().describe('Optional tag to filter by'),
-  },
-  async ({ library_id, tag }) => {
-    const result = await callTool('list_library_components', { library_id, tag })
-    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
-  }
-)
-
-server.tool(
   'export_library',
-  'Package all internal components into a new installed library. The library is persisted as a .cjl file and added to the library index. Returns the new library ID and component count.',
+  'Package all internal components into a .cjl file via save dialog. Returns the file path and component count.',
   {
     name: z.string().describe('Name for the library (e.g. "My Components")'),
     author: z.string().optional().describe('Optional author name'),
@@ -356,31 +332,11 @@ server.tool(
   }
 )
 
-server.tool(
-  'install_library',
-  'Install a library from inline JSON data. The data should contain components in the same format as a .cjl file. The library is persisted and added to the library index.',
-  {
-    name: z.string().describe('Name for the library'),
-    author: z.string().optional().describe('Optional author name'),
-    description: z.string().optional().describe('Optional description'),
-    version: z.string().optional().describe('Optional version string'),
-    components: z.object({
-      items: z.array(z.unknown()).describe('Array of component objects'),
-      order: z.array(z.string()).optional().describe('Ordered component IDs'),
-      categories: z.array(z.string()).optional().describe('Category names'),
-    }).describe('Component data: { items, order?, categories? }'),
-  },
-  async ({ name, author, description, version, components }) => {
-    const result = await callTool('install_library', { name, author, description, version, components })
-    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
-  }
-)
-
 // ── File tools ──
 
 server.tool(
   'new_file',
-  'Reset the project to a blank state (equivalent to File > New). Clears all pages, frames, and internal components. Libraries are preserved.',
+  'Reset the project to a blank state (equivalent to File > New). Clears all pages, frames, and internal components.',
   {},
   async () => {
     const result = await callTool('new_file', {})

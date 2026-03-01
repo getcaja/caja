@@ -1,18 +1,15 @@
 import { useEffect, useRef } from 'react'
 import { ChevronRight, ChevronDown } from 'lucide-react'
 import { INPUT_CLASS } from './hooks/useInlineEdit'
-import { selectionRadiusClass } from './hooks/useTreeMerge'
 
 export interface TreeRowProps {
   id: string
   depth: number
-  icon: React.ReactNode
+  icon?: React.ReactNode
   name: string
   nameClassName?: string
   isSelected: boolean
   isMulti: boolean
-  mergeTop: boolean
-  mergeBottom: boolean
   editing: boolean
   editValue: string
   onEditChange: (v: string) => void
@@ -32,6 +29,7 @@ export interface TreeRowProps {
   rowRef?: React.Ref<HTMLDivElement>
   dndProps?: Record<string, unknown>
   colorDot?: string
+  selectionStyle?: 'accent' | 'neutral'
 }
 
 export function TreeRow({
@@ -41,8 +39,6 @@ export function TreeRow({
   nameClassName,
   isSelected,
   isMulti,
-  mergeTop,
-  mergeBottom,
   editing,
   editValue,
   onEditChange,
@@ -62,6 +58,7 @@ export function TreeRow({
   rowRef,
   dndProps,
   colorDot,
+  selectionStyle = 'accent',
 }: TreeRowProps) {
   const internalRef = useRef<HTMLDivElement>(null)
 
@@ -78,22 +75,20 @@ export function TreeRow({
     }
   }, [isSelected]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const radius = selectionRadiusClass(isSelected, isMulti, mergeTop, mergeBottom)
-
   // Drop indicators
   let dropIndicator: React.ReactNode = null
   if (dropPosition === 'before') {
     dropIndicator = (
       <div
         className="absolute left-0 right-0 top-0 h-[2px] bg-accent z-10 pointer-events-none"
-        style={{ marginLeft: depth * 16 + 4 }}
+        style={{ marginLeft: depth * 16 + 8 }}
       />
     )
   } else if (dropPosition === 'after') {
     dropIndicator = (
       <div
         className="absolute left-0 right-0 bottom-0 h-[2px] bg-accent z-10 pointer-events-none"
-        style={{ marginLeft: depth * 16 + 4 }}
+        style={{ marginLeft: depth * 16 + 8 }}
       />
     )
   }
@@ -124,14 +119,14 @@ export function TreeRow({
       <div
         ref={rowRef ?? internalRef}
         {...(dndProps ?? {})}
-        className={`flex items-center gap-1.5 py-1 px-1 ${radius} cursor-default group transition-all ${
+        className={`flex items-center gap-1.5 py-1 cursor-default group ${
           isSelected
-            ? `${isMulti ? 'tree-node-multi-selected' : 'tree-node-selected'} text-text-primary`
+            ? `${selectionStyle === 'neutral' ? 'tree-node-selected-neutral' : isMulti ? 'tree-node-multi-selected' : 'tree-node-selected'} text-text-primary`
             : dropPosition === 'inside'
               ? 'bg-[var(--color-accent)]/10 outline outline-1 outline-[var(--color-accent)]/40'
               : 'hover:bg-[var(--color-accent)]/8 text-text-secondary hover:text-text-primary'
         } ${className ?? ''}`}
-        style={{ paddingLeft: depth * 16 + 4 }}
+        style={{ paddingLeft: depth * 16 + 8, paddingRight: 8 }}
         onClick={onClick}
         onDoubleClick={onDoubleClick}
         onContextMenu={onContextMenu}
@@ -141,7 +136,7 @@ export function TreeRow({
         {chevronEl}
 
         {/* Type icon */}
-        <span className="shrink-0">{icon}</span>
+        {icon && <span className="shrink-0">{icon}</span>}
 
         {/* Color dot */}
         {colorDot && (

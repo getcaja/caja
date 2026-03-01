@@ -59,12 +59,15 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
   const expandToFrame = useFrameStore((s) => s.expandToFrame)
   const previewMode = useFrameStore((s) => s.previewMode)
+  const canvasTool = useFrameStore((s) => s.canvasTool)
+  const pendingTextEdit = useFrameStore((s) => s.pendingTextEdit)
   const canvasDragId = useFrameStore((s) => s.canvasDragId)
   const isMcpHighlighted = useFrameStore((s) => s.mcpHighlightIds.has(frame.id))
 
   const [editingText, setEditingText] = useState(false)
   const textRef = useRef<HTMLSpanElement>(null)
   const clickPosRef = useRef<{ x: number; y: number } | null>(null)
+  const pendingInsertRef = useRef(false)
   const Tag = resolveTag(frame)
 
   const isSelected = !previewMode && selectedId === frame.id
@@ -101,25 +104,28 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
     !previewMode && isEmpty && !isRoot && 'is-empty',
     isDragged && 'is-line-drop',
     isMcpHighlighted && 'mcp-highlight',
-    !previewMode && (editingText ? 'cursor-text' : 'cursor-default'),
+    !previewMode && (editingText ? 'cursor-text' : canvasTool === 'text' ? (isText ? 'cursor-text' : 'cursor-crosshair') : canvasTool === 'frame' ? 'cursor-crosshair' : 'cursor-default'),
     previewCursor,
   ].filter(Boolean).join(' ')
 
-  // useLayoutEffect: runs synchronously before paint — no cursor delay
+  // Focus immediately (useLayoutEffect = before paint), then position caret
+  // after browser has laid out the new contentEditable span (rAF = after paint).
   useLayoutEffect(() => {
     if (editingText && textRef.current) {
       const el = textRef.current
-      const doc = el.ownerDocument
       el.focus()
       const pos = clickPosRef.current
       if (pos) {
-        const range = doc.caretRangeFromPoint(pos.x, pos.y)
-        if (range) {
-          const sel = doc.getSelection()
-          sel?.removeAllRanges()
-          sel?.addRange(range)
-        }
         clickPosRef.current = null
+        requestAnimationFrame(() => {
+          const doc = el.ownerDocument
+          const range = doc.caretRangeFromPoint(pos.x, pos.y)
+          if (range) {
+            const sel = doc.getSelection()
+            sel?.removeAllRanges()
+            sel?.addRange(range)
+          }
+        })
       }
     }
   }, [editingText])
@@ -130,9 +136,26 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
     }
   }, [isSelected, editingText])
 
+  // Auto-enter edit mode for newly inserted text (text tool)
+  useEffect(() => {
+    if (pendingTextEdit === frame.id && isText && isSelected) {
+      pendingInsertRef.current = true
+      setEditingText(true)
+      useFrameStore.getState().clearPendingTextEdit()
+    }
+  }, [pendingTextEdit, frame.id, isText, isSelected])
+
   const commitText = () => {
     if (textRef.current && isText) {
       const newContent = textRef.current.textContent || ''
+      // If this was a pending insert and the user left it empty, remove the frame
+      if (pendingInsertRef.current && !newContent.trim()) {
+        pendingInsertRef.current = false
+        setEditingText(false)
+        useFrameStore.getState().removeFrame(frame.id)
+        return
+      }
+      pendingInsertRef.current = false
       updateFrame(frame.id, { content: newContent })
     }
     setEditingText(false)
@@ -246,6 +269,31 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
     onClick: (e: React.MouseEvent) => {
       e.stopPropagation()
       if (_skipNextClick) { _skipNextClick = false; return }
+
+      // Frame tool: click on box → insert frame child; click on non-box → insert in root
+      if (canvasTool === 'frame') {
+        const store = useFrameStore.getState()
+        const parentId = isBox ? frame.id : store.root.id
+        store.addChild(parentId, 'box')
+        return
+      }
+
+      // Text tool: click on existing text → edit it; click on box → insert new text child
+      if (canvasTool === 'text') {
+        if (isText) {
+          select(frame.id)
+          clickPosRef.current = { x: e.clientX, y: e.clientY }
+          setEditingText(true)
+        } else {
+          const store = useFrameStore.getState()
+          const parentId = isBox ? frame.id : store.root.id
+          store.addChild(parentId, 'text', { content: '' })
+          const newId = useFrameStore.getState().selectedId
+          if (newId) useFrameStore.setState({ pendingTextEdit: newId })
+        }
+        return
+      }
+
       // Triple-click: select all text when editing
       if (editingText && e.detail >= 3 && textRef.current) {
         const doc = textRef.current.ownerDocument
@@ -373,6 +421,7 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
               if (e.key === 'Escape') {
                 e.preventDefault()
                 commitText()
+                useFrameStore.getState().setCanvasTool('pointer')
               }
             }}
           >

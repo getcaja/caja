@@ -405,11 +405,6 @@ pub fn run() {
             let export_item = MenuItemBuilder::with_id("export", "Export…")
                 .accelerator("CmdOrCtrl+E")
                 .build(app)?;
-            let save_library_item = MenuItemBuilder::with_id("save-library", "Save Library")
-                .build(app)?;
-            let export_library_item = MenuItemBuilder::with_id("export-library", "Export Library…")
-                .build(app)?;
-
             let file_menu = SubmenuBuilder::new(app, "File")
                 .item(&new_item)
                 .item(&open_item)
@@ -418,9 +413,6 @@ pub fn run() {
                 .item(&save_as_item)
                 .separator()
                 .item(&export_item)
-                .separator()
-                .item(&save_library_item)
-                .item(&export_library_item)
                 .separator()
                 .close_window()
                 .build()?;

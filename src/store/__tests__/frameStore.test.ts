@@ -420,9 +420,9 @@ describe('frameStore', () => {
       const raw: Partial<BoxElement> = { type: 'box', name: 'Test', children: [] } as any
       store().insertFrame(root().id, raw as Frame)
       expect(rootChildren()).toHaveLength(1)
-      // Should have all default fields filled (createBox defaults to 'block')
+      // Should have all default fields filled (createBox defaults to 'flex')
       const inserted = rootChildren()[0] as BoxElement
-      expect(inserted.display).toBe('block')
+      expect(inserted.display).toBe('flex')
       expect(inserted.padding).toBeDefined()
     })
 
@@ -884,7 +884,7 @@ describe('frameStore', () => {
     it('fills missing fields on a minimal box', () => {
       const raw = { id: 'test-1', type: 'box', name: 'Bare', children: [] } as any
       const result = normalizeFrame(raw) as BoxElement
-      expect(result.display).toBe('block') // createBox defaults to 'block'
+      expect(result.display).toBe('flex') // createBox defaults to 'flex'
       expect(result.padding).toBeDefined()
       expect(result.padding.top.mode).toBe('custom')
       expect(result.gap).toBeDefined()

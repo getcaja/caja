@@ -1,11 +1,9 @@
-import { Pencil, Trash2, Play, Copy, SquarePen, FolderPlus } from 'lucide-react'
 import type { Component } from '../../types/component'
 
 interface ComponentContextMenuProps {
   contextMenu:
     | { x: number; y: number; type: 'component'; component: Component }
     | { x: number; y: number; type: 'category'; tag: string }
-  readOnly: boolean
   multiCount: number
   onEdit?: (id: string) => void
   onInsert?: (component: Component) => void
@@ -19,7 +17,7 @@ interface ComponentContextMenuProps {
 }
 
 export function ComponentContextMenu({
-  contextMenu, readOnly, multiCount,
+  contextMenu, multiCount,
   onEdit, onInsert, onDuplicate,
   onRename, onDelete, onGroup,
   onCategoryRename, onCategoryDelete,
@@ -34,39 +32,35 @@ export function ComponentContextMenu({
       >
         {onEdit && (
           <button className="c-menu-item" onClick={() => { onEdit(contextMenu.component.id); onClose() }}>
-            <SquarePen size={12} /> Edit
+            Edit
           </button>
         )}
         {onInsert && (
           <button className="c-menu-item" onClick={() => { onInsert(contextMenu.component); onClose() }}>
-            <Play size={12} /> Insert
+            Insert
           </button>
         )}
-        {(onEdit || onInsert) && !readOnly && <div className="border-t border-border my-1" />}
-        {!readOnly && (
+        {(onEdit || onInsert) && <div className="border-t border-border my-1" />}
+        {onDuplicate && (
+          <button className="c-menu-item" onClick={() => { onDuplicate(contextMenu.component); onClose() }}>
+            Duplicate
+          </button>
+        )}
+        <button className="c-menu-item" onClick={() => { onRename(contextMenu.component); onClose() }}>
+          Rename
+        </button>
+        {onGroup && multiCount > 1 && (
           <>
-            {onDuplicate && (
-              <button className="c-menu-item" onClick={() => { onDuplicate(contextMenu.component); onClose() }}>
-                <Copy size={12} /> Duplicate
-              </button>
-            )}
-            <button className="c-menu-item" onClick={() => { onRename(contextMenu.component); onClose() }}>
-              <Pencil size={12} /> Rename
-            </button>
-            {onGroup && multiCount > 1 && (
-              <>
-                <div className="border-t border-border my-1" />
-                <button className="c-menu-item" onClick={() => { onGroup(); onClose() }}>
-                  <FolderPlus size={12} /> Group
-                </button>
-              </>
-            )}
             <div className="border-t border-border my-1" />
-            <button className="c-menu-item" onClick={() => { onDelete(contextMenu.component.id); onClose() }}>
-              <Trash2 size={12} /> Delete
+            <button className="c-menu-item" onClick={() => { onGroup(); onClose() }}>
+              Group
             </button>
           </>
         )}
+        <div className="border-t border-border my-1" />
+        <button className="c-menu-item" onClick={() => { onDelete(contextMenu.component.id); onClose() }}>
+          Delete
+        </button>
       </div>
     )
   }
@@ -78,10 +72,10 @@ export function ComponentContextMenu({
       onClick={(e) => e.stopPropagation()}
     >
       <button className="c-menu-item" onClick={() => { onCategoryRename(contextMenu.tag); onClose() }}>
-        <Pencil size={12} /> Rename
+        Rename
       </button>
       <button className="c-menu-item" onClick={() => { onCategoryDelete(contextMenu.tag); onClose() }}>
-        <Trash2 size={12} /> Delete category
+        Delete category
       </button>
     </div>
   )

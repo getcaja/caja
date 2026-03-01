@@ -1,11 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import type { ComponentData } from '../../store/catalogStore'
-import type { LibraryMeta } from '../../types/component'
 import type { CjlFileData } from '../libraryOps'
 
 // We test the .cjl format structure directly (serialization/parsing) without
 // importing libraryOps (which depends on Tauri FS APIs). This validates the
-// data contract that importLibrary/exportLibrary rely on.
+// data contract that readCjlFile/exportLibrary rely on.
 
 function makeComponentData(): ComponentData {
   return {
@@ -82,38 +81,12 @@ describe('.cjl file format', () => {
     const bad = { version: 1, components: makeComponentData() }
     const parsed = bad as Partial<CjlFileData>
     expect(parsed.name).toBeUndefined()
-    // importLibrary would throw: "Invalid .cjl file: missing name or components"
+    // readCjlFile would throw: "Invalid .cjl file: missing name or components"
   })
 
   it('detects malformed files: missing components', () => {
     const bad = { version: 1, name: 'Bad' }
     const parsed = bad as Partial<CjlFileData>
     expect(parsed.components).toBeUndefined()
-  })
-
-  it('LibraryMeta can be constructed from CjlFileData', () => {
-    const cjl: CjlFileData = {
-      version: 1,
-      name: 'Kit',
-      author: 'Bob',
-      description: 'desc',
-      libraryVersion: '2.0',
-      components: makeComponentData(),
-    }
-
-    const meta: LibraryMeta = {
-      id: 'lib-uuid',
-      name: cjl.name,
-      author: cjl.author,
-      version: cjl.libraryVersion,
-      description: cjl.description,
-      importedAt: new Date().toISOString(),
-      filePath: 'lib-uuid.cjl',
-    }
-
-    expect(meta.name).toBe('Kit')
-    expect(meta.author).toBe('Bob')
-    expect(meta.version).toBe('2.0')
-    expect(meta.description).toBe('desc')
   })
 })

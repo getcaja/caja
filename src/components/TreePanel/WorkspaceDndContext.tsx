@@ -51,10 +51,6 @@ function ComponentDragGhost({ id, count }: { id: string; count: number }) {
     if (isCategory) return null
     const internal = s.components.find((p) => p.id === id)
     if (internal) return internal.name
-    for (const [, lib] of s.libraries) {
-      const p = lib.items?.find((p) => p.id === id)
-      if (p) return p.name
-    }
     return null
   })
 
@@ -238,23 +234,10 @@ export function WorkspaceDndProvider({ children }: { children: React.ReactNode }
       // Component drag — set componentDragFrame for canvas insertion
       const internalComponents = catalog.allComponents()
 
-      let component = internalComponents.find((c) => c.id === id)
-      let origin: { libraryId?: string; componentId?: string } | undefined
+      const component = internalComponents.find((c) => c.id === id)
 
       if (component) {
-        origin = { libraryId: 'internal', componentId: component.id }
-      } else {
-        for (const [libId, lib] of catalog.libraries) {
-          const found = lib.items?.find((c) => c.id === id)
-          if (found) {
-            component = found
-            origin = { libraryId: libId, componentId: found.id }
-            break
-          }
-        }
-      }
-
-      if (component && origin) {
+        const origin = { libraryId: 'internal', componentId: component.id }
         useFrameStore.getState().setComponentDragFrame(component.frame, origin)
       }
     }
