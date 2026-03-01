@@ -3,6 +3,7 @@ import { PagePanel } from './PagePanel'
 import { ElementSection } from './ElementSection'
 import { LayoutSection } from './LayoutSection'
 import { TypographySection } from './TypographySection'
+import { AppearanceSection } from './AppearanceSection'
 import { FillSection } from './FillSection'
 import { BorderSection } from './BorderSection'
 import { EffectsSection } from './EffectsSection'
@@ -15,7 +16,6 @@ export function Properties() {
   const selected = useFrameStore((s) => s.getSelected())
   const multiCount = useFrameStore((s) => s.selectedIds.size)
   const rootId = useFrameStore((s) => s.getRootId())
-  const advancedMode = useFrameStore((s) => s.advancedMode)
   const pageSelected = useFrameStore((s) => s.pageSelected)
 
   if (multiCount > 1) return null
@@ -34,11 +34,12 @@ export function Properties() {
       <PositionSection frame={selected} />
       <LayoutSection frame={selected} isRoot={isRoot} />
       {hasTextStyles && <TypographySection frame={selected} />}
+      <AppearanceSection frame={selected} />
       <FillSection frame={selected} />
       <BorderSection frame={selected} />
-      {advancedMode && <EffectsSection frame={selected} />}
-      {advancedMode && <TransformSection frame={selected} />}
-      {advancedMode && <TransitionSection frame={selected} />}
+      <EffectsSection frame={selected} />
+      <TransformSection frame={selected} />
+      <TransitionSection frame={selected} />
       <AdvancedSection frame={selected} />
     </div>
   )

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Blend, Ellipsis, Link2, Upload } from 'lucide-react'
+import { Ellipsis, Link2, Upload } from 'lucide-react'
 import type { Frame } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { Section } from '../ui/Section'
@@ -7,7 +7,6 @@ import { ColorInput } from '../ui/ColorInput'
 import { TokenInput } from '../ui/TokenInput'
 import { ToggleGroup } from '../ui/ToggleGroup'
 import { Popover } from '../ui/Popover'
-import { OPACITY_SCALE } from '../../data/scales'
 
 const lbl = (text: string) => <span className="text-[12px]">{text}</span>
 
@@ -42,10 +41,6 @@ export function FillSection({ frame }: { frame: Frame }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
   const [mode, setMode] = useState<FillMode>(frame.bgImage ? 'image' : 'solid')
 
-  const opacityActive = frame.opacity.mode === 'token'
-    ? frame.opacity.token !== '100'
-    : frame.opacity.value !== 100
-
   const imagePropsActive = frame.bgSize !== 'auto'
     || frame.bgPosition !== 'center'
     || frame.bgRepeat !== 'repeat'
@@ -67,35 +62,7 @@ export function FillSection({ frame }: { frame: Frame }) {
             }}
             className="flex-1"
           />
-          <Popover
-            trigger={
-              <button
-                type="button"
-                title="Opacity"
-                className={`w-5 h-5 shrink-0 flex items-center justify-center rounded ${
-                  opacityActive
-                    ? 'text-blue-400 bg-blue-400/10'
-                    : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'
-                }`}
-              >
-                <Blend size={12} />
-              </button>
-            }
-            align="end"
-          >
-            <div className="p-2 w-[200px]">
-              <TokenInput
-                scale={OPACITY_SCALE}
-                value={frame.opacity}
-                onChange={(v) => updateFrame(frame.id, { opacity: v })}
-                min={0}
-                unit="%"
-                classPrefix="opacity"
-                defaultValue={100}
-                label="Opacity"
-              />
-            </div>
-          </Popover>
+          <div className="w-5 shrink-0" />
         </div>
 
         {/* Solid mode */}

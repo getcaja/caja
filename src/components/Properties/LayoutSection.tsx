@@ -84,7 +84,7 @@ export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolea
                 }}
                 className="flex-1"
               />
-              {!isGrid ? (
+              {advancedMode && !isGrid ? (
                 <Popover
                   open={displayOptsOpen}
                   onOpenChange={setDisplayOptsOpen}
@@ -184,118 +184,122 @@ export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolea
             parentIsFlex={parentIsFlex}
             tooltip="Height"
           />
-          <Popover
-            open={constraintsOpen}
-            onOpenChange={setConstraintsOpen}
-            trigger={
-              <button
-                type="button"
-                title="Size Constraints"
-                className={`w-5 h-5 flex items-center justify-center rounded shrink-0 ${
-                  constraintsActive || childPropsActive
-                    ? 'text-blue-400 bg-blue-400/10'
-                    : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'
-                }`}
-              >
-                <Ellipsis size={12} />
-              </button>
-            }
-            side="bottom"
-            align="end"
-          >
-            <div className="flex flex-col gap-2 p-2.5 w-[200px]">
-              <TokenInput
-                scale={SIZE_CONSTRAINT_SCALE}
-                value={frame.minWidth}
-                onChange={(v) => updateFrame(frame.id, { minWidth: v })}
-                min={0}
-                label="Min W"
-                classPrefix="min-w"
-              />
-              <TokenInput
-                scale={SIZE_CONSTRAINT_SCALE}
-                value={frame.maxWidth}
-                onChange={(v) => updateFrame(frame.id, { maxWidth: v })}
-                min={0}
-                label="Max W"
-                classPrefix="max-w"
-              />
-              <TokenInput
-                scale={SIZE_CONSTRAINT_SCALE}
-                value={frame.minHeight}
-                onChange={(v) => updateFrame(frame.id, { minHeight: v })}
-                min={0}
-                label="Min H"
-                classPrefix="min-h"
-              />
-              <TokenInput
-                scale={SIZE_CONSTRAINT_SCALE}
-                value={frame.maxHeight}
-                onChange={(v) => updateFrame(frame.id, { maxHeight: v })}
-                min={0}
-                label="Max H"
-                classPrefix="max-h"
-              />
-              {hasChildBehavior && !isFlex && (
-                <>
-                  {parentIsFlex && (
-                    <>
-                      <TokenInput
-                        scale={GROW_SCALE}
-                        value={frame.grow}
-                        onChange={(v) => updateFrame(frame.id, { grow: v })}
-                        min={0}
-                        label="Grow"
-                        classPrefix="grow"
-                        defaultValue={0}
-                      />
-                      <TokenInput
-                        scale={SHRINK_SCALE}
-                        value={frame.shrink}
-                        onChange={(v) => updateFrame(frame.id, { shrink: v })}
-                        min={0}
-                        label="Shrink"
-                        classPrefix="shrink"
-                        defaultValue={1}
-                      />
-                    </>
-                  )}
-                  <TokenInput
-                    value={frame.alignSelf}
-                    options={ALIGN_SELF_OPTIONS}
-                    onChange={(v) => updateFrame(frame.id, { alignSelf: v as Frame['alignSelf'] })}
-                    label="Align Self"
-                    classPrefix="self"
-                    initialValue="auto"
-                  />
-                  {parentIsGrid && (
-                    <>
-                      <TokenInput
-                        scale={COL_SPAN_SCALE}
-                        value={frame.colSpan}
-                        onChange={(v) => updateFrame(frame.id, { colSpan: v })}
-                        min={0}
-                        label="Col Span"
-                        classPrefix="col-span"
-                        defaultValue={0}
-                        placeholder="Auto"
-                      />
-                      <TokenInput
-                        scale={ROW_SPAN_SCALE}
-                        value={frame.rowSpan}
-                        onChange={(v) => updateFrame(frame.id, { rowSpan: v })}
-                        min={0}
-                        label="Row Span"
-                        classPrefix="row-span"
-                        defaultValue={0}
-                        placeholder="Auto"
-                      />
-                    </>
-                  )}
-                </>
-              )}
-            </div>
-          </Popover>
+          {advancedMode ? (
+            <Popover
+              open={constraintsOpen}
+              onOpenChange={setConstraintsOpen}
+              trigger={
+                <button
+                  type="button"
+                  title="Size Constraints"
+                  className={`w-5 h-5 flex items-center justify-center rounded shrink-0 ${
+                    constraintsActive || childPropsActive
+                      ? 'text-blue-400 bg-blue-400/10'
+                      : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'
+                  }`}
+                >
+                  <Ellipsis size={12} />
+                </button>
+              }
+              side="bottom"
+              align="end"
+            >
+              <div className="flex flex-col gap-2 p-2.5 w-[200px]">
+                <TokenInput
+                  scale={SIZE_CONSTRAINT_SCALE}
+                  value={frame.minWidth}
+                  onChange={(v) => updateFrame(frame.id, { minWidth: v })}
+                  min={0}
+                  label="Min W"
+                  classPrefix="min-w"
+                />
+                <TokenInput
+                  scale={SIZE_CONSTRAINT_SCALE}
+                  value={frame.maxWidth}
+                  onChange={(v) => updateFrame(frame.id, { maxWidth: v })}
+                  min={0}
+                  label="Max W"
+                  classPrefix="max-w"
+                />
+                <TokenInput
+                  scale={SIZE_CONSTRAINT_SCALE}
+                  value={frame.minHeight}
+                  onChange={(v) => updateFrame(frame.id, { minHeight: v })}
+                  min={0}
+                  label="Min H"
+                  classPrefix="min-h"
+                />
+                <TokenInput
+                  scale={SIZE_CONSTRAINT_SCALE}
+                  value={frame.maxHeight}
+                  onChange={(v) => updateFrame(frame.id, { maxHeight: v })}
+                  min={0}
+                  label="Max H"
+                  classPrefix="max-h"
+                />
+                {hasChildBehavior && !isFlex && (
+                  <>
+                    {parentIsFlex && (
+                      <>
+                        <TokenInput
+                          scale={GROW_SCALE}
+                          value={frame.grow}
+                          onChange={(v) => updateFrame(frame.id, { grow: v })}
+                          min={0}
+                          label="Grow"
+                          classPrefix="grow"
+                          defaultValue={0}
+                        />
+                        <TokenInput
+                          scale={SHRINK_SCALE}
+                          value={frame.shrink}
+                          onChange={(v) => updateFrame(frame.id, { shrink: v })}
+                          min={0}
+                          label="Shrink"
+                          classPrefix="shrink"
+                          defaultValue={1}
+                        />
+                      </>
+                    )}
+                    <TokenInput
+                      value={frame.alignSelf}
+                      options={ALIGN_SELF_OPTIONS}
+                      onChange={(v) => updateFrame(frame.id, { alignSelf: v as Frame['alignSelf'] })}
+                      label="Align Self"
+                      classPrefix="self"
+                      initialValue="auto"
+                    />
+                    {parentIsGrid && (
+                      <>
+                        <TokenInput
+                          scale={COL_SPAN_SCALE}
+                          value={frame.colSpan}
+                          onChange={(v) => updateFrame(frame.id, { colSpan: v })}
+                          min={0}
+                          label="Col Span"
+                          classPrefix="col-span"
+                          defaultValue={0}
+                          placeholder="Auto"
+                        />
+                        <TokenInput
+                          scale={ROW_SPAN_SCALE}
+                          value={frame.rowSpan}
+                          onChange={(v) => updateFrame(frame.id, { rowSpan: v })}
+                          min={0}
+                          label="Row Span"
+                          classPrefix="row-span"
+                          defaultValue={0}
+                          placeholder="Auto"
+                        />
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+            </Popover>
+          ) : (
+            <div className="w-5 shrink-0" />
+          )}
         </div>
 
         {isBox && (
@@ -357,7 +361,7 @@ export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolea
                     }}
                   />
                 </div>
-                {hasChildBehavior ? (
+                {advancedMode && hasChildBehavior ? (
                   <Popover
                     open={childPropsOpen}
                     onOpenChange={setChildPropsOpen}
@@ -494,13 +498,15 @@ export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolea
           label="Padding"
           classPrefix="p"
         />
-        <SpacingControl
-          value={frame.margin}
-          onChange={(v) => updateSpacing(frame.id, 'margin', v)}
-          label="Margin"
-          classPrefix="m"
-          scale={MARGIN_SCALE}
-        />
+        {advancedMode && (
+          <SpacingControl
+            value={frame.margin}
+            onChange={(v) => updateSpacing(frame.id, 'margin', v)}
+            label="Margin"
+            classPrefix="m"
+            scale={MARGIN_SCALE}
+          />
+        )}
 
         {/* Clip */}
         <div className="flex items-center gap-2">
@@ -519,38 +525,42 @@ export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolea
             <span className={`text-[12px] ${frame.overflow === 'hidden' ? 'text-text-primary' : 'text-text-muted'}`}>Clip</span>
           </button>
           <div className="flex-1" />
-          <Popover
-            trigger={
-              <button
-                type="button"
-                title="Overflow"
-                className={`w-5 h-5 shrink-0 flex items-center justify-center rounded ${
-                  frame.overflow === 'scroll'
-                    ? 'text-blue-400 bg-blue-400/10'
-                    : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'
-                }`}
-              >
-                <Ellipsis size={12} />
-              </button>
-            }
-            side="bottom"
-            align="end"
-          >
-            <div className="flex flex-col gap-1.5 p-2.5 min-w-[120px]">
-              <button
-                type="button"
-                onClick={() => updateFrame(frame.id, { overflow: frame.overflow === 'scroll' ? 'visible' : 'scroll' })}
-                className="flex items-center gap-1.5 cursor-pointer select-none"
-              >
-                <span className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center ${
-                  frame.overflow === 'scroll' ? 'bg-accent border-accent text-white' : 'border-border-accent bg-surface-2'
-                }`}>
-                  {frame.overflow === 'scroll' && <Check size={10} strokeWidth={3} />}
-                </span>
-                <span className={`text-[12px] ${frame.overflow === 'scroll' ? 'text-text-primary' : 'text-text-muted'}`}>Scroll</span>
-              </button>
-            </div>
-          </Popover>
+          {advancedMode ? (
+            <Popover
+              trigger={
+                <button
+                  type="button"
+                  title="Overflow"
+                  className={`w-5 h-5 shrink-0 flex items-center justify-center rounded ${
+                    frame.overflow === 'scroll'
+                      ? 'text-blue-400 bg-blue-400/10'
+                      : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'
+                  }`}
+                >
+                  <Ellipsis size={12} />
+                </button>
+              }
+              side="bottom"
+              align="end"
+            >
+              <div className="flex flex-col gap-1.5 p-2.5 min-w-[120px]">
+                <button
+                  type="button"
+                  onClick={() => updateFrame(frame.id, { overflow: frame.overflow === 'scroll' ? 'visible' : 'scroll' })}
+                  className="flex items-center gap-1.5 cursor-pointer select-none"
+                >
+                  <span className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center ${
+                    frame.overflow === 'scroll' ? 'bg-accent border-accent text-white' : 'border-border-accent bg-surface-2'
+                  }`}>
+                    {frame.overflow === 'scroll' && <Check size={10} strokeWidth={3} />}
+                  </span>
+                  <span className={`text-[12px] ${frame.overflow === 'scroll' ? 'text-text-primary' : 'text-text-muted'}`}>Scroll</span>
+                </button>
+              </div>
+            </Popover>
+          ) : (
+            <div className="w-5 shrink-0" />
+          )}
         </div>
       </div>
     </Section>

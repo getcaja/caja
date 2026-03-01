@@ -10,7 +10,7 @@ export function EffectsSection({ frame }: { frame: Frame }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
 
   return (
-    <Section title="Effects">
+    <Section title="Effects" defaultCollapsed>
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
           <TokenInput
