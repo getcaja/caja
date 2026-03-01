@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { useFrameStore, isRootId } from './store/frameStore'
+import { useFrameStore } from './store/frameStore'
 import { TreePanel } from './components/TreePanel/TreePanel'
 import { Canvas } from './components/Canvas/Canvas'
 import { RightPanel } from './components/RightPanel/RightPanel'
@@ -73,10 +73,6 @@ function App() {
   const loadFromStorage = useFrameStore((s) => s.loadFromStorage)
   const undo = useFrameStore((s) => s.undo)
   const redo = useFrameStore((s) => s.redo)
-  const removeFrame = useFrameStore((s) => s.removeFrame)
-  const removeSelected = useFrameStore((s) => s.removeSelected)
-  const reorderFrame = useFrameStore((s) => s.reorderFrame)
-  const selectedId = useFrameStore((s) => s.selectedId)
   const filePath = useFrameStore((s) => s.filePath)
   const previewMode = useFrameStore((s) => s.previewMode)
   const activePageId = useFrameStore((s) => s.activePageId)
@@ -279,14 +275,14 @@ function App() {
     return () => mq.removeEventListener('change', onChange)
   }, [])
 
-  // Keyboard shortcuts
+  // Global keyboard shortcuts (tree-specific shortcuts are in useTreeKeyboard adapters in TreePanel)
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase()
       if ((e.metaKey || e.ctrlKey) && key === 'z' && !e.shiftKey) {
         e.preventDefault()
-        const tab = useFrameStore.getState().treePanelTab
-        if (tab === 'components' || tab === 'libraries') {
+        const { treePanelTab, editingComponentId } = useFrameStore.getState()
+        if ((treePanelTab === 'components' || treePanelTab === 'libraries') && !editingComponentId) {
           useCatalogStore.getState().undo()
         } else {
           undo()
@@ -294,79 +290,12 @@ function App() {
       }
       if ((e.metaKey || e.ctrlKey) && key === 'z' && e.shiftKey) {
         e.preventDefault()
-        const tab = useFrameStore.getState().treePanelTab
-        if (tab === 'components' || tab === 'libraries') {
+        const { treePanelTab, editingComponentId } = useFrameStore.getState()
+        if ((treePanelTab === 'components' || treePanelTab === 'libraries') && !editingComponentId) {
           useCatalogStore.getState().redo()
         } else {
           redo()
         }
-      }
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        const { selectedIds } = useFrameStore.getState()
-        if (!selectedId && selectedIds.size === 0) return
-        const tag = (e.target as HTMLElement).tagName
-        if (tag === 'INPUT' || tag === 'TEXTAREA') return
-        const isEditable = (e.target as HTMLElement).isContentEditable
-        if (isEditable) return
-        e.preventDefault()
-        if (selectedIds.size > 1) {
-          removeSelected()
-        } else if (selectedId && !isRootId(selectedId)) {
-          removeFrame(selectedId)
-        }
-      }
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && selectedId && !isRootId(selectedId)) {
-        const tag = (e.target as HTMLElement).tagName
-        if (tag === 'INPUT' || tag === 'TEXTAREA') return
-        if ((e.target as HTMLElement).isContentEditable) return
-        const { getParentDirection, getParentDisplay } = useFrameStore.getState()
-        const display = getParentDisplay(selectedId)
-        // Grid with multiple columns behaves like a row (Left/Right only)
-        const dir = display === 'grid' ? 'row' : getParentDirection(selectedId)
-        if (dir === 'column' && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) return
-        if (dir === 'row' && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) return
-        e.preventDefault()
-        const before = e.key === 'ArrowUp' || e.key === 'ArrowLeft'
-        reorderFrame(selectedId, before ? 'up' : 'down')
-      }
-      // Select all siblings
-      if ((e.metaKey || e.ctrlKey) && key === 'a' && !e.shiftKey) {
-        const tag = (e.target as HTMLElement).tagName
-        if (tag === 'INPUT' || tag === 'TEXTAREA') return
-        if ((e.target as HTMLElement).isContentEditable) return
-        e.preventDefault()
-        useFrameStore.getState().selectAllSiblings()
-      }
-      // Copy / Cut / Paste
-      if ((e.metaKey || e.ctrlKey) && key === 'c' && !e.shiftKey) {
-        const tag = (e.target as HTMLElement).tagName
-        if (tag === 'INPUT' || tag === 'TEXTAREA') return
-        if ((e.target as HTMLElement).isContentEditable) return
-        e.preventDefault()
-        useFrameStore.getState().copySelected()
-      }
-      if ((e.metaKey || e.ctrlKey) && key === 'x' && !e.shiftKey) {
-        const tag = (e.target as HTMLElement).tagName
-        if (tag === 'INPUT' || tag === 'TEXTAREA') return
-        if ((e.target as HTMLElement).isContentEditable) return
-        e.preventDefault()
-        useFrameStore.getState().cutSelected()
-      }
-      if ((e.metaKey || e.ctrlKey) && key === 'v' && !e.shiftKey) {
-        const tag = (e.target as HTMLElement).tagName
-        if (tag === 'INPUT' || tag === 'TEXTAREA') return
-        if ((e.target as HTMLElement).isContentEditable) return
-        e.preventDefault()
-        useFrameStore.getState().pasteClipboard()
-      }
-      // Duplicate
-      if ((e.metaKey || e.ctrlKey) && key === 'd') {
-        const tag = (e.target as HTMLElement).tagName
-        if (tag === 'INPUT' || tag === 'TEXTAREA') return
-        if ((e.target as HTMLElement).isContentEditable) return
-        e.preventDefault()
-        const s = useFrameStore.getState()
-        if (s.selectedId && !isRootId(s.selectedId)) s.duplicateFrame(s.selectedId)
       }
       if ((e.metaKey || e.ctrlKey) && e.key === 's' && !e.shiftKey) {
         e.preventDefault()
@@ -435,7 +364,7 @@ function App() {
     return () => {
       window.removeEventListener('keydown', handler)
     }
-  }, [undo, redo, removeFrame, removeSelected, reorderFrame, selectedId, handleSave, handleSaveAs, handleOpen])
+  }, [undo, redo, handleSave, handleSaveAs, handleOpen])
 
   // Resize drag — full-viewport overlay prevents iframe from stealing events.
   // Uses pointermove/pointerup (NOT mousemove/mouseup) because preventDefault()

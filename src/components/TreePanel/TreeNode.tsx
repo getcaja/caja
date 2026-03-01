@@ -1,22 +1,17 @@
-import { createContext, useContext, useRef, useEffect, useCallback, useMemo } from 'react'
+import { createContext, useContext, useRef, useCallback, useMemo } from 'react'
 import { useDraggable, useDroppable, useDndContext } from '@dnd-kit/core'
 import type { Frame } from '../../types/frame'
-import { useFrameStore, findInTree } from '../../store/frameStore'
-import { useTreeDnd, type DropPosition } from './TreeDndContext'
+import { useFrameStore } from '../../store/frameStore'
+import { useTreeDnd } from './TreeDndContext'
 import { useContextMenu } from './hooks/useContextMenu'
 import { useInlineEdit } from './hooks/useInlineEdit'
-import { ChevronRight, ChevronDown, Frame as FrameIcon, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse, Copy, Trash2, Group, SquarePlus, Eye, EyeOff, Link, Bookmark, Diamond, Pencil, RotateCcw, Unlink } from 'lucide-react'
+import { useTreeMerge, type TreeMergeState } from './hooks/useTreeMerge'
+import { TreeRow } from './TreeRow'
+import { Frame as FrameIcon, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse, Copy, Trash2, Group, SquarePlus, Eye, EyeOff, Link, Bookmark, Diamond, Pencil, RotateCcw, Unlink } from 'lucide-react'
 
 /* ── Tree merge context ─────────────────────────────────────
- * Computes which selected tree rows are visually adjacent so
- * their backgrounds can merge into a continuous block (like Figma).
- * mergeTop = previous visible row is also selected → no top radius
- * mergeBottom = next visible row is also selected → no bottom radius */
-
-interface TreeMergeState {
-  mergeTop: Set<string>
-  mergeBottom: Set<string>
-}
+ * Wraps useTreeMerge with a React context so TreeNodes don't
+ * each need to independently compute visible order. */
 
 const EMPTY_MERGE: TreeMergeState = { mergeTop: new Set(), mergeBottom: new Set() }
 const TreeMergeContext = createContext<TreeMergeState>(EMPTY_MERGE)
@@ -26,10 +21,7 @@ export function TreeMergeProvider({ children }: { children: React.ReactNode }) {
   const selectedIds = useFrameStore((s) => s.selectedIds)
   const collapsedIds = useFrameStore((s) => s.collapsedIds)
 
-  const mergeState = useMemo(() => {
-    if (selectedIds.size <= 1) return EMPTY_MERGE
-
-    // Flatten visible tree order (DFS, skip hidden nodes)
+  const visibleOrder = useMemo(() => {
     const order: string[] = []
     function walk(frame: Frame) {
       if (frame.hidden) return
@@ -39,16 +31,10 @@ export function TreeMergeProvider({ children }: { children: React.ReactNode }) {
       }
     }
     walk(root)
+    return order
+  }, [root, collapsedIds])
 
-    const mergeTop = new Set<string>()
-    const mergeBottom = new Set<string>()
-    for (let i = 0; i < order.length; i++) {
-      if (!selectedIds.has(order[i])) continue
-      if (i > 0 && selectedIds.has(order[i - 1])) mergeTop.add(order[i])
-      if (i < order.length - 1 && selectedIds.has(order[i + 1])) mergeBottom.add(order[i])
-    }
-    return { mergeTop, mergeBottom }
-  }, [root, selectedIds, collapsedIds])
+  const mergeState = useTreeMerge(selectedIds, visibleOrder)
 
   return <TreeMergeContext.Provider value={mergeState}>{children}</TreeMergeContext.Provider>
 }
@@ -87,28 +73,9 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
   const isMulti = selectedIds.size > 1
   const merge = useContext(TreeMergeContext)
 
-  // Compute border-radius for merged multi-selection groups
-  const selectionRadius = !isSelected ? 'rounded-md' : !isMulti ? 'rounded-md' : (() => {
-    const mt = merge.mergeTop.has(frame.id)
-    const mb = merge.mergeBottom.has(frame.id)
-    if (mt && mb) return ''
-    if (mt) return 'rounded-b-md'
-    if (mb) return 'rounded-t-md'
-    return 'rounded-md'
-  })()
-
-  useEffect(() => {
-    if (isSelected && rowRef.current) {
-      requestAnimationFrame(() => {
-        rowRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-      })
-    }
-  }, [isSelected])
-
   const isBox = frame.type === 'box'
   const hasChildren = isBox && frame.children.length > 0
   const isCollapsed = collapsedIds.has(frame.id)
-  // isDragging: true for the active drag item, or any multi-drag sibling
   const isDragging = dndActive !== null && (
     String(dndActive.id) === frame.id || (multiDragCount > 1 && selectedIds.has(frame.id))
   )
@@ -145,56 +112,82 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
     (el: HTMLElement | null) => {
       setDraggableRef(el)
       setDroppableRef(el)
-      rowRef.current = el
+      ;(rowRef as React.MutableRefObject<HTMLDivElement | null>).current = el as HTMLDivElement | null
     },
     [setDraggableRef, setDroppableRef],
   )
 
-  // Drop indicator styles
-  let dropIndicator: React.ReactNode = null
-  if (isOver && overPosition && activeId) {
-    if (overPosition === 'before') {
-      dropIndicator = (
-        <div
-          className="absolute left-0 right-0 top-0 h-[2px] bg-accent z-10"
-          style={{ marginLeft: depth * 16 + 4 }}
-        />
-      )
-    } else if (overPosition === 'after') {
-      dropIndicator = (
-        <div
-          className="absolute left-0 right-0 bottom-0 h-[2px] bg-accent z-10"
-          style={{ marginLeft: depth * 16 + 4 }}
-        />
-      )
-    }
-  }
+  // Determine icon
+  const iconEl = isMaster ? <Diamond size={12} fill="currentColor" />
+    : isInstance ? <Diamond size={12} />
+    : frame.type === 'text' && 'tag' in frame && frame.tag === 'a' ? <Link size={12} />
+    : frame.type === 'text' ? <Type size={12} />
+    : frame.type === 'image' ? <ImageIcon size={12} />
+    : frame.type === 'button' ? <RectangleHorizontal size={12} />
+    : frame.type === 'input' ? <TextCursorInput size={12} />
+    : frame.type === 'textarea' ? <AlignLeft size={12} />
+    : frame.type === 'select' ? <ListCollapse size={12} />
+    : <FrameIcon size={12} />
+
+  // Icon color class
+  const iconColor = isMaster || isInstance ? 'text-purple-400' : ''
+
+  // Chevron state
+  const chevron: 'expanded' | 'collapsed' | 'leaf' | 'none' = !isBox ? 'none'
+    : hasChildren ? (isCollapsed ? 'collapsed' : 'expanded')
+    : 'leaf'
+
+  // Row className additions
+  const rowClassName = [
+    frame.hidden ? 'opacity-40' : '',
+    insideInstance ? 'text-purple-400!' : '',
+  ].filter(Boolean).join(' ')
+
+  // Name display
+  const displayName = isRoot && !editingComponentId ? 'Body' : frame.name
+  const nameClass = isMaster || isInstance ? 'text-purple-400' : ''
+
+  // Drop position (only when hovered and not self-dragging)
+  const dropPos = isOver && overPosition && activeId ? overPosition : null
+
+  // Visibility button as trailing
+  const trailing = !isRoot ? (
+    <button
+      className={`w-4 h-4 c-icon-btn text-[10px] shrink-0 ${frame.hidden ? '' : 'hidden group-hover:flex'} ${frame.hidden ? 'text-text-muted' : 'hover:text-text-secondary hover:bg-surface-2/60'}`}
+      onClick={(e) => {
+        e.stopPropagation()
+        toggleHidden(frame.id)
+      }}
+      title={frame.hidden ? 'Show' : 'Hide'}
+    >
+      {frame.hidden ? <EyeOff size={10} /> : <Eye size={10} />}
+    </button>
+  ) : undefined
 
   return (
-    <div className="relative" style={isDragging ? { opacity: 0.3 } : undefined}>
-      {dropIndicator}
-      <div
-        ref={setNodeRef}
-        {...listeners}
-        {...attributes}
-        className={`flex items-center gap-1.5 py-1 px-1 ${selectionRadius} cursor-default group transition-all ${
-          isSelected
-            ? `${isMulti ? 'tree-node-multi-selected' : 'tree-node-selected'} text-text-primary`
-            : isOver && overPosition === 'inside'
-              ? 'bg-[var(--color-accent)]/10 outline outline-1 outline-[var(--color-accent)]/40'
-              : 'hover:bg-[var(--color-accent)]/8 text-text-secondary hover:text-text-primary'
-        } ${frame.hidden ? 'opacity-40' : ''} ${insideInstance ? 'text-purple-400!' : ''}`}
-        style={{ paddingLeft: depth * 16 + 4 }}
+    <>
+      <TreeRow
+        id={frame.id}
+        depth={depth}
+        icon={<span className={iconColor}>{iconEl}</span>}
+        name={displayName}
+        nameClassName={nameClass}
+        isSelected={isSelected}
+        isMulti={isMulti}
+        mergeTop={merge.mergeTop.has(frame.id)}
+        mergeBottom={merge.mergeBottom.has(frame.id)}
+        editing={!isRoot && nameEdit.editing}
+        editValue={nameEdit.value}
+        onEditChange={nameEdit.setValue}
+        onEditCommit={nameEdit.commit}
+        onEditCancel={nameEdit.cancel}
         onClick={(e) => {
           if (e.shiftKey) useFrameStore.getState().selectRange(frame.id)
           else if (e.metaKey) useFrameStore.getState().selectMulti(frame.id)
           else select(frame.id)
         }}
-        onMouseEnter={() => hover(frame.id)}
-        onMouseLeave={() => hover(null)}
         onDoubleClick={() => {
           if (isRoot) return
-          // Double-click on an instance → enter edit mode for its master
           if (isInstance && frame._componentId) {
             useFrameStore.getState().enterComponentEditMode(frame._componentId)
             return
@@ -205,66 +198,18 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
           if (!selectedIds.has(frame.id)) select(frame.id)
           ctxMenu.open(e)
         }}
-      >
-        {/* Collapse chevron */}
-        <span
-          className="w-3.5 h-4 flex items-center justify-center shrink-0 text-text-muted select-none"
-          onClick={(e) => {
-            if (hasChildren) {
-              e.stopPropagation()
-              toggleCollapse(frame.id)
-            }
-          }}
-          style={{ cursor: hasChildren ? 'pointer' : 'default' }}
-        >
-          {isBox ? (
-            hasChildren ? (isCollapsed ? <ChevronRight size={10} /> : <ChevronDown size={10} />) : <ChevronRight size={10} className="opacity-50" />
-          ) : null}
-        </span>
-
-        {/* Type icon — filled diamond for masters, hollow diamond for instances */}
-        <span className={`shrink-0 ${isMaster ? 'text-purple-400' : isInstance ? 'text-purple-400' : ''}`}>
-          {isMaster ? <Diamond size={12} fill="currentColor" />
-            : isInstance ? <Diamond size={12} />
-            : frame.type === 'text' && 'tag' in frame && frame.tag === 'a' ? <Link size={12} />
-            : frame.type === 'text' ? <Type size={12} />
-            : frame.type === 'image' ? <ImageIcon size={12} />
-            : frame.type === 'button' ? <RectangleHorizontal size={12} />
-            : frame.type === 'input' ? <TextCursorInput size={12} />
-            : frame.type === 'textarea' ? <AlignLeft size={12} />
-            : frame.type === 'select' ? <ListCollapse size={12} />
-            : <FrameIcon size={12} />}
-        </span>
-
-        {/* Color dot */}
-        {frame.bg?.value && (
-          <span
-            className="w-2 h-2 rounded-full shrink-0"
-            style={{ backgroundColor: frame.bg.value }}
-          />
-        )}
-
-        {/* Name */}
-        {!isRoot && nameEdit.editing ? (
-          <input {...nameEdit.inputProps} />
-        ) : (
-          <span className={`flex-1 h-5 flex items-center text-[12px] truncate ${isMaster || isInstance ? 'text-purple-400' : ''}`}>{isRoot && !editingComponentId ? 'Body' : frame.name}</span>
-        )}
-
-        {/* Visibility toggle on hover */}
-        {!isRoot && (
-          <button
-            className={`w-4 h-4 c-icon-btn text-[10px] shrink-0 ${frame.hidden ? '' : 'hidden group-hover:flex'} ${frame.hidden ? 'text-text-muted' : 'hover:text-text-secondary hover:bg-surface-2/60'}`}
-            onClick={(e) => {
-              e.stopPropagation()
-              toggleHidden(frame.id)
-            }}
-            title={frame.hidden ? 'Show' : 'Hide'}
-          >
-            {frame.hidden ? <EyeOff size={10} /> : <Eye size={10} />}
-          </button>
-        )}
-      </div>
+        onMouseEnter={() => hover(frame.id)}
+        onMouseLeave={() => hover(null)}
+        chevron={chevron}
+        onChevronClick={() => toggleCollapse(frame.id)}
+        trailing={trailing}
+        isDragging={isDragging}
+        dropPosition={dropPos}
+        className={rowClassName}
+        rowRef={setNodeRef}
+        dndProps={{ ...listeners, ...attributes }}
+        colorDot={frame.bg?.value || undefined}
+      />
 
       {/* Right-click context menu (fixed position) */}
       {ctxMenu.backdrop}
@@ -311,7 +256,6 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
                   className="c-menu-item"
                   onClick={() => {
                     const store = useFrameStore.getState()
-                    // Switch back to Layers page and insert instance there
                     store.setTreePanelTab('layers')
                     requestAnimationFrame(() => {
                       useFrameStore.getState().insertInstance(frame.id, useFrameStore.getState().root.id)
@@ -428,6 +372,6 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
         frame.children.map((child, i) => (
           <TreeNode key={child.id} frame={child} depth={depth + 1} parentId={frame.id} index={i} insideInstance={insideInstance || isInstance} />
         ))}
-    </div>
+    </>
   )
 }

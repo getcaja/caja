@@ -111,25 +111,14 @@ export function buildOverlayRules(state: {
   canvasDragId: string | null
   showDragGuides: boolean
   dragTargetParentId: string | null
-  instanceIds?: string[]
 }): string[] {
-  const { selectedId, selectedIds, hoveredId, showSel, showHov, canvasDragId, showDragGuides, dragTargetParentId, instanceIds } = state
+  const { selectedId, selectedIds, hoveredId, showSel, showHov, canvasDragId, showDragGuides, dragTargetParentId } = state
   const rules: string[] = []
-  const COMPONENT_COLOR = '#a855f7' // purple-500
-
-  // Component instance outlines (purple dotted, when not selected/hovered)
-  if (instanceIds && instanceIds.length > 0) {
-    for (const iid of instanceIds) {
-      if (iid === selectedId || selectedIds.has(iid) || iid === hoveredId) continue
-      rules.push(`[data-frame-id="${iid}"] { outline: 1px dotted ${COMPONENT_COLOR} !important; outline-offset: -1px !important; }`)
-    }
-  }
+  const color = 'var(--color-accent)'
 
   if (showSel) {
     // Primary selection — solid 2px
     if (selectedId) {
-      const isInstance = instanceIds?.includes(selectedId)
-      const color = isInstance ? COMPONENT_COLOR : 'var(--color-accent)'
       rules.push(`[data-frame-id="${selectedId}"] { outline: 2px solid ${color} !important; outline-offset: -2px !important; }`)
       const exc = canvasDragId ? `:not([data-frame-id="${canvasDragId}"])` : ''
       rules.push(`[data-frame-id="${selectedId}"] > [data-frame-id]${exc} { outline: 1px dotted ${color} !important; outline-offset: -1px; }`)
@@ -137,22 +126,18 @@ export function buildOverlayRules(state: {
     // Secondary selections — solid 2px (same style as primary, like Figma)
     for (const id of selectedIds) {
       if (id === selectedId) continue
-      const isInstance = instanceIds?.includes(id)
-      const color = isInstance ? COMPONENT_COLOR : 'var(--color-accent)'
       rules.push(`[data-frame-id="${id}"] { outline: 2px solid ${color} !important; outline-offset: -2px !important; }`)
     }
   }
 
   if (showHov && hoveredId) {
-    const isInstance = instanceIds?.includes(hoveredId)
-    const color = isInstance ? COMPONENT_COLOR : 'var(--color-accent)'
     rules.push(`[data-frame-id="${hoveredId}"] { outline: 1px solid ${color} !important; outline-offset: -1px !important; }`)
     rules.push(`[data-frame-id="${hoveredId}"] > [data-frame-id] { outline: 1px dotted ${color} !important; outline-offset: -1px; }`)
   }
 
   if (showDragGuides && dragTargetParentId) {
     const exc = canvasDragId ? `:not([data-frame-id="${canvasDragId}"])` : ''
-    rules.push(`[data-frame-id="${dragTargetParentId}"] > [data-frame-id]${exc} { outline: 1px dotted var(--color-accent) !important; outline-offset: -1px; }`)
+    rules.push(`[data-frame-id="${dragTargetParentId}"] > [data-frame-id]${exc} { outline: 1px dotted ${color} !important; outline-offset: -1px; }`)
   }
 
   return rules
@@ -186,22 +171,6 @@ export function SelectionOverlay() {
   })
   const showHov = !previewMode && !!hoveredId && hoveredId !== selectedId && !hovIsDescOfSel && !canvasDragId
 
-  // Collect component instance IDs for purple outlines
-  // Returns a joined string to avoid new-array-per-call (React 19 useSyncExternalStore)
-  const instanceIdsStr = useFrameStore((s) => {
-    if (s.previewMode) return ''
-    const ids: string[] = []
-    function walk(frame: import('../../types/frame').Frame) {
-      if (frame._componentId) ids.push(frame.id)
-      if (frame.type === 'box') {
-        for (const child of frame.children) walk(child)
-      }
-    }
-    walk(s.root)
-    return ids.join(',')
-  })
-  const instanceIds = instanceIdsStr ? instanceIdsStr.split(',') : undefined
-
   const dragTargetParentId = canvasDragOver?.parentId ?? null
   const showDragGuides = !previewMode && !!canvasDragId && !!dragTargetParentId
 
@@ -212,7 +181,7 @@ export function SelectionOverlay() {
     setLineRect(computeLineRect(doc, canvasDragOver))
   }, [isLineMode, canvasDragOver?.parentId, canvasDragOver?.index, canvasDragId, doc])
 
-  const rules = buildOverlayRules({ selectedId, selectedIds, hoveredId, showSel, showHov, canvasDragId, showDragGuides, dragTargetParentId, instanceIds })
+  const rules = buildOverlayRules({ selectedId, selectedIds, hoveredId, showSel, showHov, canvasDragId, showDragGuides, dragTargetParentId })
 
   return (
     <>

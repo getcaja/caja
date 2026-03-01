@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
-import { findInTree } from '../../store/frameStore'
-import { useFrameStore } from '../../store/frameStore'
+import { useState, useRef, useMemo, useCallback } from 'react'
+import { findInTree, cloneWithNewIds, normalizeFrame } from '../../store/frameStore'
+import { useFrameStore, isRootId } from '../../store/frameStore'
 import { useCatalogStore } from '../../store/catalogStore'
 import { AddMenu } from './AddMenu'
 import { TreeDndProvider } from './TreeDndContext'
@@ -8,6 +8,7 @@ import { TreeNode, TreeMergeProvider } from './TreeNode'
 import { ComponentsPanel, type ComponentsPanelHandle } from './ComponentsPanel'
 import { PageNode } from './PageNode'
 import { useContextMenu } from './hooks/useContextMenu'
+import { useTreeKeyboard } from './hooks/useTreeKeyboard'
 import { Plus, FolderPlus, Diamond, Download, X } from 'lucide-react'
 
 interface TreePanelProps {
@@ -41,18 +42,114 @@ export function TreePanel({ onExportLibrary }: TreePanelProps) {
   const componentBtnRef = useRef<HTMLButtonElement>(null)
   const componentPanelRef = useRef<ComponentsPanelHandle>(null)
 
-  // Escape key exits component edit mode
-  useEffect(() => {
-    if (!editingComponentId) return
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation()
-        exitComponentEditMode()
+  /* ── Keyboard: Layers adapter ──────────────────────────── */
+  const layersKeyboardConfig = useMemo(() => ({
+    isActive: tab === 'layers' && !editingComponentId,
+    getSelectedIds: () => useFrameStore.getState().selectedIds,
+    getPrimaryId: () => useFrameStore.getState().selectedId,
+    deleteSelected: () => {
+      const s = useFrameStore.getState()
+      if (s.selectedIds.size > 1) {
+        s.removeSelected()
+      } else if (s.selectedId && !isRootId(s.selectedId)) {
+        s.removeFrame(s.selectedId)
       }
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [editingComponentId, exitComponentEditMode])
+    },
+    duplicateSelected: () => {
+      const s = useFrameStore.getState()
+      if (s.selectedId && !isRootId(s.selectedId)) s.duplicateFrame(s.selectedId)
+    },
+    copySelected: () => useFrameStore.getState().copySelected(),
+    cutSelected: () => useFrameStore.getState().cutSelected(),
+    pasteClipboard: () => useFrameStore.getState().pasteClipboard(),
+    selectAll: () => useFrameStore.getState().selectAllSiblings(),
+    reorder: (dir: 'up' | 'down', arrowKey: string) => {
+      const s = useFrameStore.getState()
+      if (!s.selectedId || isRootId(s.selectedId)) return
+      const display = s.getParentDisplay(s.selectedId)
+      const parentDir = display === 'grid' ? 'row' : s.getParentDirection(s.selectedId)
+      if (parentDir === 'column' && (arrowKey === 'ArrowLeft' || arrowKey === 'ArrowRight')) return
+      if (parentDir === 'row' && (arrowKey === 'ArrowUp' || arrowKey === 'ArrowDown')) return
+      s.reorderFrame(s.selectedId, dir)
+    },
+    escape: () => useFrameStore.getState().select(null),
+  }), [tab, editingComponentId])
+
+  useTreeKeyboard(layersKeyboardConfig)
+
+  /* ── Keyboard: Edit mode adapter ───────────────────────── */
+  const editKeyboardConfig = useMemo(() => ({
+    isActive: !!editingComponentId,
+    getSelectedIds: () => useFrameStore.getState().selectedIds,
+    getPrimaryId: () => useFrameStore.getState().selectedId,
+    deleteSelected: () => {
+      const s = useFrameStore.getState()
+      if (s.selectedIds.size > 1) {
+        s.removeSelected()
+      } else if (s.selectedId && !isRootId(s.selectedId)) {
+        s.removeFrame(s.selectedId)
+      }
+    },
+    duplicateSelected: () => {
+      const s = useFrameStore.getState()
+      if (s.selectedId && !isRootId(s.selectedId)) s.duplicateFrame(s.selectedId)
+    },
+    copySelected: () => useFrameStore.getState().copySelected(),
+    cutSelected: () => useFrameStore.getState().cutSelected(),
+    pasteClipboard: () => useFrameStore.getState().pasteClipboard(),
+    selectAll: () => useFrameStore.getState().selectAllSiblings(),
+    reorder: (dir: 'up' | 'down', arrowKey: string) => {
+      const s = useFrameStore.getState()
+      if (!s.selectedId || isRootId(s.selectedId)) return
+      const display = s.getParentDisplay(s.selectedId)
+      const parentDir = display === 'grid' ? 'row' : s.getParentDirection(s.selectedId)
+      if (parentDir === 'column' && (arrowKey === 'ArrowLeft' || arrowKey === 'ArrowRight')) return
+      if (parentDir === 'row' && (arrowKey === 'ArrowUp' || arrowKey === 'ArrowDown')) return
+      s.reorderFrame(s.selectedId, dir)
+    },
+    escape: () => useFrameStore.getState().exitComponentEditMode(),
+  }), [editingComponentId])
+
+  useTreeKeyboard(editKeyboardConfig)
+
+  /* ── Keyboard: Components adapter ──────────────────────── */
+  const componentsKeyboardConfig = useMemo(() => ({
+    isActive: tab === 'components' && !editingComponentId,
+    getSelectedIds: () => useCatalogStore.getState().highlightIds,
+    getPrimaryId: () => useCatalogStore.getState().highlightId,
+    deleteSelected: () => {
+      const cs = useCatalogStore.getState()
+      for (const id of cs.highlightIds) {
+        if (!id.startsWith('__cat:')) cs.deleteComponent(id)
+      }
+    },
+    duplicateSelected: () => {
+      const cs = useCatalogStore.getState()
+      const hl = cs.highlightId
+      if (!hl || hl.startsWith('__cat:')) return
+      const comp = cs.components.find((c) => c.id === hl)
+      if (!comp) return
+      const master = cloneWithNewIds(normalizeFrame(comp.frame))
+      master.name = `${comp.name} Copy`
+      useFrameStore.getState().addComponentMaster(master)
+      cs.registerComponent({
+        id: master.id,
+        name: master.name,
+        tags: [...comp.tags],
+        frame: master,
+        meta: {},
+        createdAt: new Date().toISOString(),
+      })
+    },
+    selectAll: () => {
+      const cs = useCatalogStore.getState()
+      const allIds = new Set(cs.components.map((c) => c.id))
+      useCatalogStore.setState({ highlightIds: allIds })
+    },
+    escape: () => useCatalogStore.getState().setHighlightId(null),
+  }), [tab, editingComponentId])
+
+  useTreeKeyboard(componentsKeyboardConfig)
 
   const activePage = pages.find((p) => p.id === activePageId)
 

@@ -87,62 +87,6 @@ describe('buildOverlayRules', () => {
     expect(rules).toEqual([])
   })
 
-  // ── Component instance outlines ──
-
-  it('generates purple dotted outlines for component instances', () => {
-    const rules = buildOverlayRules({ ...base, instanceIds: ['inst-1', 'inst-2'] })
-    expect(rules).toHaveLength(2)
-    expect(rules[0]).toContain('[data-frame-id="inst-1"]')
-    expect(rules[0]).toContain('dotted')
-    expect(rules[0]).toContain('#a855f7')
-    expect(rules[1]).toContain('[data-frame-id="inst-2"]')
-  })
-
-  it('skips instance outline for selected instance', () => {
-    const rules = buildOverlayRules({
-      ...base,
-      selectedId: 'inst-1',
-      showSel: true,
-      instanceIds: ['inst-1', 'inst-2'],
-    })
-    // inst-1 should get a solid purple selection outline, not a dotted one
-    const dottedInst1 = rules.filter((r) => r.includes('inst-1') && r.includes('dotted') && r.includes('#a855f7') && !r.includes('> [data-frame-id]'))
-    expect(dottedInst1).toHaveLength(0)
-
-    // Selection outline for inst-1 should use purple
-    const selRule = rules.find((r) => r.includes('inst-1') && r.includes('2px solid'))
-    expect(selRule).toBeDefined()
-    expect(selRule).toContain('#a855f7')
-  })
-
-  it('skips instance outline for hovered instance', () => {
-    const rules = buildOverlayRules({
-      ...base,
-      hoveredId: 'inst-1',
-      showHov: true,
-      instanceIds: ['inst-1', 'inst-2'],
-    })
-    // inst-1 should not get a dotted outline (it gets a hover outline instead)
-    const dottedInst1 = rules.filter((r) => r.includes('"inst-1"') && r.includes('dotted') && !r.includes('> [data-frame-id]'))
-    expect(dottedInst1).toHaveLength(0)
-
-    // Hover outline should use purple
-    const hoverRule = rules.find((r) => r.includes('inst-1') && r.includes('1px solid'))
-    expect(hoverRule).toBeDefined()
-    expect(hoverRule).toContain('#a855f7')
-  })
-
-  it('uses accent color for non-instance selection', () => {
-    const rules = buildOverlayRules({
-      ...base,
-      selectedId: 'frame-1',
-      showSel: true,
-      instanceIds: ['inst-1'],
-    })
-    const selRule = rules.find((r) => r.includes('frame-1') && r.includes('2px solid'))
-    expect(selRule).toBeDefined()
-    expect(selRule).toContain('var(--color-accent)')
-  })
 })
 
 // ── Hover/selection suppression logic ──

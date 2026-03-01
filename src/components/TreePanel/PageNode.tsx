@@ -2,7 +2,8 @@ import type { Page } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { useContextMenu } from './hooks/useContextMenu'
 import { useInlineEdit } from './hooks/useInlineEdit'
-import { Check, Copy, Trash2 } from 'lucide-react'
+import { TreeRow } from './TreeRow'
+import { Check, Copy, File, Trash2 } from 'lucide-react'
 
 interface PageNodeProps {
   page: Page
@@ -29,23 +30,27 @@ export function PageNode({ page }: PageNodeProps) {
 
   return (
     <>
-      <div
-        className={`flex items-center gap-1.5 py-1 px-2 rounded-md cursor-default group transition-all ${isActive ? 'text-text-primary' : 'text-text-secondary hover:bg-[var(--color-accent)]/8 hover:text-text-primary'}`}
+      <TreeRow
+        id={page.id}
+        depth={0}
+        icon={<File size={12} />}
+        name={page.name}
+        nameClassName="font-semibold"
+        isSelected={isActive}
+        isMulti={false}
+        mergeTop={false}
+        mergeBottom={false}
+        editing={nameEdit.editing}
+        editValue={nameEdit.value}
+        onEditChange={nameEdit.setValue}
+        onEditCommit={nameEdit.commit}
+        onEditCancel={nameEdit.cancel}
         onClick={handleClick}
         onDoubleClick={() => nameEdit.start(page.name)}
         onContextMenu={ctxMenu.open}
-      >
-        {nameEdit.editing ? (
-          <input {...nameEdit.inputProps} className="flex-1 h-5 bg-surface-2 border border-accent rounded px-1 text-[12px] font-semibold text-text-primary outline-none min-w-0" />
-        ) : (
-          <>
-            <span className="flex-1 h-5 flex items-center text-[12px] font-semibold truncate">{page.name}</span>
-            {isActive && (
-              <Check size={12} className="shrink-0 text-text-secondary" />
-            )}
-          </>
-        )}
-      </div>
+        chevron="none"
+        trailing={isActive ? <Check size={12} className="shrink-0 text-text-secondary" /> : undefined}
+      />
 
       {ctxMenu.backdrop}
       {ctxMenu.menu && (

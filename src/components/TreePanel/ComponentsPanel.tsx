@@ -2,13 +2,14 @@ import { useState, useMemo, useCallback, useEffect, useRef, forwardRef, useImper
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { useFrameStore, findInTree, cloneWithNewIds, normalizeFrame } from '../../store/frameStore'
 import { useCatalogStore } from '../../store/catalogStore'
-import { ChevronRight, ChevronDown, Diamond, Folder } from 'lucide-react'
+import { ChevronDown, Diamond, Folder } from 'lucide-react'
 import type { Component } from '../../types/component'
 import { ComponentPreview } from './ComponentPreview'
 import { useComponentsData } from './useComponentsData'
 import { ComponentContextMenu } from './ComponentContextMenu'
 import { useWorkspaceDnd } from './WorkspaceDndContext'
-import type { DropPosition } from './dndUtils'
+import { useTreeMerge } from './hooks/useTreeMerge'
+import { TreeRow } from './TreeRow'
 
 export type ComponentSource =
   | { type: 'internal' }
@@ -240,17 +241,7 @@ export const ComponentsPanel = forwardRef<ComponentsPanelHandle, ComponentsPanel
     return order
   }, [uncategorized, allTags, categorized, collapsedTags])
 
-  const { mergeTop, mergeBottom } = useMemo(() => {
-    if (highlightIds.size <= 1) return { mergeTop: new Set<string>(), mergeBottom: new Set<string>() }
-    const mt = new Set<string>()
-    const mb = new Set<string>()
-    for (let i = 0; i < visibleOrder.length; i++) {
-      if (!highlightIds.has(visibleOrder[i])) continue
-      if (i > 0 && highlightIds.has(visibleOrder[i - 1])) mt.add(visibleOrder[i])
-      if (i < visibleOrder.length - 1 && highlightIds.has(visibleOrder[i + 1])) mb.add(visibleOrder[i])
-    }
-    return { mergeTop: mt, mergeBottom: mb }
-  }, [visibleOrder, highlightIds])
+  const { mergeTop, mergeBottom } = useTreeMerge(highlightIds, visibleOrder)
 
   const handleClick = useCallback((id: string, e: React.MouseEvent) => {
     if (e.shiftKey) highlightRange(id, visibleOrder)
@@ -359,23 +350,24 @@ export const ComponentsPanel = forwardRef<ComponentsPanelHandle, ComponentsPanel
 
           {/* New category being created */}
           {editingCategoryTag === '__new__' && (
-            <div className="flex items-center gap-1.5 py-1 px-1" style={{ paddingLeft: 4 }}>
-              <span className="w-3.5 h-4 flex items-center justify-center shrink-0 text-text-muted">
-                <ChevronDown size={10} />
-              </span>
-              <span className="shrink-0 text-text-muted"><Folder size={12} /></span>
-              <input
-                autoFocus
-                value={editCategoryValue}
-                onChange={(e) => setEditCategoryValue(e.target.value)}
-                onBlur={commitCategoryRename}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') commitCategoryRename()
-                  if (e.key === 'Escape') setEditingCategoryTag(null)
-                }}
-                className="flex-1 bg-surface-0 border border-accent/50 rounded-md px-1.5 py-0.5 text-[12px] text-text-primary outline-none focus:border-accent min-w-0 transition-colors"
-              />
-            </div>
+            <TreeRow
+              id="__new__"
+              depth={0}
+              icon={<span className="text-text-muted"><Folder size={12} /></span>}
+              name=""
+              isSelected={false}
+              isMulti={false}
+              mergeTop={false}
+              mergeBottom={false}
+              editing={true}
+              editValue={editCategoryValue}
+              onEditChange={setEditCategoryValue}
+              onEditCommit={commitCategoryRename}
+              onEditCancel={() => setEditingCategoryTag(null)}
+              onClick={() => {}}
+              onContextMenu={() => {}}
+              chevron="expanded"
+            />
           )}
         </>
       )}
@@ -427,7 +419,7 @@ export const ComponentsPanel = forwardRef<ComponentsPanelHandle, ComponentsPanel
 
 function CategoryRow({
   tag, items, readOnly, isCollapsed, isEditingCat, editCategoryValue,
-  isHighlighted, isMulti, mergeTop: mt, mergeBottom: mb,
+  isHighlighted, isMulti, mergeTop, mergeBottom,
   onToggle, onClick, onEditChange, onEditCommit, onEditCancel,
   onDoubleClick, onDeleteCategory, onContextMenu, children,
 }: {
@@ -466,77 +458,44 @@ function CategoryRow({
     data: { type: 'category', tag, isBox: true, hasExpandedChildren: !isCollapsed && items.length > 0 },
   })
 
-  const isCatOver = overId === catId
+  const isCatOver = overId === catId && !isDragging
   const catOverPos = isCatOver ? overPosition : null
 
   // Merge refs
+  const rowRef = useRef<HTMLDivElement>(null)
   const mergedRef = useCallback((node: HTMLDivElement | null) => {
     setDragRef(node)
     setDropRef(node)
+    ;(rowRef as React.MutableRefObject<HTMLDivElement | null>).current = node
   }, [setDragRef, setDropRef])
 
   return (
-    <div className="relative">
-      {/* Drop indicators for category reorder */}
-      {isCatOver && catOverPos === 'before' && (
-        <div className="absolute left-0 right-0 top-0 h-[2px] bg-accent z-10 pointer-events-none" style={{ marginLeft: 4 }} />
-      )}
-      {isCatOver && catOverPos === 'after' && (
-        <div className="absolute left-0 right-0 bottom-0 h-[2px] bg-accent z-10 pointer-events-none" style={{ marginLeft: 4 }} />
-      )}
-
-      {/* Category row */}
-      <div
-        ref={mergedRef}
-        {...dragListeners}
-        {...dragAttrs}
-        className={`flex items-center gap-1.5 py-1 px-1 ${
-          !isHighlighted ? 'rounded-md' : !isMulti ? 'rounded-md' : mt && mb ? '' : mt ? 'rounded-b-md' : mb ? 'rounded-t-md' : 'rounded-md'
-        } group transition-all ${
-          isCatOver && catOverPos === 'inside'
-            ? 'bg-[var(--color-accent)]/10 outline outline-1 outline-[var(--color-accent)]/40'
-            : isHighlighted
-              ? `${isMulti ? 'tree-node-multi-selected' : 'tree-node-selected'} text-text-primary`
-              : isDragging ? 'opacity-40' : 'hover:bg-[var(--color-accent)]/8 text-text-secondary hover:text-text-primary'
-        }`}
-        style={{ paddingLeft: 4 }}
+    <div>
+      <TreeRow
+        id={catId}
+        depth={0}
+        icon={<span className="text-text-muted"><Folder size={12} /></span>}
+        name={tag}
+        isSelected={isHighlighted}
+        isMulti={isMulti ?? false}
+        mergeTop={mergeTop ?? false}
+        mergeBottom={mergeBottom ?? false}
+        editing={isEditingCat}
+        editValue={editCategoryValue}
+        onEditChange={onEditChange}
+        onEditCommit={onEditCommit}
+        onEditCancel={onEditCancel}
         onClick={(e) => { if (!activeId) onClick(e) }}
-        onContextMenu={readOnly ? undefined : onContextMenu}
-      >
-        <span
-          className="w-3.5 h-4 flex items-center justify-center shrink-0 text-text-muted select-none cursor-pointer"
-          onClick={(e) => { e.stopPropagation(); onToggle() }}
-        >
-          {isCollapsed ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
-        </span>
-
-        <span className="shrink-0 text-text-muted"><Folder size={12} /></span>
-
-        {isEditingCat ? (
-          <input
-            autoFocus
-            value={editCategoryValue}
-            onChange={(e) => onEditChange(e.target.value)}
-            onBlur={onEditCommit}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') onEditCommit()
-              if (e.key === 'Escape') onEditCancel()
-            }}
-            onClick={(e) => e.stopPropagation()}
-            onPointerDown={(e) => e.stopPropagation()}
-            className="flex-1 bg-surface-0 border border-accent/50 rounded-md px-1.5 py-0.5 text-[12px] text-text-primary outline-none focus:border-accent min-w-0 transition-colors"
-          />
-        ) : (
-          <span
-            className="flex-1 text-[12px] truncate cursor-default"
-            onDoubleClick={readOnly ? undefined : (e) => { e.stopPropagation(); onDoubleClick() }}
-          >
-            {tag}
-          </span>
-        )}
-
-        <div className="w-5 shrink-0" />
-      </div>
+        onDoubleClick={readOnly ? undefined : (e) => { e.stopPropagation(); onDoubleClick() }}
+        onContextMenu={readOnly ? () => {} : onContextMenu}
+        chevron={isCollapsed ? 'collapsed' : 'expanded'}
+        onChevronClick={onToggle}
+        isDragging={isDragging}
+        dropPosition={catOverPos}
+        trailing={<div className="w-5 shrink-0" />}
+        rowRef={mergedRef}
+        dndProps={{ ...dragListeners, ...dragAttrs }}
+      />
 
       {/* Children */}
       {children}
@@ -548,7 +507,7 @@ function CategoryRow({
 
 function ComponentRow({
   component, depth, readOnly, isEditing, editValue,
-  isHighlighted, isMulti, mergeTop: mt, mergeBottom: mb,
+  isHighlighted, isMulti, mergeTop, mergeBottom,
   onClick, onEditChange, onEditCommit, onEditCancel, onDoubleClick,
   onContextMenu, onPreviewEnter, onPreviewLeave,
 }: {
@@ -585,81 +544,48 @@ function ComponentRow({
     data: { type: 'component', tag: component.tags[0] ?? null },
   })
 
-  const scrollRef = useRef<HTMLDivElement>(null)
-
   // Merge refs
+  const rowRef = useRef<HTMLDivElement>(null)
   const mergedRef = useCallback((node: HTMLDivElement | null) => {
     setDragRef(node)
     setDropRef(node)
-    ;(scrollRef as React.MutableRefObject<HTMLDivElement | null>).current = node
+    ;(rowRef as React.MutableRefObject<HTMLDivElement | null>).current = node
   }, [setDragRef, setDropRef])
 
-  useEffect(() => {
-    if (isHighlighted && scrollRef.current) {
-      requestAnimationFrame(() => {
-        scrollRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-      })
-    }
-  }, [isHighlighted])
-
   const isOver = overId === component.id
-  const pos = isOver ? overPosition : null
   const isDragging = isDraggingSelf || (activeId !== null && multiDragCount > 1 && highlightIdsForDrag.has(component.id))
 
   return (
     <div
-      ref={mergedRef}
-      {...listeners}
-      {...attributes}
-      className="relative"
       onMouseEnter={(e) => {
         const rect = e.currentTarget.getBoundingClientRect()
         onPreviewEnter?.(component, rect.top)
       }}
       onMouseLeave={() => onPreviewLeave?.()}
     >
-      {/* Drop indicators */}
-      {isOver && pos === 'before' && (
-        <div className="absolute left-0 right-0 top-0 h-[2px] bg-accent z-10 pointer-events-none" style={{ marginLeft: depth * 16 + 4 }} />
-      )}
-      {isOver && pos === 'after' && (
-        <div className="absolute left-0 right-0 bottom-0 h-[2px] bg-accent z-10 pointer-events-none" style={{ marginLeft: depth * 16 + 4 }} />
-      )}
-
-      <div
-        className={`flex items-center gap-1.5 py-1 px-1 ${
-          !isHighlighted ? 'rounded-md' : !isMulti ? 'rounded-md' : mt && mb ? '' : mt ? 'rounded-b-md' : mb ? 'rounded-t-md' : 'rounded-md'
-        } group transition-all ${
-          isHighlighted
-            ? `${isMulti ? 'tree-node-multi-selected' : 'tree-node-selected'} text-text-primary`
-            : isDragging ? 'opacity-40' : 'hover:bg-[var(--color-accent)]/8 text-text-secondary hover:text-text-primary'
-        }`}
-        style={{ paddingLeft: depth * 16 + 8 }}
+      <TreeRow
+        id={component.id}
+        depth={depth}
+        icon={<span className="text-accent"><Diamond size={12} /></span>}
+        name={component.name}
+        isSelected={isHighlighted}
+        isMulti={isMulti ?? false}
+        mergeTop={mergeTop ?? false}
+        mergeBottom={mergeBottom ?? false}
+        editing={isEditing}
+        editValue={editValue}
+        onEditChange={onEditChange}
+        onEditCommit={onEditCommit}
+        onEditCancel={onEditCancel}
         onClick={onClick}
+        onDoubleClick={onDoubleClick}
         onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onContextMenu(e.clientX, e.clientY) }}
-      >
-        <span className="shrink-0 text-accent"><Diamond size={12} /></span>
-
-        {isEditing ? (
-          <input
-            autoFocus
-            value={editValue}
-            onChange={(e) => onEditChange(e.target.value)}
-            onBlur={onEditCommit}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') onEditCommit()
-              if (e.key === 'Escape') onEditCancel()
-            }}
-            onClick={(e) => e.stopPropagation()}
-            onPointerDown={(e) => e.stopPropagation()}
-            className="flex-1 bg-surface-0 border border-accent/50 rounded-md px-1.5 py-0.5 text-[12px] text-text-primary outline-none focus:border-accent min-w-0 transition-colors"
-          />
-        ) : (
-          <span className="flex-1 text-[12px] truncate" onDoubleClick={onDoubleClick}>{component.name}</span>
-        )}
-
-        <div className="w-5 shrink-0" />
-      </div>
+        isDragging={isDragging}
+        dropPosition={isOver ? overPosition : null}
+        trailing={<div className="w-5 shrink-0" />}
+        rowRef={mergedRef}
+        dndProps={{ ...listeners, ...attributes }}
+      />
     </div>
   )
 }
