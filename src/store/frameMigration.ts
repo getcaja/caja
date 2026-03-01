@@ -212,6 +212,10 @@ export function migrateFrame(raw: Record<string, unknown>): Frame {
     } as BoxElement
   }
 
+  // Preserve component instance data
+  if (raw._componentId) result._componentId = raw._componentId as string
+  if (raw._overrides) result._overrides = raw._overrides as Record<string, Record<string, unknown>>
+
   // Final pass: normalizeFrame fills in any fields the manual migration missed
   // (e.g. new fields added to types that haven't been added to migrateFrame yet)
   return normalizeFrame(result)

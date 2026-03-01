@@ -1,13 +1,15 @@
 import type { Frame, BoxElement } from '../types/frame'
 import { cloneTree } from '../store/frameFactories'
 import { findInTree } from '../store/frameStore'
+import { useCatalogStore } from '../store/catalogStore'
 
 /**
  * Resolve a component instance into a renderable frame tree.
  *
- * If the frame has `_componentId`, look up the master in the Components page,
- * deep clone it, apply `_overrides`, and return the result with the instance's
- * own ID and layout position preserved.
+ * Lookup order:
+ * 1. Components page (masters created via createComponent)
+ * 2. catalogStore (components saved via "Save as Component")
+ * 3. Library data (installed .cjl libraries)
  *
  * If the frame is not an instance, returns it unchanged.
  */
@@ -15,9 +17,32 @@ export function resolveInstance(
   frame: Frame,
   componentPageRoot: BoxElement | null,
 ): Frame {
-  if (!frame._componentId || !componentPageRoot) return frame
+  if (!frame._componentId) return frame
 
-  const master = findInTree(componentPageRoot, frame._componentId)
+  // Try Components page first
+  let master: Frame | null = componentPageRoot
+    ? findInTree(componentPageRoot, frame._componentId)
+    : null
+
+  // Fallback: look in catalogStore (internal components + libraries)
+  if (!master) {
+    const catalog = useCatalogStore.getState()
+    // Check internal components
+    const comp = catalog.getComponent(frame._componentId)
+    if (comp) {
+      master = comp.frame
+    } else {
+      // Check libraries
+      for (const [libId] of catalog.libraries) {
+        const libComp = catalog.getLibraryComponent(libId, frame._componentId)
+        if (libComp) {
+          master = libComp.frame
+          break
+        }
+      }
+    }
+  }
+
   if (!master) return frame // master deleted — render as-is
 
   // Deep clone master tree

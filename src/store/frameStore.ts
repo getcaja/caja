@@ -261,8 +261,11 @@ interface FrameStore {
   componentDragOrigin: { libraryId?: string; patternId?: string } | null
   clipboard: Frame[]
   treePanelTab: 'layers' | 'components' | 'libraries'
+  _layersPageId: string | null  // remembers last Layers page when switching to Components tab
   _lastDuplicateMap: Record<string, string> | null
   _previewSnapshot: BoxElement | null
+  editingComponentId: string | null
+  _beforeEditState: { pageId: string; tab: 'layers' | 'components' | 'libraries' } | null
   mcpHighlightIds: Set<string>
 
   past: Record<string, BoxElement[]>
@@ -319,6 +322,10 @@ interface FrameStore {
   addMcpHighlight: (id: string) => void
   advancedMode: boolean
   setAdvancedMode: (value: boolean) => void
+
+  // Component edit mode
+  enterComponentEditMode: (componentId: string) => void
+  exitComponentEditMode: () => void
 
   // Component system
   getComponentPage: () => Page | undefined
@@ -393,6 +400,23 @@ function updateActiveRoot(state: { pages: Page[]; activePageId: string }, newRoo
 
 export const COMPONENT_PAGE_ID = '__components__'
 
+// Sync catalogStore from the Components page (call after loading data)
+function syncCatalogFromComponentsPage(pages: Page[]) {
+  const compPage = pages.find((p) => p.isComponentPage)
+  if (!compPage || compPage.root.type !== 'box') return
+  const catalog = useCatalogStore.getState()
+  for (const master of compPage.root.children) {
+    catalog.registerComponent({
+      id: master.id,
+      name: master.name || 'Component',
+      tags: [],
+      frame: master,
+      meta: {},
+      createdAt: new Date().toISOString(),
+    })
+  }
+}
+
 // Update a specific page's root in the pages array
 function updatePageRoot(pages: Page[], pageId: string, newRoot: BoxElement): Page[] {
   return pages.map((p) => p.id === pageId ? { ...p, root: newRoot } : p)
@@ -414,6 +438,115 @@ function collectInstances(pages: Page[], componentId: string): { pageId: string;
     walk(page.root, page.id)
   }
   return results
+}
+
+// Override-related props to diff when detecting user edits on instances.
+// These are the props users typically change on instances (text, colors, images, etc.)
+const OVERRIDE_KEYS = [
+  'content', 'src', 'alt', 'href', 'placeholder', 'disabled', 'checked',
+  'inputType', 'inputName', 'inputValue', 'rows', 'tag',
+] as const
+
+/**
+ * Walk instance and original master in parallel (by structural position).
+ * Detect which properties the user changed on the instance vs the original master.
+ * Returns a map of path → changed properties.
+ */
+function collectUserOverrides(
+  instance: Frame,
+  original: Frame,
+  path = '',
+): Map<string, Record<string, unknown>> {
+  const overrides = new Map<string, Record<string, unknown>>()
+  const diff: Record<string, unknown> = {}
+
+  // Compare override-worthy properties
+  for (const key of OVERRIDE_KEYS) {
+    if (key in instance && key in original) {
+      const instVal = (instance as Record<string, unknown>)[key]
+      const origVal = (original as Record<string, unknown>)[key]
+      if (instVal !== origVal) diff[key] = instVal
+    }
+  }
+
+  // Deep compare bg and color (DesignValue objects)
+  if ('bg' in instance && 'bg' in original) {
+    const iBg = (instance as Record<string, unknown>).bg
+    const oBg = (original as Record<string, unknown>).bg
+    if (JSON.stringify(iBg) !== JSON.stringify(oBg)) diff.bg = iBg
+  }
+  if ('color' in instance && 'color' in original) {
+    const iColor = (instance as Record<string, unknown>).color
+    const oColor = (original as Record<string, unknown>).color
+    if (JSON.stringify(iColor) !== JSON.stringify(oColor)) diff.color = iColor
+  }
+
+  if (Object.keys(diff).length > 0) {
+    overrides.set(path, diff)
+  }
+
+  // Recurse children by structural position
+  if (instance.type === 'box' && original.type === 'box') {
+    const len = Math.min(instance.children.length, original.children.length)
+    for (let i = 0; i < len; i++) {
+      const childOverrides = collectUserOverrides(instance.children[i], original.children[i], `${path}/${i}`)
+      for (const [k, v] of childOverrides) {
+        overrides.set(k, v)
+      }
+    }
+  }
+
+  return overrides
+}
+
+/**
+ * Apply user overrides (by structural path) to a freshly cloned master tree.
+ */
+function applyUserOverrides(
+  frame: Frame,
+  overrides: Map<string, Record<string, unknown>>,
+  path: string,
+) {
+  const myOverrides = overrides.get(path)
+  if (myOverrides) {
+    Object.assign(frame, myOverrides)
+  }
+
+  if (frame.type === 'box') {
+    for (let i = 0; i < frame.children.length; i++) {
+      applyUserOverrides(frame.children[i], overrides, `${path}/${i}`)
+    }
+  }
+}
+
+/** Check if a target is an instance or inside one. Used to prevent inserting children. */
+function isInstanceOrInsideInstance(root: Frame, targetId: string): boolean {
+  function walk(frame: Frame, insideInstance: boolean): boolean {
+    if (frame.id === targetId) return insideInstance || !!frame._componentId
+    if (frame.type === 'box') {
+      const entering = insideInstance || !!frame._componentId
+      for (const child of frame.children) {
+        if (walk(child, entering)) return true
+      }
+    }
+    return false
+  }
+  return walk(root, false)
+}
+
+/** Check if a frame is a child INSIDE an instance (but not the instance root itself). */
+function isChildOfInstance(root: Frame, frameId: string): boolean {
+  function walk(frame: Frame, insideInstance: boolean): boolean {
+    if (frame.id === frameId) return insideInstance
+    if (frame.type === 'box') {
+      const entering = insideInstance || !!frame._componentId
+      for (const child of frame.children) {
+        if (walk(child, entering)) return true
+      }
+    }
+    return false
+  }
+  return walk(root, false)
 }
 
 const initialPageId = 'page-1'
@@ -441,7 +574,10 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   componentDragOrigin: null,
   clipboard: [] as Frame[],
   treePanelTab: 'layers' as const,
+  _layersPageId: null as string | null,
   advancedMode: initialViewPrefs.advancedMode,
+  editingComponentId: null,
+  _beforeEditState: null,
   _lastDuplicateMap: null,
   _previewSnapshot: null,
   mcpHighlightIds: new Set<string>(),
@@ -569,8 +705,16 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
     set((state) => {
       const parent = findInTree(state.root, parentId)
       if (!parent || parent.type !== 'box') return {}
+      if (isInstanceOrInsideInstance(state.root, parentId)) return {} // instances are sealed
       const cloned = cloneWithNewIds(normalizeFrame(frame))
-      if (origin) cloned._origin = origin
+      if (origin) {
+        cloned._origin = origin
+        // Link as component instance when inserted from Components/Libraries
+        if (origin.patternId) {
+          cloned._componentId = origin.patternId
+          cloned._overrides = {}
+        }
+      }
       const history = pushHistory(state)
       const newRoot = insertChildInTree(state.root, parentId, cloned, 0) as BoxElement
       return { ...updateActiveRoot(state, newRoot), selectedId: cloned.id, selectedIds: new Set([cloned.id]), ...history }
@@ -580,8 +724,16 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
     set((state) => {
       const parent = findInTree(state.root, parentId)
       if (!parent || parent.type !== 'box') return {}
+      if (isInstanceOrInsideInstance(state.root, parentId)) return {} // instances are sealed
       const cloned = cloneWithNewIds(normalizeFrame(frame))
-      if (origin) cloned._origin = origin
+      if (origin) {
+        cloned._origin = origin
+        // Link as component instance when inserted from Components/Libraries
+        if (origin.patternId) {
+          cloned._componentId = origin.patternId
+          cloned._overrides = {}
+        }
+      }
       const history = pushHistory(state)
       const newRoot = insertChildInTree(state.root, parentId, cloned, index) as BoxElement
       return { ...updateActiveRoot(state, newRoot), selectedId: cloned.id, selectedIds: new Set([cloned.id]), ...history }
@@ -589,6 +741,7 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
 
   addChild: (parentId, type, overrides) =>
     set((state) => {
+      if (isInstanceOrInsideInstance(state.root, parentId)) return {} // instances are sealed
       const prefixMap = { text: 'text', image: 'image', button: 'button', input: 'input', textarea: 'textarea', select: 'select', link: 'link', box: 'frame' } as const
       const prefix = prefixMap[type]
       const name = overrides?.name || nextName(prefix, state.root)
@@ -609,15 +762,41 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   removeFrame: (id) =>
     set((state) => {
       if (isRootId(id)) return {} // never remove internal root
+      if (isChildOfInstance(state.root, id)) return {} // instance children are immutable
       const history = pushHistory(state)
       const nextIds = new Set(state.selectedIds)
       nextIds.delete(id)
       const newRoot = removeFromTree(state.root, id) as BoxElement
-      return { ...updateActiveRoot(state, newRoot), selectedId: state.selectedId === id ? null : state.selectedId, selectedIds: nextIds, ...history }
+
+      // If removing a master from the Components page, auto-detach all its instances
+      const isOnCompPage = state.pages.find((p) => p.isComponentPage && p.id === state.activePageId)
+      let pages = updateActiveRoot(state, newRoot).pages
+      if (isOnCompPage) {
+        // Find and detach all instances of this component across regular pages
+        const instances = collectInstances(state.pages, id)
+        if (instances.length > 0) {
+          for (const inst of instances) {
+            const page = pages.find((p) => p.id === inst.pageId)
+            if (!page) continue
+            const detachedRoot = updateInTree(page.root, inst.frameId, (f) => {
+              const d = { ...f }
+              delete d._componentId
+              delete d._overrides
+              return d as Frame
+            }) as BoxElement
+            pages = updatePageRoot(pages, inst.pageId, detachedRoot)
+          }
+        }
+        // Remove from catalogStore too
+        useCatalogStore.getState().deleteComponent(id)
+      }
+
+      return { pages, root: newRoot, selectedId: state.selectedId === id ? null : state.selectedId, selectedIds: nextIds, ...history }
     }),
 
   duplicateFrame: (id) =>
     set((state) => {
+      if (isChildOfInstance(state.root, id)) return {} // instance children are immutable
       const result = duplicateInTree(state.root, id)
       if (!result) return {}
       const history = pushHistory(state)
@@ -626,6 +805,7 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
 
   wrapInFrame: (id) =>
     set((state) => {
+      if (isChildOfInstance(state.root, id)) return {} // instance children are immutable
       const result = wrapInFrameInTree(state.root, id)
       if (!result) return {}
       const history = pushHistory(state)
@@ -635,6 +815,7 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   moveFrame: (frameId, newParentId, index) =>
     set((state) => {
       if (isRootId(frameId)) return {}
+      if (isInstanceOrInsideInstance(state.root, newParentId)) return {} // can't move into instances
       const history = pushHistory(state)
       const newRoot = moveInTree(state.root, frameId, newParentId, index) as BoxElement
       return { ...updateActiveRoot(state, newRoot), ...history }
@@ -643,6 +824,7 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   reorderFrame: (frameId, direction) =>
     set((state) => {
       if (isRootId(frameId)) return {}
+      if (isChildOfInstance(state.root, frameId)) return {} // instance children are immutable
       const parent = findParent(state.root, frameId)
       if (!parent) return {}
       const idx = parent.children.findIndex((c) => c.id === frameId)
@@ -771,6 +953,7 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
       pages, activePageId: pageId, root, filePath: null, dirty: false,
       selectedId: null, selectedIds: new Set(), past: {}, future: {},
       collapsedIds: new Set(), hoveredId: null,
+      editingComponentId: null, _beforeEditState: null,
     })
     useCatalogStore.getState().resetComponents()
   },
@@ -787,15 +970,20 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
             name: p.name as string,
             route: p.route as string,
             root: migrateToInternalRoot(p.root as Record<string, unknown>, p.id as string),
+            // Detect component page by flag OR by well-known ID (handles old data)
+            ...((p.isComponentPage || p.id === COMPONENT_PAGE_ID) ? { isComponentPage: true } : {}),
           }))
-          const activePageId = (parsed.activePageId as string) || pages[0].id
-          const activePage = pages.find((p) => p.id === activePageId) || pages[0]
+          // Never activate the Components page on startup — always start on a regular page
+          const savedPageId = (parsed.activePageId as string) || pages[0].id
+          const regularPages = pages.filter((p) => !p.isComponentPage)
+          const activePage = regularPages.find((p) => p.id === savedPageId) || regularPages[0] || pages[0]
           let maxId = 0
           for (const p of pages) maxId = Math.max(maxId, maxIdInTree(p.root))
           nextId = maxId + 1
           const maxPid = Math.max(...pages.map((p) => parseInt(p.id.replace('page-', '')) || 0))
           nextPageId = maxPid + 1
           set({ pages, activePageId: activePage.id, root: activePage.root, past: {}, future: {} })
+          syncCatalogFromComponentsPage(pages)
         } else if (parsed.root) {
           // Legacy single-root format → wrap in one page
           const pageId = 'page-1'
@@ -830,8 +1018,11 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
     nextId = maxId + 1
     const maxPid = Math.max(...pages.map((p) => parseInt(p.id.replace('page-', '')) || 0))
     nextPageId = maxPid + 1
-    const activePage = pages.find((p) => p.id === activePageId) || pages[0]
+    // Never activate the Components page on load — always start on a regular page
+    const regularPages = pages.filter((p) => !p.isComponentPage)
+    const activePage = regularPages.find((p) => p.id === activePageId) || regularPages[0] || pages[0]
     set({ pages, activePageId: activePage.id, root: activePage.root, filePath, dirty: false, selectedId: null, selectedIds: new Set(), past: {}, future: {} })
+    syncCatalogFromComponentsPage(pages)
   },
 
   setFilePath: (path) => set({ filePath: path }),
@@ -858,7 +1049,64 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
     return { canvasDragOver: over }
   }),
   setComponentDragFrame: (frame, origin) => set({ componentDragFrame: frame, componentDragOrigin: origin ?? null }),
-  setTreePanelTab: (tab) => set({ treePanelTab: tab }),
+  setTreePanelTab: (tab) => {
+    const state = get()
+    const prevTab = state.treePanelTab
+
+    // If in edit mode and switching away from Components, exit edit mode first
+    if (state.editingComponentId && tab !== 'components') {
+      const restore = state._beforeEditState
+      const restorePage = restore ? state.pages.find((p) => p.id === restore.pageId) : null
+      if (restorePage) {
+        set({
+          editingComponentId: null,
+          _beforeEditState: null,
+          treePanelTab: tab,
+          _layersPageId: null,
+          activePageId: restorePage.id,
+          root: restorePage.root,
+          selectedId: null,
+          selectedIds: new Set(),
+          hoveredId: null,
+        })
+        return
+      }
+    }
+
+    if (tab === 'components' && prevTab !== 'components') {
+      // Switching TO Components tab (browse mode, no edit mode)
+      // Save current page so we can restore when switching away
+      set({
+        treePanelTab: tab,
+        _layersPageId: state.activePageId,
+        // Don't switch to components page — browse mode uses PatternsPanel from catalog
+        selectedId: null,
+        selectedIds: new Set(),
+        hoveredId: null,
+      })
+      return
+    }
+
+    if (prevTab === 'components' && tab !== 'components') {
+      // Switching FROM Components (browse mode): restore previous page
+      const restoreId = state._layersPageId
+      const restorePage = restoreId ? state.pages.find((p) => p.id === restoreId) : null
+      if (restorePage) {
+        set({
+          treePanelTab: tab,
+          _layersPageId: null,
+          activePageId: restorePage.id,
+          root: restorePage.root,
+          selectedId: null,
+          selectedIds: new Set(),
+          hoveredId: null,
+        })
+        return
+      }
+    }
+
+    set({ treePanelTab: tab })
+  },
   setAdvancedMode: (value) => set((s) => {
     saveViewPrefs({ previewMode: s.previewMode, canvasWidth: s.canvasWidth, advancedMode: value })
     return { advancedMode: value }
@@ -923,6 +1171,61 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
     }
   })(),
 
+  // --- Component edit mode ---
+
+  enterComponentEditMode: (componentId) => {
+    const state = get()
+    const compPage = state.pages.find((p) => p.isComponentPage)
+    if (!compPage || compPage.root.type !== 'box') return
+    // Verify the component exists on the component page
+    const master = compPage.root.children.find((c) => c.id === componentId)
+    if (!master) return
+
+    set({
+      _beforeEditState: { pageId: state.activePageId, tab: state.treePanelTab },
+      activePageId: compPage.id,
+      root: compPage.root,
+      editingComponentId: componentId,
+      treePanelTab: 'components',
+      selectedId: componentId,
+      selectedIds: new Set([componentId]),
+      hoveredId: null,
+    })
+  },
+
+  exitComponentEditMode: () => {
+    const state = get()
+    if (!state.editingComponentId) return
+    const restore = state._beforeEditState
+    const restorePage = restore ? state.pages.find((p) => p.id === restore.pageId) : null
+
+    if (restorePage) {
+      set({
+        editingComponentId: null,
+        _beforeEditState: null,
+        activePageId: restorePage.id,
+        root: restorePage.root,
+        treePanelTab: restore!.tab,
+        selectedId: null,
+        selectedIds: new Set(),
+        hoveredId: null,
+      })
+    } else {
+      // Fallback: just exit edit mode, stay on first regular page
+      const regularPage = state.pages.find((p) => !p.isComponentPage) || state.pages[0]
+      set({
+        editingComponentId: null,
+        _beforeEditState: null,
+        activePageId: regularPage.id,
+        root: regularPage.root,
+        treePanelTab: 'layers',
+        selectedId: null,
+        selectedIds: new Set(),
+        hoveredId: null,
+      })
+    }
+  },
+
   // --- Component system ---
 
   getComponentPage: () => {
@@ -983,6 +1286,16 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
       ...history,
     })
 
+    // Register in catalogStore so it shows in Components panel
+    useCatalogStore.getState().registerComponent({
+      id: componentId,
+      name: master.name || frame.name || 'Component',
+      tags: [],
+      frame: master,
+      meta: {},
+      createdAt: new Date().toISOString(),
+    })
+
     return componentId
   },
 
@@ -1036,29 +1349,52 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
     const frame = findInTree(state.root, frameId)
     if (!frame || !frame._componentId) return {}
 
+    // Look up master: Components page first, then catalogStore fallback
+    let master: Frame | null = null
+    const compPage = state.pages.find((p) => p.isComponentPage)
+    if (compPage) {
+      master = findInTree(compPage.root, frame._componentId)
+    }
+    if (!master) {
+      const catalog = useCatalogStore.getState()
+      const comp = catalog.getComponent(frame._componentId)
+      if (comp) master = comp.frame
+    }
+    if (!master) return {} // master deleted
+
+    // Re-clone master tree
+    const freshClone = cloneWithNewIds(normalizeFrame(master))
+
+    // Preserve instance's own identity and component link
+    freshClone.id = frame.id
+    freshClone.name = frame.name
+    freshClone._componentId = frame._componentId
+    freshClone._overrides = {}
+
     const history = pushHistory(state)
-    const newRoot = updateInTree(state.root, frameId, (f) => ({
-      ...f,
-      _overrides: {},
-    } as Frame)) as BoxElement
+    const newRoot = updateInTree(state.root, frameId, () => freshClone) as BoxElement
 
     return { ...updateActiveRoot(state, newRoot), ...history }
   }),
 
   propagateComponent: (componentId) => {
-    // Find master
+    // Find new master (just edited on Components page)
     const state = get()
     const compPage = state.pages.find((p) => p.isComponentPage)
     if (!compPage) return
 
-    const master = findInTree(compPage.root, componentId)
-    if (!master) return
+    const newMaster = findInTree(compPage.root, componentId)
+    if (!newMaster) return
+
+    // Get original master from catalog (baseline for diffing user overrides)
+    const catalogComp = useCatalogStore.getState().getComponent(componentId)
+    const originalMaster = catalogComp?.frame ?? null
 
     // Find all instances across all pages
     const instances = collectInstances(state.pages, componentId)
     if (instances.length === 0) return
 
-    // For each instance, rebuild its tree from master + overrides
+    // For each instance, detect user overrides, then apply new master + overrides
     let pages = [...state.pages]
     let currentRoot = state.root
 
@@ -1069,24 +1405,39 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
       const instanceFrame = findInTree(page.root, frameId)
       if (!instanceFrame) continue
 
-      // Re-clone master with new IDs for this instance's children
-      const freshClone = cloneWithNewIds(normalizeFrame(master))
+      // Detect user overrides by diffing instance vs original master (by structural position)
+      const userOverrides = originalMaster
+        ? collectUserOverrides(instanceFrame, originalMaster)
+        : new Map<string, Record<string, unknown>>()
 
-      // Rebuild instance: keep instance's own ID, position, and _componentId/_overrides
-      const rebuilt: Frame = {
-        ...freshClone,
-        id: instanceFrame.id,
-        name: instanceFrame.name,
-        _componentId: componentId,
-        _overrides: instanceFrame._overrides || {},
+      // Re-clone new master with new IDs
+      const freshClone = cloneWithNewIds(normalizeFrame(newMaster))
+
+      // Preserve instance's own identity and component link
+      freshClone.id = instanceFrame.id
+      freshClone.name = instanceFrame.name
+      freshClone._componentId = componentId
+      freshClone._overrides = instanceFrame._overrides || {}
+
+      // Apply user overrides to the fresh clone (by structural position)
+      if (userOverrides.size > 0) {
+        applyUserOverrides(freshClone, userOverrides, '')
       }
 
-      const newPageRoot = updateInTree(page.root, frameId, () => rebuilt) as BoxElement
+      const newPageRoot = updateInTree(page.root, frameId, () => freshClone) as BoxElement
       pages = updatePageRoot(pages, pageId, newPageRoot)
 
       if (pageId === state.activePageId) {
         currentRoot = newPageRoot
       }
+    }
+
+    // Also update catalog entry with the new master frame
+    const catalog = useCatalogStore.getState()
+    const comp = catalog.getComponent(componentId)
+    if (comp) {
+      // Update the catalog's stored frame to the latest master
+      catalog.registerComponent({ ...comp, frame: cloneTree(newMaster) })
     }
 
     set({ pages, root: currentRoot, dirty: true })
@@ -1208,4 +1559,32 @@ useFrameStore.subscribe((state) => {
       console.warn('Failed to save state to localStorage:', err)
     }
   }, 500)
+})
+
+// Auto-propagate: when editing masters on the Components page, sync all instances
+let propagateTimer: ReturnType<typeof setTimeout> | null = null
+let lastCompPageRoot: BoxElement | null = null
+useFrameStore.subscribe((state) => {
+  const compPage = state.pages.find((p) => p.isComponentPage)
+  if (!compPage) { lastCompPageRoot = null; return }
+
+  // Only propagate when the Components page root actually changed
+  if (compPage.root === lastCompPageRoot) return
+  const prevRoot = lastCompPageRoot
+  lastCompPageRoot = compPage.root
+
+  // Skip the first time (initialization)
+  if (!prevRoot) return
+
+  // Debounce propagation to avoid redundant work during rapid edits
+  if (propagateTimer) clearTimeout(propagateTimer)
+  propagateTimer = setTimeout(() => {
+    propagateTimer = null
+    const s = useFrameStore.getState()
+    const cp = s.pages.find((p) => p.isComponentPage)
+    if (!cp || cp.root.type !== 'box') return
+    for (const master of cp.root.children) {
+      s.propagateComponent(master.id)
+    }
+  }, 0)
 })

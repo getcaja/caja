@@ -19,9 +19,10 @@ export interface PatternsPanelHandle {
 
 interface PatternsPanelProps {
   source?: PatternSource
+  onEditComponent?: (componentId: string) => void
 }
 
-export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>(function PatternsPanel({ source = { type: 'internal' } }, ref) {
+export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>(function PatternsPanel({ source = { type: 'internal' }, onEditComponent }, ref) {
   const {
     patterns, readOnly, sourceName, root, selectedId, insertFrame,
     highlightId, setHighlightId, emptyCategories, deletePattern,
@@ -31,7 +32,6 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
 
   const { activeId: dragId } = useWorkspaceDnd()
 
-  const [rootCollapsed, setRootCollapsed] = useState(false)
   const [collapsedTags, setCollapsedTags] = useState<Set<string>>(new Set())
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
@@ -207,26 +207,14 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
       data-pattern-dnd-panel
       className="h-full flex flex-col overflow-y-auto py-1 px-1"
     >
-      {/* Root "Patterns" node — visible only when there's content */}
       {hasContent && (
-        <RootDroppable
-          readOnly={readOnly}
-          isHighlighted={highlightId === '__patterns_root__'}
-          isCollapsed={rootCollapsed}
-          hasContent={hasContent}
-          onToggle={() => setRootCollapsed((p) => !p)}
-          onClick={() => setHighlightId('__patterns_root__')}
-        />
-      )}
-
-      {hasContent && !rootCollapsed && (
         <>
-          {/* Uncategorized patterns (depth 1) */}
+          {/* Uncategorized items */}
           {uncategorized.map((s) => (
             <PatternRow
               key={s.id}
               pattern={s}
-              depth={1}
+              depth={0}
               readOnly={readOnly}
               isEditing={!readOnly && editingId === s.id}
               editValue={editValue}
@@ -235,7 +223,10 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
               onEditChange={setEditValue}
               onEditCommit={commitPatternRename}
               onEditCancel={() => setEditingId(null)}
-              onDoubleClick={() => { if (!readOnly) startPatternRename(s) }}
+              onDoubleClick={() => {
+                if (onEditComponent) { onEditComponent(s.id); return }
+                if (!readOnly) startPatternRename(s)
+              }}
               onContextMenu={(x, y) => setContextMenu({ x, y, type: 'pattern', pattern: s })}
               onInsert={() => handleInsert(s)}
               onDelete={readOnly ? undefined : () => deletePattern(s.id)}
@@ -277,7 +268,7 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
                   <PatternRow
                     key={s.id}
                     pattern={s}
-                    depth={2}
+                    depth={1}
                     readOnly={readOnly}
                     isEditing={!readOnly && editingId === s.id}
                     editValue={editValue}
@@ -286,7 +277,10 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
                     onEditChange={setEditValue}
                     onEditCommit={commitPatternRename}
                     onEditCancel={() => setEditingId(null)}
-                    onDoubleClick={() => { if (!readOnly) startPatternRename(s) }}
+                    onDoubleClick={() => {
+                      if (onEditComponent) { onEditComponent(s.id); return }
+                      if (!readOnly) startPatternRename(s)
+                    }}
                     onContextMenu={(x, y) => setContextMenu({ x, y, type: 'pattern', pattern: s })}
                     onInsert={() => handleInsert(s)}
                     onDelete={readOnly ? undefined : () => deletePattern(s.id)}
@@ -300,7 +294,7 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
 
           {/* New category being created */}
           {editingCategoryTag === '__new__' && (
-            <div className="flex items-center gap-1.5 py-1 px-1" style={{ paddingLeft: 1 * 16 + 4 }}>
+            <div className="flex items-center gap-1.5 py-1 px-1" style={{ paddingLeft: 4 }}>
               <span className="w-3.5 h-4 flex items-center justify-center shrink-0 text-text-muted">
                 <ChevronDown size={10} />
               </span>
@@ -324,7 +318,7 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
       {!hasContent && (
         <div className="flex-1 flex items-center justify-center">
           <span className="text-text-muted text-[12px]">
-            {readOnly ? 'This library has no patterns.' : 'No patterns yet'}
+            {readOnly ? 'This library is empty.' : 'No components yet'}
           </span>
         </div>
       )}
@@ -358,53 +352,6 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
     </div>
   )
 })
-
-/* ── Root droppable node ─────────────────────────────────── */
-
-function RootDroppable({
-  readOnly, isHighlighted, isCollapsed, hasContent, onToggle, onClick,
-}: {
-  readOnly: boolean
-  isHighlighted: boolean
-  isCollapsed: boolean
-  hasContent: boolean
-  onToggle: () => void
-  onClick: () => void
-}) {
-  const { activeId, overId, overPosition } = useWorkspaceDnd()
-
-  const { setNodeRef } = useDroppable({
-    id: '__patterns_root__',
-    disabled: readOnly || !!activeId?.startsWith('__cat:'),
-    data: { type: 'root', isBox: true },
-  })
-
-  const isOver = overId === '__patterns_root__' && overPosition === 'inside'
-
-  return (
-    <div
-      ref={setNodeRef}
-      className={`flex items-center gap-1.5 py-1 px-1 rounded-md group transition-all ${
-        isOver
-          ? 'bg-[var(--color-accent)]/10 outline outline-1 outline-[var(--color-accent)]/40'
-          : isHighlighted
-            ? 'tree-node-selected text-text-primary'
-            : 'hover:bg-[var(--color-accent)]/8 text-text-secondary hover:text-text-primary'
-      }`}
-      style={{ paddingLeft: 4 }}
-      onClick={onClick}
-    >
-      <span
-        className="w-3.5 h-4 flex items-center justify-center shrink-0 text-text-muted select-none cursor-pointer"
-        onClick={(e) => { e.stopPropagation(); onToggle() }}
-      >
-        {hasContent ? (isCollapsed ? <ChevronRight size={10} /> : <ChevronDown size={10} />) : null}
-      </span>
-      <span className="shrink-0"><Folder size={12} /></span>
-      <span className="flex-1 text-[12px] truncate">Patterns</span>
-    </div>
-  )
-}
 
 /* ── Category row with DnD ───────────────────────────────── */
 
@@ -458,10 +405,10 @@ function CategoryRow({
     <div className="relative">
       {/* Drop indicators for category reorder */}
       {isCatOver && catOverPos === 'before' && (
-        <div className="absolute left-0 right-0 top-0 h-[2px] bg-accent z-10 pointer-events-none" style={{ marginLeft: 1 * 16 + 4 }} />
+        <div className="absolute left-0 right-0 top-0 h-[2px] bg-accent z-10 pointer-events-none" style={{ marginLeft: 4 }} />
       )}
       {isCatOver && catOverPos === 'after' && (
-        <div className="absolute left-0 right-0 bottom-0 h-[2px] bg-accent z-10 pointer-events-none" style={{ marginLeft: 1 * 16 + 4 }} />
+        <div className="absolute left-0 right-0 bottom-0 h-[2px] bg-accent z-10 pointer-events-none" style={{ marginLeft: 4 }} />
       )}
 
       {/* Category row */}
@@ -476,7 +423,7 @@ function CategoryRow({
               ? 'tree-node-selected text-text-primary'
               : isDragging ? 'opacity-40' : 'hover:bg-[var(--color-accent)]/8 text-text-secondary hover:text-text-primary'
         }`}
-        style={{ paddingLeft: 1 * 16 + 4 }}
+        style={{ paddingLeft: 4 }}
         onClick={() => { if (!activeId) onClick() }}
         onContextMenu={readOnly ? undefined : onContextMenu}
       >

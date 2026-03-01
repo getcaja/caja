@@ -320,13 +320,7 @@ export function WorkspaceDndProvider({ children }: { children: React.ReactNode }
       const result = resolveComponentCanvasDrop(px, py)
       cleanupDrag()
       if (result) {
-        // Mark as instance so the frame links back to the component
-        const frameWithLink = {
-          ...componentDragFrame,
-          _componentId: componentDragOrigin?.patternId ?? dragId,
-          _overrides: {},
-        }
-        store.insertFrameAt(result.parentId, frameWithLink, result.index, componentDragOrigin ?? undefined)
+        store.insertFrameAt(result.parentId, componentDragFrame, result.index, componentDragOrigin ?? undefined)
       }
       return
     }

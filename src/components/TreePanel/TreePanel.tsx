@@ -1,5 +1,6 @@
-import { useState, useRef } from 'react'
-import { useFrameStore, findInTree } from '../../store/frameStore'
+import { useState, useRef, useEffect } from 'react'
+import { findInTree } from '../../store/frameStore'
+import { useFrameStore } from '../../store/frameStore'
 import { useCatalogStore } from '../../store/catalogStore'
 import { AddMenu } from './AddMenu'
 import { TreeDndProvider } from './TreeDndContext'
@@ -10,7 +11,7 @@ import { importLibrary, saveLibraryIndex } from '../../lib/libraryOps'
 import { PageNode } from './PageNode'
 import { Select } from '../ui/Select'
 import { useContextMenu } from './hooks/useContextMenu'
-import { Plus, FolderPlus, Code, Download, Settings } from 'lucide-react'
+import { Plus, FolderPlus, Code, Download, Settings, ArrowLeft } from 'lucide-react'
 
 interface TreePanelProps {
   onExportLibrary: () => void
@@ -28,6 +29,10 @@ export function TreePanel({ onExportLibrary }: TreePanelProps) {
   const activeLibraryId = useCatalogStore((s) => s.activeLibraryId)
   const libraryIndex = useCatalogStore((s) => s.libraryIndex)
   const setActiveLibraryId = useCatalogStore((s) => s.setActiveLibraryId)
+  const hasComponentPage = useFrameStore((s) => s.pages.some((p) => p.isComponentPage))
+  const editingComponentId = useFrameStore((s) => s.editingComponentId)
+  const enterComponentEditMode = useFrameStore((s) => s.enterComponentEditMode)
+  const exitComponentEditMode = useFrameStore((s) => s.exitComponentEditMode)
   const [showAdd, setShowAdd] = useState(false)
   const [menuPos, setMenuPos] = useState({ x: 0, y: 0 })
   const addBtnRef = useRef<HTMLButtonElement>(null)
@@ -39,6 +44,19 @@ export function TreePanel({ onExportLibrary }: TreePanelProps) {
 
   // Modal state
   const [showManageLibraries, setShowManageLibraries] = useState(false)
+
+  // Escape key exits component edit mode
+  useEffect(() => {
+    if (!editingComponentId) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation()
+        exitComponentEditMode()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [editingComponentId, exitComponentEditMode])
 
   const activePage = pages.find((p) => p.id === activePageId)
 
@@ -81,10 +99,7 @@ export function TreePanel({ onExportLibrary }: TreePanelProps) {
 
   const handleSaveSelectedAsPattern = () => {
     if (!selectedId) return
-    const frame = findInTree(root, selectedId)
-    if (!frame) return
-    useCatalogStore.getState().saveComponent(frame.name || 'Component', [], frame)
-    setTab('components')
+    useFrameStore.getState().createComponent(selectedId)
     patternMenu.close()
   }
 
@@ -103,6 +118,38 @@ export function TreePanel({ onExportLibrary }: TreePanelProps) {
       setActiveLibraryId(libraryIndex[0].id)
     }
     setTab('libraries')
+  }
+
+  // Component edit mode: isolated panel — no tabs, just back bar + tree
+  if (editingComponentId) {
+    const editingMaster = findInTree(root, editingComponentId)
+
+    return (
+      <div className="h-full bg-surface-1/80 flex flex-col">
+        <div className="px-2 py-2.5 border-b border-border flex items-center gap-1.5">
+          <button
+            onClick={exitComponentEditMode}
+            className="w-5 h-5 c-icon-btn hover:text-accent hover:bg-accent/10"
+            title="Back"
+          >
+            <ArrowLeft size={14} />
+          </button>
+          <span className="text-[12px] font-semibold truncate text-text-primary">
+            {editingMaster?.name ?? 'Component'}
+          </span>
+        </div>
+        <TreeDndProvider>
+          <div
+            className="flex-1 overflow-y-auto py-0.5 px-1"
+            onClick={(e) => { if (e.target === e.currentTarget) useFrameStore.getState().select(null) }}
+          >
+            {editingMaster && (
+              <TreeNode frame={editingMaster} depth={0} isRoot />
+            )}
+          </div>
+        </TreeDndProvider>
+      </div>
+    )
   }
 
   return (
@@ -239,7 +286,11 @@ export function TreePanel({ onExportLibrary }: TreePanelProps) {
 
       {tab === 'components' && (
         <div className="flex-1 flex flex-col overflow-hidden">
-          <PatternsPanel ref={patternPanelRef} source={{ type: 'internal' }} />
+          <PatternsPanel
+            ref={patternPanelRef}
+            source={{ type: 'internal' }}
+            onEditComponent={enterComponentEditMode}
+          />
         </div>
       )}
 

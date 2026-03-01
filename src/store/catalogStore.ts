@@ -26,6 +26,7 @@ interface CatalogStore {
   allComponents: () => Component[]
   getComponent: (id: string) => Component | undefined
   saveComponent: (name: string, tags: string[], frame: Frame) => Component
+  registerComponent: (component: Component) => void
   deleteComponent: (id: string) => boolean
   renameComponent: (id: string, name: string) => void
   updateComponentTags: (id: string, tags: string[]) => void
@@ -130,6 +131,21 @@ export const useCatalogStore = create<CatalogStore>((_set, get) => {
       return { components: next, order: nextOrder, highlightId: component.id }
     })
     return component
+  }
+
+  function registerComponentImpl(component: Component): void {
+    set((state) => {
+      const existing = state.components.findIndex((c) => c.id === component.id)
+      if (existing >= 0) {
+        // Update existing entry (e.g. when master is edited and propagated)
+        const next = [...state.components]
+        next[existing] = component
+        return { components: next }
+      }
+      const next = [...state.components, component]
+      const nextOrder = [...state.order, component.id]
+      return { components: next, order: nextOrder, highlightId: component.id }
+    })
   }
 
   function deleteComponentImpl(id: string): boolean {
@@ -256,6 +272,7 @@ export const useCatalogStore = create<CatalogStore>((_set, get) => {
     allComponents: allComponentsImpl,
     getComponent: (id) => get().components.find((s) => s.id === id),
     saveComponent: saveComponentImpl,
+    registerComponent: registerComponentImpl,
     deleteComponent: deleteComponentImpl,
     renameComponent: renameComponentImpl,
     updateComponentTags: updateComponentTagsImpl,

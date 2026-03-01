@@ -93,7 +93,10 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
   const [downloading, setDownloading] = useState(false)
 
   const frameTag = 'tag' in frame ? (frame as { tag?: string }).tag : undefined
-  const key = getBadgeKey(frame.type, isRoot, frameTag)
+  const isInstance = !!frame._componentId
+  const isOnComponentPage = useFrameStore((s) => s.pages.find((p) => p.id === s.activePageId)?.isComponentPage ?? false)
+  const isMaster = isOnComponentPage && !isRoot
+  const key = getBadgeKey(frame.type, isRoot, frameTag, { isInstance, isMaster })
   const tagOptions = getTagOptions(frame.type, frameTag)
   const currentTag = frameTag || getTagDefault(frame.type)
 

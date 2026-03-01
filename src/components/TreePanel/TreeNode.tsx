@@ -2,7 +2,6 @@ import { useRef, useEffect, useCallback, useMemo } from 'react'
 import { useDraggable, useDroppable, useDndContext } from '@dnd-kit/core'
 import type { Frame } from '../../types/frame'
 import { useFrameStore, findInTree } from '../../store/frameStore'
-import { useCatalogStore } from '../../store/catalogStore'
 import { useTreeDnd, type DropPosition } from './TreeDndContext'
 import { useContextMenu } from './hooks/useContextMenu'
 import { useInlineEdit } from './hooks/useInlineEdit'
@@ -55,6 +54,9 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
   const isOver = overId === frame.id && !isDragging
 
   const isInstance = !!frame._componentId
+  const isOnComponentPage = useFrameStore((s) => s.pages.find((p) => p.id === s.activePageId)?.isComponentPage ?? false)
+  const editingComponentId = useFrameStore((s) => s.editingComponentId)
+  const isMaster = isOnComponentPage && !editingComponentId && !isRoot && parentId !== null
   const isLeaf = frame.type !== 'box'
   const addTargetId = isLeaf ? parentId : frame.id
 
@@ -126,7 +128,13 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
         onMouseEnter={() => hover(frame.id)}
         onMouseLeave={() => hover(null)}
         onDoubleClick={() => {
-          if (!isRoot) nameEdit.start(frame.name)
+          if (isRoot) return
+          // Double-click on an instance → enter edit mode for its master
+          if (isInstance && frame._componentId) {
+            useFrameStore.getState().enterComponentEditMode(frame._componentId)
+            return
+          }
+          nameEdit.start(frame.name)
         }}
         onContextMenu={(e) => {
           select(frame.id)
@@ -149,9 +157,10 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
           ) : null}
         </span>
 
-        {/* Type icon — diamond for component instances */}
-        <span className={`shrink-0 ${isInstance ? 'text-purple-400' : ''}`}>
-          {isInstance ? <Diamond size={12} />
+        {/* Type icon — filled diamond for masters, hollow diamond for instances */}
+        <span className={`shrink-0 ${isMaster ? 'text-purple-400' : isInstance ? 'text-purple-400' : ''}`}>
+          {isMaster ? <Diamond size={12} fill="currentColor" />
+            : isInstance ? <Diamond size={12} />
             : frame.type === 'text' && 'tag' in frame && frame.tag === 'a' ? <Link size={12} />
             : frame.type === 'text' ? <Type size={12} />
             : frame.type === 'image' ? <ImageIcon size={12} />
@@ -174,7 +183,7 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
         {!isRoot && nameEdit.editing ? (
           <input {...nameEdit.inputProps} />
         ) : (
-          <span className={`flex-1 h-5 flex items-center text-[12px] truncate ${isInstance ? 'text-purple-400' : ''}`}>{isRoot ? 'Body' : frame.name}</span>
+          <span className={`flex-1 h-5 flex items-center text-[12px] truncate ${isMaster || isInstance ? 'text-purple-400' : ''}`}>{isRoot && !editingComponentId ? 'Body' : frame.name}</span>
         )}
 
         {/* Visibility toggle on hover */}
@@ -214,20 +223,31 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
               >
                 <Group size={12} /> Wrap in Frame
               </button>
-              {!isInstance && (
+              {!isInstance && !isMaster && (
                 <button
                   className="c-menu-item"
                   onClick={() => {
-                    const store = useFrameStore.getState()
-                    const f = findInTree(store.root, frame.id)
-                    if (f) {
-                      useCatalogStore.getState().saveComponent(f.name || 'Component', [], f)
-                      store.setTreePanelTab('components')
-                    }
+                    useFrameStore.getState().createComponent(frame.id)
                     ctxMenu.close()
                   }}
                 >
                   <Bookmark size={12} /> Save as Component
+                </button>
+              )}
+              {isMaster && (
+                <button
+                  className="c-menu-item"
+                  onClick={() => {
+                    const store = useFrameStore.getState()
+                    // Switch back to Layers page and insert instance there
+                    store.setTreePanelTab('layers')
+                    requestAnimationFrame(() => {
+                      useFrameStore.getState().insertInstance(frame.id, useFrameStore.getState().root.id)
+                    })
+                    ctxMenu.close()
+                  }}
+                >
+                  <Copy size={12} /> Insert Instance
                 </button>
               )}
               {isInstance && (
@@ -235,14 +255,8 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
                   <button
                     className="c-menu-item"
                     onClick={() => {
-                      const store = useFrameStore.getState()
-                      // Navigate to Components tab to edit master
-                      const compPage = store.pages.find((p) => p.isComponentPage)
-                      if (compPage && frame._componentId) {
-                        store.setTreePanelTab('components')
-                        store.setActivePage(compPage.id)
-                        store.select(frame._componentId)
-                      }
+                      if (!frame._componentId) { ctxMenu.close(); return }
+                      useFrameStore.getState().enterComponentEditMode(frame._componentId)
                       ctxMenu.close()
                     }}
                   >

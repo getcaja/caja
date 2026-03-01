@@ -27,7 +27,13 @@ export function CanvasInline() {
   const previewMode = useFrameStore((s) => s.previewMode)
   const rootBgValue = useFrameStore((s) => s.root.bg.value)
   const root = useFrameStore((s) => s.root)
+  const editingComponentId = useFrameStore((s) => s.editingComponentId)
   const hover = useFrameStore((s) => s.hover)
+
+  // In edit mode, render only the master being edited
+  const renderFrame = editingComponentId && root.type === 'box'
+    ? root.children.find((c) => c.id === editingComponentId) ?? root
+    : root
 
   const onPreviewClick = useCallback((e: React.MouseEvent) => {
     const anchor = (e.target as HTMLElement).closest('a[href]') as HTMLAnchorElement | null
@@ -102,7 +108,19 @@ export function CanvasInline() {
     backgroundColor: rootBgValue || '#ffffff',
   }
 
-  if (previewMode) {
+  if (editingComponentId) {
+    // Component edit mode: center the component in the canvas
+    wrapperStyle = { width: '100%', height: '100%' }
+    canvasStyle = {
+      ...canvasResetStyle,
+      width: '100%',
+      minHeight: '100%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#f5f5f4',
+    }
+  } else if (previewMode) {
     wrapperStyle = { width: '100%', height: '100%' }
     canvasStyle = {
       ...canvasResetStyle,
@@ -155,8 +173,8 @@ export function CanvasInline() {
         onMouseLeave={previewMode ? undefined : () => hover(null)}
         onClick={previewMode ? onPreviewClick : onCanvasClick}
       >
-        <ErrorBoundary fallback="inline" resetKey={root.id}>
-          <FrameRenderer frame={root} />
+        <ErrorBoundary fallback="inline" resetKey={renderFrame.id}>
+          <FrameRenderer frame={renderFrame} />
         </ErrorBoundary>
         <GoogleFontsLoader />
       </div>

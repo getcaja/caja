@@ -90,6 +90,7 @@ export const ALIGN_SELF_OPTIONS = [
 ]
 
 const BADGE = 'bg-accent/15 text-accent'
+const COMPONENT_BADGE = 'bg-purple-500/15 text-purple-400'
 
 export const TYPE_BADGE_STYLES: Record<string, string> = {
   root: BADGE,
@@ -101,6 +102,8 @@ export const TYPE_BADGE_STYLES: Record<string, string> = {
   textarea: BADGE,
   select: BADGE,
   link: BADGE,
+  component: COMPONENT_BADGE,
+  master: COMPONENT_BADGE,
 }
 
 export const TYPE_BADGE_LABELS: Record<string, string> = {
@@ -113,10 +116,14 @@ export const TYPE_BADGE_LABELS: Record<string, string> = {
   textarea: 'Textarea',
   select: 'Select',
   link: 'Link',
+  component: 'Component',
+  master: 'Master',
 }
 
-export function getBadgeKey(type: ElementType, isRoot: boolean, tag?: string): string {
+export function getBadgeKey(type: ElementType, isRoot: boolean, tag?: string, opts?: { isInstance?: boolean; isMaster?: boolean }): string {
   if (isRoot) return 'root'
+  if (opts?.isMaster) return 'master'
+  if (opts?.isInstance) return 'component'
   if (type === 'text' && tag === 'a') return 'link'
   return type
 }

@@ -6,7 +6,7 @@ import { toContainerQueries } from '../../utils/responsiveClasses'
 import { useFrameStore, isRootId, findInTree } from '../../store/frameStore'
 import { resolveCanvasDrop, getFrameDepth } from '../../utils/canvasDrop'
 import { resolveRenderSrc, subscribeAssets, getAssetSnapshot } from '../../lib/assetOps'
-import { resolveInstance } from '../../utils/componentResolver'
+
 import './FrameRenderer.css'
 
 // Module-level flag: skip the next click after a drag completes
@@ -45,13 +45,9 @@ export function resolveTag(frame: Frame): keyof React.JSX.IntrinsicElements {
 export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
   if (rawFrame.hidden) return null
 
-  // Resolve component instances: if frame has _componentId, render from master + overrides
-  const componentPageRoot = useFrameStore((s) => {
-    if (!rawFrame._componentId) return null
-    const compPage = s.pages.find((p) => p.isComponentPage)
-    return compPage?.root ?? null
-  })
-  const frame = rawFrame._componentId ? resolveInstance(rawFrame, componentPageRoot) : rawFrame
+  // Instances are rendered directly from their stored tree (cloned from master at insert time).
+  // Override resolution via resolveInstance will be used later for master→instance propagation.
+  const frame = rawFrame
 
   // Re-render when blob cache is updated (e.g. after restoreAllAssets on app load)
   useSyncExternalStore(subscribeAssets, getAssetSnapshot)

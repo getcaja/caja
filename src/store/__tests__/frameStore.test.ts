@@ -1145,6 +1145,24 @@ describe('frameStore', () => {
       })
     })
 
+    describe('instance name preservation', () => {
+      it('insertInstance preserves master name', () => {
+        const boxId = addChild('box')
+        store().renameFrame(boxId, 'Button-Black')
+        const componentId = store().createComponent(boxId)!
+
+        // Verify master has the correct name
+        const compPage = store().getComponentPage()!
+        const master = findInTree(compPage.root, componentId)!
+        expect(master.name).toBe('Button-Black')
+
+        // Insert an instance
+        const instanceId = store().insertInstance(componentId, store().root.id)!
+        const instance = findInTree(store().root, instanceId)!
+        expect(instance.name).toBe('Button-Black')
+      })
+    })
+
     describe('detachInstance', () => {
       it('removes _componentId and _overrides from an instance', () => {
         const boxId = addChild('box')
