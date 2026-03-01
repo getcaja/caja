@@ -14,7 +14,7 @@ export interface CjlFileData {
   author?: string
   description?: string
   libraryVersion?: string
-  patterns: ComponentData
+  components: ComponentData
 }
 
 // --- Path helpers ---
@@ -71,8 +71,8 @@ export async function importLibrary(): Promise<{ meta: LibraryMeta; data: Compon
   const content = await readTextFile(path)
   const parsed = JSON.parse(content) as CjlFileData
 
-  if (!parsed.patterns || !parsed.name) {
-    throw new Error('Invalid .cjl file: missing name or patterns')
+  if (!parsed.components || !parsed.name) {
+    throw new Error('Invalid .cjl file: missing name or components')
   }
 
   const id = crypto.randomUUID()
@@ -93,10 +93,10 @@ export async function importLibrary(): Promise<{ meta: LibraryMeta; data: Compon
     filePath: fileName,
   }
 
-  return { meta, data: parsed.patterns }
+  return { meta, data: parsed.components }
 }
 
-/** Export internal patterns as a .cjl library file. Returns the save path or null if cancelled. */
+/** Export components as a .cjl library file. Returns the save path or null if cancelled. */
 export async function exportLibrary(
   data: ComponentData,
   meta: { name: string; author?: string; description?: string; version?: string }
@@ -113,7 +113,7 @@ export async function exportLibrary(
     author: meta.author,
     description: meta.description,
     libraryVersion: meta.version,
-    patterns: data,
+    components: data,
   }
 
   await writeTextFile(path, JSON.stringify(cjl, null, 2))
@@ -132,7 +132,7 @@ export async function saveLibrary(
     author: meta.author,
     description: meta.description,
     libraryVersion: meta.version,
-    patterns: data,
+    components: data,
   }
   await writeTextFile(path, JSON.stringify(cjl, null, 2))
 }
@@ -143,7 +143,7 @@ export async function loadLibraryData(meta: LibraryMeta): Promise<ComponentData>
   const filePath = await join(dir, meta.filePath)
   const content = await readTextFile(filePath)
   const parsed = JSON.parse(content) as CjlFileData
-  return parsed.patterns
+  return parsed.components
 }
 
 /** Remove a library file from app data dir. */
@@ -187,7 +187,7 @@ export async function rebuildLibraryIndex(): Promise<LibraryMeta[]> {
       const filePath = await join(dir, fileName)
       const content = await readTextFile(filePath)
       const parsed = JSON.parse(content) as CjlFileData
-      if (!parsed.name || !parsed.patterns) continue
+      if (!parsed.name || !parsed.components) continue
 
       const id = fileName.replace('.cjl', '')
       const meta: LibraryMeta = {

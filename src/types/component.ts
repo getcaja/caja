@@ -14,9 +14,6 @@ export interface Component {
   createdAt: string // ISO date
 }
 
-/** Backward-compatible alias — Pattern is the same shape as Component */
-export type Pattern = Component
-
 /** Lightweight metadata for an installed library (persisted in library-index.json) */
 export interface LibraryMeta {
   id: string
@@ -34,5 +31,3 @@ export interface ComponentData {
   categories: string[]
 }
 
-/** Backward-compatible alias */
-export type PatternData = ComponentData

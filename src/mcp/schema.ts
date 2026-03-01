@@ -219,10 +219,10 @@ export const toolSchemas = {
       required: ['operations'],
     },
   },
-  // --- Pattern tools (new names) ---
-  list_patterns: {
-    name: 'list_patterns',
-    description: 'List available patterns (reusable frame trees). Returns lightweight metadata without frame data. Filter by tag optionally.',
+  // --- Component tools (primary names) ---
+  list_components: {
+    name: 'list_components',
+    description: 'List available components (reusable frame trees). Returns lightweight metadata without frame data. Filter by tag optionally.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -231,16 +231,16 @@ export const toolSchemas = {
     },
   },
 
-  insert_pattern: {
-    name: 'insert_pattern',
-    description: 'Insert a pattern into the tree. Clones the pattern frame with new IDs and adds it as a child of parent_id. Use overrides to customize cloned children by name (e.g. set content, classes) without extra update calls. Use library_id to insert from an external library.',
+  insert_component: {
+    name: 'insert_component',
+    description: 'Insert a component into the tree. Clones the component frame with new IDs and adds it as a child of parent_id. Use overrides to customize cloned children by name (e.g. set content, classes) without extra update calls. Use library_id to insert from an external library.',
     inputSchema: {
       type: 'object' as const,
       properties: {
-        pattern_id: { type: 'string', description: 'ID of the pattern to insert' },
+        component_id: { type: 'string', description: 'ID of the component to insert' },
         parent_id: { type: 'string', description: 'ID of the parent box to insert into' },
         index: { type: 'number', description: 'Position index within the parent. If omitted, appends at the end.' },
-        library_id: { type: 'string', description: 'Optional library ID to insert from an external library instead of internal patterns' },
+        library_id: { type: 'string', description: 'Optional library ID to insert from an external library instead of internal components' },
         overrides: {
           type: 'object',
           description: 'Map of frame name → patch. Each patch can have "properties" (object) and/or "classes" (Tailwind string). Matches children by name in the cloned tree. Example: { "price": { "properties": { "content": "$49" } }, "cta": { "classes": "bg-violet-600" } }',
@@ -253,18 +253,18 @@ export const toolSchemas = {
           },
         },
       },
-      required: ['pattern_id', 'parent_id'],
+      required: ['component_id', 'parent_id'],
     },
   },
 
-  save_pattern: {
-    name: 'save_pattern',
-    description: 'Save an existing frame from the tree as a reusable pattern.',
+  save_component: {
+    name: 'save_component',
+    description: 'Save an existing frame from the tree as a reusable component.',
     inputSchema: {
       type: 'object' as const,
       properties: {
-        frame_id: { type: 'string', description: 'ID of the frame to save as pattern' },
-        name: { type: 'string', description: 'Name for the pattern' },
+        frame_id: { type: 'string', description: 'ID of the frame to save as component' },
+        name: { type: 'string', description: 'Name for the component' },
         tags: {
           type: 'array',
           items: { type: 'string' },
@@ -275,87 +275,21 @@ export const toolSchemas = {
     },
   },
 
-  delete_pattern: {
-    name: 'delete_pattern',
-    description: 'Delete a user-created pattern.',
+  delete_component: {
+    name: 'delete_component',
+    description: 'Delete a user-created component.',
     inputSchema: {
       type: 'object' as const,
       properties: {
-        pattern_id: { type: 'string', description: 'ID of the pattern to delete' },
+        component_id: { type: 'string', description: 'ID of the component to delete' },
       },
-      required: ['pattern_id'],
+      required: ['component_id'],
     },
   },
 
-  // --- Backward-compat snippet aliases ---
-  list_snippets: {
-    name: 'list_snippets',
-    description: '[Alias for list_patterns] List available patterns. Filter by tag optionally.',
-    inputSchema: {
-      type: 'object' as const,
-      properties: {
-        tag: { type: 'string', description: 'Optional tag to filter by' },
-      },
-    },
-  },
-
-  insert_snippet: {
-    name: 'insert_snippet',
-    description: '[Alias for insert_pattern] Insert a pattern into the tree.',
-    inputSchema: {
-      type: 'object' as const,
-      properties: {
-        snippet_id: { type: 'string', description: 'ID of the pattern to insert (alias for pattern_id)' },
-        parent_id: { type: 'string', description: 'ID of the parent box to insert into' },
-        index: { type: 'number', description: 'Position index within the parent. If omitted, appends at the end.' },
-        overrides: {
-          type: 'object',
-          description: 'Map of frame name → patch.',
-          additionalProperties: {
-            type: 'object',
-            properties: {
-              properties: { type: 'object', additionalProperties: true },
-              classes: { type: 'string' },
-            },
-          },
-        },
-      },
-      required: ['snippet_id', 'parent_id'],
-    },
-  },
-
-  save_snippet: {
-    name: 'save_snippet',
-    description: '[Alias for save_pattern] Save an existing frame as a reusable pattern.',
-    inputSchema: {
-      type: 'object' as const,
-      properties: {
-        frame_id: { type: 'string', description: 'ID of the frame to save as pattern' },
-        name: { type: 'string', description: 'Name for the pattern' },
-        tags: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'Optional tags',
-        },
-      },
-      required: ['frame_id', 'name'],
-    },
-  },
-
-  delete_snippet: {
-    name: 'delete_snippet',
-    description: '[Alias for delete_pattern] Delete a user-created pattern.',
-    inputSchema: {
-      type: 'object' as const,
-      properties: {
-        snippet_id: { type: 'string', description: 'ID of the pattern to delete (alias for pattern_id)' },
-      },
-      required: ['snippet_id'],
-    },
-  },
   new_file: {
     name: 'new_file',
-    description: 'Reset the project to a blank state (equivalent to File > New). Clears all pages, frames, and internal patterns. Libraries are preserved.',
+    description: 'Reset the project to a blank state (equivalent to File > New). Clears all pages, frames, and internal components. Libraries are preserved.',
     inputSchema: {
       type: 'object' as const,
       properties: {},
@@ -410,20 +344,20 @@ export const toolSchemas = {
   // --- Library tools ---
   list_libraries: {
     name: 'list_libraries',
-    description: 'List installed pattern libraries. Returns lightweight metadata (id, name, author, version, description) for each library.',
+    description: 'List installed component libraries. Returns lightweight metadata (id, name, author, version, description) for each library.',
     inputSchema: {
       type: 'object' as const,
       properties: {},
     },
   },
 
-  list_library_patterns: {
-    name: 'list_library_patterns',
-    description: 'List patterns from a specific installed library. Returns pattern metadata without full frame data.',
+  list_library_components: {
+    name: 'list_library_components',
+    description: 'List components from a specific installed library. Returns component metadata without full frame data.',
     inputSchema: {
       type: 'object' as const,
       properties: {
-        library_id: { type: 'string', description: 'ID of the library to list patterns from' },
+        library_id: { type: 'string', description: 'ID of the library to list components from' },
         tag: { type: 'string', description: 'Optional tag to filter by' },
       },
       required: ['library_id'],
@@ -432,7 +366,7 @@ export const toolSchemas = {
 
   export_library: {
     name: 'export_library',
-    description: 'Package all internal patterns into a new installed library. The library is persisted as a .cjl file and added to the library index. Returns the new library ID and pattern count.',
+    description: 'Package all internal components into a new installed library. The library is persisted as a .cjl file and added to the library index. Returns the new library ID and component count.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -447,7 +381,7 @@ export const toolSchemas = {
 
   install_library: {
     name: 'install_library',
-    description: 'Install a library from inline JSON data. The data should contain patterns in the same format as a .cjl file. The library is persisted and added to the library index.',
+    description: 'Install a library from inline JSON data. The data should contain components in the same format as a .cjl file. The library is persisted and added to the library index.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -455,18 +389,18 @@ export const toolSchemas = {
         author: { type: 'string', description: 'Optional author name' },
         description: { type: 'string', description: 'Optional description' },
         version: { type: 'string', description: 'Optional version string' },
-        patterns: {
+        components: {
           type: 'object',
-          description: 'Pattern data: { items: Pattern[], order: string[], categories: string[] }',
+          description: 'Component data: { items: Component[], order: string[], categories: string[] }',
           properties: {
-            items: { type: 'array', description: 'Array of pattern objects' },
-            order: { type: 'array', items: { type: 'string' }, description: 'Ordered pattern IDs' },
+            items: { type: 'array', description: 'Array of component objects' },
+            order: { type: 'array', items: { type: 'string' }, description: 'Ordered component IDs' },
             categories: { type: 'array', items: { type: 'string' }, description: 'Category names' },
           },
           required: ['items'],
         },
       },
-      required: ['name', 'patterns'],
+      required: ['name', 'components'],
     },
   },
   upload_asset: {

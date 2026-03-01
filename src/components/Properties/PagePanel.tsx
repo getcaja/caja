@@ -8,7 +8,7 @@ export function PagePanel() {
   const setPageRoute = useFrameStore((s) => s.setPageRoute)
 
   const page = pages.find((p) => p.id === activePageId)
-  if (!page) return null
+  if (!page || page.isComponentPage) return null
 
   return (
     <div className="h-full overflow-y-auto">

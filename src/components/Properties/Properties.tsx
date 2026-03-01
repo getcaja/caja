@@ -13,11 +13,15 @@ import { AdvancedSection } from './AdvancedSection'
 
 export function Properties() {
   const selected = useFrameStore((s) => s.getSelected())
+  const multiCount = useFrameStore((s) => s.selectedIds.size)
   const rootId = useFrameStore((s) => s.getRootId())
   const advancedMode = useFrameStore((s) => s.advancedMode)
+  const tab = useFrameStore((s) => s.treePanelTab)
+
+  if (multiCount > 1) return null
 
   if (!selected) {
-    return <PagePanel />
+    return tab === 'layers' ? <PagePanel /> : null
   }
 
   const isRoot = selected.id === rootId

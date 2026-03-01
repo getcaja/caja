@@ -105,8 +105,8 @@ interface BaseElement {
   // Advanced
   tailwindClasses: string
 
-  // Origin tracking — populated when inserting from a pattern/component source (passive, informational)
-  _origin?: { libraryId?: string; patternId?: string }
+  // Origin tracking — populated when inserting from a component source (passive, informational)
+  _origin?: { libraryId?: string; componentId?: string }
 
   // Component system — when set, this frame is an instance of a master component
   _componentId?: string                                          // ID of the master frame in the Components page

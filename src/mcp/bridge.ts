@@ -1,8 +1,13 @@
 // Frontend MCP bridge — listens for events from the Rust HTTP server,
 // executes tools/reads resources, and sends results back.
 
-import { executeTool } from './tools'
-import { readResource } from './resources'
+import { executeTool as _execToolInit } from './tools'
+import { readResource as _readResInit } from './resources'
+
+// Mutable references — updated by HMR when tools.ts or resources.ts change.
+// Without this, the static import bindings stay stale after dependency HMR.
+let currentExecuteTool = _execToolInit
+let currentReadResource = _readResInit
 
 // Deduplicate events by ID — persisted on window so it survives HMR module
 // re-evaluation. Without this, leaked listeners from React StrictMode's
@@ -52,7 +57,7 @@ export async function startMcpBridge() {
       useFrameStore.setState({ mcpBusy: true })
       toolQueue = toolQueue.then(async () => {
         try {
-          const result = await executeTool(name, params)
+          const result = await currentExecuteTool(name, params)
           await invoke('mcp_respond', { id, result: JSON.stringify(result) })
         } finally {
           if (busyTimeout) clearTimeout(busyTimeout)
@@ -78,7 +83,7 @@ export async function startMcpBridge() {
       const { id, uri } = event.payload
       if (handled.has(id)) return
       handled.add(id)
-      const resource = readResource(uri)
+      const resource = currentReadResource(uri)
       await invoke('mcp_respond', {
         id,
         result: JSON.stringify(resource ?? { error: `Resource not found: ${uri}` }),
@@ -108,8 +113,10 @@ export function stopMcpBridge() {
 // Accept ./tools and ./resources so their updates propagate here.
 if (import.meta.hot) {
   import.meta.hot.dispose(() => stopMcpBridge())
-  import.meta.hot.accept()
-  import.meta.hot.accept(['./tools', './resources'], () => {
+  import.meta.hot.accept(() => startMcpBridge())
+  import.meta.hot.accept(['./tools', './resources'], (modules) => {
+    if (modules?.[0]) currentExecuteTool = modules[0].executeTool
+    if (modules?.[1]) currentReadResource = modules[1].readResource
     startMcpBridge()
   })
 }

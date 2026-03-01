@@ -10,6 +10,7 @@ import { buildOverlayRules } from '../SelectionOverlay'
 describe('buildOverlayRules', () => {
   const base = {
     selectedId: null as string | null,
+    selectedIds: new Set<string>(),
     hoveredId: null as string | null,
     showSel: false,
     showHov: false,

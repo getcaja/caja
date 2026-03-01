@@ -104,6 +104,7 @@ function computeLineRect(
  *  Exported for testing. */
 export function buildOverlayRules(state: {
   selectedId: string | null
+  selectedIds: Set<string>
   hoveredId: string | null
   showSel: boolean
   showHov: boolean
@@ -112,25 +113,34 @@ export function buildOverlayRules(state: {
   dragTargetParentId: string | null
   instanceIds?: string[]
 }): string[] {
-  const { selectedId, hoveredId, showSel, showHov, canvasDragId, showDragGuides, dragTargetParentId, instanceIds } = state
+  const { selectedId, selectedIds, hoveredId, showSel, showHov, canvasDragId, showDragGuides, dragTargetParentId, instanceIds } = state
   const rules: string[] = []
   const COMPONENT_COLOR = '#a855f7' // purple-500
 
   // Component instance outlines (purple dotted, when not selected/hovered)
   if (instanceIds && instanceIds.length > 0) {
     for (const iid of instanceIds) {
-      if (iid === selectedId || iid === hoveredId) continue
+      if (iid === selectedId || selectedIds.has(iid) || iid === hoveredId) continue
       rules.push(`[data-frame-id="${iid}"] { outline: 1px dotted ${COMPONENT_COLOR} !important; outline-offset: -1px !important; }`)
     }
   }
 
-  if (showSel && selectedId) {
-    // Use purple for selected instances
-    const isInstance = instanceIds?.includes(selectedId)
-    const color = isInstance ? COMPONENT_COLOR : 'var(--color-accent)'
-    rules.push(`[data-frame-id="${selectedId}"] { outline: 2px solid ${color} !important; outline-offset: -2px !important; }`)
-    const exc = canvasDragId ? `:not([data-frame-id="${canvasDragId}"])` : ''
-    rules.push(`[data-frame-id="${selectedId}"] > [data-frame-id]${exc} { outline: 1px dotted ${color} !important; outline-offset: -1px; }`)
+  if (showSel) {
+    // Primary selection — solid 2px
+    if (selectedId) {
+      const isInstance = instanceIds?.includes(selectedId)
+      const color = isInstance ? COMPONENT_COLOR : 'var(--color-accent)'
+      rules.push(`[data-frame-id="${selectedId}"] { outline: 2px solid ${color} !important; outline-offset: -2px !important; }`)
+      const exc = canvasDragId ? `:not([data-frame-id="${canvasDragId}"])` : ''
+      rules.push(`[data-frame-id="${selectedId}"] > [data-frame-id]${exc} { outline: 1px dotted ${color} !important; outline-offset: -1px; }`)
+    }
+    // Secondary selections — solid 2px (same style as primary, like Figma)
+    for (const id of selectedIds) {
+      if (id === selectedId) continue
+      const isInstance = instanceIds?.includes(id)
+      const color = isInstance ? COMPONENT_COLOR : 'var(--color-accent)'
+      rules.push(`[data-frame-id="${id}"] { outline: 2px solid ${color} !important; outline-offset: -2px !important; }`)
+    }
   }
 
   if (showHov && hoveredId) {
@@ -157,6 +167,7 @@ export function SelectionOverlay() {
   }, [])
 
   const selectedId = useFrameStore((s) => s.selectedId)
+  const selectedIds = useFrameStore((s) => s.selectedIds)
   const hoveredId = useFrameStore((s) => s.hoveredId)
   const previewMode = useFrameStore((s) => s.previewMode)
   const canvasDragId = useFrameStore((s) => s.canvasDragId)
@@ -164,7 +175,7 @@ export function SelectionOverlay() {
 
   const isLineMode = !!canvasDragId && !!canvasDragOver
   const isDragging = !!canvasDragId && canvasDragId === selectedId
-  const showSel = !previewMode && !!selectedId && !isDragging
+  const showSel = !previewMode && (!!selectedId || selectedIds.size > 0) && !isDragging
 
   // Suppress hover on descendants of selected element
   const hovIsDescOfSel = useFrameStore((s) => {
@@ -201,7 +212,7 @@ export function SelectionOverlay() {
     setLineRect(computeLineRect(doc, canvasDragOver))
   }, [isLineMode, canvasDragOver?.parentId, canvasDragOver?.index, canvasDragId, doc])
 
-  const rules = buildOverlayRules({ selectedId, hoveredId, showSel, showHov, canvasDragId, showDragGuides, dragTargetParentId, instanceIds })
+  const rules = buildOverlayRules({ selectedId, selectedIds, hoveredId, showSel, showHov, canvasDragId, showDragGuides, dragTargetParentId, instanceIds })
 
   return (
     <>

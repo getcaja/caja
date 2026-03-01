@@ -1,18 +1,21 @@
 import { useMemo } from 'react'
 import { useCatalogStore } from '../../store/catalogStore'
 import { useFrameStore } from '../../store/frameStore'
-import type { PatternSource } from './PatternsPanel'
+import type { ComponentSource } from './ComponentsPanel'
 
-export function usePatternsData(source: PatternSource) {
-  const userPatterns = useCatalogStore((s) => s.components)
+export function useComponentsData(source: ComponentSource) {
+  const userComponents = useCatalogStore((s) => s.components)
   const highlightId = useCatalogStore((s) => s.highlightId)
+  const highlightIds = useCatalogStore((s) => s.highlightIds)
   const setHighlightId = useCatalogStore((s) => s.setHighlightId)
+  const highlightMulti = useCatalogStore((s) => s.highlightMulti)
+  const highlightRange = useCatalogStore((s) => s.highlightRange)
   const order = useCatalogStore((s) => s.order)
   const emptyCategories = useCatalogStore((s) => s.emptyCategories)
-  const deletePattern = useCatalogStore((s) => s.deleteComponent)
-  const renamePattern = useCatalogStore((s) => s.renameComponent)
-  const updatePatternTags = useCatalogStore((s) => s.updateComponentTags)
-  const movePattern = useCatalogStore((s) => s.moveComponent)
+  const deleteComponent = useCatalogStore((s) => s.deleteComponent)
+  const renameComponent = useCatalogStore((s) => s.renameComponent)
+  const updateComponentTags = useCatalogStore((s) => s.updateComponentTags)
+  const moveComponent = useCatalogStore((s) => s.moveComponent)
   const addEmptyCategory = useCatalogStore((s) => s.addEmptyCategory)
   const removeEmptyCategory = useCatalogStore((s) => s.removeEmptyCategory)
   const moveCategory = useCatalogStore((s) => s.moveCategory)
@@ -25,13 +28,13 @@ export function usePatternsData(source: PatternSource) {
 
   const readOnly = source.type === 'library'
 
-  const patterns = useMemo(() => {
+  const components = useMemo(() => {
     if (source.type === 'library') {
       return useCatalogStore.getState().getLibraryComponents(source.libraryId)
     }
     return useCatalogStore.getState().allComponents()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [source.type, source.type === 'library' ? source.libraryId : null, userPatterns, order, libraries])
+  }, [source.type, source.type === 'library' ? source.libraryId : null, userComponents, order, libraries])
 
   const sourceName = useMemo(() => {
     if (source.type === 'internal') return 'Internal Components'
@@ -40,19 +43,22 @@ export function usePatternsData(source: PatternSource) {
   }, [source, libraryIndex])
 
   return {
-    patterns,
+    components,
     readOnly,
     sourceName,
     root,
     selectedId,
     insertFrame,
     highlightId,
+    highlightIds,
     setHighlightId,
+    highlightMulti,
+    highlightRange,
     emptyCategories,
-    deletePattern,
-    renamePattern,
-    updatePatternTags,
-    movePattern,
+    deleteComponent,
+    renameComponent,
+    updateComponentTags,
+    moveComponent,
     addEmptyCategory,
     removeEmptyCategory,
     moveCategory,

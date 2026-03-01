@@ -105,8 +105,8 @@ function App() {
   const handleSave = useCallback(async () => {
     if (!isTauri) return
     const store = useFrameStore.getState()
-    const snippets = useCatalogStore.getState().getComponentData()
-    const path = await saveFile(store.pages, store.activePageId, snippets, store.filePath)
+    const componentData = useCatalogStore.getState().getComponentData()
+    const path = await saveFile(store.pages, store.activePageId, componentData, store.filePath)
     if (path) {
       store.setFilePath(path)
       store.markClean()
@@ -116,8 +116,8 @@ function App() {
   const handleSaveAs = useCallback(async () => {
     if (!isTauri) return
     const store = useFrameStore.getState()
-    const snippets = useCatalogStore.getState().getComponentData()
-    const path = await saveFileAs(store.pages, store.activePageId, snippets)
+    const componentData = useCatalogStore.getState().getComponentData()
+    const path = await saveFileAs(store.pages, store.activePageId, componentData)
     if (path) {
       store.setFilePath(path)
       store.markClean()
@@ -146,7 +146,7 @@ function App() {
         const root = migrateToInternalRoot(data.root as Record<string, unknown>, 'page-1')
         useFrameStore.getState().loadFromFile(root, result.path)
       }
-      useCatalogStore.getState().loadComponents((data.patterns ?? data.snippets) as import('./store/catalogStore').ComponentData | undefined)
+      useCatalogStore.getState().loadComponents(data.components as import('./store/catalogStore').ComponentData | undefined)
       // Restore blob URLs from local asset files after file load
       import('./lib/assetOps').then(({ restoreAllAssets }) => {
         restoreAllAssets(useFrameStore.getState().pages).catch((err) => console.warn('Asset restore failed:', err))
@@ -235,6 +235,12 @@ function App() {
           case 'export-library':
             setShowExportLibrary(true)
             break
+          case 'collapse-all':
+            useFrameStore.getState().collapseAll()
+            break
+          case 'expand-all':
+            useFrameStore.getState().expandAll()
+            break
           default:
             // Theme menu items: "theme-<id>" → strip prefix
             if (e.payload.startsWith('theme-')) {
@@ -279,11 +285,21 @@ function App() {
       const key = e.key.toLowerCase()
       if ((e.metaKey || e.ctrlKey) && key === 'z' && !e.shiftKey) {
         e.preventDefault()
-        undo()
+        const tab = useFrameStore.getState().treePanelTab
+        if (tab === 'components' || tab === 'libraries') {
+          useCatalogStore.getState().undo()
+        } else {
+          undo()
+        }
       }
       if ((e.metaKey || e.ctrlKey) && key === 'z' && e.shiftKey) {
         e.preventDefault()
-        redo()
+        const tab = useFrameStore.getState().treePanelTab
+        if (tab === 'components' || tab === 'libraries') {
+          useCatalogStore.getState().redo()
+        } else {
+          redo()
+        }
       }
       if (e.key === 'Delete' || e.key === 'Backspace') {
         const { selectedIds } = useFrameStore.getState()
@@ -312,6 +328,14 @@ function App() {
         e.preventDefault()
         const before = e.key === 'ArrowUp' || e.key === 'ArrowLeft'
         reorderFrame(selectedId, before ? 'up' : 'down')
+      }
+      // Select all siblings
+      if ((e.metaKey || e.ctrlKey) && key === 'a' && !e.shiftKey) {
+        const tag = (e.target as HTMLElement).tagName
+        if (tag === 'INPUT' || tag === 'TEXTAREA') return
+        if ((e.target as HTMLElement).isContentEditable) return
+        e.preventDefault()
+        useFrameStore.getState().selectAllSiblings()
       }
       // Copy / Cut / Paste
       if ((e.metaKey || e.ctrlKey) && key === 'c' && !e.shiftKey) {

@@ -1,4 +1,4 @@
-// Shared Tailwind theme + canvas reset CSS — used by PatternPreview iframe.
+// Shared Tailwind theme + canvas reset CSS — used by ComponentPreview iframe.
 
 // Canvas reset — form controls, default text color, scrollbar
 // Body defaults + scrollbar styling only.

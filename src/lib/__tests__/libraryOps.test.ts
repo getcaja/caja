@@ -32,7 +32,7 @@ describe('.cjl file format', () => {
       author: 'Alice',
       description: 'A set of UI components',
       libraryVersion: '1.0.0',
-      patterns: makeComponentData(),
+      components: makeComponentData(),
     }
 
     const json = JSON.stringify(cjl, null, 2)
@@ -43,10 +43,10 @@ describe('.cjl file format', () => {
     expect(parsed.author).toBe('Alice')
     expect(parsed.description).toBe('A set of UI components')
     expect(parsed.libraryVersion).toBe('1.0.0')
-    expect(parsed.patterns.items).toHaveLength(1)
-    expect(parsed.patterns.items[0].name).toBe('Button')
-    expect(parsed.patterns.order).toEqual(['p1'])
-    expect(parsed.patterns.categories).toEqual(['ui'])
+    expect(parsed.components!.items).toHaveLength(1)
+    expect(parsed.components!.items[0].name).toBe('Button')
+    expect(parsed.components!.order).toEqual(['p1'])
+    expect(parsed.components!.categories).toEqual(['ui'])
   })
 
   it('round-trip: create → serialize → parse → verify', () => {
@@ -54,22 +54,22 @@ describe('.cjl file format', () => {
     const cjl: CjlFileData = {
       version: 1,
       name: 'Test Lib',
-      patterns: original,
+      components: original,
     }
 
     const serialized = JSON.stringify(cjl)
     const restored = JSON.parse(serialized) as CjlFileData
 
-    expect(restored.patterns.items).toEqual(original.items)
-    expect(restored.patterns.order).toEqual(original.order)
-    expect(restored.patterns.categories).toEqual(original.categories)
+    expect(restored.components!.items).toEqual(original.items)
+    expect(restored.components!.order).toEqual(original.order)
+    expect(restored.components!.categories).toEqual(original.categories)
   })
 
   it('optional fields can be omitted', () => {
     const cjl: CjlFileData = {
       version: 1,
       name: 'Minimal',
-      patterns: { items: [], order: [], categories: [] },
+      components: { items: [], order: [], categories: [] },
     }
 
     const parsed = JSON.parse(JSON.stringify(cjl)) as CjlFileData
@@ -79,16 +79,16 @@ describe('.cjl file format', () => {
   })
 
   it('detects malformed files: missing name', () => {
-    const bad = { version: 1, patterns: makeComponentData() }
+    const bad = { version: 1, components: makeComponentData() }
     const parsed = bad as Partial<CjlFileData>
     expect(parsed.name).toBeUndefined()
-    // importLibrary would throw: "Invalid .cjl file: missing name or patterns"
+    // importLibrary would throw: "Invalid .cjl file: missing name or components"
   })
 
-  it('detects malformed files: missing patterns', () => {
+  it('detects malformed files: missing components', () => {
     const bad = { version: 1, name: 'Bad' }
     const parsed = bad as Partial<CjlFileData>
-    expect(parsed.patterns).toBeUndefined()
+    expect(parsed.components).toBeUndefined()
   })
 
   it('LibraryMeta can be constructed from CjlFileData', () => {
@@ -98,7 +98,7 @@ describe('.cjl file format', () => {
       author: 'Bob',
       description: 'desc',
       libraryVersion: '2.0',
-      patterns: makeComponentData(),
+      components: makeComponentData(),
     }
 
     const meta: LibraryMeta = {

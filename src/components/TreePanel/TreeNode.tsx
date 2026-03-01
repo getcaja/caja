@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, useMemo } from 'react'
+import { createContext, useContext, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useDraggable, useDroppable, useDndContext } from '@dnd-kit/core'
 import type { Frame } from '../../types/frame'
 import { useFrameStore, findInTree } from '../../store/frameStore'
@@ -7,15 +7,62 @@ import { useContextMenu } from './hooks/useContextMenu'
 import { useInlineEdit } from './hooks/useInlineEdit'
 import { ChevronRight, ChevronDown, Frame as FrameIcon, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse, Copy, Trash2, Group, SquarePlus, Eye, EyeOff, Link, Bookmark, Diamond, Pencil, RotateCcw, Unlink } from 'lucide-react'
 
+/* ── Tree merge context ─────────────────────────────────────
+ * Computes which selected tree rows are visually adjacent so
+ * their backgrounds can merge into a continuous block (like Figma).
+ * mergeTop = previous visible row is also selected → no top radius
+ * mergeBottom = next visible row is also selected → no bottom radius */
+
+interface TreeMergeState {
+  mergeTop: Set<string>
+  mergeBottom: Set<string>
+}
+
+const EMPTY_MERGE: TreeMergeState = { mergeTop: new Set(), mergeBottom: new Set() }
+const TreeMergeContext = createContext<TreeMergeState>(EMPTY_MERGE)
+
+export function TreeMergeProvider({ children }: { children: React.ReactNode }) {
+  const root = useFrameStore((s) => s.root)
+  const selectedIds = useFrameStore((s) => s.selectedIds)
+  const collapsedIds = useFrameStore((s) => s.collapsedIds)
+
+  const mergeState = useMemo(() => {
+    if (selectedIds.size <= 1) return EMPTY_MERGE
+
+    // Flatten visible tree order (DFS, skip hidden nodes)
+    const order: string[] = []
+    function walk(frame: Frame) {
+      if (frame.hidden) return
+      order.push(frame.id)
+      if (frame.type === 'box' && !collapsedIds.has(frame.id)) {
+        for (const child of frame.children) walk(child)
+      }
+    }
+    walk(root)
+
+    const mergeTop = new Set<string>()
+    const mergeBottom = new Set<string>()
+    for (let i = 0; i < order.length; i++) {
+      if (!selectedIds.has(order[i])) continue
+      if (i > 0 && selectedIds.has(order[i - 1])) mergeTop.add(order[i])
+      if (i < order.length - 1 && selectedIds.has(order[i + 1])) mergeBottom.add(order[i])
+    }
+    return { mergeTop, mergeBottom }
+  }, [root, selectedIds, collapsedIds])
+
+  return <TreeMergeContext.Provider value={mergeState}>{children}</TreeMergeContext.Provider>
+}
+
 interface TreeNodeProps {
   frame: Frame
   depth: number
   parentId?: string | null
   index?: number
   isRoot?: boolean
+  insideInstance?: boolean
 }
 
-export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = false }: TreeNodeProps) {
+export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = false, insideInstance = false }: TreeNodeProps) {
   const selectedId = useFrameStore((s) => s.selectedId)
   const selectedIds = useFrameStore((s) => s.selectedIds)
   const collapsedIds = useFrameStore((s) => s.collapsedIds)
@@ -29,7 +76,7 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
   const renameFrame = useFrameStore((s) => s.renameFrame)
   const toggleHidden = useFrameStore((s) => s.toggleHidden)
 
-  const { activeId, overId, overPosition } = useTreeDnd()
+  const { activeId, overId, overPosition, multiDragCount } = useTreeDnd()
   const { active: dndActive } = useDndContext()
 
   const nameEdit = useInlineEdit((v) => renameFrame(frame.id, v))
@@ -37,6 +84,18 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
   const rowRef = useRef<HTMLDivElement>(null)
 
   const isSelected = selectedId === frame.id || selectedIds.has(frame.id)
+  const isMulti = selectedIds.size > 1
+  const merge = useContext(TreeMergeContext)
+
+  // Compute border-radius for merged multi-selection groups
+  const selectionRadius = !isSelected ? 'rounded-md' : !isMulti ? 'rounded-md' : (() => {
+    const mt = merge.mergeTop.has(frame.id)
+    const mb = merge.mergeBottom.has(frame.id)
+    if (mt && mb) return ''
+    if (mt) return 'rounded-b-md'
+    if (mb) return 'rounded-t-md'
+    return 'rounded-md'
+  })()
 
   useEffect(() => {
     if (isSelected && rowRef.current) {
@@ -49,8 +108,10 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
   const isBox = frame.type === 'box'
   const hasChildren = isBox && frame.children.length > 0
   const isCollapsed = collapsedIds.has(frame.id)
-  // Use dnd-kit's own context for isDragging — most reliable source of truth
-  const isDragging = dndActive !== null && String(dndActive.id) === frame.id
+  // isDragging: true for the active drag item, or any multi-drag sibling
+  const isDragging = dndActive !== null && (
+    String(dndActive.id) === frame.id || (multiDragCount > 1 && selectedIds.has(frame.id))
+  )
   const isOver = overId === frame.id && !isDragging
 
   const isInstance = !!frame._componentId
@@ -116,15 +177,19 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
         ref={setNodeRef}
         {...listeners}
         {...attributes}
-        className={`flex items-center gap-1.5 py-1 px-1 rounded-md cursor-default group transition-all ${
+        className={`flex items-center gap-1.5 py-1 px-1 ${selectionRadius} cursor-default group transition-all ${
           isSelected
-            ? 'tree-node-selected text-text-primary'
+            ? `${isMulti ? 'tree-node-multi-selected' : 'tree-node-selected'} text-text-primary`
             : isOver && overPosition === 'inside'
               ? 'bg-[var(--color-accent)]/10 outline outline-1 outline-[var(--color-accent)]/40'
               : 'hover:bg-[var(--color-accent)]/8 text-text-secondary hover:text-text-primary'
-        } ${frame.hidden ? 'opacity-40' : ''}`}
+        } ${frame.hidden ? 'opacity-40' : ''} ${insideInstance ? 'text-purple-400!' : ''}`}
         style={{ paddingLeft: depth * 16 + 4 }}
-        onClick={() => select(frame.id)}
+        onClick={(e) => {
+          if (e.shiftKey) useFrameStore.getState().selectRange(frame.id)
+          else if (e.metaKey) useFrameStore.getState().selectMulti(frame.id)
+          else select(frame.id)
+        }}
         onMouseEnter={() => hover(frame.id)}
         onMouseLeave={() => hover(null)}
         onDoubleClick={() => {
@@ -137,7 +202,7 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
           nameEdit.start(frame.name)
         }}
         onContextMenu={(e) => {
-          select(frame.id)
+          if (!selectedIds.has(frame.id)) select(frame.id)
           ctxMenu.open(e)
         }}
       >
@@ -219,9 +284,16 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
               </button>
               <button
                 className="c-menu-item"
-                onClick={() => { wrapInFrame(frame.id); ctxMenu.close() }}
+                onClick={() => {
+                  if (selectedIds.size > 1) {
+                    useFrameStore.getState().wrapSelectedInFrame()
+                  } else {
+                    wrapInFrame(frame.id)
+                  }
+                  ctxMenu.close()
+                }}
               >
-                <Group size={12} /> Wrap in Frame
+                <Group size={12} /> Group
               </button>
               {!isInstance && !isMaster && (
                 <button
@@ -354,7 +426,7 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
       {/* Children */}
       {isBox && !isCollapsed &&
         frame.children.map((child, i) => (
-          <TreeNode key={child.id} frame={child} depth={depth + 1} parentId={frame.id} index={i} />
+          <TreeNode key={child.id} frame={child} depth={depth + 1} parentId={frame.id} index={i} insideInstance={insideInstance || isInstance} />
         ))}
     </div>
   )

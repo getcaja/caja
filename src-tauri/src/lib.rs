@@ -462,9 +462,17 @@ pub fn run() {
                 .item(&theme_light)
                 .build()?;
 
+            let collapse_all = MenuItemBuilder::with_id("collapse-all", "Collapse All Layers")
+                .build(app)?;
+            let expand_all = MenuItemBuilder::with_id("expand-all", "Expand All Layers")
+                .build(app)?;
+
             let view_menu = SubmenuBuilder::new(app, "View")
                 .item(&toggle_left_panel)
                 .item(&toggle_right_panel)
+                .separator()
+                .item(&collapse_all)
+                .item(&expand_all)
                 .separator()
                 .item(&advanced_mode_item)
                 .separator()
@@ -491,7 +499,7 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             if let Some(window) = app.get_webview_window("main") {
                 use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial, NSVisualEffectState};
-                let _ = apply_vibrancy(&window, NSVisualEffectMaterial::Sidebar, Some(NSVisualEffectState::Active), None);
+                let _ = apply_vibrancy(&window, NSVisualEffectMaterial::UnderWindowBackground, Some(NSVisualEffectState::Active), None);
 
                 // window-state plugin restores geometry after setup, resetting traffic lights.
                 // Nudge the window size after a delay to trigger Tauri/TAO's native repositioning.

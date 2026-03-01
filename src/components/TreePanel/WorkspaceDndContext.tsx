@@ -23,9 +23,10 @@ import { Code, Folder } from 'lucide-react'
 
 interface WorkspaceDndState {
   activeId: string | null
-  activeType: 'pattern' | 'category' | null
+  activeType: 'component' | 'category' | null
   overId: string | null
   overPosition: DropPosition | null
+  multiDragCount: number
 }
 
 const WorkspaceDndCtx = createContext<WorkspaceDndState>({
@@ -33,6 +34,7 @@ const WorkspaceDndCtx = createContext<WorkspaceDndState>({
   activeType: null,
   overId: null,
   overPosition: null,
+  multiDragCount: 0,
 })
 
 export function useWorkspaceDnd() {
@@ -41,11 +43,11 @@ export function useWorkspaceDnd() {
 
 /* ── Drag ghost overlay ─────────────────────────────────── */
 
-function PatternDragGhost({ id }: { id: string }) {
+function ComponentDragGhost({ id, count }: { id: string; count: number }) {
   const isCategory = id.startsWith('__cat:')
   const label = isCategory ? id.slice('__cat:'.length) : null
 
-  const patternName = useCatalogStore((s) => {
+  const componentName = useCatalogStore((s) => {
     if (isCategory) return null
     const internal = s.components.find((p) => p.id === id)
     if (internal) return internal.name
@@ -56,7 +58,7 @@ function PatternDragGhost({ id }: { id: string }) {
     return null
   })
 
-  const name = label ?? patternName ?? id
+  const name = label ?? componentName ?? id
 
   return (
     <div
@@ -67,6 +69,9 @@ function PatternDragGhost({ id }: { id: string }) {
         {isCategory ? <Folder size={12} /> : <Code size={12} />}
       </span>
       <span className="truncate max-w-[140px]">{name}</span>
+      {count > 1 && (
+        <span className="shrink-0 bg-accent text-white text-[10px] font-semibold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">{count}</span>
+      )}
     </div>
   )
 }
@@ -82,7 +87,7 @@ function isInsideCanvas(px: number, py: number): boolean {
 
 function resolveComponentCanvasDrop(px: number, py: number) {
   const root = useFrameStore.getState().root
-  return resolveCanvasDrop(document, px, py, '__snippet__', root, null)
+  return resolveCanvasDrop(document, px, py, '__component__', root, null)
 }
 
 /* ── Provider ────────────────────────────────────────────── */
@@ -93,6 +98,7 @@ export function WorkspaceDndProvider({ children }: { children: React.ReactNode }
     activeType: null,
     overId: null,
     overPosition: null,
+    multiDragCount: 0,
   })
 
   const lastZoneRef = useRef<{ id: string; zone: DropPosition } | null>(null)
@@ -101,6 +107,7 @@ export function WorkspaceDndProvider({ children }: { children: React.ReactNode }
     position: null,
   })
   const resolveRafRef = useRef(0)
+  const multiDragIdsRef = useRef<Set<string>>(new Set())
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -119,24 +126,27 @@ export function WorkspaceDndProvider({ children }: { children: React.ReactNode }
 
       const aType = (active.data.current as Record<string, unknown> | undefined)?.type as string | undefined
 
-      // Pattern/category drags: check if pointer is over canvas
-      if ((aType === 'pattern' || aType === 'category') && isInsideCanvas(pointerCoordinates.x, pointerCoordinates.y)) {
+      // Component/category drags: check if pointer is over canvas
+      if ((aType === 'component' || aType === 'category') && isInsideCanvas(pointerCoordinates.x, pointerCoordinates.y)) {
         return []  // canvas hit — handled in onDragMove
       }
 
       // Panel collision: closestByY + computeZone logic
       const activeIdStr = String(active.id)
       const isActiveCat = activeIdStr.startsWith('__cat:')
+      const dragIds = multiDragIdsRef.current
 
       const validContainers = (droppableContainers as DroppableContainer[]).filter((c) => {
         const cid = String(c.id)
         if (cid === activeIdStr) return false
+        // Skip all multi-drag items
+        if (dragIds.size > 1 && dragIds.has(cid)) return false
         const data = c.data.current as Record<string, unknown> | undefined
         const type = data?.type as string | undefined
         if (isActiveCat) {
           return type === 'category'
         }
-        return type === 'pattern' || type === 'category' || type === 'root'
+        return type === 'component' || type === 'category' || type === 'root'
       })
 
       const best = closestByY(
@@ -192,9 +202,10 @@ export function WorkspaceDndProvider({ children }: { children: React.ReactNode }
     cancelAnimationFrame(resolveRafRef.current)
     resolveRafRef.current = 0
 
-    setState({ activeId: null, activeType: null, overId: null, overPosition: null })
+    setState({ activeId: null, activeType: null, overId: null, overPosition: null, multiDragCount: 0 })
     overRef.current = { id: null, position: null }
     lastZoneRef.current = null
+    multiDragIdsRef.current = new Set()
 
     const store = useFrameStore.getState()
     store.setCanvasDrag(null)
@@ -205,38 +216,51 @@ export function WorkspaceDndProvider({ children }: { children: React.ReactNode }
   const handleDragStart = useCallback(({ active }: DragStartEvent) => {
     const id = String(active.id)
     const data = active.data.current as Record<string, unknown> | undefined
-    const type = (data?.type as 'pattern' | 'category') ?? null
+    const type = (data?.type as 'component' | 'category') ?? null
 
     overRef.current = { id: null, position: null }
 
-    if (type === 'pattern') {
+    // Determine multi-drag from catalog highlightIds
+    const catalog = useCatalogStore.getState()
+    const { highlightIds } = catalog
+    let dragIds: Set<string>
+
+    if (type === 'component' && highlightIds.size > 1 && highlightIds.has(id)) {
+      // Multi-drag: all highlighted components (no categories in multi-drag)
+      dragIds = new Set([...highlightIds].filter((hid) => !hid.startsWith('__cat:')))
+      if (dragIds.size <= 1) dragIds = new Set([id])
+    } else {
+      dragIds = new Set([id])
+    }
+    multiDragIdsRef.current = dragIds
+
+    if (type === 'component') {
       // Component drag — set componentDragFrame for canvas insertion
-      const catalog = useCatalogStore.getState()
-      const internalPatterns = catalog.allComponents()
+      const internalComponents = catalog.allComponents()
 
-      let pattern = internalPatterns.find((p) => p.id === id)
-      let origin: { libraryId?: string; patternId?: string } | undefined
+      let component = internalComponents.find((c) => c.id === id)
+      let origin: { libraryId?: string; componentId?: string } | undefined
 
-      if (pattern) {
-        origin = { libraryId: 'internal', patternId: pattern.id }
+      if (component) {
+        origin = { libraryId: 'internal', componentId: component.id }
       } else {
         for (const [libId, lib] of catalog.libraries) {
-          const found = lib.items?.find((p) => p.id === id)
+          const found = lib.items?.find((c) => c.id === id)
           if (found) {
-            pattern = found
-            origin = { libraryId: libId, patternId: found.id }
+            component = found
+            origin = { libraryId: libId, componentId: found.id }
             break
           }
         }
       }
 
-      if (pattern && origin) {
-        useFrameStore.getState().setComponentDragFrame(pattern.frame, origin)
+      if (component && origin) {
+        useFrameStore.getState().setComponentDragFrame(component.frame, origin)
       }
     }
     // category: no special start logic
 
-    setState({ activeId: id, activeType: type, overId: null, overPosition: null })
+    setState({ activeId: id, activeType: type, overId: null, overPosition: null, multiDragCount: dragIds.size })
   }, [])
 
   const handleDragMove = useCallback(
@@ -249,15 +273,15 @@ export function WorkspaceDndProvider({ children }: { children: React.ReactNode }
       const px = ae.clientX + delta.x
       const py = ae.clientY + delta.y
 
-      if (aType === 'pattern' || aType === 'category') {
+      if (aType === 'component' || aType === 'category') {
         // Check if pointer is over canvas
         if (isInsideCanvas(px, py)) {
           const store = useFrameStore.getState()
-          if (!store.canvasDragId && aType === 'pattern') {
-            store.setCanvasDrag('__snippet__')
+          if (!store.canvasDragId && aType === 'component') {
+            store.setCanvasDrag('__component__')
           }
 
-          if (aType === 'pattern') {
+          if (aType === 'component') {
             cancelAnimationFrame(resolveRafRef.current)
             resolveRafRef.current = requestAnimationFrame(() => {
               const result = resolveComponentCanvasDrop(px, py)
@@ -301,6 +325,8 @@ export function WorkspaceDndProvider({ children }: { children: React.ReactNode }
   const handleDragEnd = useCallback(({ active, activatorEvent, delta }: DragEndEvent) => {
     const lastZone = lastZoneRef.current
     const dragId = String(active.id)
+    const dragIds = multiDragIdsRef.current
+    const isMulti = dragIds.size > 1
     const data = active.data.current as Record<string, unknown> | undefined
     const aType = data?.type as string | undefined
 
@@ -316,7 +342,7 @@ export function WorkspaceDndProvider({ children }: { children: React.ReactNode }
     const { componentDragFrame, componentDragOrigin } = store
 
     // Component canvas drop: synchronous resolve at final position
-    if (aType === 'pattern' && componentDragFrame && isInsideCanvas(px, py)) {
+    if (aType === 'component' && componentDragFrame && isInsideCanvas(px, py)) {
       const result = resolveComponentCanvasDrop(px, py)
       cleanupDrag()
       if (result) {
@@ -327,15 +353,16 @@ export function WorkspaceDndProvider({ children }: { children: React.ReactNode }
 
     cleanupDrag()
 
-    // Panel drop (pattern/category reorder)
+    // Panel drop (component/category reorder)
     if (!lastZone) return
     const targetId = lastZone.id
     const zone = lastZone.zone
     if (dragId === targetId) return
+    if (dragIds.has(targetId)) return
 
     const isActiveCat = dragId.startsWith('__cat:')
     const isTargetCat = targetId.startsWith('__cat:')
-    const isTargetRoot = targetId === '__patterns_root__'
+    const isTargetRoot = targetId === '__components_root__'
 
     const catalog = useCatalogStore.getState()
 
@@ -348,6 +375,34 @@ export function WorkspaceDndProvider({ children }: { children: React.ReactNode }
         } else {
           catalog.moveCategory(dragTag, targetTag, zone as 'before' | 'after')
         }
+      }
+    } else if (isMulti) {
+      // Multi-drag: move all selected components
+      const ids = [...dragIds]
+      if (isTargetRoot && zone === 'inside') {
+        for (const cid of ids) catalog.updateComponentTags(cid, [])
+        const all = catalog.allComponents()
+        const uncategorized = all.filter((s) => s.tags.length === 0 && !dragIds.has(s.id))
+        const last = uncategorized.length > 0 ? uncategorized[uncategorized.length - 1].id : null
+        catalog.moveComponents(ids, last, 'after')
+      } else if (isTargetCat && zone === 'inside') {
+        const targetTag = targetId.slice('__cat:'.length)
+        for (const cid of ids) catalog.updateComponentTags(cid, [targetTag])
+        const all = catalog.allComponents()
+        const items = all.filter((s) => s.tags[0] === targetTag && !dragIds.has(s.id))
+        const last = items.length > 0 ? items[items.length - 1].id : null
+        catalog.moveComponents(ids, last, 'after')
+      } else if (isTargetCat) {
+        const targetTag = targetId.slice('__cat:'.length)
+        const all = catalog.allComponents()
+        const items = all.filter((s) => s.tags[0] === targetTag)
+        if (zone === 'before' && items.length > 0) {
+          catalog.moveComponents(ids, items[0].id, 'before')
+        } else if (zone === 'after' && items.length > 0) {
+          catalog.moveComponents(ids, items[items.length - 1].id, 'after')
+        }
+      } else {
+        catalog.moveComponents(ids, targetId, zone as 'before' | 'after')
       }
     } else {
       if (isTargetRoot && zone === 'inside') {
@@ -394,8 +449,9 @@ export function WorkspaceDndProvider({ children }: { children: React.ReactNode }
       activeType: state.activeType,
       overId: state.overId,
       overPosition: state.overPosition,
+      multiDragCount: state.multiDragCount,
     }),
-    [state.activeId, state.activeType, state.overId, state.overPosition],
+    [state.activeId, state.activeType, state.overId, state.overPosition, state.multiDragCount],
   )
 
   return (
@@ -413,8 +469,8 @@ export function WorkspaceDndProvider({ children }: { children: React.ReactNode }
       </WorkspaceDndCtx.Provider>
 
       <DragOverlay dropAnimation={null} style={{ pointerEvents: 'none' }}>
-        {state.activeType === 'pattern' || state.activeType === 'category'
-          ? state.activeId ? <PatternDragGhost id={state.activeId} /> : null
+        {state.activeType === 'component' || state.activeType === 'category'
+          ? state.activeId ? <ComponentDragGhost id={state.activeId} count={state.multiDragCount} /> : null
           : null}
       </DragOverlay>
     </DndContext>

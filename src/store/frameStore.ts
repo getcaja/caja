@@ -156,7 +156,7 @@ export function findInTree(root: Frame, id: string): Frame | null {
   return null
 }
 
-// Deep clone with new IDs (for duplication) — exported for snippet insertion
+// Deep clone with new IDs (for duplication) — exported for component insertion
 // Optional idMap accumulator: records oldId → newId for every cloned frame.
 export function cloneWithNewIds(frame: Frame, idMap?: Record<string, string>): Frame {
   const newId = generateId()
@@ -258,7 +258,7 @@ interface FrameStore {
   canvasDragId: string | null
   canvasDragOver: { parentId: string; index: number } | null
   componentDragFrame: Frame | null
-  componentDragOrigin: { libraryId?: string; patternId?: string } | null
+  componentDragOrigin: { libraryId?: string; componentId?: string } | null
   clipboard: Frame[]
   treePanelTab: 'layers' | 'components' | 'libraries'
   _layersPageId: string | null  // remembers last Layers page when switching to Components tab
@@ -273,21 +273,27 @@ interface FrameStore {
 
   select: (id: string | null) => void
   selectMulti: (id: string) => void
+  selectRange: (targetId: string) => void
+  selectAllSiblings: () => void
   removeSelected: () => void
   copySelected: () => void
   cutSelected: () => void
   pasteClipboard: () => void
   hover: (id: string | null) => void
   toggleCollapse: (id: string) => void
+  collapseAll: () => void
+  expandAll: () => void
   toggleHidden: (id: string) => void
 
-  insertFrame: (parentId: string, frame: Frame, origin?: { libraryId?: string; patternId?: string }) => void
-  insertFrameAt: (parentId: string, frame: Frame, index: number, origin?: { libraryId?: string; patternId?: string }) => void
+  insertFrame: (parentId: string, frame: Frame, origin?: { libraryId?: string; componentId?: string }) => void
+  insertFrameAt: (parentId: string, frame: Frame, index: number, origin?: { libraryId?: string; componentId?: string }) => void
   addChild: (parentId: string, type: 'box' | 'text' | 'image' | 'button' | 'input' | 'textarea' | 'select' | 'link', overrides?: Partial<Frame>) => void
   removeFrame: (id: string) => void
   duplicateFrame: (id: string) => void
   wrapInFrame: (id: string) => void
+  wrapSelectedInFrame: () => void
   moveFrame: (frameId: string, newParentId: string, index: number) => void
+  moveFrames: (ids: string[], newParentId: string, index: number) => void
   reorderFrame: (frameId: string, direction: 'up' | 'down') => void
   updateFrame: (id: string, updates: Partial<Frame>) => void
   updateSpacing: (id: string, field: 'padding' | 'margin' | 'inset', values: Partial<Spacing>) => void
@@ -316,7 +322,7 @@ interface FrameStore {
   setCanvasZoom: (zoom: number) => void
   setCanvasDrag: (id: string | null) => void
   setCanvasDragOver: (over: { parentId: string; index: number } | null) => void
-  setComponentDragFrame: (frame: Frame | null, origin?: { libraryId?: string; patternId?: string } | null) => void
+  setComponentDragFrame: (frame: Frame | null, origin?: { libraryId?: string; componentId?: string } | null) => void
   setTreePanelTab: (tab: 'layers' | 'components' | 'libraries') => void
   expandToFrame: (id: string) => void
   addMcpHighlight: (id: string) => void
@@ -330,6 +336,7 @@ interface FrameStore {
   // Component system
   getComponentPage: () => Page | undefined
   ensureComponentPage: () => Page
+  addComponentMaster: (master: Frame) => void  // add a master frame to the components page
   createComponent: (frameId: string) => string | null  // returns componentId or null
   insertInstance: (componentId: string, parentId: string, index?: number) => string | null  // returns instance frame id
   detachInstance: (frameId: string) => void
@@ -352,6 +359,7 @@ interface ViewPrefs {
   previewMode: boolean
   canvasWidth: number | null
   advancedMode: boolean
+  collapsedIds: string[]
 }
 
 function loadViewPrefs(): ViewPrefs {
@@ -363,15 +371,17 @@ function loadViewPrefs(): ViewPrefs {
         previewMode: parsed.previewMode ?? false,
         canvasWidth: parsed.canvasWidth ?? null,
         advancedMode: parsed.advancedMode ?? false,
+        collapsedIds: parsed.collapsedIds ?? [],
       }
     }
   } catch (err) { console.warn('Failed to load view preferences:', err) }
-  return { previewMode: false, canvasWidth: null, advancedMode: false }
+  return { previewMode: false, canvasWidth: null, advancedMode: false, collapsedIds: [] }
 }
 
-function saveViewPrefs(prefs: ViewPrefs) {
+function saveViewPrefs(prefs: Partial<ViewPrefs>) {
   try {
-    localStorage.setItem(VIEW_PREFS_KEY, JSON.stringify(prefs))
+    const current = loadViewPrefs()
+    localStorage.setItem(VIEW_PREFS_KEY, JSON.stringify({ ...current, ...prefs }))
   } catch (err) {
     console.warn('Failed to save view preferences:', err)
   }
@@ -560,7 +570,7 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   selectedId: null,
   selectedIds: new Set<string>(),
   hoveredId: null,
-  collapsedIds: new Set(),
+  collapsedIds: new Set(initialViewPrefs.collapsedIds),
   filePath: null,
   dirty: false,
   previewMode: initialViewPrefs.previewMode,
@@ -596,6 +606,43 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
       next.add(id)
       return { selectedIds: next, selectedId: id }
     }
+  }),
+
+  selectRange: (targetId) => set((state) => {
+    const anchorId = state.selectedId
+    if (!anchorId) return { selectedId: targetId, selectedIds: new Set([targetId]) }
+    if (anchorId === targetId) return {}
+
+    // Flatten visible tree order (DFS, skip hidden, respect collapsed)
+    const order: string[] = []
+    function walk(frame: Frame) {
+      if (frame.hidden) return
+      order.push(frame.id)
+      if (frame.type === 'box' && !state.collapsedIds.has(frame.id)) {
+        for (const child of frame.children) walk(child)
+      }
+    }
+    walk(state.root)
+
+    const anchorIdx = order.indexOf(anchorId)
+    const targetIdx = order.indexOf(targetId)
+    if (anchorIdx < 0 || targetIdx < 0) return {}
+
+    const start = Math.min(anchorIdx, targetIdx)
+    const end = Math.max(anchorIdx, targetIdx)
+    const ids = new Set(order.slice(start, end + 1))
+
+    // Keep selectedId as anchor so subsequent shift+clicks extend from the same point
+    return { selectedIds: ids }
+  }),
+
+  selectAllSiblings: () => set((state) => {
+    const id = state.selectedId
+    if (!id) return {}
+    const parent = findParent(state.root, id)
+    if (!parent) return {}
+    const ids = new Set(parent.children.map((c) => c.id))
+    return { selectedIds: ids, selectedId: id }
   }),
 
   removeSelected: () => set((state) => {
@@ -689,8 +736,27 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
       const next = new Set(state.collapsedIds)
       if (next.has(id)) next.delete(id)
       else next.add(id)
+      saveViewPrefs({ collapsedIds: [...next] })
       return { collapsedIds: next }
     }),
+
+  collapseAll: () => set((state) => {
+    const ids: string[] = []
+    function walk(frame: Frame) {
+      if (frame.type === 'box' && frame.children.length > 0) {
+        ids.push(frame.id)
+        for (const child of frame.children) walk(child)
+      }
+    }
+    walk(state.root)
+    saveViewPrefs({ collapsedIds: ids })
+    return { collapsedIds: new Set(ids) }
+  }),
+
+  expandAll: () => {
+    saveViewPrefs({ collapsedIds: [] })
+    set({ collapsedIds: new Set() })
+  },
 
   toggleHidden: (id) =>
     set((state) => {
@@ -710,8 +776,8 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
       if (origin) {
         cloned._origin = origin
         // Link as component instance when inserted from Components/Libraries
-        if (origin.patternId) {
-          cloned._componentId = origin.patternId
+        if (origin.componentId) {
+          cloned._componentId = origin.componentId
           cloned._overrides = {}
         }
       }
@@ -729,8 +795,8 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
       if (origin) {
         cloned._origin = origin
         // Link as component instance when inserted from Components/Libraries
-        if (origin.patternId) {
-          cloned._componentId = origin.patternId
+        if (origin.componentId) {
+          cloned._componentId = origin.componentId
           cloned._overrides = {}
         }
       }
@@ -812,12 +878,124 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
       return { ...updateActiveRoot(state, result.tree as BoxElement), selectedId: result.wrapperId, ...history }
     }),
 
+  wrapSelectedInFrame: () =>
+    set((state) => {
+      const allIds = new Set(state.selectedIds)
+      if (state.selectedId) allIds.add(state.selectedId)
+      if (allIds.size === 0) return {}
+      // Single selection: delegate to existing wrapInFrame logic
+      if (allIds.size === 1) {
+        const id = [...allIds][0]
+        if (isChildOfInstance(state.root, id)) return {}
+        const result = wrapInFrameInTree(state.root, id)
+        if (!result) return {}
+        const history = pushHistory(state)
+        return { ...updateActiveRoot(state, result.tree as BoxElement), selectedId: result.wrapperId, selectedIds: new Set([result.wrapperId]), ...history }
+      }
+      // Filter to top-level: items whose parent is NOT also selected
+      const ids = new Set<string>()
+      for (const id of allIds) {
+        const p = findParent(state.root, id)
+        if (!p || !allIds.has(p.id)) ids.add(id)
+      }
+      if (ids.size === 0) return {}
+      // All top-level must share the same parent
+      const parents = new Set<string>()
+      for (const id of ids) {
+        if (isRootId(id)) return {}
+        if (isChildOfInstance(state.root, id)) return {}
+        const p = findParent(state.root, id)
+        if (!p) return {}
+        parents.add(p.id)
+      }
+      if (parents.size !== 1) return {} // not siblings
+      const parentId = [...parents][0]
+      const parent = findInTree(state.root, parentId) as BoxElement
+      if (!parent) return {}
+      // Collect children in their original order
+      const selected = parent.children.filter((c) => ids.has(c.id))
+      const firstIdx = parent.children.findIndex((c) => ids.has(c.id))
+      const wrapper = createBox({ children: selected })
+      // Replace the selected children with the wrapper at the first selected position
+      const newChildren: Frame[] = []
+      let inserted = false
+      for (const c of parent.children) {
+        if (ids.has(c.id)) {
+          if (!inserted) {
+            newChildren.push(wrapper)
+            inserted = true
+          }
+          // skip — moved into wrapper
+        } else {
+          newChildren.push(c)
+        }
+      }
+      function replaceParent(node: Frame): Frame {
+        if (node.id === parentId && node.type === 'box') {
+          return { ...node, children: newChildren }
+        }
+        return withChildren(node, getChildren(node).map(replaceParent))
+      }
+      const history = pushHistory(state)
+      const newRoot = replaceParent(state.root) as BoxElement
+      return { ...updateActiveRoot(state, newRoot), selectedId: wrapper.id, selectedIds: new Set([wrapper.id]), ...history }
+    }),
+
   moveFrame: (frameId, newParentId, index) =>
     set((state) => {
       if (isRootId(frameId)) return {}
       if (isInstanceOrInsideInstance(state.root, newParentId)) return {} // can't move into instances
       const history = pushHistory(state)
       const newRoot = moveInTree(state.root, frameId, newParentId, index) as BoxElement
+      return { ...updateActiveRoot(state, newRoot), ...history }
+    }),
+
+  moveFrames: (ids, newParentId, index) =>
+    set((state) => {
+      if (ids.length === 0) return {}
+      for (const id of ids) {
+        if (isRootId(id)) return {}
+        if (isChildOfInstance(state.root, id)) return {}
+      }
+      if (isInstanceOrInsideInstance(state.root, newParentId)) return {}
+
+      const idSet = new Set(ids)
+      const extracted: Frame[] = []
+      let removedBefore = 0
+
+      // Extract all frames from wherever they are, preserving tree-walk order
+      function extract(node: Frame): Frame {
+        if (node.type !== 'box') return node
+        const newChildren: Frame[] = []
+        for (let i = 0; i < node.children.length; i++) {
+          const child = node.children[i]
+          if (idSet.has(child.id)) {
+            extracted.push(child)
+            if (node.id === newParentId && i < index) removedBefore++
+          } else {
+            newChildren.push(extract(child))
+          }
+        }
+        return { ...node, children: newChildren }
+      }
+
+      const treeAfterExtract = extract(state.root)
+      if (extracted.length === 0) return {}
+
+      const adjustedIndex = Math.max(0, index - removedBefore)
+
+      function insert(node: Frame): Frame {
+        if (node.id === newParentId && node.type === 'box') {
+          const children = [...node.children]
+          children.splice(adjustedIndex, 0, ...extracted)
+          return { ...node, children }
+        }
+        if (node.type !== 'box') return node
+        return { ...node, children: node.children.map(insert) }
+      }
+
+      const history = pushHistory(state)
+      const newRoot = insert(treeAfterExtract) as BoxElement
       return { ...updateActiveRoot(state, newRoot), ...history }
     }),
 
@@ -948,7 +1126,8 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
     nextId = 1
     nextPageId = 2
     localStorage.removeItem('caja-state')
-    localStorage.removeItem('caja-snippets-state')
+    localStorage.removeItem('caja-components-state')
+    saveViewPrefs({ collapsedIds: [] })
     set({
       pages, activePageId: pageId, root, filePath: null, dirty: false,
       selectedId: null, selectedIds: new Set(), past: {}, future: {},
@@ -1079,7 +1258,7 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
       set({
         treePanelTab: tab,
         _layersPageId: state.activePageId,
-        // Don't switch to components page — browse mode uses PatternsPanel from catalog
+        // Don't switch to components page — browse mode uses ComponentsPanel from catalog
         selectedId: null,
         selectedIds: new Set(),
         hoveredId: null,
@@ -1247,6 +1426,14 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
     }
     set({ pages: [...state.pages, page] })
     return page
+  },
+
+  addComponentMaster: (master) => {
+    const compPage = get().ensureComponentPage()
+    const compPageRoot = get().pages.find((p) => p.isComponentPage)!.root
+    const newCompRoot = addChildInTree(compPageRoot, compPageRoot.id, master) as BoxElement
+    const pages = updatePageRoot(get().pages, COMPONENT_PAGE_ID, newCompRoot)
+    set({ pages, dirty: true })
   },
 
   createComponent: (frameId) => {

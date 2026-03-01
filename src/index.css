@@ -126,7 +126,7 @@ input[type=number] {
     @apply flex items-center justify-center rounded text-text-muted;
   }
 
-  /* --- Pattern preview insert button --- */
+  /* --- Component preview insert button --- */
   .preview-insert-btn:hover {
     background: var(--color-accent-hover) !important;
   }
@@ -157,11 +157,16 @@ input[type=number] {
   box-shadow: none !important;
 }
 
-/* Tree node selected state */
+/* Tree node selected state — single selection */
 .tree-node-selected {
   background: color-mix(in srgb, var(--color-accent) 15%, transparent);
   outline: 1px solid color-mix(in srgb, var(--color-accent) 50%, transparent);
   outline-offset: -1px;
+}
+
+/* Tree node selected state — multi selection (merged group look) */
+.tree-node-multi-selected {
+  background: color-mix(in srgb, var(--color-accent) 15%, transparent);
 }
 
 /* TokenInput — reset the inner input */

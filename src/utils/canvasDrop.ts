@@ -103,7 +103,7 @@ function findDropParent(
  * @param doc           The document to query
  * @param cx            Cursor X in the document's coordinate space
  * @param cy            Cursor Y in the document's coordinate space
- * @param excludeId     Frame ID to exclude (the frame being dragged, or '__snippet__')
+ * @param excludeId     Frame ID to exclude (the frame being dragged, or '__component__')
  * @param root          Current frame tree root
  * @param maxDropDepth  Maximum allowed depth for drop parents (null = no limit).
  *                      Set to sourceParentDepth to lock drag to same level or shallower.

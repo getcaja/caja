@@ -267,7 +267,13 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
       }
       if (!editingText) {
         expandToFrame(frame.id)
-        select(frame.id)
+        if (e.shiftKey) {
+          useFrameStore.getState().selectRange(frame.id)
+        } else if (e.metaKey) {
+          useFrameStore.getState().selectMulti(frame.id)
+        } else {
+          select(frame.id)
+        }
       }
     },
     onMouseDown: isText && !editingText ? (e: React.MouseEvent) => {

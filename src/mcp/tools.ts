@@ -100,14 +100,14 @@ const handlers: Record<string, ToolHandler> = {
     // Sanitize properties before passing to store (no existing frame for border fallback)
     const sanitized = Object.keys(mergedProps).length > 0 ? sanitizeFrameProperties(mergedProps) : undefined
 
-    // Build result with optional pattern hint when parent has repeated same-type children
+    // Build result with optional component hint when parent has repeated same-type children
     const buildAddResult = (child: Frame, parentFrame: Frame): ToolResult => {
       const finalChild = findInTree(getStore().root, child.id)
       const result: ToolResult = { success: true, data: finalChild ? compactSnapshot(finalChild) : { id: child.id } }
       if (parentFrame.type === 'box') {
         const sameTypeCount = parentFrame.children.filter(c => c.type === element_type).length
         if (sameTypeCount >= 3) {
-          result.hint = `Parent has ${sameTypeCount} ${element_type} children. Consider save_pattern + insert_pattern with overrides for repeated patterns.`
+          result.hint = `Parent has ${sameTypeCount} ${element_type} children. Consider save_component + insert_component with overrides for repeated structures.`
         }
       }
       return result
@@ -273,7 +273,7 @@ const handlers: Record<string, ToolHandler> = {
     return {
       success: true,
       data: { original: id, duplicate: newId, idMap },
-      hint: 'Use idMap to update cloned children directly: batch_update with update_frame for each idMap value. For repeated patterns, consider save_pattern + insert_pattern with overrides instead.',
+      hint: 'Use idMap to update cloned children directly: batch_update with update_frame for each idMap value. For repeated structures, consider save_component + insert_component with overrides instead.',
     }
   },
 
@@ -357,11 +357,22 @@ const handlers: Record<string, ToolHandler> = {
     const ids = resultIds.filter(Boolean)
     if (allSuccess) {
       const response: ToolResult = { success: true, data: { count: results.length, ids } }
-      // Nudge about snippets when building many similar structures
+      // Include full results for read-only operations so data isn't lost
+      const READ_TOOLS = new Set(['list_components', 'list_library_components', 'get_tree', 'get_selected'])
+      const readResults: Record<number, unknown> = {}
+      for (let i = 0; i < operations.length; i++) {
+        if (READ_TOOLS.has(operations[i].tool) && results[i]?.data != null) {
+          readResults[i] = results[i].data
+        }
+      }
+      if (Object.keys(readResults).length > 0) {
+        response.data.results = readResults
+      }
+      // Nudge about components when building many similar structures
       if (results.length >= 8) {
         const addCount = operations.filter((op) => op.tool === 'add_frame').length
         if (addCount >= 6) {
-          response.hint = 'Building a complex structure? Save it as a pattern with save_pattern, then reuse with insert_pattern + overrides to avoid rebuilding.'
+          response.hint = 'Building a complex structure? Save it as a component with save_component, then reuse with insert_component + overrides to avoid rebuilding.'
         }
       }
       return response
@@ -371,37 +382,34 @@ const handlers: Record<string, ToolHandler> = {
     return { success: false, error: results[failedIdx]?.error, data: { failedAt: failedIdx, completedCount: failedIdx, completedIds, totalRequested: operations.length } }
   },
 
-  // --- Pattern tools (with backward-compat snippet aliases) ---
+  // --- Component tools ---
 
-  list_patterns(params) {
+  list_components(params) {
     const { tag } = params as { tag?: string }
     const catalogStore = useCatalogStore.getState()
     let all = catalogStore.allComponents()
-    if (tag) all = all.filter((s) => s.tags.includes(tag))
+    if (tag) all = all.filter((c) => c.tags.includes(tag))
     return {
       success: true,
       data: all.map(({ id, name, tags, meta, createdAt }) => ({ id, name, tags, meta, createdAt })),
     }
   },
 
-  insert_pattern(params) {
-    const { pattern_id, snippet_id, parent_id, index, overrides, library_id } = params as {
-      pattern_id?: string
-      snippet_id?: string // backward compat alias
+  insert_component(params) {
+    const { component_id, parent_id, index, overrides, library_id } = params as {
+      component_id: string
       parent_id: string
       index?: number
       overrides?: Record<string, { properties?: Record<string, unknown>; classes?: string }>
-      library_id?: string // optional: insert from an external library
+      library_id?: string
     }
-    const resolvedId = pattern_id || snippet_id
-    if (!resolvedId) return { success: false, error: 'pattern_id is required' }
+    if (!component_id) return { success: false, error: 'component_id is required' }
 
     const catalogStore = useCatalogStore.getState()
-    // Look up component from library or internal catalog
-    const pattern = library_id
-      ? catalogStore.getLibraryComponent(library_id, resolvedId)
-      : catalogStore.getComponent(resolvedId)
-    if (!pattern) return { success: false, error: `Pattern ${resolvedId} not found${library_id ? ` in library ${library_id}` : ''}` }
+    const component = library_id
+      ? catalogStore.getLibraryComponent(library_id, component_id)
+      : catalogStore.getComponent(component_id)
+    if (!component) return { success: false, error: `Component ${component_id} not found${library_id ? ` in library ${library_id}` : ''}` }
 
     const store = getStore()
     const parent = findInTree(store.root, parent_id)
@@ -409,13 +417,11 @@ const handlers: Record<string, ToolHandler> = {
       return { success: false, error: `Parent ${parent_id} not found or is not a box` }
     }
 
-    const origin = { libraryId: library_id || 'internal', patternId: pattern.id }
-    // Normalize frame tree to fill in missing fields (external library data may be incomplete)
-    const normalizedFrame = normalizeFrame(pattern.frame)
+    const origin = { libraryId: library_id || 'internal', componentId: component.id }
+    const normalizedFrame = normalizeFrame(component.frame)
     if (index !== undefined) {
       store.insertFrameAt(parent_id, normalizedFrame, index, origin)
     } else {
-      // Default: append at end (most natural for MCP sequential building)
       store.insertFrameAt(parent_id, normalizedFrame, parent.children.length, origin)
     }
     const newId = getStore().selectedId
@@ -454,22 +460,34 @@ const handlers: Record<string, ToolHandler> = {
       }
     }
 
-    const result: ToolResult = { success: true, data: { id: newId, pattern: pattern.name } }
+    const result: ToolResult = { success: true, data: { id: newId, component: component.name } }
     if (!overrides) {
       result.hint = 'Tip: use overrides param to customize content by name without extra update_frame calls. Example: overrides: { "title": { properties: { content: "New title" } } }'
     }
     return result
   },
 
-  save_pattern(params) {
+  save_component(params) {
     const { frame_id, name, tags } = params as { frame_id: string; name: string; tags?: string[] }
     const store = getStore()
     const frame = findInTree(store.root, frame_id)
     if (!frame) return { success: false, error: `Frame ${frame_id} not found` }
 
+    // Clone frame as master, add to components page (enables edit mode)
+    const master = cloneWithNewIds(frame)
+    master.name = name
+    store.addComponentMaster(master)
+
+    // Register in catalog with the master's ID (matches component page frame)
     const catalogStore = useCatalogStore.getState()
-    const cloned = cloneWithNewIds(frame)
-    const pattern = catalogStore.saveComponent(name, tags || [], cloned)
+    catalogStore.registerComponent({
+      id: master.id,
+      name,
+      tags: tags || [],
+      frame: master,
+      meta: {},
+      createdAt: new Date().toISOString(),
+    })
 
     // Collect named slots for the hint
     const slots: string[] = []
@@ -481,22 +499,21 @@ const handlers: Record<string, ToolHandler> = {
 
     return {
       success: true,
-      data: { id: pattern.id, name: pattern.name, slots },
-      hint: `Reuse with: insert_pattern({ pattern_id: "${pattern.id}", parent_id: "...", overrides: { "${slots[1] || slots[0]}": { properties: { content: "..." } } } }). Override any slot by name.`,
+      data: { id: master.id, name, slots },
+      hint: `Reuse with: insert_component({ component_id: "${master.id}", parent_id: "...", overrides: { "${slots[1] || slots[0]}": { properties: { content: "..." } } } }). Override any slot by name.`,
     }
   },
 
-  delete_pattern(params) {
-    const { pattern_id, snippet_id } = params as { pattern_id?: string; snippet_id?: string }
-    const resolvedId = pattern_id || snippet_id
-    if (!resolvedId) return { success: false, error: 'pattern_id is required' }
+  delete_component(params) {
+    const { component_id } = params as { component_id: string }
+    if (!component_id) return { success: false, error: 'component_id is required' }
 
     const catalogStore = useCatalogStore.getState()
-    const pattern = catalogStore.getComponent(resolvedId)
-    if (!pattern) return { success: false, error: `Pattern ${resolvedId} not found` }
+    const component = catalogStore.getComponent(component_id)
+    if (!component) return { success: false, error: `Component ${component_id} not found` }
 
-    catalogStore.deleteComponent(resolvedId)
-    return { success: true, data: { deleted: resolvedId } }
+    catalogStore.deleteComponent(component_id)
+    return { success: true, data: { deleted: component_id } }
   },
 
   // --- Library tools ---
@@ -511,7 +528,7 @@ const handlers: Record<string, ToolHandler> = {
     }
   },
 
-  list_library_patterns(params) {
+  list_library_components(params) {
     const { library_id } = params as { library_id: string }
     if (!library_id) return { success: false, error: 'library_id is required' }
 
@@ -519,10 +536,10 @@ const handlers: Record<string, ToolHandler> = {
     const meta = catalogStore.libraryIndex.find((m) => m.id === library_id)
     if (!meta) return { success: false, error: `Library ${library_id} not found` }
 
-    const patterns = catalogStore.getLibraryComponents(library_id)
+    const components = catalogStore.getLibraryComponents(library_id)
     return {
       success: true,
-      data: patterns.map(({ id, name, tags, meta, createdAt }) => ({ id, name, tags, meta, createdAt })),
+      data: components.map(({ id, name, tags, meta, createdAt }) => ({ id, name, tags, meta, createdAt })),
     }
   },
 
@@ -533,10 +550,10 @@ const handlers: Record<string, ToolHandler> = {
     if (!name) return { success: false, error: 'name is required' }
 
     const catalogStore = useCatalogStore.getState()
-    const patternData = catalogStore.getComponentData()
+    const componentData = catalogStore.getComponentData()
 
-    if (!patternData.items.length) {
-      return { success: false, error: 'No internal components to export. Save components first with save_pattern.' }
+    if (!componentData.items.length) {
+      return { success: false, error: 'No internal components to export. Save components first with save_component.' }
     }
 
     const id = crypto.randomUUID()
@@ -548,7 +565,7 @@ const handlers: Record<string, ToolHandler> = {
       author,
       description,
       libraryVersion: version,
-      patterns: patternData,
+      components: componentData,
     }
 
     const dir = await ensureLibrariesDir()
@@ -565,33 +582,33 @@ const handlers: Record<string, ToolHandler> = {
       filePath: fileName,
     }
 
-    catalogStore.installLibrary(meta, patternData)
+    catalogStore.installLibrary(meta, componentData)
     await saveLibraryIndex([...catalogStore.libraryIndex])
 
     return {
       success: true,
-      data: { id, name, patternCount: patternData.items.length },
-      hint: `Library installed. Use list_library_patterns({ library_id: "${id}" }) to see patterns, or insert_pattern({ pattern_id: "...", parent_id: "...", library_id: "${id}" }) to stamp from it.`,
+      data: { id, name, componentCount: componentData.items.length },
+      hint: `Library installed. Use list_library_components({ library_id: "${id}" }) to see components, or insert_component({ component_id: "...", parent_id: "...", library_id: "${id}" }) to stamp from it.`,
     }
   },
 
   async install_library(params) {
-    const { name, author, description, version, patterns } = params as {
+    const { name, author, description, version, components } = params as {
       name: string; author?: string; description?: string; version?: string
-      patterns: ComponentData
+      components: ComponentData
     }
     if (!name) return { success: false, error: 'name is required' }
-    if (!patterns || !Array.isArray(patterns.items)) {
-      return { success: false, error: 'patterns.items array is required' }
+    if (!components || !Array.isArray(components.items)) {
+      return { success: false, error: 'components.items array is required' }
     }
 
     const id = crypto.randomUUID()
     const fileName = `${id}.cjl`
 
-    const patternData: ComponentData = {
-      items: patterns.items,
-      order: patterns.order || patterns.items.map((p) => p.id),
-      categories: patterns.categories || [],
+    const componentData: ComponentData = {
+      items: components.items,
+      order: components.order || components.items.map((c) => c.id),
+      categories: components.categories || [],
     }
 
     const cjl: CjlFileData = {
@@ -600,7 +617,7 @@ const handlers: Record<string, ToolHandler> = {
       author,
       description,
       libraryVersion: version,
-      patterns: patternData,
+      components: componentData,
     }
 
     const dir = await ensureLibrariesDir()
@@ -618,13 +635,13 @@ const handlers: Record<string, ToolHandler> = {
     }
 
     const catalogStore = useCatalogStore.getState()
-    catalogStore.installLibrary(meta, patternData)
+    catalogStore.installLibrary(meta, componentData)
     await saveLibraryIndex([...catalogStore.libraryIndex])
 
     return {
       success: true,
-      data: { id, name, patternCount: patternData.items.length },
-      hint: `Library installed. Use list_library_patterns({ library_id: "${id}" }) to browse, or insert_pattern with library_id to stamp patterns.`,
+      data: { id, name, componentCount: componentData.items.length },
+      hint: `Library installed. Use list_library_components({ library_id: "${id}" }) to browse, or insert_component with library_id to stamp components.`,
     }
   },
 
@@ -696,17 +713,11 @@ const handlers: Record<string, ToolHandler> = {
   },
 }
 
-// Backward-compat aliases: old snippet names → new pattern names
-handlers.list_snippets = handlers.list_patterns
-handlers.insert_snippet = handlers.insert_pattern
-handlers.save_snippet = handlers.save_pattern
-handlers.delete_snippet = handlers.delete_pattern
-
 // Tools that visually modify frames — trigger MCP highlight on success
 const HIGHLIGHT_TOOLS = new Set([
   'add_frame', 'update_frame', 'update_spacing', 'update_size',
   'move_frame', 'duplicate_frame', 'wrap_frame', 'rename_frame',
-  'insert_pattern', 'insert_snippet',
+  'insert_component',
 ])
 
 export async function executeTool(name: string, params: ToolParams = {}): Promise<ToolResult> {

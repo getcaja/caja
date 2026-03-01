@@ -38,15 +38,9 @@ export const resourceDefinitions: Resource[] = [
     mimeType: 'text/html',
   },
   {
-    uri: 'caja://patterns',
-    name: 'Components',
-    description: 'All components (formerly patterns) in the current file as JSON',
-    mimeType: 'application/json',
-  },
-  {
     uri: 'caja://components',
     name: 'Components',
-    description: 'Alias for caja://patterns — all components in the current file',
+    description: 'All components in the current file as JSON',
     mimeType: 'application/json',
   },
 ]
@@ -99,7 +93,7 @@ export function readResource(uri: string): { content: string; mimeType: string }
     }
   }
 
-  if (uri === 'caja://patterns' || uri === 'caja://snippets' || uri === 'caja://components') {
+  if (uri === 'caja://components') {
     const catalogStore = useCatalogStore.getState()
     const all = catalogStore.allComponents()
     return {

@@ -2,20 +2,25 @@ import { create } from 'zustand'
 import type { Component, LibraryMeta, ComponentData } from '../types/component'
 import type { Frame } from '../types/frame'
 
-const STORAGE_KEY = 'caja-snippets-state' // keep legacy key for backward compat
+const STORAGE_KEY = 'caja-components-state'
 
-/** @deprecated Use ComponentData */
-export type PatternData = ComponentData
 export type { ComponentData }
+
+type CatalogSnapshot = { components: Component[]; order: string[]; emptyCategories: string[] }
 
 interface CatalogStore {
   // --- Internal components (per-file, read-write) ---
   components: Component[]
-  /** @deprecated Use components */
-  patterns: Component[]
   order: string[] // ordered component IDs — controls display order
   emptyCategories: string[] // manually created categories with no components yet
-  highlightId: string | null // selected/highlighted component in the panel
+  highlightId: string | null // anchor for range select
+  highlightIds: Set<string>  // all highlighted (multi-select)
+
+  // --- Undo / redo ---
+  _past: CatalogSnapshot[]
+  _future: CatalogSnapshot[]
+  undo: () => void
+  redo: () => void
 
   // --- Library system (app-level, read-only) ---
   libraryIndex: LibraryMeta[]           // lightweight metadata for installed libs
@@ -31,38 +36,18 @@ interface CatalogStore {
   renameComponent: (id: string, name: string) => void
   updateComponentTags: (id: string, tags: string[]) => void
   moveComponent: (componentId: string, targetId: string | null, position: 'before' | 'after' | 'inside') => void
+  moveComponents: (componentIds: string[], targetId: string | null, position: 'before' | 'after' | 'inside') => void
   importComponents: (components: Component[]) => void
+  groupComponents: (componentIds: string[], categoryName: string) => void
   addEmptyCategory: (name: string) => void
   removeEmptyCategory: (name: string) => void
   moveCategory: (tag: string, targetTag: string, position: 'before' | 'after') => void
   setHighlightId: (id: string | null) => void
+  highlightMulti: (id: string) => void
+  highlightRange: (targetId: string, visibleOrder: string[]) => void
   resetComponents: () => void
   loadComponents: (data: ComponentData | undefined) => void
   getComponentData: () => ComponentData
-
-  // Backward-compatible aliases
-  /** @deprecated Use allComponents */
-  allPatterns: () => Component[]
-  /** @deprecated Use getComponent */
-  getPattern: (id: string) => Component | undefined
-  /** @deprecated Use saveComponent */
-  savePattern: (name: string, tags: string[], frame: Frame) => Component
-  /** @deprecated Use deleteComponent */
-  deletePattern: (id: string) => boolean
-  /** @deprecated Use renameComponent */
-  renamePattern: (id: string, name: string) => void
-  /** @deprecated Use updateComponentTags */
-  updatePatternTags: (id: string, tags: string[]) => void
-  /** @deprecated Use moveComponent */
-  movePattern: (componentId: string, targetId: string | null, position: 'before' | 'after' | 'inside') => void
-  /** @deprecated Use importComponents */
-  importPatterns: (components: Component[]) => void
-  /** @deprecated Use resetComponents */
-  resetPatterns: () => void
-  /** @deprecated Use loadComponents */
-  loadPatterns: (data: ComponentData | undefined) => void
-  /** @deprecated Use getComponentData */
-  getPatternData: () => ComponentData
 
   // --- Export memory (per-session, no persistence) ---
   lastExport: { path: string; name: string; author: string; description: string; version: string } | null
@@ -74,25 +59,26 @@ interface CatalogStore {
   removeLibrary: (id: string) => void
   getLibraryComponents: (libraryId: string) => Component[]
   getLibraryComponent: (libraryId: string, componentId: string) => Component | undefined
-  /** @deprecated Use getLibraryComponents */
-  getLibraryPatterns: (libraryId: string) => Component[]
-  /** @deprecated Use getLibraryComponent */
-  getLibraryPattern: (libraryId: string, componentId: string) => Component | undefined
   setLibraryIndex: (index: LibraryMeta[]) => void
   setLibraryData: (libraryId: string, data: ComponentData) => void
 }
 
+const MAX_CATALOG_HISTORY = 50
+
 export const useCatalogStore = create<CatalogStore>((_set, get) => {
-  // Auto-sync: whenever `components` is written, mirror it to `patterns` (backward-compat alias)
-  const set: typeof _set = (partial, replace) => {
-    _set((state) => {
-      const next = typeof partial === 'function' ? partial(state) : partial
-      if (next && typeof next === 'object' && 'components' in next) {
-        return { ...next, patterns: (next as { components: Component[] }).components }
-      }
-      return next
-    }, replace)
+  const set = _set
+
+  function snapshot(): CatalogSnapshot {
+    const { components, order, emptyCategories } = get()
+    return { components: [...components], order: [...order], emptyCategories: [...emptyCategories] }
   }
+
+  function pushCatalogHistory() {
+    const s = get()
+    const past = [...s._past.slice(-(MAX_CATALOG_HISTORY - 1)), snapshot()]
+    set({ _past: past, _future: [] })
+  }
+
   function ensureOrder(order: string[], all: Component[]): string[] {
     const existing = new Set(order)
     const allIds = all.map((s) => s.id)
@@ -128,7 +114,7 @@ export const useCatalogStore = create<CatalogStore>((_set, get) => {
     set((state) => {
       const next = [...state.components, component]
       const nextOrder = [...state.order, component.id]
-      return { components: next, order: nextOrder, highlightId: component.id }
+      return { components: next, order: nextOrder, highlightId: component.id, highlightIds: new Set([component.id]) }
     })
     return component
   }
@@ -144,7 +130,7 @@ export const useCatalogStore = create<CatalogStore>((_set, get) => {
       }
       const next = [...state.components, component]
       const nextOrder = [...state.order, component.id]
-      return { components: next, order: nextOrder, highlightId: component.id }
+      return { components: next, order: nextOrder, highlightId: component.id, highlightIds: new Set([component.id]) }
     })
   }
 
@@ -206,6 +192,47 @@ export const useCatalogStore = create<CatalogStore>((_set, get) => {
     })
   }
 
+  function moveComponentsImpl(componentIds: string[], targetId: string | null, position: 'before' | 'after' | 'inside'): void {
+    const all = allComponentsImpl()
+    const idSet = new Set(componentIds)
+
+    // Determine target tag
+    let newTag: string | null = null
+    if (targetId) {
+      const target = all.find((s) => s.id === targetId)
+      if (target) newTag = target.tags[0] || null
+    }
+
+    // Update tags for all dragged items
+    for (const cid of componentIds) {
+      const component = all.find((s) => s.id === cid)
+      if (!component) continue
+      const currentTag = component.tags[0] || null
+      if (newTag !== currentTag) {
+        updateComponentTagsImpl(cid, newTag ? [newTag] : [])
+      }
+    }
+
+    set((state) => {
+      // Preserve relative order of dragged items
+      const draggedInOrder = state.order.filter((id) => idSet.has(id))
+      const order = state.order.filter((id) => !idSet.has(id))
+      if (!targetId) {
+        order.push(...draggedInOrder)
+      } else {
+        const targetIdx = order.indexOf(targetId)
+        if (targetIdx === -1) {
+          order.push(...draggedInOrder)
+        } else if (position === 'before') {
+          order.splice(targetIdx, 0, ...draggedInOrder)
+        } else {
+          order.splice(targetIdx + 1, 0, ...draggedInOrder)
+        }
+      }
+      return { order }
+    })
+  }
+
   function importComponentsImpl(incoming: Component[]): void {
     set((state) => {
       const existingIds = new Set(state.components.map((s) => s.id))
@@ -218,18 +245,18 @@ export const useCatalogStore = create<CatalogStore>((_set, get) => {
 
   function resetComponentsImpl(): void {
     localStorage.removeItem(STORAGE_KEY)
-    set({ components: [], order: [], emptyCategories: [], highlightId: null })
+    set({ components: [], order: [], emptyCategories: [], highlightId: null, highlightIds: new Set() })
   }
 
   function loadComponentsImpl(data: ComponentData | undefined): void {
     if (!data) {
-      set({ components: [], order: [], emptyCategories: [], highlightId: null })
+      set({ components: [], order: [], emptyCategories: [], highlightId: null, highlightIds: new Set() })
       return
     }
     const items = data.items || []
     const order = ensureOrder(data.order || [], items)
     const categories = data.categories || []
-    set({ components: items, order, emptyCategories: categories, highlightId: null })
+    set({ components: items, order, emptyCategories: categories, highlightId: null, highlightIds: new Set() })
   }
 
   function getComponentDataImpl(): ComponentData {
@@ -254,10 +281,10 @@ export const useCatalogStore = create<CatalogStore>((_set, get) => {
 
   return {
     components: [],
-    patterns: [],
     order: [],
     emptyCategories: [],
     highlightId: null,
+    highlightIds: new Set(),
 
     // Library state
     libraryIndex: [],
@@ -268,34 +295,67 @@ export const useCatalogStore = create<CatalogStore>((_set, get) => {
     lastExport: null,
     setLastExport: (config) => set({ lastExport: config }),
 
+    // Undo / redo
+    _past: [],
+    _future: [],
+    undo: () => {
+      const { _past, components, order, emptyCategories } = get()
+      if (_past.length === 0) return
+      const prev = _past[_past.length - 1]
+      const current: CatalogSnapshot = { components: [...components], order: [...order], emptyCategories: [...emptyCategories] }
+      set({
+        components: prev.components,
+        order: prev.order,
+        emptyCategories: prev.emptyCategories,
+        _past: _past.slice(0, -1),
+        _future: [...get()._future, current],
+      })
+    },
+    redo: () => {
+      const { _future, components, order, emptyCategories } = get()
+      if (_future.length === 0) return
+      const next = _future[_future.length - 1]
+      const current: CatalogSnapshot = { components: [...components], order: [...order], emptyCategories: [...emptyCategories] }
+      set({
+        components: next.components,
+        order: next.order,
+        emptyCategories: next.emptyCategories,
+        _future: _future.slice(0, -1),
+        _past: [...get()._past, current],
+      })
+    },
+
     // New names
     allComponents: allComponentsImpl,
     getComponent: (id) => get().components.find((s) => s.id === id),
-    saveComponent: saveComponentImpl,
+    saveComponent: (...args) => { pushCatalogHistory(); return saveComponentImpl(...args) },
     registerComponent: registerComponentImpl,
-    deleteComponent: deleteComponentImpl,
-    renameComponent: renameComponentImpl,
-    updateComponentTags: updateComponentTagsImpl,
-    moveComponent: moveComponentImpl,
+    deleteComponent: (id) => { pushCatalogHistory(); return deleteComponentImpl(id) },
+    renameComponent: (id, name) => { pushCatalogHistory(); renameComponentImpl(id, name) },
+    updateComponentTags: (id, tags) => { pushCatalogHistory(); updateComponentTagsImpl(id, tags) },
+    moveComponent: (cid, tid, pos) => { pushCatalogHistory(); moveComponentImpl(cid, tid, pos) },
+    moveComponents: (ids, tid, pos) => { pushCatalogHistory(); moveComponentsImpl(ids, tid, pos) },
     importComponents: importComponentsImpl,
     resetComponents: resetComponentsImpl,
     loadComponents: loadComponentsImpl,
     getComponentData: getComponentDataImpl,
 
-    // Backward-compatible aliases
-    allPatterns: allComponentsImpl,
-    getPattern: (id) => get().components.find((s) => s.id === id),
-    savePattern: saveComponentImpl,
-    deletePattern: deleteComponentImpl,
-    renamePattern: renameComponentImpl,
-    updatePatternTags: updateComponentTagsImpl,
-    movePattern: moveComponentImpl,
-    importPatterns: importComponentsImpl,
-    resetPatterns: resetComponentsImpl,
-    loadPatterns: loadComponentsImpl,
-    getPatternData: getComponentDataImpl,
+    groupComponents: (componentIds, categoryName) => {
+      pushCatalogHistory()
+      set((state) => {
+        const idSet = new Set(componentIds)
+        const components = state.components.map((s) =>
+          idSet.has(s.id) ? { ...s, tags: [categoryName, ...s.tags.slice(1)] } : s,
+        )
+        const emptyCategories = state.emptyCategories.includes(categoryName)
+          ? state.emptyCategories
+          : [...state.emptyCategories, categoryName]
+        return { components, emptyCategories }
+      })
+    },
 
     addEmptyCategory: (name) => {
+      pushCatalogHistory()
       set((state) => {
         if (state.emptyCategories.includes(name)) return {}
         return { emptyCategories: [...state.emptyCategories, name] }
@@ -303,6 +363,7 @@ export const useCatalogStore = create<CatalogStore>((_set, get) => {
     },
 
     removeEmptyCategory: (name) => {
+      pushCatalogHistory()
       set((state) => {
         const next = state.emptyCategories.filter((c) => c !== name)
         if (next.length === state.emptyCategories.length) return {}
@@ -312,6 +373,7 @@ export const useCatalogStore = create<CatalogStore>((_set, get) => {
 
     moveCategory: (tag, targetTag, position) => {
       if (tag === targetTag) return
+      pushCatalogHistory()
       const all = allComponentsImpl()
 
       const dragIds = all.filter((s) => s.tags[0] === tag).map((s) => s.id)
@@ -340,7 +402,33 @@ export const useCatalogStore = create<CatalogStore>((_set, get) => {
       })
     },
 
-    setHighlightId: (id) => set({ highlightId: id }),
+    setHighlightId: (id) => set({ highlightId: id, highlightIds: new Set(id ? [id] : []) }),
+
+    highlightMulti: (id) => set((state) => {
+      const next = new Set(state.highlightIds)
+      if (next.has(id)) {
+        next.delete(id)
+        const newPrimary = next.size > 0 ? [...next][next.size - 1] : null
+        return { highlightIds: next, highlightId: state.highlightId === id ? newPrimary : state.highlightId }
+      } else {
+        next.add(id)
+        return { highlightIds: next, highlightId: id }
+      }
+    }),
+
+    highlightRange: (targetId, visibleOrder) => set((state) => {
+      const anchorId = state.highlightId
+      if (!anchorId) return { highlightId: targetId, highlightIds: new Set([targetId]) }
+      if (anchorId === targetId) return {}
+
+      const anchorIdx = visibleOrder.indexOf(anchorId)
+      const targetIdx = visibleOrder.indexOf(targetId)
+      if (anchorIdx < 0 || targetIdx < 0) return {}
+
+      const start = Math.min(anchorIdx, targetIdx)
+      const end = Math.max(anchorIdx, targetIdx)
+      return { highlightIds: new Set(visibleOrder.slice(start, end + 1)) }
+    }),
 
     // --- Library operations ---
 
@@ -370,9 +458,6 @@ export const useCatalogStore = create<CatalogStore>((_set, get) => {
 
     getLibraryComponents: getLibraryComponentsImpl,
     getLibraryComponent: getLibraryComponentImpl,
-    // Backward-compatible aliases
-    getLibraryPatterns: getLibraryComponentsImpl,
-    getLibraryPattern: getLibraryComponentImpl,
 
     setLibraryIndex: (index) => set({ libraryIndex: index }),
 
@@ -417,5 +502,3 @@ export function loadComponentsFromStorage() {
   }
 }
 
-/** @deprecated Use loadComponentsFromStorage */
-export const loadPatternsFromStorage = loadComponentsFromStorage

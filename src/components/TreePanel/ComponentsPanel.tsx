@@ -1,34 +1,36 @@
 import { useState, useMemo, useCallback, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
-import { useFrameStore, findInTree } from '../../store/frameStore'
-import { Plus, X, ChevronRight, ChevronDown, Code, Folder } from 'lucide-react'
-import type { Pattern } from '../../types/pattern'
-import { PatternPreview } from './PatternPreview'
-import { usePatternsData } from './usePatternsData'
-import { PatternContextMenu } from './PatternContextMenu'
+import { useFrameStore, findInTree, cloneWithNewIds, normalizeFrame } from '../../store/frameStore'
+import { useCatalogStore } from '../../store/catalogStore'
+import { ChevronRight, ChevronDown, Diamond, Folder } from 'lucide-react'
+import type { Component } from '../../types/component'
+import { ComponentPreview } from './ComponentPreview'
+import { useComponentsData } from './useComponentsData'
+import { ComponentContextMenu } from './ComponentContextMenu'
 import { useWorkspaceDnd } from './WorkspaceDndContext'
 import type { DropPosition } from './dndUtils'
 
-export type PatternSource =
+export type ComponentSource =
   | { type: 'internal' }
   | { type: 'library'; libraryId: string }
 
-export interface PatternsPanelHandle {
+export interface ComponentsPanelHandle {
   createCategory: () => void
 }
 
-interface PatternsPanelProps {
-  source?: PatternSource
+interface ComponentsPanelProps {
+  source?: ComponentSource
   onEditComponent?: (componentId: string) => void
 }
 
-export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>(function PatternsPanel({ source = { type: 'internal' }, onEditComponent }, ref) {
+export const ComponentsPanel = forwardRef<ComponentsPanelHandle, ComponentsPanelProps>(function ComponentsPanel({ source = { type: 'internal' }, onEditComponent }, ref) {
   const {
-    patterns, readOnly, sourceName, root, selectedId, insertFrame,
-    highlightId, setHighlightId, emptyCategories, deletePattern,
-    renamePattern, updatePatternTags, movePattern, addEmptyCategory,
+    components, readOnly, sourceName, root, selectedId, insertFrame,
+    highlightId, highlightIds, setHighlightId, highlightMulti, highlightRange,
+    emptyCategories, deleteComponent,
+    renameComponent, updateComponentTags, moveComponent, addEmptyCategory,
     removeEmptyCategory, moveCategory,
-  } = usePatternsData(source)
+  } = useComponentsData(source)
 
   const { activeId: dragId } = useWorkspaceDnd()
 
@@ -38,13 +40,13 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
   const [editingCategoryTag, setEditingCategoryTag] = useState<string | null>(null)
   const [editCategoryValue, setEditCategoryValue] = useState('')
   const [contextMenu, setContextMenu] = useState<
-    | { x: number; y: number; type: 'pattern'; pattern: Pattern }
+    | { x: number; y: number; type: 'component'; component: Component }
     | { x: number; y: number; type: 'category'; tag: string }
     | null
   >(null)
 
-  // Pattern hover preview
-  const [previewPattern, setPreviewPattern] = useState<Pattern | null>(null)
+  // Component hover preview
+  const [previewComponent, setPreviewComponent] = useState<Component | null>(null)
   const [previewY, setPreviewY] = useState(0)
   const previewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const leaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -54,11 +56,11 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
     if (leaveTimerRef.current) { clearTimeout(leaveTimerRef.current); leaveTimerRef.current = null }
   }, [])
 
-  const onPreviewEnter = useCallback((pattern: Pattern, y: number) => {
+  const onPreviewEnter = useCallback((component: Component, y: number) => {
     cancelLeave()
     if (previewTimerRef.current) clearTimeout(previewTimerRef.current)
     previewTimerRef.current = setTimeout(() => {
-      setPreviewPattern(pattern)
+      setPreviewComponent(component)
       setPreviewY(y)
     }, 300)
   }, [cancelLeave])
@@ -66,7 +68,7 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
   const onPreviewLeave = useCallback(() => {
     if (previewTimerRef.current) { clearTimeout(previewTimerRef.current); previewTimerRef.current = null }
     leaveTimerRef.current = setTimeout(() => {
-      setPreviewPattern(null)
+      setPreviewComponent(null)
     }, 150)
   }, [])
 
@@ -76,22 +78,24 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
 
   const onPreviewPopupLeave = useCallback(() => {
     leaveTimerRef.current = setTimeout(() => {
-      setPreviewPattern(null)
+      setPreviewComponent(null)
     }, 150)
   }, [])
 
   function handlePreviewInsert() {
-    if (!previewPattern) return
-    handleInsert(previewPattern)
+    if (!previewComponent) return
+    handleInsert(previewComponent)
     cancelLeave()
     if (previewTimerRef.current) { clearTimeout(previewTimerRef.current); previewTimerRef.current = null }
-    setPreviewPattern(null)
+    setPreviewComponent(null)
   }
 
-  function handlePreviewClose() {
+  function handlePreviewEdit() {
+    if (!previewComponent || !onEditComponent) return
+    onEditComponent(previewComponent.id)
     cancelLeave()
     if (previewTimerRef.current) { clearTimeout(previewTimerRef.current); previewTimerRef.current = null }
-    setPreviewPattern(null)
+    setPreviewComponent(null)
   }
 
   // Clear preview during drag
@@ -101,10 +105,10 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
 
   // Group: uncategorized at root, then by first tag (preserving order)
   const { uncategorized, allTags, categorized } = useMemo(() => {
-    const map = new Map<string, Pattern[]>()
-    const uncat: Pattern[] = []
+    const map = new Map<string, Component[]>()
+    const uncat: Component[] = []
     const tagOrder: string[] = []
-    for (const s of patterns) {
+    for (const s of components) {
       if (s.tags.length === 0) {
         uncat.push(s)
       } else {
@@ -117,7 +121,7 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
       if (!map.has(cat)) { map.set(cat, []); tagOrder.push(cat) }
     }
     return { categorized: map, uncategorized: uncat, allTags: tagOrder }
-  }, [patterns, emptyCategories])
+  }, [components, emptyCategories])
 
   function getInsertParent(): string {
     if (selectedId) {
@@ -127,9 +131,23 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
     return root.id
   }
 
-  function handleInsert(pattern: Pattern) {
-    const origin = { libraryId: source.type === 'library' ? source.libraryId : 'internal', patternId: pattern.id }
-    insertFrame(getInsertParent(), pattern.frame, origin)
+  function handleInsert(component: Component) {
+    const origin = { libraryId: source.type === 'library' ? source.libraryId : 'internal', componentId: component.id }
+    insertFrame(getInsertParent(), component.frame, origin)
+  }
+
+  function handleDuplicate(component: Component) {
+    const master = cloneWithNewIds(normalizeFrame(component.frame))
+    master.name = `${component.name} Copy`
+    useFrameStore.getState().addComponentMaster(master)
+    useCatalogStore.getState().registerComponent({
+      id: master.id,
+      name: master.name,
+      tags: [...component.tags],
+      frame: master,
+      meta: {},
+      createdAt: new Date().toISOString(),
+    })
   }
 
   function toggleTag(tag: string) {
@@ -141,12 +159,12 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
     })
   }
 
-  function startPatternRename(pattern: Pattern) {
-    setEditingId(pattern.id)
-    setEditValue(pattern.name)
+  function startComponentRename(component: Component) {
+    setEditingId(component.id)
+    setEditValue(component.name)
   }
-  function commitPatternRename() {
-    if (editingId && editValue.trim()) renamePattern(editingId, editValue.trim())
+  function commitComponentRename() {
+    if (editingId && editValue.trim()) renameComponent(editingId, editValue.trim())
     setEditingId(null)
   }
 
@@ -163,9 +181,9 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
         addEmptyCategory(name)
       }
     } else if (editingCategoryTag && name !== editingCategoryTag) {
-      for (const s of patterns) {
+      for (const s of components) {
         if (s.tags[0] === editingCategoryTag) {
-          updatePatternTags(s.id, [name, ...s.tags.slice(1)])
+          updateComponentTags(s.id, [name, ...s.tags.slice(1)])
         }
       }
       if (emptyCategories.includes(editingCategoryTag)) {
@@ -177,9 +195,9 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
   }
 
   function deleteCategory(tag: string) {
-    for (const s of patterns) {
+    for (const s of components) {
       if (s.tags[0] === tag) {
-        updatePatternTags(s.id, s.tags.slice(1))
+        updateComponentTags(s.id, s.tags.slice(1))
       }
     }
     removeEmptyCategory(tag)
@@ -193,43 +211,86 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
     setEditCategoryValue(name)
   }
 
+  function handleGroup() {
+    const ids = [...highlightIds].filter((id) => !id.startsWith('__cat:'))
+    if (ids.length === 0) return
+    let name = 'Group 1'
+    let i = 1
+    while (allTags.includes(name)) { name = `Group ${++i}` }
+    useCatalogStore.getState().groupComponents(ids, name)
+  }
+
   useImperativeHandle(ref, () => ({ createCategory }))
 
   const closeContext = useCallback(() => setContextMenu(null), [])
 
-  const hasContent = patterns.length > 0 || allTags.length > 0
+  const hasContent = components.length > 0 || allTags.length > 0
+
+  // Compute visible order for shift+click range selection + merge styling
+  const visibleOrder = useMemo(() => {
+    const order: string[] = []
+    for (const s of uncategorized) order.push(s.id)
+    for (const tag of allTags) {
+      order.push(`__cat:${tag}`)
+      if (!collapsedTags.has(tag)) {
+        const items = categorized.get(tag) || []
+        for (const s of items) order.push(s.id)
+      }
+    }
+    return order
+  }, [uncategorized, allTags, categorized, collapsedTags])
+
+  const { mergeTop, mergeBottom } = useMemo(() => {
+    if (highlightIds.size <= 1) return { mergeTop: new Set<string>(), mergeBottom: new Set<string>() }
+    const mt = new Set<string>()
+    const mb = new Set<string>()
+    for (let i = 0; i < visibleOrder.length; i++) {
+      if (!highlightIds.has(visibleOrder[i])) continue
+      if (i > 0 && highlightIds.has(visibleOrder[i - 1])) mt.add(visibleOrder[i])
+      if (i < visibleOrder.length - 1 && highlightIds.has(visibleOrder[i + 1])) mb.add(visibleOrder[i])
+    }
+    return { mergeTop: mt, mergeBottom: mb }
+  }, [visibleOrder, highlightIds])
+
+  const handleClick = useCallback((id: string, e: React.MouseEvent) => {
+    if (e.shiftKey) highlightRange(id, visibleOrder)
+    else if (e.metaKey) highlightMulti(id)
+    else setHighlightId(id)
+  }, [visibleOrder, highlightRange, highlightMulti, setHighlightId])
 
   const panelRight = panelRef.current ? panelRef.current.getBoundingClientRect().right : 280
 
   return (
     <div
       ref={panelRef}
-      data-pattern-dnd-panel
+      data-component-dnd-panel
       className="h-full flex flex-col overflow-y-auto py-1 px-1"
+      onClick={(e) => { if (e.target === e.currentTarget) setHighlightId(null) }}
     >
       {hasContent && (
         <>
           {/* Uncategorized items */}
           {uncategorized.map((s) => (
-            <PatternRow
+            <ComponentRow
               key={s.id}
-              pattern={s}
+              component={s}
               depth={0}
               readOnly={readOnly}
               isEditing={!readOnly && editingId === s.id}
               editValue={editValue}
-              isHighlighted={highlightId === s.id}
-              onClick={() => setHighlightId(s.id)}
+              isHighlighted={highlightIds.has(s.id)}
+              isMulti={highlightIds.size > 1}
+              mergeTop={mergeTop.has(s.id)}
+              mergeBottom={mergeBottom.has(s.id)}
+              onClick={(e) => handleClick(s.id, e)}
               onEditChange={setEditValue}
-              onEditCommit={commitPatternRename}
+              onEditCommit={commitComponentRename}
               onEditCancel={() => setEditingId(null)}
               onDoubleClick={() => {
                 if (onEditComponent) { onEditComponent(s.id); return }
-                if (!readOnly) startPatternRename(s)
+                if (!readOnly) startComponentRename(s)
               }}
-              onContextMenu={(x, y) => setContextMenu({ x, y, type: 'pattern', pattern: s })}
-              onInsert={() => handleInsert(s)}
-              onDelete={readOnly ? undefined : () => deletePattern(s.id)}
+              onContextMenu={(x, y) => setContextMenu({ x, y, type: 'component', component: s })}
               onPreviewEnter={onPreviewEnter}
               onPreviewLeave={onPreviewLeave}
             />
@@ -250,9 +311,12 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
                 isCollapsed={isCollapsed}
                 isEditingCat={isEditingCat}
                 editCategoryValue={editCategoryValue}
-                isHighlighted={highlightId === `__cat:${tag}`}
+                isHighlighted={highlightIds.has(`__cat:${tag}`)}
+                isMulti={highlightIds.size > 1}
+                mergeTop={mergeTop.has(`__cat:${tag}`)}
+                mergeBottom={mergeBottom.has(`__cat:${tag}`)}
                 onToggle={() => toggleTag(tag)}
-                onClick={() => setHighlightId(`__cat:${tag}`)}
+                onClick={(e) => handleClick(`__cat:${tag}`, e)}
                 onEditChange={setEditCategoryValue}
                 onEditCommit={commitCategoryRename}
                 onEditCancel={() => setEditingCategoryTag(null)}
@@ -265,25 +329,26 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
                 }}
               >
                 {!isCollapsed && items.map((s) => (
-                  <PatternRow
+                  <ComponentRow
                     key={s.id}
-                    pattern={s}
+                    component={s}
                     depth={1}
                     readOnly={readOnly}
                     isEditing={!readOnly && editingId === s.id}
                     editValue={editValue}
-                    isHighlighted={highlightId === s.id}
-                    onClick={() => setHighlightId(s.id)}
+                    isHighlighted={highlightIds.has(s.id)}
+                    isMulti={highlightIds.size > 1}
+                    mergeTop={mergeTop.has(s.id)}
+                    mergeBottom={mergeBottom.has(s.id)}
+                    onClick={(e) => handleClick(s.id, e)}
                     onEditChange={setEditValue}
-                    onEditCommit={commitPatternRename}
+                    onEditCommit={commitComponentRename}
                     onEditCancel={() => setEditingId(null)}
                     onDoubleClick={() => {
                       if (onEditComponent) { onEditComponent(s.id); return }
-                      if (!readOnly) startPatternRename(s)
+                      if (!readOnly) startComponentRename(s)
                     }}
-                    onContextMenu={(x, y) => setContextMenu({ x, y, type: 'pattern', pattern: s })}
-                    onInsert={() => handleInsert(s)}
-                    onDelete={readOnly ? undefined : () => deletePattern(s.id)}
+                    onContextMenu={(x, y) => setContextMenu({ x, y, type: 'component', component: s })}
                     onPreviewEnter={onPreviewEnter}
                     onPreviewLeave={onPreviewLeave}
                   />
@@ -323,29 +388,34 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
         </div>
       )}
 
-      {/* Pattern context menu */}
+      {/* Component context menu */}
       {contextMenu && <div className="fixed inset-0 z-40" onClick={closeContext} onContextMenu={(e) => { e.preventDefault(); closeContext() }} />}
       {contextMenu && (
-        <PatternContextMenu
+        <ComponentContextMenu
           contextMenu={contextMenu}
           readOnly={readOnly}
-          onRename={startPatternRename}
-          onDelete={(id) => deletePattern(id)}
+          multiCount={highlightIds.size}
+          onEdit={onEditComponent}
+          onInsert={handleInsert}
+          onDuplicate={readOnly ? undefined : handleDuplicate}
+          onRename={startComponentRename}
+          onDelete={(id) => deleteComponent(id)}
+          onGroup={!readOnly ? handleGroup : undefined}
           onCategoryRename={startCategoryRename}
           onCategoryDelete={deleteCategory}
           onClose={() => setContextMenu(null)}
         />
       )}
 
-      {/* Pattern hover preview — always mounted, iframe persists */}
-      <PatternPreview
-        frame={previewPattern?.frame ?? null}
-        name={previewPattern?.name ?? ''}
+      {/* Component hover preview — always mounted, iframe persists */}
+      <ComponentPreview
+        frame={previewComponent?.frame ?? null}
+        name={previewComponent?.name ?? ''}
         sourceName={sourceName}
         anchorY={previewY}
         panelRight={panelRight}
         onInsert={handlePreviewInsert}
-        onClose={handlePreviewClose}
+        onEdit={onEditComponent ? handlePreviewEdit : undefined}
         onPopupEnter={onPreviewPopupEnter}
         onPopupLeave={onPreviewPopupLeave}
       />
@@ -357,18 +427,22 @@ export const PatternsPanel = forwardRef<PatternsPanelHandle, PatternsPanelProps>
 
 function CategoryRow({
   tag, items, readOnly, isCollapsed, isEditingCat, editCategoryValue,
-  isHighlighted, onToggle, onClick, onEditChange, onEditCommit, onEditCancel,
+  isHighlighted, isMulti, mergeTop: mt, mergeBottom: mb,
+  onToggle, onClick, onEditChange, onEditCommit, onEditCancel,
   onDoubleClick, onDeleteCategory, onContextMenu, children,
 }: {
   tag: string
-  items: Pattern[]
+  items: Component[]
   readOnly: boolean
   isCollapsed: boolean
   isEditingCat: boolean
   editCategoryValue: string
   isHighlighted: boolean
+  isMulti?: boolean
+  mergeTop?: boolean
+  mergeBottom?: boolean
   onToggle: () => void
-  onClick: () => void
+  onClick: (e: React.MouseEvent) => void
   onEditChange: (v: string) => void
   onEditCommit: () => void
   onEditCancel: () => void
@@ -416,15 +490,17 @@ function CategoryRow({
         ref={mergedRef}
         {...dragListeners}
         {...dragAttrs}
-        className={`flex items-center gap-1.5 py-1 px-1 rounded-md group transition-all ${
+        className={`flex items-center gap-1.5 py-1 px-1 ${
+          !isHighlighted ? 'rounded-md' : !isMulti ? 'rounded-md' : mt && mb ? '' : mt ? 'rounded-b-md' : mb ? 'rounded-t-md' : 'rounded-md'
+        } group transition-all ${
           isCatOver && catOverPos === 'inside'
             ? 'bg-[var(--color-accent)]/10 outline outline-1 outline-[var(--color-accent)]/40'
             : isHighlighted
-              ? 'tree-node-selected text-text-primary'
+              ? `${isMulti ? 'tree-node-multi-selected' : 'tree-node-selected'} text-text-primary`
               : isDragging ? 'opacity-40' : 'hover:bg-[var(--color-accent)]/8 text-text-secondary hover:text-text-primary'
         }`}
         style={{ paddingLeft: 4 }}
-        onClick={() => { if (!activeId) onClick() }}
+        onClick={(e) => { if (!activeId) onClick(e) }}
         onContextMenu={readOnly ? undefined : onContextMenu}
       >
         <span
@@ -459,19 +535,7 @@ function CategoryRow({
           </span>
         )}
 
-        {/* Delete on hover */}
-        {!readOnly && (
-          <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
-            <button
-              className="w-4 h-4 c-icon-btn text-[10px] hover:text-text-secondary hover:bg-surface-2/60"
-              onClick={(e) => { e.stopPropagation(); onDeleteCategory() }}
-              onPointerDown={(e) => e.stopPropagation()}
-              title="Delete category"
-            >
-              <X size={10} />
-            </button>
-          </div>
-        )}
+        <div className="w-5 shrink-0" />
       </div>
 
       {/* Children */}
@@ -480,43 +544,45 @@ function CategoryRow({
   )
 }
 
-/* ── Pattern row with @dnd-kit hooks ─────────────────────── */
+/* ── Component row with @dnd-kit hooks ─────────────────────── */
 
-function PatternRow({
-  pattern, depth, readOnly, isEditing, editValue,
-  isHighlighted,
+function ComponentRow({
+  component, depth, readOnly, isEditing, editValue,
+  isHighlighted, isMulti, mergeTop: mt, mergeBottom: mb,
   onClick, onEditChange, onEditCommit, onEditCancel, onDoubleClick,
-  onContextMenu, onInsert, onDelete, onPreviewEnter, onPreviewLeave,
+  onContextMenu, onPreviewEnter, onPreviewLeave,
 }: {
-  pattern: Pattern
+  component: Component
   depth: number
   readOnly?: boolean
   isEditing: boolean
   editValue: string
   isHighlighted: boolean
-  onClick: () => void
+  isMulti?: boolean
+  mergeTop?: boolean
+  mergeBottom?: boolean
+  onClick: (e: React.MouseEvent) => void
   onEditChange: (v: string) => void
   onEditCommit: () => void
   onEditCancel: () => void
   onDoubleClick: () => void
   onContextMenu: (x: number, y: number) => void
-  onInsert: () => void
-  onDelete?: () => void
-  onPreviewEnter?: (pattern: Pattern, y: number) => void
+  onPreviewEnter?: (component: Component, y: number) => void
   onPreviewLeave?: () => void
 }) {
-  const { activeId, overId, overPosition } = useWorkspaceDnd()
+  const { activeId, overId, overPosition, multiDragCount } = useWorkspaceDnd()
+  const highlightIdsForDrag = useCatalogStore((s) => s.highlightIds)
 
-  const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({
-    id: pattern.id,
+  const { attributes, listeners, setNodeRef: setDragRef, isDragging: isDraggingSelf } = useDraggable({
+    id: component.id,
     disabled: isEditing,
-    data: { type: 'pattern' },
+    data: { type: 'component' },
   })
 
   const { setNodeRef: setDropRef } = useDroppable({
-    id: pattern.id,
+    id: component.id,
     disabled: !!readOnly,
-    data: { type: 'pattern', tag: pattern.tags[0] ?? null },
+    data: { type: 'component', tag: component.tags[0] ?? null },
   })
 
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -536,8 +602,9 @@ function PatternRow({
     }
   }, [isHighlighted])
 
-  const isOver = overId === pattern.id
+  const isOver = overId === component.id
   const pos = isOver ? overPosition : null
+  const isDragging = isDraggingSelf || (activeId !== null && multiDragCount > 1 && highlightIdsForDrag.has(component.id))
 
   return (
     <div
@@ -547,7 +614,7 @@ function PatternRow({
       className="relative"
       onMouseEnter={(e) => {
         const rect = e.currentTarget.getBoundingClientRect()
-        onPreviewEnter?.(pattern, rect.top)
+        onPreviewEnter?.(component, rect.top)
       }}
       onMouseLeave={() => onPreviewLeave?.()}
     >
@@ -560,17 +627,18 @@ function PatternRow({
       )}
 
       <div
-        className={`flex items-center gap-1.5 py-1 px-1 rounded-md group transition-all ${
+        className={`flex items-center gap-1.5 py-1 px-1 ${
+          !isHighlighted ? 'rounded-md' : !isMulti ? 'rounded-md' : mt && mb ? '' : mt ? 'rounded-b-md' : mb ? 'rounded-t-md' : 'rounded-md'
+        } group transition-all ${
           isHighlighted
-            ? 'tree-node-selected text-text-primary'
+            ? `${isMulti ? 'tree-node-multi-selected' : 'tree-node-selected'} text-text-primary`
             : isDragging ? 'opacity-40' : 'hover:bg-[var(--color-accent)]/8 text-text-secondary hover:text-text-primary'
         }`}
-        style={{ paddingLeft: depth * 16 + 4 }}
+        style={{ paddingLeft: depth * 16 + 8 }}
         onClick={onClick}
         onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onContextMenu(e.clientX, e.clientY) }}
       >
-        <span className="w-3.5 h-4 shrink-0" />
-        <span className="shrink-0 text-text-muted"><Code size={12} /></span>
+        <span className="shrink-0 text-accent"><Diamond size={12} /></span>
 
         {isEditing ? (
           <input
@@ -587,29 +655,10 @@ function PatternRow({
             className="flex-1 bg-surface-0 border border-accent/50 rounded-md px-1.5 py-0.5 text-[12px] text-text-primary outline-none focus:border-accent min-w-0 transition-colors"
           />
         ) : (
-          <span className="flex-1 text-[12px] truncate" onDoubleClick={onDoubleClick}>{pattern.name}</span>
+          <span className="flex-1 text-[12px] truncate" onDoubleClick={onDoubleClick}>{component.name}</span>
         )}
 
-        <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
-          <button
-            className="w-4 h-4 c-icon-btn text-[10px] hover:text-accent hover:bg-accent/10"
-            onClick={(e) => { e.stopPropagation(); onInsert() }}
-            onPointerDown={(e) => e.stopPropagation()}
-            title="Insert"
-          >
-            <Plus size={12} />
-          </button>
-          {!readOnly && onDelete && (
-            <button
-              className="w-4 h-4 c-icon-btn text-[10px] hover:text-text-secondary hover:bg-surface-2/60"
-              onClick={(e) => { e.stopPropagation(); onDelete() }}
-              onPointerDown={(e) => e.stopPropagation()}
-              title="Delete"
-            >
-              <X size={10} />
-            </button>
-          )}
-        </div>
+        <div className="w-5 shrink-0" />
       </div>
     </div>
   )

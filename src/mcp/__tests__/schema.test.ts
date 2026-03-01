@@ -2,30 +2,16 @@ import { describe, it, expect } from 'vitest'
 import { toolSchemas, type ToolName } from '../schema'
 
 describe('MCP schema', () => {
-  describe('pattern tools exist', () => {
-    const patternTools: ToolName[] = [
-      'list_patterns', 'insert_pattern', 'save_pattern', 'delete_pattern',
+  describe('component tools exist (primary names)', () => {
+    const componentTools: ToolName[] = [
+      'list_components', 'insert_component', 'save_component', 'delete_component',
     ]
 
-    for (const name of patternTools) {
+    for (const name of componentTools) {
       it(`has ${name} schema`, () => {
         expect(toolSchemas[name]).toBeDefined()
         expect(toolSchemas[name].name).toBe(name)
         expect(toolSchemas[name].inputSchema).toBeDefined()
-      })
-    }
-  })
-
-  describe('snippet aliases exist (backward compat)', () => {
-    const snippetTools: ToolName[] = [
-      'list_snippets', 'insert_snippet', 'save_snippet', 'delete_snippet',
-    ]
-
-    for (const name of snippetTools) {
-      it(`has ${name} alias schema`, () => {
-        expect(toolSchemas[name]).toBeDefined()
-        expect(toolSchemas[name].name).toBe(name)
-        expect(toolSchemas[name].description).toContain('Alias')
       })
     }
   })
@@ -36,16 +22,16 @@ describe('MCP schema', () => {
       expect(toolSchemas.list_libraries.name).toBe('list_libraries')
     })
 
-    it('has list_library_patterns schema', () => {
-      expect(toolSchemas.list_library_patterns).toBeDefined()
-      expect(toolSchemas.list_library_patterns.name).toBe('list_library_patterns')
-      expect(toolSchemas.list_library_patterns.inputSchema.required).toContain('library_id')
+    it('has list_library_components schema', () => {
+      expect(toolSchemas.list_library_components).toBeDefined()
+      expect(toolSchemas.list_library_components.name).toBe('list_library_components')
+      expect(toolSchemas.list_library_components.inputSchema.required).toContain('library_id')
     })
   })
 
-  describe('insert_pattern includes library_id param', () => {
+  describe('insert_component includes library_id param', () => {
     it('has library_id in properties', () => {
-      const props = toolSchemas.insert_pattern.inputSchema.properties
+      const props = toolSchemas.insert_component.inputSchema.properties
       expect(props.library_id).toBeDefined()
       expect(props.library_id.type).toBe('string')
     })

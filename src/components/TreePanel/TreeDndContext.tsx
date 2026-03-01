@@ -27,12 +27,14 @@ interface TreeDndState {
   activeId: string | null
   overId: string | null
   overPosition: DropPosition | null
+  multiDragCount: number
 }
 
 const TreeDndCtx = createContext<TreeDndState>({
   activeId: null,
   overId: null,
   overPosition: null,
+  multiDragCount: 0,
 })
 
 export function useTreeDnd() {
@@ -49,7 +51,7 @@ export function isDescendant(frame: Frame, targetId: string): boolean {
 
 /* ── Drag ghost overlay ─────────────────────────────────── */
 
-function DragGhost({ id }: { id: string }) {
+function DragGhost({ id, count }: { id: string; count: number }) {
   const root = useFrameStore((s) => s.root)
   const frame = findInTree(root, id)
   if (!frame) return null
@@ -68,6 +70,9 @@ function DragGhost({ id }: { id: string }) {
     <div className="flex items-center gap-1.5 py-1 px-2 bg-surface-2 rounded-md text-text-primary text-[12px] shadow-lg border border-border pointer-events-none" style={{ opacity: 0.6 }}>
       <span className="shrink-0 text-text-muted">{icon}</span>
       <span className="truncate max-w-[140px]">{frame.name}</span>
+      {count > 1 && (
+        <span className="shrink-0 bg-accent text-white text-[10px] font-semibold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">{count}</span>
+      )}
     </div>
   )
 }
@@ -79,6 +84,7 @@ export function TreeDndProvider({ children }: { children: React.ReactNode }) {
     activeId: null,
     overId: null,
     overPosition: null,
+    multiDragCount: 0,
   })
 
   // Tracks last computed zone for hysteresis (updated inside collision detection)
@@ -86,6 +92,10 @@ export function TreeDndProvider({ children }: { children: React.ReactNode }) {
 
   // Cached active frame node — set once on drag start, avoids findInTree on every move
   const activeNodeRef = useRef<Frame | null>(null)
+
+  // Multi-drag: all IDs being dragged + their cached Frame nodes (for descendant checks)
+  const multiDragIdsRef = useRef<Set<string>>(new Set())
+  const multiDragNodesRef = useRef<Frame[]>([])
 
   // Mirror of state.overId/overPosition for equality checks in callbacks without stale closures
   const overRef = useRef<{ id: string | null; position: DropPosition | null }>({
@@ -110,14 +120,23 @@ export function TreeDndProvider({ children }: { children: React.ReactNode }) {
       if (!pointerCoordinates) return []
 
       const activeIdStr = String(active.id)
-      const activeNode = activeNodeRef.current
+      const dragIds = multiDragIdsRef.current
+      const dragNodes = multiDragNodesRef.current
 
       const best = closestByY(
         droppableContainers as DroppableContainer[],
         droppableRects,
         pointerCoordinates,
         activeIdStr,
-        (cid) => !!activeNode && isDescendant(activeNode, cid),
+        (cid) => {
+          // Skip all multi-drag items
+          if (dragIds.has(cid)) return true
+          // Skip descendants of any multi-drag item
+          for (const node of dragNodes) {
+            if (isDescendant(node, cid)) return true
+          }
+          return false
+        },
       )
 
       if (!best) {
@@ -155,11 +174,51 @@ export function TreeDndProvider({ children }: { children: React.ReactNode }) {
 
   const handleDragStart = useCallback(({ active }: DragStartEvent) => {
     const id = String(active.id)
-    // Cache the active node so collision detection can skip descendants without tree walks
-    const root = useFrameStore.getState().root
-    activeNodeRef.current = root ? findInTree(root, id) : null
+    const store = useFrameStore.getState()
+    const root = store.root
+
+    // Determine multi-drag: dragged item must be in the multi-selection, all top-level must be siblings
+    let dragIds: Set<string>
+    const { selectedIds } = store
+
+    if (selectedIds.size > 1 && selectedIds.has(id)) {
+      // Filter to top-level selections: items whose parent is NOT also selected
+      // (children of selected parents move naturally with their parent)
+      const topLevel = new Set<string>()
+      for (const sid of selectedIds) {
+        const p = findParent(root, sid)
+        if (!p || !selectedIds.has(p.id)) topLevel.add(sid)
+      }
+
+      const parents = new Set<string>()
+      for (const sid of topLevel) {
+        const p = findParent(root, sid)
+        if (p) parents.add(p.id)
+      }
+      if (parents.size === 1 && topLevel.size > 0) {
+        dragIds = topLevel
+      } else {
+        // Not all siblings — narrow to single
+        store.select(id)
+        dragIds = new Set([id])
+      }
+    } else {
+      if (selectedIds.size > 1) store.select(id)
+      dragIds = new Set([id])
+    }
+
+    // Cache multi-drag state for collision detection and drag end
+    multiDragIdsRef.current = dragIds
+    const nodes: Frame[] = []
+    for (const did of dragIds) {
+      const node = findInTree(root, did)
+      if (node) nodes.push(node)
+    }
+    multiDragNodesRef.current = nodes
+    activeNodeRef.current = findInTree(root, id)
+
     overRef.current = { id: null, position: null }
-    setState({ activeId: id, overId: null, overPosition: null })
+    setState({ activeId: id, overId: null, overPosition: null, multiDragCount: dragIds.size })
   }, [])
 
   const updateOver = useCallback((id: string | null, position: DropPosition | null) => {
@@ -195,72 +254,100 @@ export function TreeDndProvider({ children }: { children: React.ReactNode }) {
 
   const handleDragEnd = useCallback(({ active, over }: DragEndEvent) => {
     const lastZone = lastZoneRef.current
+    const dragIds = multiDragIdsRef.current
+    const isMulti = dragIds.size > 1
 
     // Clear state
-    setState({ activeId: null, overId: null, overPosition: null })
+    setState({ activeId: null, overId: null, overPosition: null, multiDragCount: 0 })
     overRef.current = { id: null, position: null }
     lastZoneRef.current = null
     activeNodeRef.current = null
+    multiDragIdsRef.current = new Set()
+    multiDragNodesRef.current = []
 
     if (!over || !lastZone) return
 
-    // Consistency: zone and target must come from the same collision result.
-    // If they diverged (race between collision runs), cancel — better than a wrong move.
     const targetId = lastZone.id
     if (String(over.id) !== targetId) return
 
     const zone = lastZone.zone
     const dragId = String(active.id)
-    if (dragId === targetId) return
+    if (dragIds.has(targetId)) return
 
     // Safety net: validate no descendant drop
-    const { root, moveFrame } = useFrameStore.getState()
+    const store = useFrameStore.getState()
+    const { root } = store
     if (!root) return
-    const dragNode = findInTree(root, dragId)
-    if (dragNode && isDescendant(dragNode, targetId)) return
+    for (const did of dragIds) {
+      const node = findInTree(root, did)
+      if (node && isDescendant(node, targetId)) return
+    }
 
     const targetData = over.data.current as
       | { parentId: string | null; index: number; isBox: boolean }
       | undefined
     if (!targetData) return
 
-    if (zone === 'inside' && targetData.isBox) {
-      const targetFrame = findInTree(root, targetId)
-      const childCount = targetFrame?.type === 'box' ? targetFrame.children.length : 0
-      moveFrame(dragId, targetId, childCount)
-    } else if (zone === 'before' && targetData.parentId) {
-      let idx = targetData.index
-      // Same-parent adjustment: moveInTree extracts the dragged node first,
-      // shifting all subsequent siblings' indices down by 1.
-      const dragParent = findParent(root, dragId)
-      if (dragParent && dragParent.id === targetData.parentId) {
-        const dragIdx = dragParent.children.findIndex((c) => c.id === dragId)
-        if (dragIdx >= 0 && dragIdx < targetData.index) idx -= 1
+    if (isMulti) {
+      // Multi-drag: compute visual index, moveFrames adjusts internally
+      let targetParentId: string
+      let visualIdx: number
+
+      if (zone === 'inside' && targetData.isBox) {
+        targetParentId = targetId
+        const targetFrame = findInTree(root, targetId)
+        visualIdx = targetFrame?.type === 'box' ? targetFrame.children.length : 0
+      } else if (zone === 'before' && targetData.parentId) {
+        targetParentId = targetData.parentId
+        visualIdx = targetData.index
+      } else if (zone === 'after' && targetData.parentId) {
+        targetParentId = targetData.parentId
+        visualIdx = targetData.index + 1
+      } else {
+        return
       }
-      moveFrame(dragId, targetData.parentId, idx)
-    } else if (zone === 'after' && targetData.parentId) {
-      let idx = targetData.index + 1
-      const dragParent = findParent(root, dragId)
-      if (dragParent && dragParent.id === targetData.parentId) {
-        const dragIdx = dragParent.children.findIndex((c) => c.id === dragId)
-        if (dragIdx >= 0 && dragIdx < idx) idx -= 1
+
+      store.moveFrames([...dragIds], targetParentId, visualIdx)
+    } else {
+      // Single drag: existing logic with same-parent index adjustment
+      if (zone === 'inside' && targetData.isBox) {
+        const targetFrame = findInTree(root, targetId)
+        const childCount = targetFrame?.type === 'box' ? targetFrame.children.length : 0
+        store.moveFrame(dragId, targetId, childCount)
+      } else if (zone === 'before' && targetData.parentId) {
+        let idx = targetData.index
+        const dragParent = findParent(root, dragId)
+        if (dragParent && dragParent.id === targetData.parentId) {
+          const dragIdx = dragParent.children.findIndex((c) => c.id === dragId)
+          if (dragIdx >= 0 && dragIdx < targetData.index) idx -= 1
+        }
+        store.moveFrame(dragId, targetData.parentId, idx)
+      } else if (zone === 'after' && targetData.parentId) {
+        let idx = targetData.index + 1
+        const dragParent = findParent(root, dragId)
+        if (dragParent && dragParent.id === targetData.parentId) {
+          const dragIdx = dragParent.children.findIndex((c) => c.id === dragId)
+          if (dragIdx >= 0 && dragIdx < idx) idx -= 1
+        }
+        store.moveFrame(dragId, targetData.parentId, idx)
       }
-      moveFrame(dragId, targetData.parentId, idx)
     }
   }, [])
 
   const handleDragCancel = useCallback(() => {
-    setState({ activeId: null, overId: null, overPosition: null })
+    setState({ activeId: null, overId: null, overPosition: null, multiDragCount: 0 })
     overRef.current = { id: null, position: null }
     lastZoneRef.current = null
     activeNodeRef.current = null
+    multiDragIdsRef.current = new Set()
+    multiDragNodesRef.current = []
   }, [])
 
   /* ── Context value (stable when state hasn't changed) ─── */
 
   const ctxValue = useMemo<TreeDndState>(
-    () => ({ activeId: state.activeId, overId: state.overId, overPosition: state.overPosition }),
-    [state.activeId, state.overId, state.overPosition],
+    () => ({ activeId: state.activeId, overId: state.overId, overPosition: state.overPosition, multiDragCount: state.multiDragCount }),
+    [state.activeId, state.overId, state.overPosition, state.multiDragCount],
   )
 
   return (
@@ -278,7 +365,7 @@ export function TreeDndProvider({ children }: { children: React.ReactNode }) {
       </TreeDndCtx.Provider>
 
       <DragOverlay dropAnimation={null}>
-        {state.activeId ? <DragGhost id={state.activeId} /> : null}
+        {state.activeId ? <DragGhost id={state.activeId} count={state.multiDragCount} /> : null}
       </DragOverlay>
     </DndContext>
   )

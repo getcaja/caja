@@ -434,8 +434,8 @@ describe('frameStore', () => {
 
     it('insertFrame stores origin metadata', () => {
       const raw: Partial<BoxElement> = { type: 'box', name: 'Test', children: [] } as any
-      store().insertFrame(root().id, raw as Frame, { patternId: 'p1' })
-      expect(rootChildren()[0]._origin).toEqual({ patternId: 'p1' })
+      store().insertFrame(root().id, raw as Frame, { componentId: 'p1' })
+      expect(rootChildren()[0]._origin).toEqual({ componentId: 'p1' })
     })
 
     it('insertFrameAt inserts at specified index', () => {
