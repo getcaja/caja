@@ -120,31 +120,38 @@ function App() {
 
   const handleOpen = useCallback(async () => {
     if (!isTauri) return
-    const result = await openFile()
-    if (result) {
-      const { migrateToInternalRoot } = await import('./store/frameStore')
-      const data = result.data
-      if (data.pages && Array.isArray(data.pages)) {
-        // New multi-page format
-        const pages = (data.pages as Array<Record<string, unknown>>).map((p) => ({
-          id: p.id as string,
-          name: p.name as string,
-          route: p.route as string,
-          root: migrateToInternalRoot(p.root as Record<string, unknown>, p.id as string),
-          ...(p.isComponentPage ? { isComponentPage: true as const } : {}),
-        }))
-        const activePageId = (data.activePageId as string) || pages[0].id
-        useFrameStore.getState().loadFromFileMulti(pages, activePageId, result.path)
-      } else if (data.root) {
-        // Legacy single-root format
-        const root = migrateToInternalRoot(data.root as Record<string, unknown>, 'page-1')
-        useFrameStore.getState().loadFromFile(root, result.path)
+    try {
+      const result = await openFile()
+      if (result) {
+        const { migrateToInternalRoot } = await import('./store/frameStore')
+        const data = result.data
+        if (data.pages && Array.isArray(data.pages)) {
+          // New multi-page format
+          const pages = (data.pages as Array<Record<string, unknown>>).map((p) => ({
+            id: p.id as string,
+            name: p.name as string,
+            route: p.route as string,
+            root: migrateToInternalRoot(p.root as Record<string, unknown>, p.id as string),
+            ...(p.isComponentPage ? { isComponentPage: true as const } : {}),
+          }))
+          const activePageId = (data.activePageId as string) || pages[0].id
+          useFrameStore.getState().loadFromFileMulti(pages, activePageId, result.path)
+        } else if (data.root) {
+          // Legacy single-root format
+          const root = migrateToInternalRoot(data.root as Record<string, unknown>, 'page-1')
+          useFrameStore.getState().loadFromFile(root, result.path)
+        }
+        useCatalogStore.getState().loadComponents(data.components as import('./store/catalogStore').ComponentData | undefined)
+        // Restore blob URLs from local asset files after file load
+        import('./lib/assetOps').then(({ restoreAllAssets }) => {
+          restoreAllAssets(useFrameStore.getState().pages).catch((err) => console.warn('Asset restore failed:', err))
+        })
       }
-      useCatalogStore.getState().loadComponents(data.components as import('./store/catalogStore').ComponentData | undefined)
-      // Restore blob URLs from local asset files after file load
-      import('./lib/assetOps').then(({ restoreAllAssets }) => {
-        restoreAllAssets(useFrameStore.getState().pages).catch((err) => console.warn('Asset restore failed:', err))
-      })
+    } catch (err) {
+      console.error('Failed to open file:', err)
+      const msg = err instanceof Error ? err.message : 'Unknown error opening file'
+      const { message } = await import('@tauri-apps/plugin-dialog')
+      message(msg, { title: 'Open Failed', kind: 'error' })
     }
   }, [])
 
