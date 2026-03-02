@@ -34,19 +34,10 @@ function sizeToKeyword(value: SizeValue): string | null {
   return null
 }
 
-/** Get the pill text for the current SizeValue */
-function getPillText(value: SizeValue, classPrefix?: string): string | null {
-  if (value.mode === 'hug') return 'fit'
-  if (value.mode === 'fill') return 'full'
-  if (value.mode === 'fixed' && value.value.mode === 'token') {
-    return value.value.token
-  }
-  return null
-}
-
 export function SizeInput({ value, onChange, label, classPrefix, parentIsFlex, tooltip }: SizeInputProps) {
   const startPreview = useFrameStore((s) => s.startPreview)
   const endPreview = useFrameStore((s) => s.endPreview)
+  const advancedMode = useFrameStore((s) => s.advancedMode)
 
   const [showDropdown, setShowDropdown] = useState(false)
   const [selectedIdx, setSelectedIdx] = useState(-1)
@@ -62,21 +53,27 @@ export function SizeInput({ value, onChange, label, classPrefix, parentIsFlex, t
   const isFixed = value.mode === 'fixed'
   const fixedToken = isFixed && value.value.mode === 'token' ? value.value.token : null
   const fixedNumeric = isFixed ? value.value.value : 0
-  const pillText = getPillText(value, classPrefix)
+
+  // Pill: keywords always show, fixed tokens only in advanced mode
+  let pillText: string | null = null
+  if (value.mode === 'default') pillText = advancedMode ? 'auto' : 'Auto'
+  else if (value.mode === 'hug') pillText = advancedMode ? 'fit' : 'Hug'
+  else if (value.mode === 'fill') pillText = advancedMode ? 'full' : 'Fill'
+  else if (advancedMode && fixedToken) pillText = fixedToken
   const hasPill = pillText !== null
 
   // Build dropdown items
-  const items: DropdownItem[] = buildItems(parentIsFlex, SIZE_CONSTRAINT_SCALE, classPrefix)
+  const items: DropdownItem[] = buildItems(parentIsFlex, SIZE_CONSTRAINT_SCALE, classPrefix, advancedMode)
 
   // Sync draft when value changes externally
   useEffect(() => {
     if (focused) return
-    if (isFixed && !fixedToken && fixedNumeric !== 0) {
+    if (isFixed && !hasPill && fixedNumeric !== 0) {
       setDraft(String(fixedNumeric))
     } else {
       setDraft('')
     }
-  }, [isFixed, fixedToken, fixedNumeric, focused])
+  }, [isFixed, fixedToken, fixedNumeric, focused, advancedMode])
 
   // Scroll selected item into view
   useEffect(() => {
@@ -135,13 +132,19 @@ export function SizeInput({ value, onChange, label, classPrefix, parentIsFlex, t
   const commitAtIndex = useCallback((idx: number) => {
     endPreview(true)
     originalRef.current = null
-    const patch = applyItem(items[idx])
+    const item = items[idx]
+    const patch = applyItem(item)
     onChange(patch)
-    setDraft('')
+    if (!advancedMode && item.kind === 'scale') {
+      const opt = SIZE_CONSTRAINT_SCALE.find((s) => s.token === item.key)!
+      setDraft(String(opt.value))
+    } else {
+      setDraft('')
+    }
     setShowDropdown(false)
     setSelectedIdx(-1)
     requestAnimationFrame(() => inputRef.current?.focus())
-  }, [items, onChange, applyItem, endPreview])
+  }, [items, onChange, applyItem, endPreview, advancedMode])
 
   const revertPreview = useCallback(() => {
     if (originalRef.current === null) return
@@ -179,19 +182,19 @@ export function SizeInput({ value, onChange, label, classPrefix, parentIsFlex, t
     const n = Number(draft)
     if (isNaN(n)) {
       // Invalid → restore
-      setDraft(isFixed && !fixedToken && fixedNumeric !== 0 ? String(fixedNumeric) : '')
+      setDraft(isFixed && !hasPill && fixedNumeric !== 0 ? String(fixedNumeric) : '')
       return
     }
     const clamped = Math.max(0, n)
     const match = SIZE_CONSTRAINT_SCALE.find((s) => s.value === clamped)
     if (match) {
       onChange({ mode: 'fixed', value: { mode: 'token', token: match.token, value: clamped } })
-      setDraft('')
+      setDraft(advancedMode ? '' : String(clamped))
     } else {
       onChange({ mode: 'fixed', value: { mode: 'custom', value: clamped } })
       setDraft(String(clamped))
     }
-  }, [draft, hasPill, isFixed, fixedToken, fixedNumeric, onChange])
+  }, [draft, hasPill, isFixed, fixedToken, fixedNumeric, onChange, advancedMode])
 
   // --- Keyboard ---
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -236,26 +239,26 @@ export function SizeInput({ value, onChange, label, classPrefix, parentIsFlex, t
       inputRef.current?.blur()
     } else if (e.key === 'Escape') {
       e.preventDefault()
-      setDraft(isFixed && !fixedToken && fixedNumeric !== 0 ? String(fixedNumeric) : '')
+      setDraft(isFixed && !hasPill && fixedNumeric !== 0 ? String(fixedNumeric) : '')
       inputRef.current?.blur()
-    } else if (e.key === 'ArrowUp' && isFixed && !fixedToken) {
+    } else if (e.key === 'ArrowUp' && isFixed && !hasPill) {
       e.preventDefault()
       const n = Math.max(0, fixedNumeric + 1)
       const match = SIZE_CONSTRAINT_SCALE.find((s) => s.value === n)
       if (match) {
         onChange({ mode: 'fixed', value: { mode: 'token', token: match.token, value: n } })
-        setDraft('')
+        setDraft(advancedMode ? '' : String(n))
       } else {
         onChange({ mode: 'fixed', value: { mode: 'custom', value: n } })
         setDraft(String(n))
       }
-    } else if (e.key === 'ArrowDown' && isFixed && !fixedToken) {
+    } else if (e.key === 'ArrowDown' && isFixed && !hasPill) {
       e.preventDefault()
       const n = Math.max(0, fixedNumeric - 1)
       const match = SIZE_CONSTRAINT_SCALE.find((s) => s.value === n)
       if (match) {
         onChange({ mode: 'fixed', value: { mode: 'token', token: match.token, value: n } })
-        setDraft('')
+        setDraft(advancedMode ? '' : String(n))
       } else {
         onChange({ mode: 'fixed', value: { mode: 'custom', value: n } })
         setDraft(String(n))
@@ -265,7 +268,7 @@ export function SizeInput({ value, onChange, label, classPrefix, parentIsFlex, t
 
   const handleFocus = () => {
     setFocused(true)
-    if (isFixed && !fixedToken && fixedNumeric !== 0) {
+    if (isFixed && !hasPill && fixedNumeric !== 0) {
       setDraft(String(fixedNumeric))
     }
   }
@@ -335,7 +338,7 @@ export function SizeInput({ value, onChange, label, classPrefix, parentIsFlex, t
           onKeyDown={handleKeyDown}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          placeholder={hasPill ? '' : 'Auto'}
+          placeholder={hasPill ? '' : (advancedMode ? 'Auto' : '')}
           className={`flex-1 ${hasPill ? 'min-w-0' : 'min-w-[20px]'} text-[12px] text-text-primary`}
         />
 
@@ -348,7 +351,7 @@ export function SizeInput({ value, onChange, label, classPrefix, parentIsFlex, t
             toggleDropdown()
             inputRef.current?.focus()
           }}
-          className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-text-secondary hover:bg-surface-2 transition-opacity ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}
+          className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-text-secondary hover:bg-surface-2 ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}
         >
           <Diamond size={12} />
         </button>
@@ -364,7 +367,12 @@ export function SizeInput({ value, onChange, label, classPrefix, parentIsFlex, t
           {items.map((item, i) => (
             <div key={`${item.kind}-${item.key}`}>
               {i === separatorIdx && separatorIdx > 0 && (
-                <div className="border-t border-border my-1" />
+                <>
+                  <div className="border-t border-border my-1" />
+                  {!advancedMode && (
+                    <div className="px-3 py-1 text-[11px] text-text-muted font-medium">Fixed</div>
+                  )}
+                </>
               )}
               <button
                 onMouseDown={(e) => {
@@ -385,7 +393,7 @@ export function SizeInput({ value, onChange, label, classPrefix, parentIsFlex, t
                   <span className="font-medium">{item.label}</span>
                   {item.key === committedKey && <Check size={10} />}
                 </span>
-                <span className="text-text-muted">{item.description}</span>
+                {item.description && <span className="text-text-muted">{item.description}</span>}
               </button>
             </div>
           ))}
@@ -398,23 +406,32 @@ export function SizeInput({ value, onChange, label, classPrefix, parentIsFlex, t
 function buildItems(
   parentIsFlex: boolean | undefined,
   scale: ScaleOption[],
-  classPrefix?: string,
+  classPrefix: string | undefined,
+  advancedMode: boolean,
 ): DropdownItem[] {
   const items: DropdownItem[] = []
 
   // Keywords
-  items.push({ key: 'auto', label: 'auto', description: 'auto', kind: 'keyword' })
-  if (parentIsFlex) {
-    items.push({ key: 'fit', label: `${classPrefix}-fit`, description: 'fit-content', kind: 'keyword' })
-    items.push({ key: 'full', label: `${classPrefix}-full`, description: '100%', kind: 'keyword' })
+  if (advancedMode) {
+    items.push({ key: 'auto', label: 'auto', description: 'auto', kind: 'keyword' })
+    if (parentIsFlex) {
+      items.push({ key: 'fit', label: `${classPrefix}-fit`, description: 'fit-content', kind: 'keyword' })
+      items.push({ key: 'full', label: `${classPrefix}-full`, description: '100%', kind: 'keyword' })
+    }
+  } else {
+    items.push({ key: 'auto', label: 'Auto', description: '', kind: 'keyword' })
+    if (parentIsFlex) {
+      items.push({ key: 'fit', label: 'Hug', description: 'Hug content', kind: 'keyword' })
+      items.push({ key: 'full', label: 'Fill', description: '100%', kind: 'keyword' })
+    }
   }
 
   // Scale tokens
   for (const opt of scale) {
     items.push({
       key: opt.token,
-      label: formatTokenLabel(classPrefix, opt.token),
-      description: `${opt.value}px`,
+      label: advancedMode ? formatTokenLabel(classPrefix, opt.token) : `${opt.value}px`,
+      description: advancedMode ? `${opt.value}px` : '',
       kind: 'scale',
     })
   }

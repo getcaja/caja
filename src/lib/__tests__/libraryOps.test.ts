@@ -1,13 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { PatternData } from '../../store/catalogStore'
-import type { LibraryMeta } from '../../types/pattern'
+import { describe, it, expect } from 'vitest'
+import type { ComponentData } from '../../store/catalogStore'
 import type { CjlFileData } from '../libraryOps'
 
 // We test the .cjl format structure directly (serialization/parsing) without
 // importing libraryOps (which depends on Tauri FS APIs). This validates the
-// data contract that importLibrary/exportLibrary rely on.
+// data contract that readCjlFile/exportLibrary rely on.
 
-function makePatternData(): PatternData {
+function makeComponentData(): ComponentData {
   return {
     items: [
       {
@@ -32,7 +31,7 @@ describe('.cjl file format', () => {
       author: 'Alice',
       description: 'A set of UI components',
       libraryVersion: '1.0.0',
-      patterns: makePatternData(),
+      components: makeComponentData(),
     }
 
     const json = JSON.stringify(cjl, null, 2)
@@ -43,33 +42,33 @@ describe('.cjl file format', () => {
     expect(parsed.author).toBe('Alice')
     expect(parsed.description).toBe('A set of UI components')
     expect(parsed.libraryVersion).toBe('1.0.0')
-    expect(parsed.patterns.items).toHaveLength(1)
-    expect(parsed.patterns.items[0].name).toBe('Button')
-    expect(parsed.patterns.order).toEqual(['p1'])
-    expect(parsed.patterns.categories).toEqual(['ui'])
+    expect(parsed.components!.items).toHaveLength(1)
+    expect(parsed.components!.items[0].name).toBe('Button')
+    expect(parsed.components!.order).toEqual(['p1'])
+    expect(parsed.components!.categories).toEqual(['ui'])
   })
 
   it('round-trip: create → serialize → parse → verify', () => {
-    const original = makePatternData()
+    const original = makeComponentData()
     const cjl: CjlFileData = {
       version: 1,
       name: 'Test Lib',
-      patterns: original,
+      components: original,
     }
 
     const serialized = JSON.stringify(cjl)
     const restored = JSON.parse(serialized) as CjlFileData
 
-    expect(restored.patterns.items).toEqual(original.items)
-    expect(restored.patterns.order).toEqual(original.order)
-    expect(restored.patterns.categories).toEqual(original.categories)
+    expect(restored.components!.items).toEqual(original.items)
+    expect(restored.components!.order).toEqual(original.order)
+    expect(restored.components!.categories).toEqual(original.categories)
   })
 
   it('optional fields can be omitted', () => {
     const cjl: CjlFileData = {
       version: 1,
       name: 'Minimal',
-      patterns: { items: [], order: [], categories: [] },
+      components: { items: [], order: [], categories: [] },
     }
 
     const parsed = JSON.parse(JSON.stringify(cjl)) as CjlFileData
@@ -79,41 +78,15 @@ describe('.cjl file format', () => {
   })
 
   it('detects malformed files: missing name', () => {
-    const bad = { version: 1, patterns: makePatternData() }
+    const bad = { version: 1, components: makeComponentData() }
     const parsed = bad as Partial<CjlFileData>
     expect(parsed.name).toBeUndefined()
-    // importLibrary would throw: "Invalid .cjl file: missing name or patterns"
+    // readCjlFile would throw: "Invalid .cjl file: missing name or components"
   })
 
-  it('detects malformed files: missing patterns', () => {
+  it('detects malformed files: missing components', () => {
     const bad = { version: 1, name: 'Bad' }
     const parsed = bad as Partial<CjlFileData>
-    expect(parsed.patterns).toBeUndefined()
-  })
-
-  it('LibraryMeta can be constructed from CjlFileData', () => {
-    const cjl: CjlFileData = {
-      version: 1,
-      name: 'Kit',
-      author: 'Bob',
-      description: 'desc',
-      libraryVersion: '2.0',
-      patterns: makePatternData(),
-    }
-
-    const meta: LibraryMeta = {
-      id: 'lib-uuid',
-      name: cjl.name,
-      author: cjl.author,
-      version: cjl.libraryVersion,
-      description: cjl.description,
-      importedAt: new Date().toISOString(),
-      filePath: 'lib-uuid.cjl',
-    }
-
-    expect(meta.name).toBe('Kit')
-    expect(meta.author).toBe('Bob')
-    expect(meta.version).toBe('2.0')
-    expect(meta.description).toBe('desc')
+    expect(parsed.components).toBeUndefined()
   })
 })

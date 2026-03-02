@@ -126,7 +126,7 @@ input[type=number] {
     @apply flex items-center justify-center rounded text-text-muted;
   }
 
-  /* --- Pattern preview insert button --- */
+  /* --- Component preview insert button --- */
   .preview-insert-btn:hover {
     background: var(--color-accent-hover) !important;
   }
@@ -158,10 +158,14 @@ input[type=number] {
 }
 
 /* Tree node selected state */
-.tree-node-selected {
+.tree-node-selected,
+.tree-node-multi-selected {
   background: color-mix(in srgb, var(--color-accent) 15%, transparent);
-  outline: 1px solid color-mix(in srgb, var(--color-accent) 50%, transparent);
-  outline-offset: -1px;
+}
+
+/* Tree node selected state — neutral (for pages) */
+.tree-node-selected-neutral {
+  background: var(--color-surface-2);
 }
 
 /* TokenInput — reset the inner input */

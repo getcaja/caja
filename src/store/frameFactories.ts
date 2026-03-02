@@ -201,7 +201,7 @@ export function createBox(overrides?: Partial<BoxElement>): BoxElement {
     className: '',
     htmlId: '',
     tag: overrides?.tag || 'div',
-    display: 'block',
+    display: 'flex',
     direction: 'column',
     justify: 'start',
     align: 'stretch',
@@ -503,7 +503,7 @@ export function normalizeFrame(frame: Frame): Frame {
   }
   const create = creators[frame.type] || creators.text
   const migrated: Record<string, unknown> = { ...frame }
-  // Migrate old border format (pattern data / .caja files may have { width } instead of { top/right/bottom/left })
+  // Migrate old border format (.caja files may have { width } instead of { top/right/bottom/left })
   if (migrated.border && typeof migrated.border === 'object') {
     migrated.border = migrateBorder(migrated.border)
   }

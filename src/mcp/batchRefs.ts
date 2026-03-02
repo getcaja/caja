@@ -7,7 +7,7 @@ interface ToolResult {
   data?: unknown
 }
 
-const ID_FIELDS = new Set(['parent_id', 'id', 'new_parent_id', 'snippet_id', 'pattern_id', 'frame_id'])
+const ID_FIELDS = new Set(['parent_id', 'id', 'new_parent_id', 'component_id', 'frame_id'])
 
 export function resolveRefs(params: Record<string, unknown>, resultIds: string[]): Record<string, unknown> {
   const resolve = (val: unknown, key?: string): unknown => {

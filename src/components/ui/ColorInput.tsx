@@ -116,7 +116,7 @@ export function ColorInput({
               type="button"
               tabIndex={-1}
               onMouseDown={(e) => e.stopPropagation()}
-              className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-text-secondary hover:bg-surface-2 transition-opacity ${showGrid ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}
+              className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-text-secondary hover:bg-surface-2 ${showGrid ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}
             >
               <Diamond size={12} />
             </button>

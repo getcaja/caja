@@ -2,12 +2,12 @@ import { describe, it, expect } from 'vitest'
 import { toolSchemas, type ToolName } from '../schema'
 
 describe('MCP schema', () => {
-  describe('pattern tools exist', () => {
-    const patternTools: ToolName[] = [
-      'list_patterns', 'insert_pattern', 'save_pattern', 'delete_pattern',
+  describe('component tools exist (primary names)', () => {
+    const componentTools: ToolName[] = [
+      'list_components', 'insert_component', 'save_component', 'delete_component',
     ]
 
-    for (const name of patternTools) {
+    for (const name of componentTools) {
       it(`has ${name} schema`, () => {
         expect(toolSchemas[name]).toBeDefined()
         expect(toolSchemas[name].name).toBe(name)
@@ -16,38 +16,32 @@ describe('MCP schema', () => {
     }
   })
 
-  describe('snippet aliases exist (backward compat)', () => {
-    const snippetTools: ToolName[] = [
-      'list_snippets', 'insert_snippet', 'save_snippet', 'delete_snippet',
-    ]
-
-    for (const name of snippetTools) {
-      it(`has ${name} alias schema`, () => {
-        expect(toolSchemas[name]).toBeDefined()
-        expect(toolSchemas[name].name).toBe(name)
-        expect(toolSchemas[name].description).toContain('Alias')
-      })
-    }
-  })
-
-  describe('library tools exist', () => {
-    it('has list_libraries schema', () => {
-      expect(toolSchemas.list_libraries).toBeDefined()
-      expect(toolSchemas.list_libraries.name).toBe('list_libraries')
-    })
-
-    it('has list_library_patterns schema', () => {
-      expect(toolSchemas.list_library_patterns).toBeDefined()
-      expect(toolSchemas.list_library_patterns.name).toBe('list_library_patterns')
-      expect(toolSchemas.list_library_patterns.inputSchema.required).toContain('library_id')
+  describe('export_library tool exists', () => {
+    it('has export_library schema', () => {
+      expect(toolSchemas.export_library).toBeDefined()
+      expect(toolSchemas.export_library.name).toBe('export_library')
+      expect(toolSchemas.export_library.inputSchema.required).toContain('name')
     })
   })
 
-  describe('insert_pattern includes library_id param', () => {
-    it('has library_id in properties', () => {
-      const props = toolSchemas.insert_pattern.inputSchema.properties
-      expect(props.library_id).toBeDefined()
-      expect(props.library_id.type).toBe('string')
+  describe('insert_component does not have library_id param', () => {
+    it('has no library_id in properties', () => {
+      const props = toolSchemas.insert_component.inputSchema.properties
+      expect(props).not.toHaveProperty('library_id')
+    })
+  })
+
+  describe('library tools removed', () => {
+    it('does not have list_libraries', () => {
+      expect(toolSchemas).not.toHaveProperty('list_libraries')
+    })
+
+    it('does not have list_library_components', () => {
+      expect(toolSchemas).not.toHaveProperty('list_library_components')
+    })
+
+    it('does not have install_library', () => {
+      expect(toolSchemas).not.toHaveProperty('install_library')
     })
   })
 

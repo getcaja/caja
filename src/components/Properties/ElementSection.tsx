@@ -1,14 +1,11 @@
 import { useState } from 'react'
-import { Eye, EyeOff, Plus, X, Check, Code, Link } from 'lucide-react'
+import { Eye, EyeOff, Plus, X, Check, Code, Link, Pencil, RotateCcw, Unlink } from 'lucide-react'
 import type { Frame, TextElement, ImageElement, ButtonElement, InputElement, TextareaElement, SelectElement, SelectOption } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { TokenInput } from '../ui/TokenInput'
 import { ToggleGroup } from '../ui/ToggleGroup'
 import { Select } from '../ui/Select'
 import { TYPE_BADGE_STYLES, TYPE_BADGE_LABELS, getBadgeKey, BOX_TAG_OPTIONS, TEXT_TAG_OPTIONS, INPUT_TYPE_OPTIONS } from './constants'
-import { isExternalUrl, isLocalAssetPath, downloadAsset } from '../../lib/assetOps'
-
-const TEXT_LIKE = new Set(['text', 'email', 'password', 'number', 'search', 'tel', 'url'])
 
 function getTagOptions(type: Frame['type'], tag?: string) {
   if (type === 'box') return BOX_TAG_OPTIONS
@@ -21,6 +18,9 @@ function getTagDefault(type: Frame['type']) {
   if (type === 'text') return 'p'
   return ''
 }
+import { isExternalUrl, isLocalAssetPath, downloadAsset } from '../../lib/assetOps'
+
+const TEXT_LIKE = new Set(['text', 'email', 'password', 'number', 'search', 'tel', 'url'])
 
 function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
@@ -93,7 +93,10 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
   const [downloading, setDownloading] = useState(false)
 
   const frameTag = 'tag' in frame ? (frame as { tag?: string }).tag : undefined
-  const key = getBadgeKey(frame.type, isRoot, frameTag)
+  const isInstance = !!frame._componentId
+  const isOnComponentPage = useFrameStore((s) => s.pages.find((p) => p.id === s.activePageId)?.isComponentPage ?? false)
+  const isMaster = isOnComponentPage && !isRoot
+  const key = getBadgeKey(frame.type, isRoot, frameTag, { isInstance, isMaster })
   const tagOptions = getTagOptions(frame.type, frameTag)
   const currentTag = frameTag || getTagDefault(frame.type)
 
@@ -133,7 +136,7 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
   }
 
   return (
-    <div className="p-3 border-b border-border flex flex-col gap-2">
+    <div className="px-4 py-3 border-b border-border flex flex-col gap-2">
       {/* Header: badge + name + eye */}
       <div className="flex items-center gap-2">
         <span className={`text-[12px] px-1.5 py-0.5 rounded-md font-medium ${TYPE_BADGE_STYLES[key]}`}>
@@ -453,6 +456,42 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
           />
           <div className="w-5 shrink-0" />
         </div>
+      )}
+
+      {/* Component instance actions */}
+      {isInstance && frame._componentId && (
+        <>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="flex-1 h-6 px-1.5 text-[12px] rounded flex items-center justify-center gap-1 bg-surface-2 text-text-muted hover:text-text-secondary hover:bg-surface-3"
+              onClick={() => {
+                const cid = frame._componentId
+                if (cid) useFrameStore.getState().enterComponentEditMode(cid)
+              }}
+            >
+              <Pencil size={10} /> Edit Master
+            </button>
+            <div className="w-5 shrink-0" />
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="flex-1 h-6 px-1.5 text-[12px] rounded flex items-center justify-center gap-1 bg-surface-2 text-text-muted hover:text-text-secondary hover:bg-surface-3"
+              onClick={() => useFrameStore.getState().resetInstance(frame.id)}
+            >
+              <RotateCcw size={10} /> Reset
+            </button>
+            <button
+              type="button"
+              className="flex-1 h-6 px-1.5 text-[12px] rounded flex items-center justify-center gap-1 bg-surface-2 text-text-muted hover:text-text-secondary hover:bg-surface-3"
+              onClick={() => useFrameStore.getState().detachInstance(frame.id)}
+            >
+              <Unlink size={10} /> Detach
+            </button>
+            <div className="w-5 shrink-0" />
+          </div>
+        </>
       )}
     </div>
   )

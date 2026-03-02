@@ -34,7 +34,9 @@
   -webkit-user-select: text;
   user-select: text;
   outline: none;
-  min-width: 1px;
+  display: inline-block;
+  min-width: 1ch;
+  min-height: 1lh;
   position: relative;
   z-index: 2;
   cursor: text;

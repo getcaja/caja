@@ -257,61 +257,60 @@ server.tool(
   }
 )
 
-// ── Pattern tools ──
+// ── Component tools ──
 
 server.tool(
-  'list_patterns',
-  'List available patterns (reusable frame trees). Returns lightweight metadata. Filter by tag optionally.',
+  'list_components',
+  'List available components (reusable frame trees). Returns lightweight metadata. Filter by tag optionally.',
   {
     tag: z.string().optional().describe('Optional tag to filter by (e.g. "layout", "form", "card")'),
   },
   async ({ tag }) => {
-    const result = await callTool('list_patterns', { tag })
+    const result = await callTool('list_components', { tag })
     return { content: [{ type: 'text', text: JSON.stringify(result) }] }
   }
 )
 
 server.tool(
-  'insert_pattern',
-  'Insert a pattern into the tree. Clones with new IDs and adds as child of parent_id. Use overrides to customize cloned children by name without extra update calls.',
+  'insert_component',
+  'Insert a component into the tree. Clones with new IDs and adds as child of parent_id. Use overrides to customize cloned children by name without extra update calls.',
   {
-    pattern_id: z.string().describe('ID of the pattern to insert'),
+    component_id: z.string().describe('ID of the component to insert'),
     parent_id: z.string().describe('ID of the parent box to insert into'),
     index: z.number().optional().describe('Position index within the parent. If omitted, appends at the end.'),
-    library_id: z.string().optional().describe('Optional library ID to insert from an external library instead of internal patterns'),
     overrides: z.record(z.string(), z.object({
       properties: z.record(z.string(), z.unknown()).optional(),
       classes: z.string().optional(),
     })).optional().describe('Map of frame name → patch. Matches children by name in the cloned tree. Example: { "price": { "properties": { "content": "$49" } }, "cta": { "classes": "bg-violet-600" } }'),
   },
-  async ({ pattern_id, parent_id, index, library_id, overrides }) => {
-    const result = await callTool('insert_pattern', { pattern_id, parent_id, index, library_id, overrides })
+  async ({ component_id, parent_id, index, overrides }) => {
+    const result = await callTool('insert_component', { component_id, parent_id, index, overrides })
     return { content: [{ type: 'text', text: JSON.stringify(result) }] }
   }
 )
 
 server.tool(
-  'save_pattern',
-  'Save an existing frame from the tree as a reusable pattern. Name children meaningfully before saving — names become override slots.',
+  'save_component',
+  'Save an existing frame from the tree as a reusable component. Name children meaningfully before saving — names become override slots.',
   {
-    frame_id: z.string().describe('ID of the frame to save as pattern'),
-    name: z.string().describe('Name for the pattern'),
+    frame_id: z.string().describe('ID of the frame to save as component'),
+    name: z.string().describe('Name for the component'),
     tags: z.array(z.string()).optional().describe('Optional tags (e.g. ["layout", "card"])'),
   },
   async ({ frame_id, name, tags }) => {
-    const result = await callTool('save_pattern', { frame_id, name, tags })
+    const result = await callTool('save_component', { frame_id, name, tags })
     return { content: [{ type: 'text', text: JSON.stringify(result) }] }
   }
 )
 
 server.tool(
-  'delete_pattern',
-  'Delete a user-created pattern.',
+  'delete_component',
+  'Delete a user-created component.',
   {
-    pattern_id: z.string().describe('ID of the pattern to delete'),
+    component_id: z.string().describe('ID of the component to delete'),
   },
-  async ({ pattern_id }) => {
-    const result = await callTool('delete_pattern', { pattern_id })
+  async ({ component_id }) => {
+    const result = await callTool('delete_component', { component_id })
     return { content: [{ type: 'text', text: JSON.stringify(result) }] }
   }
 )
@@ -319,31 +318,8 @@ server.tool(
 // ── Library tools ──
 
 server.tool(
-  'list_libraries',
-  'List installed pattern libraries. Returns lightweight metadata (id, name, author, version, description) for each library.',
-  {},
-  async () => {
-    const result = await callTool('list_libraries', {})
-    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
-  }
-)
-
-server.tool(
-  'list_library_patterns',
-  'List patterns from a specific installed library. Returns pattern metadata without full frame data.',
-  {
-    library_id: z.string().describe('ID of the library to list patterns from'),
-    tag: z.string().optional().describe('Optional tag to filter by'),
-  },
-  async ({ library_id, tag }) => {
-    const result = await callTool('list_library_patterns', { library_id, tag })
-    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
-  }
-)
-
-server.tool(
   'export_library',
-  'Package all internal patterns into a new installed library. The library is persisted as a .cjl file and added to the library index. Returns the new library ID and pattern count.',
+  'Package all internal components into a .cjl file via save dialog. Returns the file path and component count.',
   {
     name: z.string().describe('Name for the library (e.g. "My Components")'),
     author: z.string().optional().describe('Optional author name'),
@@ -356,89 +332,11 @@ server.tool(
   }
 )
 
-server.tool(
-  'install_library',
-  'Install a library from inline JSON data. The data should contain patterns in the same format as a .cjl file. The library is persisted and added to the library index.',
-  {
-    name: z.string().describe('Name for the library'),
-    author: z.string().optional().describe('Optional author name'),
-    description: z.string().optional().describe('Optional description'),
-    version: z.string().optional().describe('Optional version string'),
-    patterns: z.object({
-      items: z.array(z.unknown()).describe('Array of pattern objects'),
-      order: z.array(z.string()).optional().describe('Ordered pattern IDs'),
-      categories: z.array(z.string()).optional().describe('Category names'),
-    }).describe('Pattern data: { items, order?, categories? }'),
-  },
-  async ({ name, author, description, version, patterns }) => {
-    const result = await callTool('install_library', { name, author, description, version, patterns })
-    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
-  }
-)
-
-// ── Backward-compat snippet aliases ──
-
-server.tool(
-  'list_snippets',
-  '[Alias for list_patterns] List available patterns.',
-  {
-    tag: z.string().optional().describe('Optional tag to filter by'),
-  },
-  async ({ tag }) => {
-    const result = await callTool('list_patterns', { tag })
-    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
-  }
-)
-
-server.tool(
-  'insert_snippet',
-  '[Alias for insert_pattern] Insert a pattern into the tree.',
-  {
-    snippet_id: z.string().describe('ID of the pattern to insert'),
-    parent_id: z.string().describe('ID of the parent box to insert into'),
-    index: z.number().optional().describe('Position index within the parent.'),
-    overrides: z.record(z.string(), z.object({
-      properties: z.record(z.string(), z.unknown()).optional(),
-      classes: z.string().optional(),
-    })).optional().describe('Map of frame name → patch.'),
-  },
-  async ({ snippet_id, parent_id, index, overrides }) => {
-    const result = await callTool('insert_pattern', { pattern_id: snippet_id, parent_id, index, overrides })
-    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
-  }
-)
-
-server.tool(
-  'save_snippet',
-  '[Alias for save_pattern] Save a frame as a reusable pattern.',
-  {
-    frame_id: z.string().describe('ID of the frame to save'),
-    name: z.string().describe('Name for the pattern'),
-    tags: z.array(z.string()).optional().describe('Optional tags'),
-  },
-  async ({ frame_id, name, tags }) => {
-    const result = await callTool('save_pattern', { frame_id, name, tags })
-    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
-  }
-)
-
-server.tool(
-  'delete_snippet',
-  '[Alias for delete_pattern] Delete a pattern.',
-  {
-    snippet_id: z.string().describe('ID of the pattern to delete'),
-  },
-  async ({ snippet_id }) => {
-    const result = await callTool('delete_pattern', { pattern_id: snippet_id })
-    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
-  }
-)
-
 // ── File tools ──
 
 server.tool(
   'new_file',
-  'Reset the project to a blank state (equivalent to File > New). Clears all pages, frames, and internal patterns. Libraries are preserved.',
+  'Reset the project to a blank state (equivalent to File > New). Clears all pages, frames, and internal components.',
   {},
   async () => {
     const result = await callTool('new_file', {})
@@ -552,6 +450,21 @@ server.resource(
         uri: uri.href,
         text: result.content || JSON.stringify(result),
         mimeType: result.mimeType || 'text/html',
+      }],
+    }
+  }
+)
+
+server.resource(
+  'caja://components',
+  'caja://components',
+  async (uri) => {
+    const result = await readResource(uri.href)
+    return {
+      contents: [{
+        uri: uri.href,
+        text: result.content || JSON.stringify(result),
+        mimeType: result.mimeType || 'application/json',
       }],
     }
   }

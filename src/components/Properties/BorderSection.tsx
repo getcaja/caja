@@ -3,7 +3,6 @@ import { useFrameStore } from '../../store/frameStore'
 import { Section } from '../ui/Section'
 import { ColorInput } from '../ui/ColorInput'
 import { ToggleGroup } from '../ui/ToggleGroup'
-import { BorderRadiusControl } from '../ui/BorderRadiusControl'
 import { SpacingControl } from '../ui/SpacingControl'
 import { BORDER_WIDTH_SCALE } from '../../data/scales'
 
@@ -31,7 +30,6 @@ const STYLE_OPTIONS: { value: string; label: string; tooltip?: string }[] = [
 
 export function BorderSection({ frame }: { frame: Frame }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
-  const updateBorderRadius = useFrameStore((s) => s.updateBorderRadius)
 
   const hasBorder = frame.border.style !== 'none'
 
@@ -87,11 +85,6 @@ export function BorderSection({ frame }: { frame: Frame }) {
           />
         )}
 
-        {/* Radius */}
-        <BorderRadiusControl
-          value={frame.borderRadius}
-          onChange={(v) => updateBorderRadius(frame.id, v)}
-        />
       </div>
     </Section>
   )

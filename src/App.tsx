@@ -1,19 +1,18 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { useFrameStore, isRootId } from './store/frameStore'
+import { useFrameStore } from './store/frameStore'
 import { TreePanel } from './components/TreePanel/TreePanel'
 import { Canvas } from './components/Canvas/Canvas'
 import { RightPanel } from './components/RightPanel/RightPanel'
 import { ExportModal } from './components/Export/ExportModal'
 import { TooltipProvider } from './components/ui/Tooltip'
 import { saveFile, saveFileAs, openFile } from './lib/fileOps'
-import { saveLibrary } from './lib/libraryOps'
-import { useCatalogStore, loadPatternsFromStorage } from './store/catalogStore'
-import { ExportLibraryModal } from './components/TreePanel/ExportLibraryModal'
+import { useCatalogStore, loadComponentsFromStorage } from './store/catalogStore'
 import { WorkspaceDndProvider } from './components/TreePanel/WorkspaceDndContext'
 
 import { startMcpBridge, stopMcpBridge } from './mcp/bridge'
 import { TitleBar } from './components/TitleBar/TitleBar'
 import { ZOOM_LEVELS } from './components/Canvas/ZoomBar'
+import { canvasZoomTo } from './components/Canvas/CanvasInline'
 import { switchTheme, getThemePreference } from './lib/theme'
 import { checkForUpdates } from './lib/updater'
 
@@ -55,7 +54,6 @@ function safeMenuSync(invoke: (cmd: string, args?: Record<string, unknown>) => P
 
 function App() {
   const [showExport, setShowExport] = useState(false)
-  const [showExportLibrary, setShowExportLibrary] = useState(false)
   const initial = useRef(loadPanelState())
   const [leftWidth, setLeftWidth] = useState(initial.current.leftWidth)
   const [rightWidth, setRightWidth] = useState(initial.current.rightWidth)
@@ -73,10 +71,6 @@ function App() {
   const loadFromStorage = useFrameStore((s) => s.loadFromStorage)
   const undo = useFrameStore((s) => s.undo)
   const redo = useFrameStore((s) => s.redo)
-  const removeFrame = useFrameStore((s) => s.removeFrame)
-  const removeSelected = useFrameStore((s) => s.removeSelected)
-  const reorderFrame = useFrameStore((s) => s.reorderFrame)
-  const selectedId = useFrameStore((s) => s.selectedId)
   const filePath = useFrameStore((s) => s.filePath)
   const previewMode = useFrameStore((s) => s.previewMode)
   const activePageId = useFrameStore((s) => s.activePageId)
@@ -92,7 +86,8 @@ function App() {
     const fileName = filePath ? filePath.split('/').pop() : 'Untitled'
     const activePage = pages.find((p) => p.id === activePageId)
     const pageName = activePage?.name || ''
-    const pageLabel = pages.length > 1 && pageName ? ` — ${pageName}` : ''
+    const regularPages = pages.filter((p) => !p.isComponentPage)
+    const pageLabel = regularPages.length > 1 && pageName ? ` — ${pageName}` : ''
     const title = `${fileName}${pageLabel} · Caja`
     if (title === lastTitleRef.current) return
     lastTitleRef.current = title
@@ -104,8 +99,8 @@ function App() {
   const handleSave = useCallback(async () => {
     if (!isTauri) return
     const store = useFrameStore.getState()
-    const snippets = useCatalogStore.getState().getPatternData()
-    const path = await saveFile(store.pages, store.activePageId, snippets, store.filePath)
+    const componentData = useCatalogStore.getState().getComponentData()
+    const path = await saveFile(store.pages, store.activePageId, componentData, store.filePath)
     if (path) {
       store.setFilePath(path)
       store.markClean()
@@ -115,8 +110,8 @@ function App() {
   const handleSaveAs = useCallback(async () => {
     if (!isTauri) return
     const store = useFrameStore.getState()
-    const snippets = useCatalogStore.getState().getPatternData()
-    const path = await saveFileAs(store.pages, store.activePageId, snippets)
+    const componentData = useCatalogStore.getState().getComponentData()
+    const path = await saveFileAs(store.pages, store.activePageId, componentData)
     if (path) {
       store.setFilePath(path)
       store.markClean()
@@ -136,6 +131,7 @@ function App() {
           name: p.name as string,
           route: p.route as string,
           root: migrateToInternalRoot(p.root as Record<string, unknown>, p.id as string),
+          ...(p.isComponentPage ? { isComponentPage: true as const } : {}),
         }))
         const activePageId = (data.activePageId as string) || pages[0].id
         useFrameStore.getState().loadFromFileMulti(pages, activePageId, result.path)
@@ -144,7 +140,7 @@ function App() {
         const root = migrateToInternalRoot(data.root as Record<string, unknown>, 'page-1')
         useFrameStore.getState().loadFromFile(root, result.path)
       }
-      useCatalogStore.getState().loadPatterns((data.patterns ?? data.snippets) as import('./store/catalogStore').PatternData | undefined)
+      useCatalogStore.getState().loadComponents(data.components as import('./store/catalogStore').ComponentData | undefined)
       // Restore blob URLs from local asset files after file load
       import('./lib/assetOps').then(({ restoreAllAssets }) => {
         restoreAllAssets(useFrameStore.getState().pages).catch((err) => console.warn('Asset restore failed:', err))
@@ -158,15 +154,8 @@ function App() {
     import('./lib/assetOps').then(({ restoreAllAssets }) => {
       restoreAllAssets(useFrameStore.getState().pages).catch((err) => console.warn('Asset restore failed:', err))
     })
-    loadPatternsFromStorage()
+    loadComponentsFromStorage()
     startMcpBridge()
-
-    // Load installed libraries (Tauri only)
-    if (isTauri) {
-      import('./components/TreePanel/ManageLibrariesModal').then(({ initializeLibraries }) => {
-        initializeLibraries().catch((err) => console.warn('Library initialization failed:', err))
-      }).catch((err) => console.warn('Failed to load library module:', err))
-    }
 
     // Sync initial view prefs to native menu check states
     if (isTauri) {
@@ -215,23 +204,11 @@ function App() {
           case 'check-for-updates':
             checkForUpdates()
             break
-          case 'save-library': {
-            const lastExport = useCatalogStore.getState().lastExport
-            if (lastExport) {
-              const data = useCatalogStore.getState().getPatternData()
-              saveLibrary(data, {
-                name: lastExport.name,
-                author: lastExport.author || undefined,
-                description: lastExport.description || undefined,
-                version: lastExport.version || undefined,
-              }, lastExport.path).catch((err) => console.error('Failed to save library:', err))
-            } else {
-              setShowExportLibrary(true)
-            }
+          case 'collapse-all':
+            useFrameStore.getState().collapseAll()
             break
-          }
-          case 'export-library':
-            setShowExportLibrary(true)
+          case 'expand-all':
+            useFrameStore.getState().expandAll()
             break
           default:
             // Theme menu items: "theme-<id>" → strip prefix
@@ -271,76 +248,44 @@ function App() {
     return () => mq.removeEventListener('change', onChange)
   }, [])
 
-  // Keyboard shortcuts
+  // Global keyboard shortcuts (tree-specific shortcuts are in useTreeKeyboard adapters in TreePanel)
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase()
       if ((e.metaKey || e.ctrlKey) && key === 'z' && !e.shiftKey) {
         e.preventDefault()
-        undo()
+        const { editingComponentId } = useFrameStore.getState()
+        if (editingComponentId) {
+          useCatalogStore.getState().undo()
+        } else {
+          undo()
+        }
       }
       if ((e.metaKey || e.ctrlKey) && key === 'z' && e.shiftKey) {
         e.preventDefault()
-        redo()
-      }
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        const { selectedIds } = useFrameStore.getState()
-        if (!selectedId && selectedIds.size === 0) return
-        const tag = (e.target as HTMLElement).tagName
-        if (tag === 'INPUT' || tag === 'TEXTAREA') return
-        const isEditable = (e.target as HTMLElement).isContentEditable
-        if (isEditable) return
-        e.preventDefault()
-        if (selectedIds.size > 1) {
-          removeSelected()
-        } else if (selectedId && !isRootId(selectedId)) {
-          removeFrame(selectedId)
+        const { editingComponentId } = useFrameStore.getState()
+        if (editingComponentId) {
+          useCatalogStore.getState().redo()
+        } else {
+          redo()
         }
       }
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && selectedId && !isRootId(selectedId)) {
-        const tag = (e.target as HTMLElement).tagName
-        if (tag === 'INPUT' || tag === 'TEXTAREA') return
-        if ((e.target as HTMLElement).isContentEditable) return
-        const { getParentDirection, getParentDisplay } = useFrameStore.getState()
-        const display = getParentDisplay(selectedId)
-        // Grid with multiple columns behaves like a row (Left/Right only)
-        const dir = display === 'grid' ? 'row' : getParentDirection(selectedId)
-        if (dir === 'column' && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) return
-        if (dir === 'row' && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) return
-        e.preventDefault()
-        const before = e.key === 'ArrowUp' || e.key === 'ArrowLeft'
-        reorderFrame(selectedId, before ? 'up' : 'down')
-      }
-      // Copy / Cut / Paste
-      if ((e.metaKey || e.ctrlKey) && key === 'c' && !e.shiftKey) {
-        const tag = (e.target as HTMLElement).tagName
-        if (tag === 'INPUT' || tag === 'TEXTAREA') return
-        if ((e.target as HTMLElement).isContentEditable) return
-        e.preventDefault()
-        useFrameStore.getState().copySelected()
-      }
-      if ((e.metaKey || e.ctrlKey) && key === 'x' && !e.shiftKey) {
-        const tag = (e.target as HTMLElement).tagName
-        if (tag === 'INPUT' || tag === 'TEXTAREA') return
-        if ((e.target as HTMLElement).isContentEditable) return
-        e.preventDefault()
-        useFrameStore.getState().cutSelected()
-      }
-      if ((e.metaKey || e.ctrlKey) && key === 'v' && !e.shiftKey) {
-        const tag = (e.target as HTMLElement).tagName
-        if (tag === 'INPUT' || tag === 'TEXTAREA') return
-        if ((e.target as HTMLElement).isContentEditable) return
-        e.preventDefault()
-        useFrameStore.getState().pasteClipboard()
-      }
-      // Duplicate
-      if ((e.metaKey || e.ctrlKey) && key === 'd') {
-        const tag = (e.target as HTMLElement).tagName
-        if (tag === 'INPUT' || tag === 'TEXTAREA') return
-        if ((e.target as HTMLElement).isContentEditable) return
+      // Group / Ungroup
+      if ((e.metaKey || e.ctrlKey) && key === 'g' && !e.shiftKey) {
         e.preventDefault()
         const s = useFrameStore.getState()
-        if (s.selectedId && !isRootId(s.selectedId)) s.duplicateFrame(s.selectedId)
+        const allIds = new Set(s.selectedIds)
+        if (s.selectedId) allIds.add(s.selectedId)
+        if (allIds.size > 1) {
+          s.wrapSelectedInFrame()
+        } else if (allIds.size === 1) {
+          s.wrapInFrame([...allIds][0])
+        }
+      }
+      if ((e.metaKey || e.ctrlKey) && key === 'g' && e.shiftKey) {
+        e.preventDefault()
+        const s = useFrameStore.getState()
+        if (s.selectedId) s.ungroupFrame(s.selectedId)
       }
       if ((e.metaKey || e.ctrlKey) && e.key === 's' && !e.shiftKey) {
         e.preventDefault()
@@ -386,22 +331,46 @@ function App() {
         e.preventDefault()
         useFrameStore.getState().togglePreviewMode()
       }
+      // Canvas tool shortcuts — only when no modifier and not typing in an input
+      if (!e.metaKey && !e.ctrlKey && !e.altKey) {
+        const tag = (e.target as HTMLElement).tagName
+        const isEditable = (e.target as HTMLElement).isContentEditable
+        if (tag !== 'INPUT' && tag !== 'TEXTAREA' && !isEditable) {
+          if (key === 'f' && !e.shiftKey) {
+            e.preventDefault()
+            const s = useFrameStore.getState()
+            if (!s.previewMode) s.setCanvasTool('frame')
+          }
+          if (key === 't') {
+            e.preventDefault()
+            const s = useFrameStore.getState()
+            if (!s.previewMode) s.setCanvasTool('text')
+          }
+          if (key === 'v' || key === 'escape') {
+            const s = useFrameStore.getState()
+            if (s.canvasTool !== 'pointer') {
+              e.preventDefault()
+              s.setCanvasTool('pointer')
+            }
+          }
+        }
+      }
       // Zoom: Cmd+= / Cmd+- / Cmd+0
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && (e.key === '=' || e.key === '+')) {
         e.preventDefault()
-        const { canvasZoom, setCanvasZoom } = useFrameStore.getState()
-        const idx = ZOOM_LEVELS.indexOf(canvasZoom)
-        if (idx < ZOOM_LEVELS.length - 1) setCanvasZoom(ZOOM_LEVELS[idx + 1])
+        const { canvasZoom } = useFrameStore.getState()
+        const next = ZOOM_LEVELS.find((z) => z > canvasZoom + 0.001)
+        if (next != null) canvasZoomTo(next)
       }
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === '-') {
         e.preventDefault()
-        const { canvasZoom, setCanvasZoom } = useFrameStore.getState()
-        const idx = ZOOM_LEVELS.indexOf(canvasZoom)
-        if (idx > 0) setCanvasZoom(ZOOM_LEVELS[idx - 1])
+        const { canvasZoom } = useFrameStore.getState()
+        const prev = [...ZOOM_LEVELS].reverse().find((z) => z < canvasZoom - 0.001)
+        if (prev != null) canvasZoomTo(prev)
       }
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === '0') {
         e.preventDefault()
-        useFrameStore.getState().setCanvasZoom(1)
+        canvasZoomTo(1)
       }
     }
 
@@ -409,7 +378,7 @@ function App() {
     return () => {
       window.removeEventListener('keydown', handler)
     }
-  }, [undo, redo, removeFrame, removeSelected, reorderFrame, selectedId, handleSave, handleSaveAs, handleOpen])
+  }, [undo, redo, handleSave, handleSaveAs, handleOpen])
 
   // Resize drag — full-viewport overlay prevents iframe from stealing events.
   // Uses pointermove/pointerup (NOT mousemove/mouseup) because preventDefault()
@@ -450,7 +419,7 @@ function App() {
           <WorkspaceDndProvider>
             {!previewMode && !leftCollapsed && (
               <div style={{ width: leftWidth }} className="shrink-0 border-r border-border relative">
-                <TreePanel onExportLibrary={() => setShowExportLibrary(true)} />
+                <TreePanel />
                 <div
                   className="absolute top-0 -right-[3px] bottom-0 w-[7px] cursor-col-resize hover:bg-accent/40 transition-colors z-10"
                   onPointerDown={(e) => startDrag('left', e)}
@@ -472,9 +441,8 @@ function App() {
           </WorkspaceDndProvider>
         </div>
 
-        {/* Export modals */}
+        {/* Export modal */}
         <ExportModal open={showExport} onOpenChange={setShowExport} />
-        <ExportLibraryModal open={showExportLibrary} onOpenChange={setShowExportLibrary} />
 
       </div>
     </TooltipProvider>

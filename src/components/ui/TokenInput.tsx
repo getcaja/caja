@@ -63,6 +63,7 @@ export function TokenInput(props: TokenInputProps) {
   const isScale = 'scale' in props && props.scale !== undefined
   const startPreview = useFrameStore((s) => s.startPreview)
   const endPreview = useFrameStore((s) => s.endPreview)
+  const advancedMode = useFrameStore((s) => s.advancedMode)
 
   // --- Shared state ---
   const [showDropdown, setShowDropdown] = useState(false)
@@ -75,13 +76,14 @@ export function TokenInput(props: TokenInputProps) {
   const scaleProps = isScale ? (props as TokenInputScale) : null
   const scaleToken = scaleProps ? (scaleProps.value.mode === 'token' ? scaleProps.value.token : null) : null
   const hasToken = scaleToken !== null
+  const showPill = advancedMode && hasToken
   const scaleNumeric = scaleProps ? scaleProps.value.value : 0
   const scaleMin = scaleProps?.min ?? 0
   const scaleUnit = scaleProps?.unit ?? 'px'
   const scaleResetValue = scaleProps ? (scaleProps.defaultValue ?? scaleMin) : 0
   const scaleIsUnset = scaleProps ? (scaleProps.value.mode === 'custom' && scaleProps.value.value === scaleResetValue) : false
 
-  const [draft, setDraft] = useState(scaleProps ? (hasToken ? '' : (scaleIsUnset ? '' : String(scaleNumeric))) : '')
+  const [draft, setDraft] = useState(scaleProps ? (showPill ? '' : (scaleIsUnset ? '' : String(scaleNumeric))) : '')
   const [focused, setFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -118,8 +120,8 @@ export function TokenInput(props: TokenInputProps) {
   useEffect(() => {
     if (!scaleProps || focused) return
     const unset = scaleProps.value.mode === 'custom' && scaleProps.value.value === scaleResetValue
-    setDraft(hasToken ? '' : (unset ? '' : String(scaleNumeric)))
-  }, [scaleNumeric, scaleToken, focused, scaleProps?.value.mode, scaleResetValue])
+    setDraft(showPill ? '' : (unset ? '' : String(scaleNumeric)))
+  }, [scaleNumeric, scaleToken, focused, scaleProps?.value.mode, scaleResetValue, advancedMode])
 
   // --- Scroll selected item into view ---
   useEffect(() => {
@@ -180,7 +182,7 @@ export function TokenInput(props: TokenInputProps) {
       const opt = scaleProps!.scale[idx]
       if (scaleProps!.autoOption?.active) scaleProps!.autoOption.onToggle()
       scaleProps!.onChange({ mode: 'token', token: opt.token, value: opt.value })
-      setDraft('')
+      setDraft(showPill ? '' : String(opt.value))
       setShowDropdown(false)
       setSelectedIdx(-1)
       requestAnimationFrame(() => inputRef.current?.focus())
@@ -189,7 +191,7 @@ export function TokenInput(props: TokenInputProps) {
       setShowDropdown(false)
       setSelectedIdx(-1)
     }
-  }, [isScale, scaleProps?.scale, scaleProps?.onChange, enumProps?.options, enumProps?.onChange, endPreview])
+  }, [isScale, scaleProps?.scale, scaleProps?.onChange, enumProps?.options, enumProps?.onChange, endPreview, advancedMode])
 
   const revertPreview = useCallback(() => {
     if (originalRef.current === null) return
@@ -217,26 +219,26 @@ export function TokenInput(props: TokenInputProps) {
   const commitDraft = useCallback(() => {
     if (!scaleProps) return
     if (draft === '') {
-      if (hasToken) return
+      if (showPill) return
       scaleProps.onChange({ mode: 'custom', value: scaleResetValue })
       setDraft('')
       return
     }
     const n = Number(draft)
     if (isNaN(n)) {
-      setDraft(hasToken ? '' : String(scaleNumeric))
+      setDraft(showPill ? '' : String(scaleNumeric))
       return
     }
     const clamped = Math.max(scaleMin, n)
     const match = scaleProps.scale.find(s => s.value === clamped)
     if (match) {
       scaleProps.onChange({ mode: 'token', token: match.token, value: clamped })
-      setDraft('')
+      setDraft(showPill ? '' : String(clamped))
     } else {
       scaleProps.onChange({ mode: 'custom', value: clamped })
       setDraft(String(clamped))
     }
-  }, [scaleProps?.onChange, scaleProps?.scale, draft, scaleNumeric, scaleMin, scaleToken, scaleResetValue])
+  }, [scaleProps?.onChange, scaleProps?.scale, draft, scaleNumeric, scaleMin, scaleToken, scaleResetValue, advancedMode])
 
   // --- Close on outside click ---
   useEffect(() => {
@@ -286,7 +288,7 @@ export function TokenInput(props: TokenInputProps) {
   const handleScaleKeyDown = (e: React.KeyboardEvent) => {
     if (showDropdown && handleDropdownKeyDown(e)) return
 
-    if (e.key === 'Backspace' && draft === '' && hasToken) {
+    if (e.key === 'Backspace' && draft === '' && showPill) {
       e.preventDefault()
       removeToken()
       return
@@ -298,26 +300,26 @@ export function TokenInput(props: TokenInputProps) {
       inputRef.current?.blur()
     } else if (e.key === 'Escape') {
       e.preventDefault()
-      setDraft(hasToken ? '' : (scaleProps!.value.mode === 'custom' && scaleProps!.value.value === scaleResetValue ? '' : String(scaleNumeric)))
+      setDraft(showPill ? '' : (scaleProps!.value.mode === 'custom' && scaleProps!.value.value === scaleResetValue ? '' : String(scaleNumeric)))
       inputRef.current?.blur()
-    } else if (e.key === 'ArrowUp' && !hasToken) {
+    } else if (e.key === 'ArrowUp' && !showPill) {
       e.preventDefault()
       const n = Math.max(scaleMin, scaleNumeric + 1)
       const match = scaleProps!.scale.find(s => s.value === n)
       if (match) {
         scaleProps!.onChange({ mode: 'token', token: match.token, value: n })
-        setDraft('')
+        setDraft(showPill ? '' : String(n))
       } else {
         scaleProps!.onChange({ mode: 'custom', value: n })
         setDraft(String(n))
       }
-    } else if (e.key === 'ArrowDown' && !hasToken) {
+    } else if (e.key === 'ArrowDown' && !showPill) {
       e.preventDefault()
       const n = Math.max(scaleMin, scaleNumeric - 1)
       const match = scaleProps!.scale.find(s => s.value === n)
       if (match) {
         scaleProps!.onChange({ mode: 'token', token: match.token, value: n })
-        setDraft('')
+        setDraft(showPill ? '' : String(n))
       } else {
         scaleProps!.onChange({ mode: 'custom', value: n })
         setDraft(String(n))
@@ -340,7 +342,7 @@ export function TokenInput(props: TokenInputProps) {
   // --- Scale focus/blur ---
   const handleFocus = () => {
     setFocused(true)
-    if (!hasToken) setDraft(scaleProps!.value.mode === 'custom' && scaleProps!.value.value === scaleResetValue ? '' : String(scaleNumeric))
+    if (!showPill) setDraft(scaleProps!.value.mode === 'custom' && scaleProps!.value.value === scaleResetValue ? '' : String(scaleNumeric))
   }
 
   const handleBlur = () => {
@@ -399,13 +401,13 @@ export function TokenInput(props: TokenInputProps) {
           }`}
         >
           <span className="flex items-center gap-1.5">
-            <span className="font-medium">{formatTokenLabel(classPrefix, item.token)}</span>
+            <span className="font-medium">{advancedMode ? formatTokenLabel(classPrefix, item.token) : item.displayRight}</span>
             {isScale
               ? item.token === scaleToken && <Check size={10} />
               : item.key === enumCommittedValue && <Check size={10} />
             }
           </span>
-          <span className="text-text-muted">{item.displayRight}</span>
+          {advancedMode && <span className="text-text-muted">{item.displayRight}</span>}
         </button>
       ))}
     </div>
@@ -446,7 +448,7 @@ export function TokenInput(props: TokenInputProps) {
                   e.stopPropagation()
                   toggleDropdown()
                 }}
-                className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-text-secondary hover:bg-surface-2 transition-opacity ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-text-secondary hover:bg-surface-2 ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
               >
                 <Diamond size={12} />
               </button>
@@ -457,7 +459,7 @@ export function TokenInput(props: TokenInputProps) {
             onClick={() => inputRef.current?.focus()}
           >
             {inlineLabelEl}
-            {hasToken && (
+            {showPill && (
               <button
                 type="button"
                 tabIndex={-1}
@@ -475,14 +477,14 @@ export function TokenInput(props: TokenInputProps) {
             <input
               ref={inputRef}
               type="text"
-              inputMode={hasToken ? undefined : 'numeric'}
+              inputMode={showPill ? undefined : 'numeric'}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={handleScaleKeyDown}
               onFocus={handleFocus}
               onBlur={handleBlur}
-              placeholder={hasToken ? '' : (scaleIsUnset ? (scaleProps!.placeholder ?? String(scaleResetValue)) : undefined)}
-              className={`flex-1 ${hasToken ? 'min-w-0' : 'min-w-[20px]'} text-[12px] text-text-primary`}
+              placeholder={showPill ? '' : (scaleIsUnset ? (scaleProps!.placeholder ?? String(scaleResetValue)) : undefined)}
+              className={`flex-1 ${showPill ? 'min-w-0' : 'min-w-[20px]'} text-[12px] text-text-primary`}
             />
 
             <button
@@ -493,7 +495,7 @@ export function TokenInput(props: TokenInputProps) {
                 toggleDropdown()
                 inputRef.current?.focus()
               }}
-              className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-text-secondary hover:bg-surface-2 transition-opacity ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}
+              className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-text-secondary hover:bg-surface-2 ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}
             >
               <Diamond size={12} />
             </button>
@@ -515,7 +517,7 @@ export function TokenInput(props: TokenInputProps) {
             ) : (
               <>
                 <span className="flex items-center bg-surface-3 text-text-primary rounded px-1 text-[11px] leading-[18px] font-medium min-w-0 truncate">
-                  {formatTokenLabel(classPrefix, enumCurrentOpt?.token ?? enumCurrentOpt?.value ?? enumProps!.value)}
+                  {advancedMode ? formatTokenLabel(classPrefix, enumCurrentOpt?.token ?? enumCurrentOpt?.value ?? enumProps!.value) : enumCurrentLabel}
                 </span>
                 <span className="flex-1" />
               </>
@@ -529,7 +531,7 @@ export function TokenInput(props: TokenInputProps) {
                 e.stopPropagation()
                 toggleDropdown()
               }}
-              className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-text-secondary hover:bg-surface-2 transition-opacity ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+              className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-text-secondary hover:bg-surface-2 ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
             >
               <Diamond size={12} />
             </button>

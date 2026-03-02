@@ -24,6 +24,8 @@ function detectMode(v: Spacing): SpacingMode {
 
 const ZERO: DesignValue<number> = { mode: 'custom', value: 0 }
 
+const MODE_CYCLE: SpacingMode[] = ['all', 'axis', 'sides']
+
 export function SpacingControl({
   value: rawValue,
   onChange,
@@ -45,19 +47,24 @@ export function SpacingControl({
     bottom: rawValue?.bottom || ZERO,
     left: rawValue?.left || ZERO,
   }
-  const [expanded, setExpanded] = useState(() => detectMode(value) === 'sides')
+  const [mode, setMode] = useState<SpacingMode>(() => detectMode(value))
 
   const toggle = () => {
-    if (expanded) {
-      // Collapsing → sync to axis pairs
+    const idx = MODE_CYCLE.indexOf(mode)
+    const next = MODE_CYCLE[(idx + 1) % MODE_CYCLE.length]
+    // Sync values when collapsing
+    if (next === 'all') {
+      onChange({ top: { ...value.top }, right: { ...value.top }, bottom: { ...value.top }, left: { ...value.top } })
+    } else if (next === 'axis') {
       onChange({ right: { ...value.left }, bottom: { ...value.top } })
     }
-    setExpanded(!expanded)
+    setMode(next)
   }
 
   const P = (labelPrefix ?? classPrefix).toUpperCase()
   const txtLbl = (suffix: string) => <span className="text-[12px]">{P}{suffix}</span>
   const tooltipMap: Record<string, string> = {
+    '': `${label} All Sides`,
     x: `${label} Left & Right`,
     y: `${label} Top & Bottom`,
     l: `${label} Left`,
@@ -66,32 +73,49 @@ export function SpacingControl({
     b: `${label} Bottom`,
   }
 
+  const modeTitle = mode === 'all' ? 'All Sides' : mode === 'axis' ? 'Horizontal / Vertical' : 'Individual Sides'
+  const isActive = mode !== 'all'
+
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
-        <TokenInput
-          scale={scale}
-          value={value.left}
-          onChange={(v) => expanded ? onChange({ left: v }) : onChange({ left: v, right: { ...v } })}
-          min={0}
-          classPrefix={expanded ? `${classPrefix}l` : `${classPrefix}x`}
-          inlineLabel={txtLbl(expanded ? 'l' : 'x')}
-          tooltip={tooltipMap[expanded ? 'l' : 'x']}
-        />
-        <TokenInput
-          scale={scale}
-          value={value.top}
-          onChange={(v) => expanded ? onChange({ top: v }) : onChange({ top: v, bottom: { ...v } })}
-          min={0}
-          classPrefix={expanded ? `${classPrefix}t` : `${classPrefix}y`}
-          inlineLabel={txtLbl(expanded ? 't' : 'y')}
-          tooltip={tooltipMap[expanded ? 't' : 'y']}
-        />
+        {mode === 'all' ? (
+          <TokenInput
+            scale={scale}
+            value={value.top}
+            onChange={(v) => onChange({ top: v, right: { ...v }, bottom: { ...v }, left: { ...v } })}
+            min={0}
+            classPrefix={classPrefix}
+            inlineLabel={txtLbl('')}
+            tooltip={tooltipMap['']}
+          />
+        ) : (
+          <>
+            <TokenInput
+              scale={scale}
+              value={value.left}
+              onChange={(v) => mode === 'axis' ? onChange({ left: v, right: { ...v } }) : onChange({ left: v })}
+              min={0}
+              classPrefix={mode === 'axis' ? `${classPrefix}x` : `${classPrefix}l`}
+              inlineLabel={txtLbl(mode === 'axis' ? 'x' : 'l')}
+              tooltip={tooltipMap[mode === 'axis' ? 'x' : 'l']}
+            />
+            <TokenInput
+              scale={scale}
+              value={value.top}
+              onChange={(v) => mode === 'axis' ? onChange({ top: v, bottom: { ...v } }) : onChange({ top: v })}
+              min={0}
+              classPrefix={mode === 'axis' ? `${classPrefix}y` : `${classPrefix}t`}
+              inlineLabel={txtLbl(mode === 'axis' ? 'y' : 't')}
+              tooltip={tooltipMap[mode === 'axis' ? 'y' : 't']}
+            />
+          </>
+        )}
         <button
           type="button"
-          title={expanded ? 'Collapse Sides' : 'Expand Sides'}
+          title={modeTitle}
           className={`w-5 h-5 flex items-center justify-center rounded shrink-0 ${
-            expanded
+            isActive
               ? 'text-blue-400 bg-blue-400/10'
               : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'
           }`}
@@ -100,7 +124,7 @@ export function SpacingControl({
           <Scan size={12} />
         </button>
       </div>
-      {expanded && (
+      {mode === 'sides' && (
         <div className="flex items-center gap-2">
           <TokenInput scale={scale} value={value.right} onChange={(v) => onChange({ right: v })} min={0} classPrefix={`${classPrefix}r`} inlineLabel={txtLbl('r')} tooltip={tooltipMap.r} />
           <TokenInput scale={scale} value={value.bottom} onChange={(v) => onChange({ bottom: v })} min={0} classPrefix={`${classPrefix}b`} inlineLabel={txtLbl('b')} tooltip={tooltipMap.b} />

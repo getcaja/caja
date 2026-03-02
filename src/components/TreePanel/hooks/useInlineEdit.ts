@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react'
 
-const INPUT_CLASS = 'flex-1 h-5 bg-surface-2 border border-transparent rounded px-1 text-[12px] text-text-primary outline-none focus:border-accent min-w-0 transition-colors'
+export const INPUT_CLASS = 'flex-1 h-5 bg-surface-2 border border-transparent rounded px-1 text-[12px] text-text-primary outline-none focus:border-accent min-w-0 transition-colors'
 
 interface InlineEditState {
   editing: boolean

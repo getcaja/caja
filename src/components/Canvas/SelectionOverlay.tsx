@@ -104,6 +104,7 @@ function computeLineRect(
  *  Exported for testing. */
 export function buildOverlayRules(state: {
   selectedId: string | null
+  selectedIds: Set<string>
   hoveredId: string | null
   showSel: boolean
   showHov: boolean
@@ -111,23 +112,32 @@ export function buildOverlayRules(state: {
   showDragGuides: boolean
   dragTargetParentId: string | null
 }): string[] {
-  const { selectedId, hoveredId, showSel, showHov, canvasDragId, showDragGuides, dragTargetParentId } = state
+  const { selectedId, selectedIds, hoveredId, showSel, showHov, canvasDragId, showDragGuides, dragTargetParentId } = state
   const rules: string[] = []
+  const color = 'var(--color-accent)'
 
-  if (showSel && selectedId) {
-    rules.push(`[data-frame-id="${selectedId}"] { outline: 2px solid var(--color-accent) !important; outline-offset: -2px !important; }`)
-    const exc = canvasDragId ? `:not([data-frame-id="${canvasDragId}"])` : ''
-    rules.push(`[data-frame-id="${selectedId}"] > [data-frame-id]${exc} { outline: 1px dotted var(--color-accent) !important; outline-offset: -1px; }`)
+  if (showSel) {
+    // Primary selection — solid 2px
+    if (selectedId) {
+      rules.push(`[data-frame-id="${selectedId}"] { outline: 2px solid ${color} !important; outline-offset: -2px !important; }`)
+      const exc = canvasDragId ? `:not([data-frame-id="${canvasDragId}"])` : ''
+      rules.push(`[data-frame-id="${selectedId}"] > [data-frame-id]${exc} { outline: 1px dotted ${color} !important; outline-offset: -1px; }`)
+    }
+    // Secondary selections — solid 2px (same style as primary, like Figma)
+    for (const id of selectedIds) {
+      if (id === selectedId) continue
+      rules.push(`[data-frame-id="${id}"] { outline: 2px solid ${color} !important; outline-offset: -2px !important; }`)
+    }
   }
 
   if (showHov && hoveredId) {
-    rules.push(`[data-frame-id="${hoveredId}"] { outline: 1px solid var(--color-accent) !important; outline-offset: -1px !important; }`)
-    rules.push(`[data-frame-id="${hoveredId}"] > [data-frame-id] { outline: 1px dotted var(--color-accent) !important; outline-offset: -1px; }`)
+    rules.push(`[data-frame-id="${hoveredId}"] { outline: 1px solid ${color} !important; outline-offset: -1px !important; }`)
+    rules.push(`[data-frame-id="${hoveredId}"] > [data-frame-id] { outline: 1px dotted ${color} !important; outline-offset: -1px; }`)
   }
 
   if (showDragGuides && dragTargetParentId) {
     const exc = canvasDragId ? `:not([data-frame-id="${canvasDragId}"])` : ''
-    rules.push(`[data-frame-id="${dragTargetParentId}"] > [data-frame-id]${exc} { outline: 1px dotted var(--color-accent) !important; outline-offset: -1px; }`)
+    rules.push(`[data-frame-id="${dragTargetParentId}"] > [data-frame-id]${exc} { outline: 1px dotted ${color} !important; outline-offset: -1px; }`)
   }
 
   return rules
@@ -142,6 +152,7 @@ export function SelectionOverlay() {
   }, [])
 
   const selectedId = useFrameStore((s) => s.selectedId)
+  const selectedIds = useFrameStore((s) => s.selectedIds)
   const hoveredId = useFrameStore((s) => s.hoveredId)
   const previewMode = useFrameStore((s) => s.previewMode)
   const canvasDragId = useFrameStore((s) => s.canvasDragId)
@@ -149,7 +160,7 @@ export function SelectionOverlay() {
 
   const isLineMode = !!canvasDragId && !!canvasDragOver
   const isDragging = !!canvasDragId && canvasDragId === selectedId
-  const showSel = !previewMode && !!selectedId && !isDragging
+  const showSel = !previewMode && (!!selectedId || selectedIds.size > 0) && !isDragging
 
   // Suppress hover on descendants of selected element
   const hovIsDescOfSel = useFrameStore((s) => {
@@ -170,7 +181,7 @@ export function SelectionOverlay() {
     setLineRect(computeLineRect(doc, canvasDragOver))
   }, [isLineMode, canvasDragOver?.parentId, canvasDragOver?.index, canvasDragId, doc])
 
-  const rules = buildOverlayRules({ selectedId, hoveredId, showSel, showHov, canvasDragId, showDragGuides, dragTargetParentId })
+  const rules = buildOverlayRules({ selectedId, selectedIds, hoveredId, showSel, showHov, canvasDragId, showDragGuides, dragTargetParentId })
 
   return (
     <>

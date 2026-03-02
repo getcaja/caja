@@ -15,7 +15,36 @@ import { FrameRenderer } from './FrameRenderer'
 import { SelectionOverlay } from './SelectionOverlay'
 import { GoogleFontsLoader } from './GoogleFontsLoader'
 import { ErrorBoundary } from '../ErrorBoundary'
+import { useCanvasContextMenu, CanvasContextMenu } from './CanvasContextMenu'
 import './FrameRenderer.css'
+
+/* ── Zoom-to-point helper ────────────────────────────────────
+ * Shared by pinch-to-zoom and keyboard shortcuts.
+ * cursorX/cursorY are relative to the scroll container viewport.
+ * If null, zooms toward the center of the viewport. */
+let _scrollEl: HTMLElement | null = null
+let _cursorX: number | null = null
+let _cursorY: number | null = null
+
+export function canvasZoomTo(nextZoom: number) {
+  const scrollEl = _scrollEl
+  if (!scrollEl) return
+  const { canvasZoom, setCanvasZoom } = useFrameStore.getState()
+  if (nextZoom === canvasZoom) return
+
+  const anchorX = _cursorX ?? scrollEl.clientWidth / 2
+  const anchorY = _cursorY ?? scrollEl.clientHeight / 2
+
+  const contentX = (scrollEl.scrollLeft + anchorX) / canvasZoom
+  const contentY = (scrollEl.scrollTop + anchorY) / canvasZoom
+
+  setCanvasZoom(nextZoom)
+
+  requestAnimationFrame(() => {
+    scrollEl.scrollLeft = contentX * nextZoom - anchorX
+    scrollEl.scrollTop = contentY * nextZoom - anchorY
+  })
+}
 
 export function CanvasInline() {
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -24,10 +53,17 @@ export function CanvasInline() {
   const [workspaceH, setWorkspaceH] = useState(800)
   const canvasWidth = useFrameStore((s) => s.canvasWidth)
   const canvasZoom = useFrameStore((s) => s.canvasZoom)
+  const canvasTool = useFrameStore((s) => s.canvasTool)
   const previewMode = useFrameStore((s) => s.previewMode)
   const rootBgValue = useFrameStore((s) => s.root.bg.value)
   const root = useFrameStore((s) => s.root)
+  const editingComponentId = useFrameStore((s) => s.editingComponentId)
   const hover = useFrameStore((s) => s.hover)
+
+  // In edit mode, render only the master being edited
+  const renderFrame = editingComponentId && root.type === 'box'
+    ? root.children.find((c) => c.id === editingComponentId) ?? root
+    : root
 
   const onPreviewClick = useCallback((e: React.MouseEvent) => {
     const anchor = (e.target as HTMLElement).closest('a[href]') as HTMLAnchorElement | null
@@ -46,8 +82,21 @@ export function CanvasInline() {
   }, [])
 
   const onCanvasClick = useCallback(() => {
-    useFrameStore.getState().select(null)
+    const store = useFrameStore.getState()
+    if (store.canvasTool === 'text') {
+      store.addChild(store.root.id, 'text', { content: '' })
+      const newId = useFrameStore.getState().selectedId
+      if (newId) useFrameStore.setState({ pendingTextEdit: newId })
+      return
+    }
+    if (store.canvasTool === 'frame') {
+      store.addChild(store.root.id, 'box')
+      return
+    }
+    store.select(store.root.id)
   }, [])
+
+  const ctxMenu = useCanvasContextMenu()
 
   // Measure scroll container for workspace dimensions (used for zoomed sizing)
   useEffect(() => {
@@ -66,6 +115,39 @@ export function CanvasInline() {
     ro.observe(container)
     return () => ro.disconnect()
   }, [])
+
+  // Track scroll container + cursor for zoom-to-point
+  useEffect(() => {
+    const scrollEl = wrapperRef.current?.parentElement
+    if (!scrollEl || previewMode) { _scrollEl = null; return }
+    _scrollEl = scrollEl
+    const onMove = (e: MouseEvent) => {
+      const rect = scrollEl.getBoundingClientRect()
+      _cursorX = e.clientX - rect.left
+      _cursorY = e.clientY - rect.top
+    }
+    const onLeave = () => { _cursorX = null; _cursorY = null }
+    scrollEl.addEventListener('mousemove', onMove)
+    scrollEl.addEventListener('mouseleave', onLeave)
+
+    // Pinch-to-zoom (wheel + ctrlKey)
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) return
+      e.preventDefault()
+      const { canvasZoom } = useFrameStore.getState()
+      const delta = -e.deltaY * 0.01
+      const next = Math.round(Math.min(2, Math.max(0.25, canvasZoom + delta)) * 100) / 100
+      canvasZoomTo(next)
+    }
+    scrollEl.addEventListener('wheel', onWheel, { passive: false })
+
+    return () => {
+      _scrollEl = null
+      scrollEl.removeEventListener('mousemove', onMove)
+      scrollEl.removeEventListener('mouseleave', onLeave)
+      scrollEl.removeEventListener('wheel', onWheel)
+    }
+  }, [previewMode])
 
   // Toggle data-cmd-held attribute on canvas div for CSS link cursor
   useEffect(() => {
@@ -102,7 +184,19 @@ export function CanvasInline() {
     backgroundColor: rootBgValue || '#ffffff',
   }
 
-  if (previewMode) {
+  if (editingComponentId) {
+    // Component edit mode: center the component in the canvas
+    wrapperStyle = { width: '100%', height: '100%' }
+    canvasStyle = {
+      ...canvasResetStyle,
+      width: '100%',
+      minHeight: '100%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#f5f5f4',
+    }
+  } else if (previewMode) {
     wrapperStyle = { width: '100%', height: '100%' }
     canvasStyle = {
       ...canvasResetStyle,
@@ -151,12 +245,13 @@ export function CanvasInline() {
         ref={canvasRef}
         id="caja-canvas"
         className="@container"
-        style={canvasStyle}
+        style={{ ...canvasStyle, ...((canvasTool === 'text' || canvasTool === 'frame') && !previewMode ? { cursor: 'crosshair' } : {}) }}
         onMouseLeave={previewMode ? undefined : () => hover(null)}
         onClick={previewMode ? onPreviewClick : onCanvasClick}
+        onContextMenu={previewMode ? undefined : ctxMenu.onContextMenu}
       >
-        <ErrorBoundary fallback="inline" resetKey={root.id}>
-          <FrameRenderer frame={root} />
+        <ErrorBoundary fallback="inline" resetKey={renderFrame.id}>
+          <FrameRenderer frame={renderFrame} />
         </ErrorBoundary>
         <GoogleFontsLoader />
       </div>
@@ -166,6 +261,9 @@ export function CanvasInline() {
           fixed insertion line position relative to the canvas instead of the
           viewport, causing coordinate mismatch with getBoundingClientRect(). */}
       {!previewMode && <SelectionOverlay />}
+      {!previewMode && ctxMenu.menu && (
+        <CanvasContextMenu menu={ctxMenu.menu} close={ctxMenu.close} />
+      )}
     </div>
   )
 }

@@ -35,16 +35,16 @@ export function TitleBar() {
       <div className="flex-1 h-full" data-tauri-drag-region />
 
       {/* MCP status button */}
-      <div className="flex items-center px-1 pr-2">
+      <div className="flex items-center pr-4">
         <button
           onClick={() => setShowMcp(true)}
-          className="w-6 h-6 flex items-center justify-center rounded-md text-text-muted hover:text-text-secondary hover:bg-surface-2 transition-colors"
+          className="w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-text-secondary hover:bg-surface-2"
           title={mcpConnected ? 'MCP Connected' : 'MCP Offline'}
         >
           {mcpBusy ? (
-            <Loader2 size={14} className="animate-spin" />
+            <Loader2 size={12} className="animate-spin" />
           ) : (
-            <Plug size={14} />
+            <Plug size={12} />
           )}
         </button>
       </div>

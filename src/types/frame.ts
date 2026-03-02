@@ -105,13 +105,12 @@ interface BaseElement {
   // Advanced
   tailwindClasses: string
 
-  // Origin tracking — populated when inserting from a pattern source (passive, informational)
-  _origin?: { libraryId?: string; patternId?: string }
+  // Origin tracking — populated when inserting from a component source (passive, informational)
+  _origin?: { libraryId?: string; componentId?: string }
 
-  // Reserved for v0.2 component system — not used in 0.1.
-  // Ensures patterns/libraries created in 0.1 are forward-compatible.
-  _componentId?: string                        // ID of the component definition this frame is an instance of
-  _componentProps?: Record<string, unknown>     // Override props for the component instance
+  // Component system — when set, this frame is an instance of a master component
+  _componentId?: string                                          // ID of the master frame in the Components page
+  _overrides?: Record<string, Record<string, unknown>>           // keyed by child frame ID → partial props to override
 }
 
 export type BoxTag = 'body' | 'div' | 'section' | 'nav' | 'header' | 'footer' | 'main' | 'article' | 'aside' | 'ul' | 'ol' | 'li' | 'form'
@@ -234,6 +233,7 @@ export interface Page {
   name: string
   route: string
   root: BoxElement
+  isComponentPage?: boolean  // hidden page that stores component masters
 }
 
 // Union type

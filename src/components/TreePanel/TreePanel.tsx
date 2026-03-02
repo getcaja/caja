@@ -1,44 +1,187 @@
-import { useState, useRef } from 'react'
-import { useFrameStore, findInTree } from '../../store/frameStore'
+import { useState, useRef, useMemo, useCallback } from 'react'
+import { findInTree, cloneWithNewIds, normalizeFrame } from '../../store/frameStore'
+import { useFrameStore, isRootId } from '../../store/frameStore'
 import { useCatalogStore } from '../../store/catalogStore'
 import { AddMenu } from './AddMenu'
 import { TreeDndProvider } from './TreeDndContext'
 import { TreeNode } from './TreeNode'
-import { PatternsPanel, type PatternsPanelHandle, type PatternSource } from './PatternsPanel'
-import { ManageLibrariesModal } from './ManageLibrariesModal'
-import { importLibrary, saveLibraryIndex } from '../../lib/libraryOps'
+import { ComponentsPanel, type ComponentsPanelHandle } from './ComponentsPanel'
+import { ComponentIOModal } from './ComponentIOModal'
 import { PageNode } from './PageNode'
-import { Select } from '../ui/Select'
 import { useContextMenu } from './hooks/useContextMenu'
-import { Plus, FolderPlus, Code, Download, Settings } from 'lucide-react'
+import { useTreeKeyboard } from './hooks/useTreeKeyboard'
+import { Plus, X, ChevronRight, ChevronsDownUp, ChevronsUpDown } from 'lucide-react'
 
-interface TreePanelProps {
-  onExportLibrary: () => void
+function TreeSection({ label, collapsed, onToggle, trailing, children }: {
+  label: string
+  collapsed: boolean
+  onToggle: () => void
+  trailing?: React.ReactNode
+  children?: React.ReactNode
+}) {
+  return (
+    <div className="py-3 border-b border-border">
+      <div className={`px-4${collapsed ? '' : ' mb-2'}`}>
+        <div className="relative flex items-center group/section">
+          <ChevronRight
+            size={12}
+            className={`absolute -left-3 top-1/2 -translate-y-1/2 text-text-muted cursor-pointer opacity-0 group-hover/section:opacity-100 ${collapsed ? '' : 'rotate-90'}`}
+            onClick={onToggle}
+          />
+          <span className="c-section-title cursor-pointer select-none" onClick={onToggle}>{label}</span>
+          <span className="flex-1" />
+          {trailing}
+        </div>
+      </div>
+      {!collapsed && children}
+    </div>
+  )
 }
 
-export function TreePanel({ onExportLibrary }: TreePanelProps) {
+export function TreePanel() {
   const root = useFrameStore((s) => s.root)
   const pages = useFrameStore((s) => s.pages)
   const activePageId = useFrameStore((s) => s.activePageId)
   const selectedId = useFrameStore((s) => s.selectedId)
   const addChild = useFrameStore((s) => s.addChild)
   const addPage = useFrameStore((s) => s.addPage)
-  const tab = useFrameStore((s) => s.treePanelTab)
+  const collapseAll = useFrameStore((s) => s.collapseAll)
+  const expandAll = useFrameStore((s) => s.expandAll)
+  const collapsedIds = useFrameStore((s) => s.collapsedIds)
+  const rawTab = useFrameStore((s) => s.treePanelTab)
+  const tab = rawTab === 'layers' || rawTab === 'components' ? rawTab : 'layers'
   const setTab = useFrameStore((s) => s.setTreePanelTab)
-  const activeLibraryId = useCatalogStore((s) => s.activeLibraryId)
-  const libraryIndex = useCatalogStore((s) => s.libraryIndex)
-  const setActiveLibraryId = useCatalogStore((s) => s.setActiveLibraryId)
+  const editingComponentId = useFrameStore((s) => s.editingComponentId)
+  const enterComponentEditMode = useFrameStore((s) => s.enterComponentEditMode)
+  const exitComponentEditMode = useFrameStore((s) => s.exitComponentEditMode)
+  const renameFrame = useFrameStore((s) => s.renameFrame)
+  const renameComponent = useCatalogStore((s) => s.renameComponent)
+  const handleRenameComponent = useCallback((id: string, name: string) => {
+    renameFrame(id, name)
+    renameComponent(id, name)
+  }, [renameFrame, renameComponent])
   const [showAdd, setShowAdd] = useState(false)
   const [menuPos, setMenuPos] = useState({ x: 0, y: 0 })
+  const [pagesCollapsed, setPagesCollapsed] = useState(false)
+  const [layersCollapsed, setLayersCollapsed] = useState(false)
   const addBtnRef = useRef<HTMLButtonElement>(null)
 
-  // Patterns "+" menu
-  const patternMenu = useContextMenu()
-  const patternBtnRef = useRef<HTMLButtonElement>(null)
-  const patternPanelRef = useRef<PatternsPanelHandle>(null)
+  // Components "+" menu
+  const componentMenu = useContextMenu()
+  const componentBtnRef = useRef<HTMLButtonElement>(null)
+  const componentPanelRef = useRef<ComponentsPanelHandle>(null)
 
-  // Modal state
-  const [showManageLibraries, setShowManageLibraries] = useState(false)
+  // Component IO modal
+  const [ioModal, setIoModal] = useState<{ open: boolean; mode: 'import' | 'export' }>({ open: false, mode: 'import' })
+
+  /* ── Keyboard: Layers adapter ──────────────────────────── */
+  const layersKeyboardConfig = useMemo(() => ({
+    isActive: tab === 'layers' && !editingComponentId,
+    getSelectedIds: () => useFrameStore.getState().selectedIds,
+    getPrimaryId: () => useFrameStore.getState().selectedId,
+    deleteSelected: () => {
+      const s = useFrameStore.getState()
+      if (s.selectedIds.size > 1) {
+        s.removeSelected()
+      } else if (s.selectedId && !isRootId(s.selectedId)) {
+        s.removeFrame(s.selectedId)
+      }
+    },
+    duplicateSelected: () => {
+      const s = useFrameStore.getState()
+      if (s.selectedId && !isRootId(s.selectedId)) s.duplicateFrame(s.selectedId)
+    },
+    copySelected: () => useFrameStore.getState().copySelected(),
+    cutSelected: () => useFrameStore.getState().cutSelected(),
+    pasteClipboard: () => useFrameStore.getState().pasteClipboard(),
+    selectAll: () => useFrameStore.getState().selectAllSiblings(),
+    reorder: (dir: 'up' | 'down', arrowKey: string) => {
+      const s = useFrameStore.getState()
+      if (!s.selectedId || isRootId(s.selectedId)) return
+      const display = s.getParentDisplay(s.selectedId)
+      const parentDir = display === 'grid' ? 'row' : s.getParentDirection(s.selectedId)
+      if (parentDir === 'column' && (arrowKey === 'ArrowLeft' || arrowKey === 'ArrowRight')) return
+      if (parentDir === 'row' && (arrowKey === 'ArrowUp' || arrowKey === 'ArrowDown')) return
+      s.reorderFrame(s.selectedId, dir)
+    },
+    escape: () => useFrameStore.getState().select(null),
+  }), [tab, editingComponentId])
+
+  useTreeKeyboard(layersKeyboardConfig)
+
+  /* ── Keyboard: Edit mode adapter ───────────────────────── */
+  const editKeyboardConfig = useMemo(() => ({
+    isActive: !!editingComponentId,
+    getSelectedIds: () => useFrameStore.getState().selectedIds,
+    getPrimaryId: () => useFrameStore.getState().selectedId,
+    deleteSelected: () => {
+      const s = useFrameStore.getState()
+      if (s.selectedIds.size > 1) {
+        s.removeSelected()
+      } else if (s.selectedId && !isRootId(s.selectedId)) {
+        s.removeFrame(s.selectedId)
+      }
+    },
+    duplicateSelected: () => {
+      const s = useFrameStore.getState()
+      if (s.selectedId && !isRootId(s.selectedId)) s.duplicateFrame(s.selectedId)
+    },
+    copySelected: () => useFrameStore.getState().copySelected(),
+    cutSelected: () => useFrameStore.getState().cutSelected(),
+    pasteClipboard: () => useFrameStore.getState().pasteClipboard(),
+    selectAll: () => useFrameStore.getState().selectAllSiblings(),
+    reorder: (dir: 'up' | 'down', arrowKey: string) => {
+      const s = useFrameStore.getState()
+      if (!s.selectedId || isRootId(s.selectedId)) return
+      const display = s.getParentDisplay(s.selectedId)
+      const parentDir = display === 'grid' ? 'row' : s.getParentDirection(s.selectedId)
+      if (parentDir === 'column' && (arrowKey === 'ArrowLeft' || arrowKey === 'ArrowRight')) return
+      if (parentDir === 'row' && (arrowKey === 'ArrowUp' || arrowKey === 'ArrowDown')) return
+      s.reorderFrame(s.selectedId, dir)
+    },
+    escape: () => useFrameStore.getState().exitComponentEditMode(),
+  }), [editingComponentId])
+
+  useTreeKeyboard(editKeyboardConfig)
+
+  /* ── Keyboard: Components adapter ──────────────────────── */
+  const componentsKeyboardConfig = useMemo(() => ({
+    isActive: tab === 'components' && !editingComponentId,
+    getSelectedIds: () => useCatalogStore.getState().highlightIds,
+    getPrimaryId: () => useCatalogStore.getState().highlightId,
+    deleteSelected: () => {
+      const cs = useCatalogStore.getState()
+      for (const id of cs.highlightIds) {
+        if (!id.startsWith('__cat:')) cs.deleteComponent(id)
+      }
+    },
+    duplicateSelected: () => {
+      const cs = useCatalogStore.getState()
+      const hl = cs.highlightId
+      if (!hl || hl.startsWith('__cat:')) return
+      const comp = cs.components.find((c) => c.id === hl)
+      if (!comp) return
+      const master = cloneWithNewIds(normalizeFrame(comp.frame))
+      master.name = `${comp.name} Copy`
+      useFrameStore.getState().addComponentMaster(master)
+      cs.registerComponent({
+        id: master.id,
+        name: master.name,
+        tags: [...comp.tags],
+        frame: master,
+        meta: {},
+        createdAt: new Date().toISOString(),
+      })
+    },
+    selectAll: () => {
+      const cs = useCatalogStore.getState()
+      const allIds = new Set(cs.components.map((c) => c.id))
+      useCatalogStore.setState({ highlightIds: allIds })
+    },
+    escape: () => useCatalogStore.getState().setHighlightId(null),
+  }), [tab, editingComponentId])
+
+  useTreeKeyboard(componentsKeyboardConfig)
 
   const activePage = pages.find((p) => p.id === activePageId)
 
@@ -72,60 +215,72 @@ export function TreePanel({ onExportLibrary }: TreePanelProps) {
     setShowAdd(false)
   }
 
-  const openPatternMenu = () => {
-    if (patternBtnRef.current) {
-      const rect = patternBtnRef.current.getBoundingClientRect()
-      patternMenu.openAt(rect.left, rect.bottom + 4)
+  const openComponentMenu = () => {
+    if (componentBtnRef.current) {
+      const rect = componentBtnRef.current.getBoundingClientRect()
+      componentMenu.openAt(rect.left, rect.bottom + 4)
     }
-  }
-
-  const handleSaveSelectedAsPattern = () => {
-    if (!selectedId) return
-    const frame = findInTree(root, selectedId)
-    if (!frame) return
-    useCatalogStore.getState().savePattern(frame.name || 'Pattern', [], frame)
-    setTab('patterns')
-    patternMenu.close()
   }
 
   const handleCreateCategory = () => {
-    patternPanelRef.current?.createCategory()
-    patternMenu.close()
+    componentPanelRef.current?.createCategory()
+    componentMenu.close()
   }
 
-  const handlePatternsTab = () => {
-    setTab('patterns')
+  const handleAssetsTab = () => {
+    setTab('components')
   }
 
-  const handleLibrariesTab = () => {
-    // Auto-select first library if none selected
-    if (activeLibraryId === null && libraryIndex.length > 0) {
-      setActiveLibraryId(libraryIndex[0].id)
-    }
-    setTab('libraries')
+  const editingMaster = editingComponentId ? findInTree(root, editingComponentId) : null
+
+  if (editingMaster) {
+    return (
+      <div className="h-full bg-surface-1/80 flex flex-col">
+        <div className="px-4 py-2.5 border-b border-border flex items-center justify-between">
+          <div className="flex items-center gap-1 min-w-0">
+            <span className="text-[12px] font-semibold px-1.5 py-0.5 text-text-muted shrink-0">Edit</span>
+            <input
+              className="text-[12px] font-semibold px-1.5 py-0.5 text-text-primary bg-transparent min-w-0 rounded focus:bg-surface-2 outline-none"
+              value={editingMaster.name}
+              onChange={(e) => handleRenameComponent(editingMaster.id, e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
+            />
+          </div>
+          <button
+            onClick={exitComponentEditMode}
+            className="w-5 h-5 shrink-0 c-icon-btn hover:text-text-primary hover:bg-surface-2"
+            title="Close"
+          >
+            <X size={12} />
+          </button>
+        </div>
+        <TreeDndProvider>
+          <div
+            className="flex-1 overflow-y-auto py-0.5 px-1"
+            onClick={(e) => { if (e.target === e.currentTarget) useFrameStore.getState().select(null) }}
+          >
+            <TreeNode frame={editingMaster} depth={0} isRoot />
+          </div>
+        </TreeDndProvider>
+      </div>
+    )
   }
 
   return (
     <div className="h-full bg-surface-1/80 flex flex-col">
-      <div className="px-4 py-2.5 border-b border-border flex items-center justify-between">
+      <div className="pl-2.5 pr-4 py-2.5 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-1">
           <button
-            className={`text-[12px] font-semibold px-1.5 py-0.5 rounded transition-colors ${tab === 'layers' ? 'text-text-primary bg-surface-2' : 'text-text-muted hover:text-text-secondary'}`}
+            className={`text-[12px] font-semibold px-1.5 py-0.5 rounded ${tab === 'layers' ? 'text-text-primary' : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'}`}
             onClick={() => setTab('layers')}
           >
-            Layers
+            File
           </button>
           <button
-            className={`text-[12px] font-semibold px-1.5 py-0.5 rounded transition-colors ${tab === 'patterns' ? 'text-text-primary bg-surface-2' : 'text-text-muted hover:text-text-secondary'}`}
-            onClick={handlePatternsTab}
+            className={`text-[12px] font-semibold px-1.5 py-0.5 rounded ${tab === 'components' ? 'text-text-primary' : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'}`}
+            onClick={handleAssetsTab}
           >
-            Patterns
-          </button>
-          <button
-            className={`text-[12px] font-semibold px-1.5 py-0.5 rounded transition-colors ${tab === 'libraries' ? 'text-text-primary bg-surface-2' : 'text-text-muted hover:text-text-secondary'}`}
-            onClick={handleLibrariesTab}
-          >
-            Libraries
+            Assets
           </button>
         </div>
         {tab === 'layers' && (
@@ -135,37 +290,17 @@ export function TreePanel({ onExportLibrary }: TreePanelProps) {
             onClick={openAddMenu}
             title="Add element"
           >
-            <Plus size={14} />
+            <Plus size={12} />
           </button>
         )}
-        {tab === 'patterns' && (
+        {tab === 'components' && (
           <button
-            ref={patternBtnRef}
+            ref={componentBtnRef}
             className="w-5 h-5 c-icon-btn hover:text-accent hover:bg-accent/10"
-            onClick={openPatternMenu}
+            onClick={openComponentMenu}
             title="Add"
           >
-            <Plus size={14} />
-          </button>
-        )}
-        {tab === 'libraries' && (
-          <button
-            className="w-5 h-5 c-icon-btn hover:text-accent hover:bg-accent/10"
-            onClick={async () => {
-              try {
-                const result = await importLibrary()
-                if (result) {
-                  useCatalogStore.getState().installLibrary(result.meta, result.data)
-                  await saveLibraryIndex(useCatalogStore.getState().libraryIndex)
-                  setActiveLibraryId(result.meta.id)
-                }
-              } catch (err) {
-                console.error('Failed to import library:', err)
-              }
-            }}
-            title="Import library"
-          >
-            <Plus size={14} />
+            <Plus size={12} />
           </button>
         )}
       </div>
@@ -180,102 +315,105 @@ export function TreePanel({ onExportLibrary }: TreePanelProps) {
         />
       )}
 
-      {/* Patterns "+" menu */}
-      {patternMenu.backdrop}
-      {patternMenu.menu && (
+      {/* Components "+" menu */}
+      {componentMenu.backdrop}
+      {componentMenu.menu && (
         <div
           className="fixed c-menu-popup min-w-[180px] z-50"
-          style={{ left: patternMenu.menu.x, top: patternMenu.menu.y }}
+          style={{ left: componentMenu.menu.x, top: componentMenu.menu.y }}
           onClick={(e) => e.stopPropagation()}
         >
-          <button
-            className={`c-menu-item ${!selectedId ? 'opacity-40 cursor-default' : ''}`}
-            disabled={!selectedId}
-            onClick={handleSaveSelectedAsPattern}
-          >
-            <Code size={12} /> Save selected as pattern
-          </button>
           <button
             className="c-menu-item"
             onClick={handleCreateCategory}
           >
-            <FolderPlus size={12} /> New category
+            New Category
           </button>
           <div className="border-t border-border my-1" />
           <button
             className="c-menu-item"
-            onClick={() => { onExportLibrary(); patternMenu.close() }}
+            onClick={() => { setIoModal({ open: true, mode: 'import' }); componentMenu.close() }}
           >
-            <Download size={12} /> Export as Library...
+            Import Components
+          </button>
+          <button
+            className="c-menu-item"
+            onClick={() => { setIoModal({ open: true, mode: 'export' }); componentMenu.close() }}
+          >
+            Export Components
           </button>
         </div>
       )}
 
       {tab === 'layers' && (
         <TreeDndProvider>
-          <div className="flex-1 overflow-y-auto flex flex-col">
-            {/* Page list */}
-            <div className="px-1 pt-1 pb-0.5 flex flex-col gap-0.5">
-              {pages.map((page) => (
-                <PageNode key={page.id} page={page} />
-              ))}
-            </div>
-
-            {/* Separator */}
-            <div className="border-t border-border my-1" />
-
-            {/* Active page tree — click empty space to deselect */}
-            <div
-              className="flex-1 overflow-y-auto py-0.5 px-1"
-              onClick={(e) => { if (e.target === e.currentTarget) useFrameStore.getState().select(null) }}
+          <div
+            className="flex-1 overflow-y-auto flex flex-col"
+          >
+            {/* Pages section */}
+            <TreeSection
+              label="Pages"
+              collapsed={pagesCollapsed}
+              onToggle={() => setPagesCollapsed((v) => !v)}
+              trailing={
+                <button
+                  className="w-5 h-5 c-icon-btn text-text-muted hover:text-accent hover:bg-accent/10"
+                  onClick={() => addPage()}
+                  title="Add page"
+                >
+                  <Plus size={12} />
+                </button>
+              }
             >
-              {activePage && (
-                <TreeNode frame={activePage.root} depth={0} isRoot />
-              )}
-            </div>
+              <div className="pb-0.5 flex flex-col gap-0.5">
+                {pages.filter((p) => !p.isComponentPage).map((page) => (
+                  <PageNode key={page.id} page={page} />
+                ))}
+              </div>
+            </TreeSection>
+
+            {/* Layers section */}
+            <TreeSection
+              label="Layers"
+              collapsed={layersCollapsed}
+              onToggle={() => setLayersCollapsed((v) => !v)}
+              trailing={
+                <button
+                  className="w-5 h-5 c-icon-btn text-text-muted hover:text-accent hover:bg-accent/10"
+                  onClick={() => collapsedIds.size > 0 ? expandAll() : collapseAll()}
+                  title={collapsedIds.size > 0 ? 'Expand all' : 'Collapse all'}
+                >
+                  {collapsedIds.size > 0 ? <ChevronsUpDown size={12} /> : <ChevronsDownUp size={12} />}
+                </button>
+              }
+            >
+              <div
+                className="flex-1 overflow-y-auto pb-0.5"
+              >
+                {activePage && (
+                  <TreeNode frame={activePage.root} depth={0} isRoot />
+                )}
+              </div>
+            </TreeSection>
           </div>
         </TreeDndProvider>
       )}
 
-      {tab === 'patterns' && (
+      {tab === 'components' && (
         <div className="flex-1 flex flex-col overflow-hidden">
-          <PatternsPanel ref={patternPanelRef} source={{ type: 'internal' }} />
+          <ComponentsPanel
+            ref={componentPanelRef}
+            source={{ type: 'internal' }}
+            onEditComponent={enterComponentEditMode}
+          />
         </div>
       )}
 
-      {tab === 'libraries' && (
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {libraryIndex.length === 0 ? (
-            <div className="flex-1 flex items-center justify-center">
-              <span className="text-text-muted text-[12px]">No libraries installed</span>
-            </div>
-          ) : (
-            <>
-              <div className="px-2 py-1.5 flex items-center gap-1.5">
-                <div className="flex-1 min-w-0">
-                  <Select
-                    value={libraryIndex.some((l) => l.id === activeLibraryId) ? activeLibraryId! : libraryIndex[0].id}
-                    options={libraryIndex.map((lib) => ({ value: lib.id, label: lib.name }))}
-                    onChange={setActiveLibraryId}
-                    className="w-full"
-                  />
-                </div>
-                <button
-                  className="w-5 h-5 shrink-0 c-icon-btn hover:text-accent hover:bg-accent/10"
-                  onClick={() => setShowManageLibraries(true)}
-                  title="Manage libraries"
-                >
-                  <Settings size={14} />
-                </button>
-              </div>
-              <PatternsPanel source={{ type: 'library', libraryId: (libraryIndex.some((l) => l.id === activeLibraryId) ? activeLibraryId! : libraryIndex[0].id) }} />
-            </>
-          )}
-        </div>
-      )}
-
-      {/* Modals */}
-      <ManageLibrariesModal open={showManageLibraries} onOpenChange={setShowManageLibraries} />
+      <ComponentIOModal
+        open={ioModal.open}
+        mode={ioModal.mode}
+        onOpenChange={(open) => setIoModal((prev) => ({ ...prev, open }))}
+      />
     </div>
   )
 }

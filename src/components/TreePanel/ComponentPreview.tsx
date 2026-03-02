@@ -1,7 +1,6 @@
 import { useEffect, useRef, useCallback, memo } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { Fragment } from 'react'
-import { X } from 'lucide-react'
 import { TAILWIND_THEME, CANVAS_RESET_CSS } from '../Canvas/canvasStyles'
 import { applyTheme, getActiveTheme } from '../../lib/theme'
 import { frameToClasses } from '../../utils/frameToClasses'
@@ -81,22 +80,22 @@ body { padding: 16px; background: #ffffff; }
 * { pointer-events: none !important; }
 `
 
-export interface PatternPreviewProps {
+export interface ComponentPreviewProps {
   frame: Frame | null
   name: string
   sourceName: string
   anchorY: number
   panelRight: number
   onInsert: () => void
-  onClose: () => void
+  onEdit?: () => void
   onPopupEnter: () => void
   onPopupLeave: () => void
 }
 
-export const PatternPreview = memo(function PatternPreview({
+export const ComponentPreview = memo(function ComponentPreview({
   frame, name, sourceName, anchorY, panelRight,
-  onInsert, onClose, onPopupEnter, onPopupLeave,
-}: PatternPreviewProps) {
+  onInsert, onEdit, onPopupEnter, onPopupLeave,
+}: ComponentPreviewProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const rootRef = useRef<Root | null>(null)
   const frameRef = useRef(frame)
@@ -189,40 +188,21 @@ export const PatternPreview = memo(function PatternPreview({
       onMouseLeave={onPopupLeave}
     >
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: `${PAD}px ${PAD}px 0` }}>
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: '16px' }}>Details</div>
-          <div style={{
-            fontSize: 11,
-            color: 'var(--color-text-muted)',
-            marginTop: 1,
-            lineHeight: '14px',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-          }}>
-            {sourceName}
-          </div>
+      <div style={{ padding: `${PAD}px ${PAD}px 0` }}>
+        <div style={{
+          fontSize: 12,
+          fontWeight: 600,
+          color: 'var(--color-text-primary)',
+          lineHeight: '16px',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+        }}>
+          {name}
         </div>
-        <button
-          onClick={onClose}
-          style={{
-            width: 20,
-            height: 20,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: 4,
-            border: 'none',
-            background: 'transparent',
-            color: 'var(--color-text-muted)',
-            cursor: 'pointer',
-            flexShrink: 0,
-            marginLeft: 4,
-          }}
-        >
-          <X size={14} />
-        </button>
+        <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 1, lineHeight: '14px' }}>
+          Component
+        </div>
       </div>
 
       {/* Preview iframe */}
@@ -236,7 +216,7 @@ export const PatternPreview = memo(function PatternPreview({
       }}>
         <iframe
           ref={iframeRef}
-          title="Pattern preview"
+          title="Component preview"
           style={{
             width: IFRAME_W,
             height: VIS_H / SCALE,
@@ -249,37 +229,45 @@ export const PatternPreview = memo(function PatternPreview({
         />
       </div>
 
-      {/* Footer: name + insert */}
+      {/* Footer: actions */}
       <div style={{ padding: `8px ${PAD}px ${PAD}px` }}>
-        <div style={{
-          fontSize: 12,
-          fontWeight: 500,
-          color: 'var(--color-text-primary)',
-          lineHeight: '16px',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          marginBottom: 8,
-        }}>
-          {name}
+        <div style={{ display: 'flex', gap: 6 }}>
+          {onEdit && (
+            <button
+              onClick={onEdit}
+              style={{
+                flex: 1,
+                height: 30,
+                borderRadius: 6,
+                border: '1px solid var(--color-border)',
+                background: 'var(--color-surface-2)',
+                color: 'var(--color-text-primary)',
+                fontSize: 12,
+                fontWeight: 500,
+                cursor: 'pointer',
+              }}
+            >
+              Edit
+            </button>
+          )}
+          <button
+            onClick={onInsert}
+            className="preview-insert-btn"
+            style={{
+              flex: 1,
+              height: 30,
+              borderRadius: 6,
+              border: 'none',
+              background: 'var(--color-accent)',
+              color: '#fff',
+              fontSize: 12,
+              fontWeight: 500,
+              cursor: 'pointer',
+            }}
+          >
+            Insert
+          </button>
         </div>
-        <button
-          onClick={onInsert}
-          className="preview-insert-btn"
-          style={{
-            width: '100%',
-            height: 30,
-            borderRadius: 6,
-            border: 'none',
-            background: 'var(--color-accent)',
-            color: '#fff',
-            fontSize: 12,
-            fontWeight: 500,
-            cursor: 'pointer',
-          }}
-        >
-          Insert instance
-        </button>
       </div>
     </div>
   )

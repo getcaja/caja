@@ -8,7 +8,7 @@ vi.stubGlobal('localStorage', {
   removeItem: (key: string) => storage.delete(key),
 })
 
-import { useFrameStore, findInTree, findParent, isRootId, normalizeFrame } from '../frameStore'
+import { useFrameStore, findInTree, findParent, isRootId, normalizeFrame, COMPONENT_PAGE_ID } from '../frameStore'
 import type { BoxElement, Frame, InputElement, TextElement } from '../../types/frame'
 
 // --- Helpers ---
@@ -420,9 +420,9 @@ describe('frameStore', () => {
       const raw: Partial<BoxElement> = { type: 'box', name: 'Test', children: [] } as any
       store().insertFrame(root().id, raw as Frame)
       expect(rootChildren()).toHaveLength(1)
-      // Should have all default fields filled (createBox defaults to 'block')
+      // Should have all default fields filled (createBox defaults to 'flex')
       const inserted = rootChildren()[0] as BoxElement
-      expect(inserted.display).toBe('block')
+      expect(inserted.display).toBe('flex')
       expect(inserted.padding).toBeDefined()
     })
 
@@ -434,8 +434,8 @@ describe('frameStore', () => {
 
     it('insertFrame stores origin metadata', () => {
       const raw: Partial<BoxElement> = { type: 'box', name: 'Test', children: [] } as any
-      store().insertFrame(root().id, raw as Frame, { patternId: 'p1' })
-      expect(rootChildren()[0]._origin).toEqual({ patternId: 'p1' })
+      store().insertFrame(root().id, raw as Frame, { componentId: 'p1' })
+      expect(rootChildren()[0]._origin).toEqual({ componentId: 'p1' })
     })
 
     it('insertFrameAt inserts at specified index', () => {
@@ -884,7 +884,7 @@ describe('frameStore', () => {
     it('fills missing fields on a minimal box', () => {
       const raw = { id: 'test-1', type: 'box', name: 'Bare', children: [] } as any
       const result = normalizeFrame(raw) as BoxElement
-      expect(result.display).toBe('block') // createBox defaults to 'block'
+      expect(result.display).toBe('flex') // createBox defaults to 'flex'
       expect(result.padding).toBeDefined()
       expect(result.padding.top.mode).toBe('custom')
       expect(result.gap).toBeDefined()
@@ -1023,6 +1023,267 @@ describe('frameStore', () => {
     it('addPage sets dirty', () => {
       store().addPage('About')
       expect(store().dirty).toBe(true)
+    })
+  })
+
+  // ===== Component System =====
+
+  describe('component system', () => {
+    describe('ensureComponentPage', () => {
+      it('creates a hidden components page on first call', () => {
+        const page = store().ensureComponentPage()
+        expect(page.id).toBe(COMPONENT_PAGE_ID)
+        expect(page.isComponentPage).toBe(true)
+        expect(page.name).toBe('Components')
+      })
+
+      it('returns the same page on subsequent calls', () => {
+        const first = store().ensureComponentPage()
+        const second = store().ensureComponentPage()
+        expect(first.id).toBe(second.id)
+      })
+    })
+
+    describe('getComponentPage', () => {
+      it('returns undefined before any component is created', () => {
+        expect(store().getComponentPage()).toBeUndefined()
+      })
+
+      it('returns the component page after ensureComponentPage', () => {
+        store().ensureComponentPage()
+        expect(store().getComponentPage()).toBeDefined()
+        expect(store().getComponentPage()!.isComponentPage).toBe(true)
+      })
+    })
+
+    describe('createComponent', () => {
+      it('creates a master in the components page and replaces original with instance', () => {
+        const boxId = addChild('box')
+        addChild('text', boxId) // add a child to the box
+
+        const componentId = store().createComponent(boxId)
+        expect(componentId).toBeTruthy()
+
+        // The original frame should now be an instance
+        const instance = findInTree(store().root, boxId)
+        expect(instance).toBeDefined()
+        expect(instance!._componentId).toBe(componentId)
+        expect(instance!._overrides).toEqual({})
+
+        // Master should exist in components page
+        const compPage = store().getComponentPage()
+        expect(compPage).toBeDefined()
+        const master = findInTree(compPage!.root, componentId!)
+        expect(master).toBeDefined()
+        expect(master!.type).toBe('box')
+      })
+
+      it('returns null for root frame', () => {
+        expect(store().createComponent(store().root.id)).toBeNull()
+      })
+
+      it('returns null for non-existent frame', () => {
+        expect(store().createComponent('nonexistent')).toBeNull()
+      })
+
+      it('can undo createComponent', () => {
+        const boxId = addChild('box')
+        store().createComponent(boxId)
+
+        // After create, frame is an instance
+        expect(findInTree(store().root, boxId)!._componentId).toBeTruthy()
+
+        store().undo()
+
+        // After undo, frame should not be an instance
+        const restored = findInTree(store().root, boxId)
+        expect(restored).toBeDefined()
+        expect(restored!._componentId).toBeUndefined()
+      })
+    })
+
+    describe('insertInstance', () => {
+      it('inserts an instance of a component', () => {
+        const boxId = addChild('box')
+        const componentId = store().createComponent(boxId)!
+
+        const instanceId = store().insertInstance(componentId, store().root.id)
+        expect(instanceId).toBeTruthy()
+
+        const instance = findInTree(store().root, instanceId!)
+        expect(instance).toBeDefined()
+        expect(instance!._componentId).toBe(componentId)
+        expect(instance!._overrides).toEqual({})
+      })
+
+      it('inserts at specific index', () => {
+        addChild('text') // index 0
+        const boxId = addChild('box')
+        const componentId = store().createComponent(boxId)!
+
+        store().insertInstance(componentId, store().root.id, 0)
+        // The instance should be at index 0
+        const children = store().root.children
+        expect(children[0]._componentId).toBe(componentId)
+      })
+
+      it('returns null when component page does not exist', () => {
+        // No component page → should return null
+        expect(store().insertInstance('fake-id', store().root.id)).toBeNull()
+      })
+
+      it('returns null for non-existent component', () => {
+        store().ensureComponentPage()
+        expect(store().insertInstance('nonexistent', store().root.id)).toBeNull()
+      })
+
+      it('returns null for non-box parent', () => {
+        const boxId = addChild('box')
+        const componentId = store().createComponent(boxId)!
+        const textId = addChild('text')
+        expect(store().insertInstance(componentId, textId)).toBeNull()
+      })
+    })
+
+    describe('instance name preservation', () => {
+      it('insertInstance preserves master name', () => {
+        const boxId = addChild('box')
+        store().renameFrame(boxId, 'Button-Black')
+        const componentId = store().createComponent(boxId)!
+
+        // Verify master has the correct name
+        const compPage = store().getComponentPage()!
+        const master = findInTree(compPage.root, componentId)!
+        expect(master.name).toBe('Button-Black')
+
+        // Insert an instance
+        const instanceId = store().insertInstance(componentId, store().root.id)!
+        const instance = findInTree(store().root, instanceId)!
+        expect(instance.name).toBe('Button-Black')
+      })
+    })
+
+    describe('detachInstance', () => {
+      it('removes _componentId and _overrides from an instance', () => {
+        const boxId = addChild('box')
+        const componentId = store().createComponent(boxId)!
+
+        // Verify it's an instance
+        expect(findInTree(store().root, boxId)!._componentId).toBe(componentId)
+
+        store().detachInstance(boxId)
+
+        const detached = findInTree(store().root, boxId)
+        expect(detached).toBeDefined()
+        expect(detached!._componentId).toBeUndefined()
+        expect(detached!._overrides).toBeUndefined()
+      })
+
+      it('is a no-op for non-instance frames', () => {
+        const boxId = addChild('box')
+        const rootBefore = store().root
+
+        store().detachInstance(boxId)
+
+        // Root reference should be the same (no change)
+        expect(store().root).toBe(rootBefore)
+      })
+
+      it('can undo detachInstance', () => {
+        const boxId = addChild('box')
+        const componentId = store().createComponent(boxId)!
+
+        store().detachInstance(boxId)
+        expect(findInTree(store().root, boxId)!._componentId).toBeUndefined()
+
+        store().undo()
+        expect(findInTree(store().root, boxId)!._componentId).toBe(componentId)
+      })
+    })
+
+    describe('resetInstance', () => {
+      it('clears _overrides on an instance', () => {
+        const boxId = addChild('box')
+        const componentId = store().createComponent(boxId)!
+
+        // Manually add overrides via updateFrame
+        const instance = findInTree(store().root, boxId)!
+        store().updateFrame(boxId, {
+          _overrides: { 'some-child': { content: 'override' } },
+        } as any)
+
+        expect(findInTree(store().root, boxId)!._overrides).toHaveProperty('some-child')
+
+        store().resetInstance(boxId)
+
+        expect(findInTree(store().root, boxId)!._overrides).toEqual({})
+        expect(findInTree(store().root, boxId)!._componentId).toBe(componentId)
+      })
+
+      it('is a no-op for non-instance frames', () => {
+        const boxId = addChild('box')
+        const rootBefore = store().root
+
+        store().resetInstance(boxId)
+
+        expect(store().root).toBe(rootBefore)
+      })
+    })
+
+    describe('propagateComponent', () => {
+      it('updates all instances when master changes', () => {
+        const boxId = addChild('box')
+        const componentId = store().createComponent(boxId)!
+
+        // Insert a second instance
+        const instance2Id = store().insertInstance(componentId, store().root.id)!
+
+        // Both instances should exist
+        expect(findInTree(store().root, boxId)!._componentId).toBe(componentId)
+        expect(findInTree(store().root, instance2Id)!._componentId).toBe(componentId)
+
+        // Propagate (even without master change, should not crash)
+        store().propagateComponent(componentId)
+
+        // Instances should still exist and be linked
+        expect(findInTree(store().root, boxId)!._componentId).toBe(componentId)
+        expect(findInTree(store().root, instance2Id)!._componentId).toBe(componentId)
+      })
+
+      it('is a no-op when component page does not exist', () => {
+        // Should not throw
+        store().propagateComponent('nonexistent')
+      })
+
+      it('is a no-op when no instances exist', () => {
+        const boxId = addChild('box')
+        const componentId = store().createComponent(boxId)!
+
+        // Detach the only instance
+        store().detachInstance(boxId)
+
+        // Should not throw
+        store().propagateComponent(componentId)
+      })
+    })
+
+    describe('removePage protects components page', () => {
+      it('cannot remove the components page', () => {
+        store().ensureComponentPage()
+        const pagesBefore = store().pages.length
+
+        store().removePage(COMPONENT_PAGE_ID)
+        expect(store().pages.length).toBe(pagesBefore)
+      })
+    })
+
+    describe('addPage excludes component page from numbering', () => {
+      it('names new pages based on regular page count only', () => {
+        store().ensureComponentPage()
+        store().addPage()
+        const newPage = store().pages.find((p) => p.name === 'Page 2')
+        expect(newPage).toBeDefined()
+      })
     })
   })
 })

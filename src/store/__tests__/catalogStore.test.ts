@@ -8,9 +8,9 @@ vi.stubGlobal('localStorage', {
   removeItem: (key: string) => storage.delete(key),
 })
 
-import { useCatalogStore, type PatternData } from '../catalogStore'
-import type { Pattern, LibraryMeta } from '../../types/pattern'
-import type { Frame, BoxElement, TextElement } from '../../types/frame'
+import { useCatalogStore, type ComponentData } from '../catalogStore'
+import type { Component } from '../../types/component'
+import type { Frame, TextElement } from '../../types/frame'
 
 // --- Helpers ---
 
@@ -34,10 +34,10 @@ function makeFrame(name = 'test'): Frame {
   } as TextElement
 }
 
-function makePattern(overrides?: Partial<Pattern>): Pattern {
+function makeComponent(overrides?: Partial<Component>): Component {
   return {
     id: crypto.randomUUID(),
-    name: 'Test Pattern',
+    name: 'Test Component',
     tags: [],
     frame: makeFrame(),
     meta: {},
@@ -46,32 +46,8 @@ function makePattern(overrides?: Partial<Pattern>): Pattern {
   }
 }
 
-function makeLibraryMeta(overrides?: Partial<LibraryMeta>): LibraryMeta {
-  return {
-    id: crypto.randomUUID(),
-    name: 'Test Library',
-    importedAt: new Date().toISOString(),
-    filePath: 'test-lib.cjl',
-    ...overrides,
-  }
-}
-
-function makePatternData(patterns: Pattern[]): PatternData {
-  return {
-    items: patterns,
-    order: patterns.map((p) => p.id),
-    categories: [],
-  }
-}
-
 function resetStore() {
-  const store = useCatalogStore.getState()
-  store.loadPatterns(undefined)
-  store.setActiveLibraryId(null)
-  // Clear libraries
-  for (const meta of store.libraryIndex) {
-    store.removeLibrary(meta.id)
-  }
+  useCatalogStore.getState().loadComponents(undefined)
 }
 
 // --- Tests ---
@@ -83,169 +59,169 @@ describe('catalogStore', () => {
   })
 
   describe('CRUD operations', () => {
-    it('savePattern creates a pattern and updates state', () => {
+    it('saveComponent creates a component and updates state', () => {
       const store = useCatalogStore.getState()
-      const pattern = store.savePattern('Card', ['layout'], makeFrame())
+      const comp = store.saveComponent('Card', ['layout'], makeFrame())
 
-      expect(pattern.name).toBe('Card')
-      expect(pattern.tags).toEqual(['layout'])
-      expect(pattern.id).toBeTruthy()
-      expect(pattern.createdAt).toBeTruthy()
+      expect(comp.name).toBe('Card')
+      expect(comp.tags).toEqual(['layout'])
+      expect(comp.id).toBeTruthy()
+      expect(comp.createdAt).toBeTruthy()
 
-      const all = store.allPatterns()
+      const all = store.allComponents()
       expect(all).toHaveLength(1)
-      expect(all[0].id).toBe(pattern.id)
+      expect(all[0].id).toBe(comp.id)
     })
 
-    it('deletePattern removes a pattern', () => {
+    it('deleteComponent removes a component', () => {
       const store = useCatalogStore.getState()
-      const p = store.savePattern('Card', [], makeFrame())
-      expect(store.allPatterns()).toHaveLength(1)
+      const p = store.saveComponent('Card', [], makeFrame())
+      expect(store.allComponents()).toHaveLength(1)
 
-      store.deletePattern(p.id)
-      expect(useCatalogStore.getState().allPatterns()).toHaveLength(0)
+      store.deleteComponent(p.id)
+      expect(useCatalogStore.getState().allComponents()).toHaveLength(0)
     })
 
-    it('renamePattern updates the name', () => {
+    it('renameComponent updates the name', () => {
       const store = useCatalogStore.getState()
-      const p = store.savePattern('Old Name', [], makeFrame())
-      store.renamePattern(p.id, 'New Name')
+      const p = store.saveComponent('Old Name', [], makeFrame())
+      store.renameComponent(p.id, 'New Name')
 
-      const updated = useCatalogStore.getState().getPattern(p.id)
+      const updated = useCatalogStore.getState().getComponent(p.id)
       expect(updated?.name).toBe('New Name')
     })
 
-    it('updatePatternTags updates tags', () => {
+    it('updateComponentTags updates tags', () => {
       const store = useCatalogStore.getState()
-      const p = store.savePattern('Card', ['layout'], makeFrame())
-      store.updatePatternTags(p.id, ['form', 'input'])
+      const p = store.saveComponent('Card', ['layout'], makeFrame())
+      store.updateComponentTags(p.id, ['form', 'input'])
 
-      const updated = useCatalogStore.getState().getPattern(p.id)
+      const updated = useCatalogStore.getState().getComponent(p.id)
       expect(updated?.tags).toEqual(['form', 'input'])
     })
 
-    it('getPattern returns undefined for non-existent id', () => {
+    it('getComponent returns undefined for non-existent id', () => {
       const store = useCatalogStore.getState()
-      expect(store.getPattern('nonexistent')).toBeUndefined()
+      expect(store.getComponent('nonexistent')).toBeUndefined()
     })
   })
 
   describe('ordering', () => {
-    it('allPatterns returns patterns in order', () => {
+    it('allComponents returns components in order', () => {
       const store = useCatalogStore.getState()
-      const a = store.savePattern('A', [], makeFrame())
-      const b = store.savePattern('B', [], makeFrame())
-      const c = store.savePattern('C', [], makeFrame())
+      const a = store.saveComponent('A', [], makeFrame())
+      const b = store.saveComponent('B', [], makeFrame())
+      const c = store.saveComponent('C', [], makeFrame())
 
-      const all = useCatalogStore.getState().allPatterns()
+      const all = useCatalogStore.getState().allComponents()
       expect(all.map((p) => p.id)).toEqual([a.id, b.id, c.id])
     })
 
-    it('movePattern reorders within the list', () => {
+    it('moveComponent reorders within the list', () => {
       const store = useCatalogStore.getState()
-      const a = store.savePattern('A', [], makeFrame())
-      const b = store.savePattern('B', [], makeFrame())
-      const c = store.savePattern('C', [], makeFrame())
+      const a = store.saveComponent('A', [], makeFrame())
+      const b = store.saveComponent('B', [], makeFrame())
+      const c = store.saveComponent('C', [], makeFrame())
 
       // Move C before A
-      useCatalogStore.getState().movePattern(c.id, a.id, 'before')
-      const order = useCatalogStore.getState().allPatterns().map((p) => p.name)
+      useCatalogStore.getState().moveComponent(c.id, a.id, 'before')
+      const order = useCatalogStore.getState().allComponents().map((p) => p.name)
       expect(order).toEqual(['C', 'A', 'B'])
     })
 
-    it('movePattern after target', () => {
+    it('moveComponent after target', () => {
       const store = useCatalogStore.getState()
-      const a = store.savePattern('A', [], makeFrame())
-      const b = store.savePattern('B', [], makeFrame())
-      const c = store.savePattern('C', [], makeFrame())
+      const a = store.saveComponent('A', [], makeFrame())
+      const b = store.saveComponent('B', [], makeFrame())
+      const c = store.saveComponent('C', [], makeFrame())
 
-      useCatalogStore.getState().movePattern(a.id, c.id, 'after')
-      const order = useCatalogStore.getState().allPatterns().map((p) => p.name)
+      useCatalogStore.getState().moveComponent(a.id, c.id, 'after')
+      const order = useCatalogStore.getState().allComponents().map((p) => p.name)
       expect(order).toEqual(['B', 'C', 'A'])
     })
 
     it('moveCategory reorders category groups', () => {
       const store = useCatalogStore.getState()
-      store.savePattern('A1', ['alpha'], makeFrame())
-      store.savePattern('A2', ['alpha'], makeFrame())
-      store.savePattern('B1', ['beta'], makeFrame())
+      store.saveComponent('A1', ['alpha'], makeFrame())
+      store.saveComponent('A2', ['alpha'], makeFrame())
+      store.saveComponent('B1', ['beta'], makeFrame())
 
       useCatalogStore.getState().moveCategory('beta', 'alpha', 'before')
-      const all = useCatalogStore.getState().allPatterns()
+      const all = useCatalogStore.getState().allComponents()
       expect(all.map((p) => p.name)).toEqual(['B1', 'A1', 'A2'])
     })
   })
 
   describe('load and reset', () => {
-    it('loadPatterns with valid data', () => {
-      const p1 = makePattern({ name: 'Hero' })
-      const p2 = makePattern({ name: 'Footer' })
-      const data: PatternData = {
+    it('loadComponents with valid data', () => {
+      const p1 = makeComponent({ name: 'Hero' })
+      const p2 = makeComponent({ name: 'Footer' })
+      const data: ComponentData = {
         items: [p1, p2],
         order: [p2.id, p1.id],
         categories: ['layout'],
       }
 
-      useCatalogStore.getState().loadPatterns(data)
+      useCatalogStore.getState().loadComponents(data)
       const store = useCatalogStore.getState()
-      expect(store.patterns).toHaveLength(2)
-      const all = store.allPatterns()
+      expect(store.components).toHaveLength(2)
+      const all = store.allComponents()
       expect(all[0].name).toBe('Footer')
       expect(all[1].name).toBe('Hero')
     })
 
-    it('loadPatterns with undefined resets state', () => {
+    it('loadComponents with undefined resets state', () => {
       const store = useCatalogStore.getState()
-      store.savePattern('Card', [], makeFrame())
-      expect(store.allPatterns()).toHaveLength(1)
+      store.saveComponent('Card', [], makeFrame())
+      expect(store.allComponents()).toHaveLength(1)
 
-      useCatalogStore.getState().loadPatterns(undefined)
-      expect(useCatalogStore.getState().allPatterns()).toHaveLength(0)
+      useCatalogStore.getState().loadComponents(undefined)
+      expect(useCatalogStore.getState().allComponents()).toHaveLength(0)
     })
 
-    it('loadPatterns handles empty order array', () => {
-      const p = makePattern()
-      useCatalogStore.getState().loadPatterns({
+    it('loadComponents handles empty order array', () => {
+      const p = makeComponent()
+      useCatalogStore.getState().loadComponents({
         items: [p],
         order: [],
         categories: [],
       })
-      // Should still return the pattern (ensureOrder adds missing)
-      expect(useCatalogStore.getState().allPatterns()).toHaveLength(1)
+      // Should still return the component (ensureOrder adds missing)
+      expect(useCatalogStore.getState().allComponents()).toHaveLength(1)
     })
 
-    it('resetPatterns clears state and localStorage', () => {
+    it('resetComponents clears state and localStorage', () => {
       const store = useCatalogStore.getState()
-      store.savePattern('Card', [], makeFrame())
-      storage.set('caja-snippets-state', '{"items":[]}')
+      store.saveComponent('Card', [], makeFrame())
+      storage.set('caja-components-state', '{"items":[]}')
 
-      useCatalogStore.getState().resetPatterns()
-      expect(useCatalogStore.getState().allPatterns()).toHaveLength(0)
-      expect(storage.has('caja-snippets-state')).toBe(false)
+      useCatalogStore.getState().resetComponents()
+      expect(useCatalogStore.getState().allComponents()).toHaveLength(0)
+      expect(storage.has('caja-components-state')).toBe(false)
     })
   })
 
-  describe('getPatternData round-trip', () => {
-    it('save → getPatternData → loadPatterns preserves data', () => {
+  describe('getComponentData round-trip', () => {
+    it('save → getComponentData → loadComponents preserves data', () => {
       const store = useCatalogStore.getState()
-      store.savePattern('Hero', ['layout'], makeFrame())
-      store.savePattern('Card', ['content'], makeFrame())
+      store.saveComponent('Hero', ['layout'], makeFrame())
+      store.saveComponent('Card', ['content'], makeFrame())
       store.addEmptyCategory('forms')
 
-      const data = useCatalogStore.getState().getPatternData()
+      const data = useCatalogStore.getState().getComponentData()
       expect(data.items).toHaveLength(2)
       expect(data.order).toHaveLength(2)
       expect(data.categories).toEqual(['forms'])
 
       // Reset and reload
-      useCatalogStore.getState().loadPatterns(undefined)
-      expect(useCatalogStore.getState().allPatterns()).toHaveLength(0)
+      useCatalogStore.getState().loadComponents(undefined)
+      expect(useCatalogStore.getState().allComponents()).toHaveLength(0)
 
-      useCatalogStore.getState().loadPatterns(data)
+      useCatalogStore.getState().loadComponents(data)
       const reloaded = useCatalogStore.getState()
-      expect(reloaded.allPatterns()).toHaveLength(2)
-      expect(reloaded.allPatterns()[0].name).toBe('Hero')
-      expect(reloaded.allPatterns()[1].name).toBe('Card')
+      expect(reloaded.allComponents()).toHaveLength(2)
+      expect(reloaded.allComponents()[0].name).toBe('Hero')
+      expect(reloaded.allComponents()[1].name).toBe('Card')
     })
   })
 
@@ -268,170 +244,18 @@ describe('catalogStore', () => {
     })
   })
 
-  describe('library operations', () => {
-    it('installLibrary adds library to index and data', () => {
-      const meta = makeLibraryMeta({ name: 'UI Kit' })
-      const patterns = [makePattern({ name: 'Button' })]
-      const data = makePatternData(patterns)
-
-      useCatalogStore.getState().installLibrary(meta, data)
+  describe('importComponents', () => {
+    it('imports novel components and skips duplicates', () => {
       const store = useCatalogStore.getState()
-
-      expect(store.libraryIndex).toHaveLength(1)
-      expect(store.libraryIndex[0].name).toBe('UI Kit')
-      expect(store.libraries.get(meta.id)).toBe(data)
-    })
-
-    it('installLibrary replaces existing library with same id', () => {
-      const meta = makeLibraryMeta({ name: 'UI Kit v1' })
-      const data1 = makePatternData([makePattern({ name: 'Button v1' })])
-      const data2 = makePatternData([makePattern({ name: 'Button v2' })])
-
-      useCatalogStore.getState().installLibrary(meta, data1)
-      useCatalogStore.getState().installLibrary(meta, data2)
-
-      const store = useCatalogStore.getState()
-      expect(store.libraryIndex).toHaveLength(1)
-      expect(store.libraries.get(meta.id)!.items[0].name).toBe('Button v2')
-    })
-
-    it('removeLibrary removes from index and data', () => {
-      const meta = makeLibraryMeta()
-      useCatalogStore.getState().installLibrary(meta, makePatternData([]))
-
-      useCatalogStore.getState().removeLibrary(meta.id)
-      const store = useCatalogStore.getState()
-      expect(store.libraryIndex).toHaveLength(0)
-      expect(store.libraries.has(meta.id)).toBe(false)
-    })
-
-    it('removeLibrary switches to next library if viewing removed library', () => {
-      const meta1 = makeLibraryMeta({ name: 'Lib 1' })
-      const meta2 = makeLibraryMeta({ name: 'Lib 2' })
-      useCatalogStore.getState().installLibrary(meta1, makePatternData([]))
-      useCatalogStore.getState().installLibrary(meta2, makePatternData([]))
-      useCatalogStore.getState().setActiveLibraryId(meta1.id)
-      expect(useCatalogStore.getState().activeLibraryId).toBe(meta1.id)
-
-      useCatalogStore.getState().removeLibrary(meta1.id)
-      expect(useCatalogStore.getState().activeLibraryId).toBe(meta2.id)
-    })
-
-    it('removeLibrary sets null when no libraries remain', () => {
-      const meta = makeLibraryMeta()
-      useCatalogStore.getState().installLibrary(meta, makePatternData([]))
-      useCatalogStore.getState().setActiveLibraryId(meta.id)
-
-      useCatalogStore.getState().removeLibrary(meta.id)
-      expect(useCatalogStore.getState().activeLibraryId).toBeNull()
-    })
-
-    it('setActiveLibraryId changes active library', () => {
-      useCatalogStore.getState().setActiveLibraryId('lib-123')
-      expect(useCatalogStore.getState().activeLibraryId).toBe('lib-123')
-    })
-
-    it('setActiveLibraryId accepts null', () => {
-      useCatalogStore.getState().setActiveLibraryId('lib-123')
-      useCatalogStore.getState().setActiveLibraryId(null)
-      expect(useCatalogStore.getState().activeLibraryId).toBeNull()
-    })
-
-    it('getLibraryPatterns returns patterns for a specific library', () => {
-      const meta = makeLibraryMeta()
-      const patterns = [makePattern({ name: 'A' }), makePattern({ name: 'B' })]
-      useCatalogStore.getState().installLibrary(meta, makePatternData(patterns))
-
-      const result = useCatalogStore.getState().getLibraryPatterns(meta.id)
-      expect(result).toHaveLength(2)
-    })
-
-    it('getLibraryPatterns returns empty for missing library', () => {
-      expect(useCatalogStore.getState().getLibraryPatterns('nope')).toEqual([])
-    })
-
-    it('getLibraryPattern finds a specific pattern in a library', () => {
-      const meta = makeLibraryMeta()
-      const p = makePattern({ name: 'Target' })
-      useCatalogStore.getState().installLibrary(meta, makePatternData([p]))
-
-      const result = useCatalogStore.getState().getLibraryPattern(meta.id, p.id)
-      expect(result?.name).toBe('Target')
-    })
-
-    it('getLibraryPattern returns undefined for missing pattern', () => {
-      const meta = makeLibraryMeta()
-      useCatalogStore.getState().installLibrary(meta, makePatternData([]))
-      expect(useCatalogStore.getState().getLibraryPattern(meta.id, 'nope')).toBeUndefined()
-    })
-  })
-
-  describe('isolation — CRUD does not affect libraries', () => {
-    it('savePattern does not modify library data', () => {
-      const meta = makeLibraryMeta()
-      const libData = makePatternData([makePattern({ name: 'Lib Item' })])
-      useCatalogStore.getState().installLibrary(meta, libData)
-
-      useCatalogStore.getState().savePattern('Internal', [], makeFrame())
-
-      const lib = useCatalogStore.getState().libraries.get(meta.id)
-      expect(lib!.items).toHaveLength(1)
-      expect(lib!.items[0].name).toBe('Lib Item')
-    })
-
-    it('deletePattern does not affect library data', () => {
-      const meta = makeLibraryMeta()
-      const libPattern = makePattern({ name: 'Lib' })
-      useCatalogStore.getState().installLibrary(meta, makePatternData([libPattern]))
-
-      const internal = useCatalogStore.getState().savePattern('Internal', [], makeFrame())
-      useCatalogStore.getState().deletePattern(internal.id)
-
-      expect(useCatalogStore.getState().getLibraryPatterns(meta.id)).toHaveLength(1)
-    })
-
-    it('resetPatterns does not affect library data', () => {
-      const meta = makeLibraryMeta()
-      useCatalogStore.getState().installLibrary(meta, makePatternData([makePattern()]))
-      useCatalogStore.getState().savePattern('Card', [], makeFrame())
-
-      useCatalogStore.getState().resetPatterns()
-      expect(useCatalogStore.getState().allPatterns()).toHaveLength(0)
-      expect(useCatalogStore.getState().getLibraryPatterns(meta.id)).toHaveLength(1)
-    })
-  })
-
-  describe('importPatterns', () => {
-    it('imports novel patterns and skips duplicates', () => {
-      const store = useCatalogStore.getState()
-      const existing = store.savePattern('Existing', [], makeFrame())
+      const existing = store.saveComponent('Existing', [], makeFrame())
       const incoming = [
         existing, // duplicate
-        makePattern({ name: 'New' }),
+        makeComponent({ name: 'New' }),
       ]
 
-      useCatalogStore.getState().importPatterns(incoming)
-      expect(useCatalogStore.getState().allPatterns()).toHaveLength(2)
-      expect(useCatalogStore.getState().allPatterns().map((p) => p.name)).toContain('New')
-    })
-  })
-
-  describe('setLibraryIndex / setLibraryData', () => {
-    it('setLibraryIndex replaces the index', () => {
-      const index = [makeLibraryMeta({ name: 'A' }), makeLibraryMeta({ name: 'B' })]
-      useCatalogStore.getState().setLibraryIndex(index)
-      expect(useCatalogStore.getState().libraryIndex).toHaveLength(2)
-    })
-
-    it('setLibraryData adds or replaces library data', () => {
-      const id = 'lib-1'
-      const data = makePatternData([makePattern({ name: 'X' })])
-      useCatalogStore.getState().setLibraryData(id, data)
-      expect(useCatalogStore.getState().libraries.get(id)!.items[0].name).toBe('X')
-
-      const data2 = makePatternData([makePattern({ name: 'Y' })])
-      useCatalogStore.getState().setLibraryData(id, data2)
-      expect(useCatalogStore.getState().libraries.get(id)!.items[0].name).toBe('Y')
+      useCatalogStore.getState().importComponents(incoming)
+      expect(useCatalogStore.getState().allComponents()).toHaveLength(2)
+      expect(useCatalogStore.getState().allComponents().map((p) => p.name)).toContain('New')
     })
   })
 })
