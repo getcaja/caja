@@ -18,6 +18,7 @@ struct BridgeState {
     app: AppHandle,
     pending: Arc<Mutex<HashMap<String, oneshot::Sender<String>>>>,
     next_id: Arc<Mutex<u64>>,
+    auth_token: String,
 }
 
 #[derive(Deserialize)]
@@ -54,12 +55,32 @@ struct ResourceReadEvent {
     uri: String,
 }
 
+// ── Auth helper ──
+
+fn check_auth(headers: &axum::http::HeaderMap, token: &str) -> Result<(), Json<ToolCallResponse>> {
+    let auth = headers
+        .get(axum::http::header::AUTHORIZATION)
+        .and_then(|v| v.to_str().ok());
+    match auth {
+        Some(v) if v == format!("Bearer {}", token) => Ok(()),
+        _ => Err(Json(ToolCallResponse {
+            success: false,
+            data: None,
+            error: Some("Unauthorized".into()),
+        })),
+    }
+}
+
 // ── HTTP Handlers ──
 
 async fn handle_tool_call(
     State(state): State<BridgeState>,
+    headers: axum::http::HeaderMap,
     Json(req): Json<ToolCallRequest>,
 ) -> Json<ToolCallResponse> {
+    if let Err(resp) = check_auth(&headers, &state.auth_token) {
+        return resp;
+    }
     let id = {
         let mut counter = state.next_id.lock().await;
         *counter += 1;
@@ -118,8 +139,16 @@ async fn handle_tool_call(
 
 async fn handle_resource(
     State(state): State<BridgeState>,
+    headers: axum::http::HeaderMap,
     axum::extract::Query(query): axum::extract::Query<ResourceQuery>,
 ) -> Json<serde_json::Value> {
+    let auth = headers
+        .get(axum::http::header::AUTHORIZATION)
+        .and_then(|v| v.to_str().ok());
+    match auth {
+        Some(v) if v == format!("Bearer {}", state.auth_token) => {}
+        _ => return Json(serde_json::json!({"error": "Unauthorized"})),
+    }
     let id = {
         let mut counter = state.next_id.lock().await;
         *counter += 1;
@@ -515,10 +544,20 @@ pub fn run() {
             }
 
             // ── MCP HTTP Bridge ──
+            let auth_token = uuid::Uuid::new_v4().to_string();
+
+            // Write token to ~/.caja/mcp-token for server.mjs to read
+            if let Some(home) = std::env::var_os("HOME") {
+                let caja_dir = std::path::Path::new(&home).join(".caja");
+                let _ = std::fs::create_dir_all(&caja_dir);
+                let _ = std::fs::write(caja_dir.join("mcp-token"), &auth_token);
+            }
+
             let bridge_state = BridgeState {
                 app: app.handle().clone(),
                 pending: Arc::new(Mutex::new(HashMap::new())),
                 next_id: Arc::new(Mutex::new(0)),
+                auth_token,
             };
 
             // Store bridge state in Tauri's managed state
