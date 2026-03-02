@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="caja-icon.png" alt="Caja" width="80" />
+  <img src="caja-symbol.png" alt="Caja" width="80" />
 </p>
 
 <h1 align="center">Caja</h1>
