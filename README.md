@@ -24,7 +24,7 @@
 
 A visual editor where what you design is what you ship. Build layouts on canvas, let AI build for you, or both — no translation layer, the tech you already use.
 
-- **WYDISWYS** — What You Design Is What You Ship. No translation layer, no compiled output — pure HTML + CSS
+- **WYDIWYG** — What You Design Is What You Get. No translation layer, no compiled output — pure HTML + CSS
 - **AI-native** — Built for AI agents from day one. Claude, Cursor, or any MCP client builds layouts directly on canvas
 - **Bidirectional Tailwind** — Design visually, get real tokens. `gap-4` not `gap-[16px]`. Paste classes back, keep designing
 - **Components** — Save any frame as a reusable component with named slots. Export `.cjl` libraries to share across projects
