@@ -36,19 +36,19 @@ export function Section({
   }
 
   return (
-    <div className="px-4 py-3 border-b border-border">
+    <div className="px-4 py-3.5 border-b border-border">
       <div
-        className={`relative flex items-center group/section${collapsed ? '' : ' mb-2'} ${collapsible ? 'cursor-pointer select-none' : ''}`}
-        onClick={collapsible ? toggle : undefined}
+        className={`relative flex items-center group/section${collapsed ? '' : ' mb-2'}`}
       >
         {collapsible && (
           <ChevronRight
             size={12}
-            className={`absolute -left-3 top-1/2 -translate-y-1/2 text-text-muted opacity-0 pointer-events-none group-hover/section:opacity-100 group-hover/section:pointer-events-auto ${collapsed ? '' : 'rotate-90'}`}
+            className={`absolute -left-3 top-1/2 -translate-y-1/2 text-text-muted cursor-pointer opacity-0 group-hover/section:opacity-100 ${collapsed ? '' : 'rotate-90'}`}
+            onClick={toggle}
           />
         )}
         {icon && <span className="text-text-muted">{icon}</span>}
-        <span className="c-section-title">{title}</span>
+        <span className={`c-section-title${collapsible ? ' cursor-pointer select-none' : ''}`} onClick={collapsible ? toggle : undefined}>{title}</span>
       </div>
       {!collapsed && children}
     </div>

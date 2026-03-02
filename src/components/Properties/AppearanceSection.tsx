@@ -1,3 +1,4 @@
+import { Blend } from 'lucide-react'
 import type { Frame } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { Section } from '../ui/Section'
@@ -25,7 +26,8 @@ export function AppearanceSection({ frame }: { frame: Frame }) {
             unit="%"
             classPrefix="opacity"
             defaultValue={100}
-            label="Opacity"
+            inlineLabel={<Blend size={12} />}
+            tooltip="Opacity"
           />
           <div className="w-5 shrink-0" />
         </div>

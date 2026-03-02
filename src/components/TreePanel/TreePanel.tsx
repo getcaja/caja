@@ -22,14 +22,15 @@ function TreeSection({ label, collapsed, onToggle, trailing, children }: {
   return (
     <div className="py-3 border-b border-border">
       <div className={`px-4${collapsed ? '' : ' mb-2'}`}>
-        <div className="relative flex items-center group/section cursor-pointer select-none" onClick={onToggle}>
+        <div className="relative flex items-center group/section">
           <ChevronRight
             size={12}
-            className={`absolute -left-3 top-1/2 -translate-y-1/2 text-text-muted opacity-0 pointer-events-none group-hover/section:opacity-100 group-hover/section:pointer-events-auto ${collapsed ? '' : 'rotate-90'}`}
+            className={`absolute -left-3 top-1/2 -translate-y-1/2 text-text-muted cursor-pointer opacity-0 group-hover/section:opacity-100 ${collapsed ? '' : 'rotate-90'}`}
+            onClick={onToggle}
           />
-          <span className="c-section-title">{label}</span>
+          <span className="c-section-title cursor-pointer select-none" onClick={onToggle}>{label}</span>
           <span className="flex-1" />
-          <span onClick={(e) => e.stopPropagation()}>{trailing}</span>
+          {trailing}
         </div>
       </div>
       {!collapsed && children}
@@ -47,7 +48,8 @@ export function TreePanel() {
   const collapseAll = useFrameStore((s) => s.collapseAll)
   const expandAll = useFrameStore((s) => s.expandAll)
   const collapsedIds = useFrameStore((s) => s.collapsedIds)
-  const tab = useFrameStore((s) => s.treePanelTab)
+  const rawTab = useFrameStore((s) => s.treePanelTab)
+  const tab = rawTab === 'layers' || rawTab === 'components' ? rawTab : 'layers'
   const setTab = useFrameStore((s) => s.setTreePanelTab)
   const editingComponentId = useFrameStore((s) => s.editingComponentId)
   const enterComponentEditMode = useFrameStore((s) => s.enterComponentEditMode)
@@ -347,7 +349,6 @@ export function TreePanel() {
         <TreeDndProvider>
           <div
             className="flex-1 overflow-y-auto flex flex-col"
-            onClick={(e) => { if (e.target === e.currentTarget) useFrameStore.getState().select(useFrameStore.getState().root.id) }}
           >
             {/* Pages section */}
             <TreeSection
@@ -388,7 +389,6 @@ export function TreePanel() {
             >
               <div
                 className="flex-1 overflow-y-auto pb-0.5"
-                onClick={(e) => { if (e.target === e.currentTarget) useFrameStore.getState().select(useFrameStore.getState().root.id) }}
               >
                 {activePage && (
                   <TreeNode frame={activePage.root} depth={0} isRoot />

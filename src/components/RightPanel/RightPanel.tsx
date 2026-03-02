@@ -14,7 +14,7 @@ function DesignBar() {
   const btn = 'w-5 h-5 flex items-center justify-center shrink-0 rounded text-text-muted hover:text-text-secondary hover:bg-surface-2 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-text-muted'
 
   return (
-    <div className="flex items-center gap-1 px-4 py-1.5 border-b border-border shrink-0">
+    <div className={`flex items-center gap-1 px-4 py-1.5 shrink-0${selectedId ? '' : ' border-b border-border'}`}>
       <button
         onClick={() => {
           const store = useFrameStore.getState()
@@ -64,7 +64,6 @@ export function RightPanel() {
       <DesignBar />
       <div
         className="flex-1 overflow-y-auto"
-        onClick={(e) => { if (e.target === e.currentTarget) useFrameStore.getState().select(useFrameStore.getState().root.id) }}
       >
         <ErrorBoundary fallback="inline" resetKey={selectedId}>
           <Properties />

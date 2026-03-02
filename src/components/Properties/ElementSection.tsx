@@ -6,9 +6,6 @@ import { TokenInput } from '../ui/TokenInput'
 import { ToggleGroup } from '../ui/ToggleGroup'
 import { Select } from '../ui/Select'
 import { TYPE_BADGE_STYLES, TYPE_BADGE_LABELS, getBadgeKey, BOX_TAG_OPTIONS, TEXT_TAG_OPTIONS, INPUT_TYPE_OPTIONS } from './constants'
-import { isExternalUrl, isLocalAssetPath, downloadAsset } from '../../lib/assetOps'
-
-const TEXT_LIKE = new Set(['text', 'email', 'password', 'number', 'search', 'tel', 'url'])
 
 function getTagOptions(type: Frame['type'], tag?: string) {
   if (type === 'box') return BOX_TAG_OPTIONS
@@ -21,6 +18,9 @@ function getTagDefault(type: Frame['type']) {
   if (type === 'text') return 'p'
   return ''
 }
+import { isExternalUrl, isLocalAssetPath, downloadAsset } from '../../lib/assetOps'
+
+const TEXT_LIKE = new Set(['text', 'email', 'password', 'number', 'search', 'tel', 'url'])
 
 function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
   return (

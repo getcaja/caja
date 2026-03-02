@@ -75,7 +75,7 @@ function DropdownButton({ icon, title, isActive, menu, children }: {
           <div
             className="fixed c-menu-popup min-w-[120px] z-50"
             style={{ left: pos.x, bottom: window.innerHeight - pos.y, transform: 'translateX(-50%)' }}
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); setOpen(false) }}
           >
             {menu}
           </div>
@@ -119,7 +119,7 @@ export function Toolbar() {
       }
     }
     addChild(parentId, type)
-    useFrameStore.getState().setTreePanelTab('elements')
+    useFrameStore.getState().setTreePanelTab('layers')
   }
 
   const btnIcon = 'w-7 h-7 flex items-center justify-center rounded-md'

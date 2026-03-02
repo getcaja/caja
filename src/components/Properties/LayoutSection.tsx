@@ -5,10 +5,10 @@ import { useFrameStore } from '../../store/frameStore'
 import { Section } from '../ui/Section'
 import { TokenInput } from '../ui/TokenInput'
 import { SizeInput } from '../ui/SizeInput'
-import { SpacingControl } from '../ui/SpacingControl'
 import { Popover } from '../ui/Popover'
 import { ToggleGroup } from '../ui/ToggleGroup'
-import { SPACING_SCALE, MARGIN_SCALE, SIZE_CONSTRAINT_SCALE, GRID_COLS_SCALE, GRID_ROWS_SCALE, GROW_SCALE, SHRINK_SCALE, COL_SPAN_SCALE, ROW_SPAN_SCALE } from '../../data/scales'
+import { SpacingControl } from '../ui/SpacingControl'
+import { SPACING_SCALE, SIZE_CONSTRAINT_SCALE, GRID_COLS_SCALE, GRID_ROWS_SCALE, GROW_SCALE, SHRINK_SCALE, COL_SPAN_SCALE, ROW_SPAN_SCALE, MARGIN_SCALE } from '../../data/scales'
 import { ALIGN_SELF_OPTIONS } from './constants'
 
 export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolean }) {
@@ -498,15 +498,13 @@ export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolea
           label="Padding"
           classPrefix="p"
         />
-        {advancedMode && (
-          <SpacingControl
-            value={frame.margin}
-            onChange={(v) => updateSpacing(frame.id, 'margin', v)}
-            label="Margin"
-            classPrefix="m"
-            scale={MARGIN_SCALE}
-          />
-        )}
+        <SpacingControl
+          value={frame.margin}
+          onChange={(v) => updateSpacing(frame.id, 'margin', v)}
+          label="Margin"
+          classPrefix="m"
+          scale={MARGIN_SCALE}
+        />
 
         {/* Clip */}
         <div className="flex items-center gap-2">

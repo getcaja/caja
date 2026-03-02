@@ -573,8 +573,8 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   root: initialRoot,
   pages: initialPages,
   activePageId: initialPageId,
-  selectedId: null,
-  selectedIds: new Set<string>(),
+  selectedId: initialRoot.id,
+  selectedIds: new Set<string>([initialRoot.id]),
   pageSelected: false,
   hoveredId: null,
   collapsedIds: new Set(initialViewPrefs.collapsedIds),
@@ -1170,7 +1170,7 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
     saveViewPrefs({ collapsedIds: [] })
     set({
       pages, activePageId: pageId, root, filePath: null, dirty: false,
-      selectedId: null, selectedIds: new Set(), past: {}, future: {},
+      selectedId: root.id, selectedIds: new Set([root.id]), past: {}, future: {},
       collapsedIds: new Set(), hoveredId: null,
       editingComponentId: null, _beforeEditState: null,
     })
@@ -1226,7 +1226,7 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
     nextId = maxIdInTree(root) + 1
     nextPageId = 2
     const pages: Page[] = [{ id: pageId, name: 'Page 1', route: '/page-1', root }]
-    set({ pages, activePageId: pageId, root, filePath, dirty: false, selectedId: null, selectedIds: new Set(), past: {}, future: {} })
+    set({ pages, activePageId: pageId, root, filePath, dirty: false, selectedId: root.id, selectedIds: new Set([root.id]), past: {}, future: {} })
   },
 
   loadFromFileMulti: (pages, activePageId, filePath) => {
@@ -1240,7 +1240,7 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
     // Never activate the Components page on load — always start on a regular page
     const regularPages = pages.filter((p) => !p.isComponentPage)
     const activePage = regularPages.find((p) => p.id === activePageId) || regularPages[0] || pages[0]
-    set({ pages, activePageId: activePage.id, root: activePage.root, filePath, dirty: false, selectedId: null, selectedIds: new Set(), past: {}, future: {} })
+    set({ pages, activePageId: activePage.id, root: activePage.root, filePath, dirty: false, selectedId: activePage.root.id, selectedIds: new Set([activePage.root.id]), past: {}, future: {} })
     syncCatalogFromComponentsPage(pages)
   },
 
@@ -1286,30 +1286,22 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
           _layersPageId: null,
           activePageId: restorePage.id,
           root: restorePage.root,
-          selectedId: null,
-          selectedIds: new Set(),
-          hoveredId: null,
         })
         return
       }
     }
 
     if (tab === 'components' && prevTab !== 'components') {
-      // Switching TO Components tab (browse mode, no edit mode)
-      // Save current page so we can restore when switching away
+      // Switching TO Components tab — keep canvas selection intact
       set({
         treePanelTab: tab,
         _layersPageId: state.activePageId,
-        // Don't switch to components page — browse mode uses ComponentsPanel from catalog
-        selectedId: null,
-        selectedIds: new Set(),
-        hoveredId: null,
       })
       return
     }
 
     if (prevTab === 'components' && tab !== 'components') {
-      // Switching FROM Components (browse mode): restore previous page
+      // Switching FROM Components — restore page, keep selection intact
       const restoreId = state._layersPageId
       const restorePage = restoreId ? state.pages.find((p) => p.id === restoreId) : null
       if (restorePage) {
@@ -1318,9 +1310,6 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
           _layersPageId: null,
           activePageId: restorePage.id,
           root: restorePage.root,
-          selectedId: null,
-          selectedIds: new Set(),
-          hoveredId: null,
         })
         return
       }
