@@ -37,11 +37,12 @@ function findParentBox(root: Frame, id: string): Frame | null {
 }
 
 /* ---------- Dropdown wrapper ---------- */
-function DropdownButton({ icon, title, isActive, menu, children }: {
+function DropdownButton({ icon, title, isActive, menu, menuClassName, children }: {
   icon?: React.ReactNode
   title: string
   isActive?: boolean
   menu: React.ReactNode
+  menuClassName?: string
   children?: React.ReactNode
 }) {
   const [open, setOpen] = useState(false)
@@ -73,7 +74,7 @@ function DropdownButton({ icon, title, isActive, menu, children }: {
           {/* Backdrop catches clicks outside menu (including on iframe) */}
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div
-            className="fixed c-menu-popup min-w-[120px] z-50"
+            className={`fixed c-menu-popup min-w-[120px] z-50 ${menuClassName ?? ''}`}
             style={{ left: pos.x, bottom: window.innerHeight - pos.y, transform: 'translateX(-50%)' }}
             onClick={(e) => { e.stopPropagation(); setOpen(false) }}
           >
@@ -220,6 +221,7 @@ export function Toolbar() {
               )}
             </span>}
             title={currentBp.label}
+            menuClassName="min-w-[180px]"
             menu={BREAKPOINTS.map((bpItem) => {
               const Icon = bpItem.icon
               const active = bpItem.width === canvasWidth
@@ -235,7 +237,9 @@ export function Toolbar() {
                     {hasOverrides && <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-accent" />}
                   </span>
                   {bpItem.label}
-                  {bpItem.width && <span className="ml-auto text-text-muted text-[10px]">{bpItem.width}px</span>}
+                  {bpItem.bp !== 'base' && <span className="px-1 py-px text-[9px] leading-none font-medium rounded bg-surface-3/50 text-text-muted">{bpItem.bp}</span>}
+                  <span className="flex-1" />
+                  {bpItem.width && <span className="text-text-muted text-[10px]">{bpItem.width}px</span>}
                 </button>
               )
             })}
