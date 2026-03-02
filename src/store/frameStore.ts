@@ -424,6 +424,19 @@ function updateActiveRoot(state: { pages: Page[]; activePageId: string }, newRoo
 /** Merge responsive overrides onto a base frame (desktop-first cascade).
  *  At 'md': apply md overrides.
  *  At 'sm': apply md overrides first, then sm on top. */
+function ensureSpacingSides(s: unknown): Spacing | undefined {
+  if (!s || typeof s !== 'object') return undefined
+  const r = s as Record<string, unknown>
+  const zero: DesignValue<number> = { mode: 'custom', value: 0 }
+  const valid = (v: unknown): v is DesignValue<number> => !!v && typeof v === 'object' && 'mode' in (v as Record<string, unknown>)
+  return {
+    top: valid(r.top) ? r.top : zero,
+    right: valid(r.right) ? r.right : zero,
+    bottom: valid(r.bottom) ? r.bottom : zero,
+    left: valid(r.left) ? r.left : zero,
+  }
+}
+
 function mergeResponsiveOverrides(frame: Frame, bp: 'md' | 'sm'): Frame {
   const resp = frame.responsive
   if (!resp) return frame
@@ -441,6 +454,9 @@ function mergeResponsiveOverrides(frame: Frame, bp: 'md' | 'sm'): Frame {
       result = { ...result, ...sm } as Frame
     }
   }
+  // Ensure spacing fields are complete after merge (responsive overrides can be partial)
+  if (result.padding) result = { ...result, padding: ensureSpacingSides(result.padding)! }
+  if (result.margin) result = { ...result, margin: ensureSpacingSides(result.margin)! }
   return result
 }
 
@@ -1126,7 +1142,8 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
       // Write spacing to responsive overrides
       const newRoot = updateInTree(state.root, id, (f) => {
         const existingOverride = (f.responsive?.[bp]?.[field as keyof ResponsiveOverrides] ?? existingSpacing(f)) as Spacing
-        const newSpacing = { ...existingOverride, ...values }
+        const spacingMerged = { ...existingOverride, ...values }
+        const newSpacing = { top: spacingMerged.top ?? ZERO, right: spacingMerged.right ?? ZERO, bottom: spacingMerged.bottom ?? ZERO, left: spacingMerged.left ?? ZERO }
         const existing = f.responsive?.[bp] ?? {}
         const merged = { ...existing, [field]: newSpacing } as ResponsiveOverrides
         // Remove if matches base
