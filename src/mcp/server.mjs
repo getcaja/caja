@@ -16,23 +16,56 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { homedir } from 'node:os'
 
 const CAJA_API = process.env.CAJA_API_URL || 'http://127.0.0.1:3334'
+
+// Read auth token from ~/.caja/mcp-token (written by Caja on startup)
+function loadAuthToken() {
+  try {
+    return readFileSync(join(homedir(), '.caja', 'mcp-token'), 'utf-8').trim()
+  } catch {
+    return null
+  }
+}
+
+let authToken = loadAuthToken()
+
+function authHeaders() {
+  const headers = { 'Content-Type': 'application/json' }
+  if (authToken) headers['Authorization'] = `Bearer ${authToken}`
+  return headers
+}
 
 // ── HTTP helpers ──
 
 async function callTool(name, params) {
   const res = await fetch(`${CAJA_API}/api/tool`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders(),
     body: JSON.stringify({ name, params }),
   })
+  if (res.status === 401) {
+    // Token may have rotated (Caja restarted), try re-reading
+    authToken = loadAuthToken()
+    const retry = await fetch(`${CAJA_API}/api/tool`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ name, params }),
+    })
+    if (!retry.ok) throw new Error(`Caja API error: ${retry.status}`)
+    return retry.json()
+  }
   if (!res.ok) throw new Error(`Caja API error: ${res.status}`)
   return res.json()
 }
 
 async function readResource(uri) {
-  const res = await fetch(`${CAJA_API}/api/resource?uri=${encodeURIComponent(uri)}`)
+  const res = await fetch(`${CAJA_API}/api/resource?uri=${encodeURIComponent(uri)}`, {
+    headers: authHeaders(),
+  })
   if (!res.ok) throw new Error(`Caja API error: ${res.status}`)
   return res.json()
 }
