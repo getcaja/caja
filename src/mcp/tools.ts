@@ -325,8 +325,8 @@ const handlers: Record<string, ToolHandler> = {
     store.select(null)
     store.hover(null)
 
-    // Wait for React re-render + layout reflow
-    await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 100)))
+    // Wait for React re-render + layout reflow (double rAF ensures paint completion)
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
 
     const fullWidth = el.scrollWidth
     const fullHeight = el.scrollHeight
