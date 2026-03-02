@@ -64,4 +64,4 @@ All 33+ MCP tools are available — create frames, style with Tailwind, manage p
 
 ## License
 
-MIT
+[AGPL-3.0](LICENSE)
