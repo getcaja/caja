@@ -194,7 +194,7 @@ export function Toolbar() {
         </div>
 
         {/* Section 3: Viewport (always visible) */}
-        <Divider />
+        {!previewMode && <Divider />}
         <div className="flex items-center gap-0.5 py-1 px-1">
           <DropdownButton
             icon={<CurrentIcon size={14} />}
