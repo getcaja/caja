@@ -26,6 +26,10 @@ const ZERO: DesignValue<number> = { mode: 'custom', value: 0 }
 
 const MODE_CYCLE: SpacingMode[] = ['all', 'axis', 'sides']
 
+function validDV(v: unknown): v is DesignValue<number> {
+  return !!v && typeof v === 'object' && 'mode' in (v as Record<string, unknown>)
+}
+
 export function SpacingControl({
   value: rawValue,
   onChange,
@@ -42,10 +46,10 @@ export function SpacingControl({
   scale?: ScaleOption[]
 }) {
   const value: Spacing = {
-    top: rawValue?.top || ZERO,
-    right: rawValue?.right || ZERO,
-    bottom: rawValue?.bottom || ZERO,
-    left: rawValue?.left || ZERO,
+    top: validDV(rawValue?.top) ? rawValue.top : ZERO,
+    right: validDV(rawValue?.right) ? rawValue.right : ZERO,
+    bottom: validDV(rawValue?.bottom) ? rawValue.bottom : ZERO,
+    left: validDV(rawValue?.left) ? rawValue.left : ZERO,
   }
   const [mode, setMode] = useState<SpacingMode>(() => detectMode(value))
 
