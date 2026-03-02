@@ -195,6 +195,7 @@ function App() {
         switch (e.payload) {
           case 'new':
             useFrameStore.getState().newFile()
+            import('./lib/assetOps').then(({ revokeAllBlobUrls }) => revokeAllBlobUrls())
             break
           case 'open':
             handleOpen()
