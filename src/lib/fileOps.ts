@@ -34,6 +34,25 @@ export async function saveFileAs(pages: Page[], activePageId: string, components
   return path
 }
 
+/** Validate that the parsed JSON has a recognizable .caja structure */
+function validateCajaData(data: unknown): data is Record<string, unknown> {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return false
+  const d = data as Record<string, unknown>
+  // Must have either pages array (new format) or root object (legacy)
+  const hasPages = Array.isArray(d.pages) && d.pages.length > 0
+  const hasRoot = d.root != null && typeof d.root === 'object'
+  if (!hasPages && !hasRoot) return false
+  // If pages exist, each must have id and root
+  if (hasPages) {
+    for (const page of d.pages as unknown[]) {
+      if (!page || typeof page !== 'object') return false
+      const p = page as Record<string, unknown>
+      if (typeof p.id !== 'string' || !p.root || typeof p.root !== 'object') return false
+    }
+  }
+  return true
+}
+
 export async function openFile(): Promise<{ path: string; data: Record<string, unknown> } | null> {
   const path = await open({
     filters: [FILE_FILTER],
@@ -42,6 +61,14 @@ export async function openFile(): Promise<{ path: string; data: Record<string, u
   })
   if (!path) return null
   const content = await readTextFile(path)
-  const data = JSON.parse(content)
+  let data: unknown
+  try {
+    data = JSON.parse(content)
+  } catch {
+    throw new Error('File is not valid JSON')
+  }
+  if (!validateCajaData(data)) {
+    throw new Error('File is not a valid .caja file (missing pages or root)')
+  }
   return { path, data }
 }
