@@ -112,6 +112,25 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
   // Drop position (only when hovered and not self-dragging)
   const dropPos = isOver && overPosition && activeId ? overPosition : null
 
+  // Responsive override badges — show which breakpoints have overrides
+  const responsiveBadges = useMemo(() => {
+    const resp = frame.responsive
+    if (!resp) return null
+    const bps: string[] = []
+    if (resp.md && Object.keys(resp.md).length > 0) bps.push('md')
+    if (resp.sm && Object.keys(resp.sm).length > 0) bps.push('sm')
+    if (bps.length === 0) return null
+    return (
+      <span className="flex items-center gap-0.5 shrink-0">
+        {bps.map((bp) => (
+          <span key={bp} className="px-1 py-px text-[9px] leading-none font-medium rounded bg-surface-3/50 text-text-muted select-none">
+            {bp}
+          </span>
+        ))}
+      </span>
+    )
+  }, [frame.responsive])
+
   // Visibility button as trailing
   const trailing = !isRoot ? (
     <button
@@ -158,6 +177,7 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
         onMouseLeave={() => hover(null)}
         chevron={chevron}
         onChevronClick={() => toggleCollapse(frame.id)}
+        badges={responsiveBadges}
         trailing={trailing}
         isDragging={isDragging}
         dropPosition={dropPos}

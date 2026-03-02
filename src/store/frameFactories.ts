@@ -102,10 +102,23 @@ export function cloneSizeValue(sv: SizeValue | undefined): SizeValue | undefined
   return { mode: sv.mode, value: cloneDV(sv.value)! }
 }
 
+// Deep clone responsive overrides
+function cloneResponsive(responsive: Frame['responsive']): Frame['responsive'] {
+  if (!responsive) return undefined
+  const result: Frame['responsive'] = {}
+  for (const key of ['md', 'sm'] as const) {
+    const ov = responsive[key]
+    if (!ov) continue
+    result[key] = JSON.parse(JSON.stringify(ov))
+  }
+  return Object.keys(result).length > 0 ? result : undefined
+}
+
 // Deep clone helper
 export function cloneTree(frame: Frame): Frame {
   const base = {
     ...frame,
+    responsive: cloneResponsive(frame.responsive),
     padding: cloneSpacing(frame.padding),
     margin: cloneSpacing(frame.margin),
     inset: cloneSpacing(frame.inset),

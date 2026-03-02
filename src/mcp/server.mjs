@@ -393,6 +393,56 @@ server.tool(
   }
 )
 
+// ── Responsive tools ──
+
+server.tool(
+  'set_breakpoint',
+  'Switch the active responsive breakpoint. Desktop-first: "base" = desktop (default), "md" = tablet (≤768px), "sm" = mobile (≤640px). After switching, ALL update_frame/update_spacing/update_size calls write to that breakpoint\'s overrides instead of the base frame. Only changed properties are stored (sparse overrides). The canvas width is also adjusted to match. Call set_breakpoint({ breakpoint: "base" }) to return to desktop editing when done.',
+  {
+    breakpoint: z.enum(['base', 'md', 'sm']).describe('The breakpoint to activate. "base" = desktop, "md" = tablet ≤768px, "sm" = mobile ≤640px.'),
+  },
+  async ({ breakpoint }) => {
+    const result = await callTool('set_breakpoint', { breakpoint })
+    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
+  }
+)
+
+server.tool(
+  'get_breakpoint',
+  'Get the currently active responsive breakpoint and canvas width.',
+  {},
+  async () => {
+    const result = await callTool('get_breakpoint', {})
+    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
+  }
+)
+
+server.tool(
+  'get_responsive_overrides',
+  'Get the responsive overrides for a frame. Returns the sparse override objects for each breakpoint (md, sm), or null if no overrides exist. Use this to inspect what properties differ per breakpoint before making changes.',
+  {
+    id: z.string().describe('ID of the frame to inspect'),
+  },
+  async ({ id }) => {
+    const result = await callTool('get_responsive_overrides', { id })
+    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
+  }
+)
+
+server.tool(
+  'clear_responsive_overrides',
+  'Clear responsive overrides for a frame at a breakpoint. If keys are provided, only those specific properties are removed. If no keys, all overrides at the breakpoint are cleared.',
+  {
+    id: z.string().describe('ID of the frame'),
+    breakpoint: z.enum(['md', 'sm']).describe('The breakpoint to clear overrides for'),
+    keys: z.array(z.string()).optional().describe('Optional list of specific property keys to remove. If omitted, all overrides at the breakpoint are cleared.'),
+  },
+  async ({ id, breakpoint, keys }) => {
+    const result = await callTool('clear_responsive_overrides', { id, breakpoint, keys })
+    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
+  }
+)
+
 // ── Resources ──
 
 server.resource(

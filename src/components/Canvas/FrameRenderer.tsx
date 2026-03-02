@@ -43,11 +43,13 @@ export function resolveTag(frame: Frame): keyof React.JSX.IntrinsicElements {
 }
 
 export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
-  if (rawFrame.hidden) return null
+  const activeBreakpoint = useFrameStore((s) => s.activeBreakpoint)
+  const getEffectiveFrame = useFrameStore((s) => s.getEffectiveFrame)
 
-  // Instances are rendered directly from their stored tree (cloned from master at insert time).
-  // Override resolution via resolveInstance will be used later for master→instance propagation.
-  const frame = rawFrame
+  // Merge responsive overrides for the active breakpoint so the canvas
+  // renders the correct visual at each breakpoint without CSS container queries.
+  // Subscribing to activeBreakpoint ensures re-render when breakpoint changes.
+  const frame = activeBreakpoint === 'base' ? rawFrame : getEffectiveFrame(rawFrame)
 
   // Re-render when blob cache is updated (e.g. after restoreAllAssets on app load)
   useSyncExternalStore(subscribeAssets, getAssetSnapshot)
@@ -90,7 +92,9 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
   const isEmpty = isBox && frame.children.length === 0 && !hasVisualPresence
   const isDragged = canvasDragId === frame.id
 
-  // Tailwind classes — container query prefixes for canvas rendering
+  // Tailwind classes — effective frame already has overrides merged,
+  // so base classes reflect the active breakpoint. toContainerQueries
+  // only needed for any user-added responsive classes in tailwindClasses.
   const tailwind = toContainerQueries(frameToClasses(frame))
 
   // In preview mode, infer cursor from semantic tag
@@ -263,6 +267,10 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
     doc.addEventListener('keydown', onKeyDown)
     doc.addEventListener('keyup', onKeyUp)
   }, [frame.id])
+
+  // Hidden frames — checked after all hooks to comply with React rules.
+  // May change per breakpoint via getEffectiveFrame.
+  if (frame.hidden) return null
 
   // Editor event handlers
   const editorHandlers = !previewMode ? {

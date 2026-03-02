@@ -1,18 +1,18 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import {
   Monitor, Tablet, Smartphone,
   Plus, MousePointer2, Type, Eye,
   Frame as FrameIcon, Link, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ChevronDown,
 } from 'lucide-react'
 import { useFrameStore, isRootId } from '../../store/frameStore'
-import type { Frame } from '../../types/frame'
+import type { Frame, Breakpoint } from '../../types/frame'
 
 type ElementType = 'box' | 'text' | 'image' | 'button' | 'input' | 'textarea' | 'select' | 'link'
 
-const BREAKPOINTS = [
-  { label: 'Full', width: null as number | null, icon: Monitor },
-  { label: 'Tablet', width: 768, icon: Tablet },
-  { label: 'Mobile', width: 375, icon: Smartphone },
+const BREAKPOINTS: { label: string; width: number | null; icon: typeof Monitor; bp: Breakpoint }[] = [
+  { label: 'Full', width: null, icon: Monitor, bp: 'base' },
+  { label: 'Tablet', width: 767, icon: Tablet, bp: 'md' },
+  { label: 'Mobile', width: 375, icon: Smartphone, bp: 'sm' },
 ]
 
 const PRIMITIVES: { type: ElementType; icon: React.ReactNode; label: string }[] = [
@@ -98,9 +98,25 @@ export function Toolbar() {
   const setCanvasTool = useFrameStore((s) => s.setCanvasTool)
   const canvasWidth = useFrameStore((s) => s.canvasWidth)
   const setCanvasWidth = useFrameStore((s) => s.setCanvasWidth)
+  const activeBreakpoint = useFrameStore((s) => s.activeBreakpoint)
+  const setActiveBreakpoint = useFrameStore((s) => s.setActiveBreakpoint)
   const addChild = useFrameStore((s) => s.addChild)
   const getSelected = useFrameStore((s) => s.getSelected)
   const selectedId = useFrameStore((s) => s.selectedId)
+
+  const root = useFrameStore((s) => s.root)
+
+  // Count frames with overrides per breakpoint
+  const overrideCounts = useMemo(() => {
+    const counts: Record<string, number> = { md: 0, sm: 0 }
+    const walk = (f: Frame) => {
+      if (f.responsive?.md && Object.keys(f.responsive.md).length > 0) counts.md++
+      if (f.responsive?.sm && Object.keys(f.responsive.sm).length > 0) counts.sm++
+      if (f.type === 'box') f.children.forEach(walk)
+    }
+    walk(root)
+    return counts
+  }, [root])
 
   // Current responsive icon
   const currentBp = BREAKPOINTS.find((bp) => bp.width === canvasWidth) ?? BREAKPOINTS[0]
@@ -197,20 +213,29 @@ export function Toolbar() {
         {!previewMode && <Divider />}
         <div className="flex items-center gap-0.5 py-1 px-1">
           <DropdownButton
-            icon={<CurrentIcon size={14} />}
+            icon={<span className="relative">
+              <CurrentIcon size={14} />
+              {activeBreakpoint !== 'base' && (
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-accent" />
+              )}
+            </span>}
             title={currentBp.label}
-            menu={BREAKPOINTS.map((bp) => {
-              const Icon = bp.icon
-              const active = bp.width === canvasWidth
+            menu={BREAKPOINTS.map((bpItem) => {
+              const Icon = bpItem.icon
+              const active = bpItem.width === canvasWidth
+              const hasOverrides = bpItem.bp !== 'base' && overrideCounts[bpItem.bp] > 0
               return (
                 <button
-                  key={bp.label}
+                  key={bpItem.label}
                   className={`c-menu-item ${active ? '!text-text-primary !bg-surface-3/60' : ''}`}
-                  onClick={() => setCanvasWidth(bp.width)}
+                  onClick={() => { setCanvasWidth(bpItem.width); setActiveBreakpoint(bpItem.bp) }}
                 >
-                  <Icon size={12} />
-                  {bp.label}
-                  {bp.width && <span className="ml-auto text-text-muted text-[10px]">{bp.width}px</span>}
+                  <span className="relative">
+                    <Icon size={12} />
+                    {hasOverrides && <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-accent" />}
+                  </span>
+                  {bpItem.label}
+                  {bpItem.width && <span className="ml-auto text-text-muted text-[10px]">{bpItem.width}px</span>}
                 </button>
               )
             })}

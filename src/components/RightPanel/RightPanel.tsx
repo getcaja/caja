@@ -1,15 +1,24 @@
-import { Component, Minus, Plus } from 'lucide-react'
+import { Component, Minus, Plus, RotateCcw } from 'lucide-react'
 import { useFrameStore } from '../../store/frameStore'
 import { Properties } from '../Properties/Properties'
 import { ErrorBoundary } from '../ErrorBoundary'
 import { ZOOM_LEVELS } from '../Canvas/ZoomBar'
 import { canvasZoomTo } from '../Canvas/CanvasInline'
 
+const BP_LABELS: Record<string, string> = { md: 'md', sm: 'sm' }
+
 function DesignBar() {
   const canvasZoom = useFrameStore((s) => s.canvasZoom)
   const selectedId = useFrameStore((s) => s.selectedId)
+  const activeBreakpoint = useFrameStore((s) => s.activeBreakpoint)
+  const selected = useFrameStore((s) => s.getSelected())
+  const clearResponsiveOverrides = useFrameStore((s) => s.clearResponsiveOverrides)
   const prevZoom = [...ZOOM_LEVELS].reverse().find((z) => z < canvasZoom - 0.001)
   const nextZoom = ZOOM_LEVELS.find((z) => z > canvasZoom + 0.001)
+
+  const hasOverridesAtBp = activeBreakpoint !== 'base' && selected != null
+    && selected.responsive?.[activeBreakpoint as 'md' | 'sm'] != null
+    && Object.keys(selected.responsive[activeBreakpoint as 'md' | 'sm']!).length > 0
 
   const btn = 'w-5 h-5 flex items-center justify-center shrink-0 rounded text-text-muted hover:text-text-secondary hover:bg-surface-2 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-text-muted'
 
@@ -30,6 +39,23 @@ function DesignBar() {
       >
         <Component size={12} />
       </button>
+
+      {activeBreakpoint !== 'base' && (
+        <div className="flex items-center gap-1">
+          <span className="px-1.5 py-0.5 text-[10px] font-medium leading-none rounded bg-accent/20 text-accent select-none">
+            {BP_LABELS[activeBreakpoint]}
+          </span>
+          {hasOverridesAtBp && (
+            <button
+              onClick={() => clearResponsiveOverrides(selected!.id, activeBreakpoint as 'md' | 'sm')}
+              className="w-4 h-4 flex items-center justify-center rounded text-text-muted hover:text-accent hover:bg-accent/10"
+              title="Reset all overrides at this breakpoint"
+            >
+              <RotateCcw size={10} />
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="flex-1" />
 

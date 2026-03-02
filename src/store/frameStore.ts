@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Frame, BoxElement, TextElement, ImageElement, ButtonElement, InputElement, TextareaElement, SelectElement, DesignValue, Spacing, SizeValue, BorderRadius, Page } from '../types/frame'
+import type { Frame, BoxElement, TextElement, ImageElement, ButtonElement, InputElement, TextareaElement, SelectElement, DesignValue, Spacing, SizeValue, BorderRadius, Page, Breakpoint, ResponsiveOverrides } from '../types/frame'
 import { useCatalogStore } from './catalogStore'
 import {
   createBox, createText, createImage, createButton, createInput,
@@ -253,6 +253,7 @@ interface FrameStore {
   dirty: boolean
   previewMode: boolean
   canvasWidth: number | null
+  activeBreakpoint: Breakpoint
   canvasZoom: number
   mcpConnected: boolean
   mcpBusy: boolean
@@ -302,6 +303,8 @@ interface FrameStore {
   updateFrame: (id: string, updates: Partial<Frame>) => void
   updateSpacing: (id: string, field: 'padding' | 'margin' | 'inset', values: Partial<Spacing>) => void
   updateSize: (id: string, dimension: 'width' | 'height', size: Partial<SizeValue>) => void
+  clearResponsiveOverrides: (id: string, bp: 'md' | 'sm') => void
+  removeResponsiveKeys: (id: string, bp: 'md' | 'sm', keys: string[]) => void
   updateBorderRadius: (id: string, values: Partial<BorderRadius>) => void
   renameFrame: (id: string, name: string) => void
 
@@ -323,6 +326,8 @@ interface FrameStore {
   togglePreviewMode: () => void
   setPreviewMode: (value: boolean) => void
   setCanvasWidth: (width: number | null) => void
+  setActiveBreakpoint: (bp: Breakpoint) => void
+  getEffectiveFrame: (frame: Frame) => Frame
   setCanvasZoom: (zoom: number) => void
   setCanvasDrag: (id: string | null) => void
   setCanvasDragOver: (over: { parentId: string; index: number } | null) => void
@@ -364,6 +369,7 @@ const VIEW_PREFS_KEY = 'caja-view-prefs'
 interface ViewPrefs {
   previewMode: boolean
   canvasWidth: number | null
+  activeBreakpoint: Breakpoint
   advancedMode: boolean
   collapsedIds: string[]
 }
@@ -376,12 +382,13 @@ function loadViewPrefs(): ViewPrefs {
       return {
         previewMode: parsed.previewMode ?? false,
         canvasWidth: parsed.canvasWidth ?? null,
+        activeBreakpoint: (['base', 'md', 'sm'].includes(parsed.activeBreakpoint) ? parsed.activeBreakpoint : 'base') as Breakpoint,
         advancedMode: parsed.advancedMode ?? false,
         collapsedIds: parsed.collapsedIds ?? [],
       }
     }
   } catch (err) { console.warn('Failed to load view preferences:', err) }
-  return { previewMode: false, canvasWidth: null, advancedMode: false, collapsedIds: [] }
+  return { previewMode: false, canvasWidth: null, activeBreakpoint: 'base' as Breakpoint, advancedMode: false, collapsedIds: [] }
 }
 
 function saveViewPrefs(prefs: Partial<ViewPrefs>) {
@@ -412,6 +419,29 @@ function updateActiveRoot(state: { pages: Page[]; activePageId: string }, newRoo
     root: newRoot,
     pages: state.pages.map((p) => p.id === state.activePageId ? { ...p, root: newRoot } : p),
   }
+}
+
+/** Merge responsive overrides onto a base frame (desktop-first cascade).
+ *  At 'md': apply md overrides.
+ *  At 'sm': apply md overrides first, then sm on top. */
+function mergeResponsiveOverrides(frame: Frame, bp: 'md' | 'sm'): Frame {
+  const resp = frame.responsive
+  if (!resp) return frame
+  let result = frame as Frame
+  // Desktop-first cascade: md always applies at sm too
+  if (bp === 'sm' || bp === 'md') {
+    const md = resp.md
+    if (md && Object.keys(md).length > 0) {
+      result = { ...result, ...md } as Frame
+    }
+  }
+  if (bp === 'sm') {
+    const sm = resp.sm
+    if (sm && Object.keys(sm).length > 0) {
+      result = { ...result, ...sm } as Frame
+    }
+  }
+  return result
 }
 
 export const COMPONENT_PAGE_ID = '__components__'
@@ -582,6 +612,7 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
   dirty: false,
   previewMode: initialViewPrefs.previewMode,
   canvasWidth: initialViewPrefs.canvasWidth,
+  activeBreakpoint: initialViewPrefs.activeBreakpoint,
   canvasZoom: 1,
   canvasTool: 'pointer',
   pendingTextEdit: null,
@@ -1055,27 +1086,82 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
 
   updateFrame: (id, updates) =>
     set((state) => {
+      const bp = state.activeBreakpoint
       const history = pushHistory(state)
-      const newRoot = updateInTree(state.root, id, (f) => ({ ...f, ...updates } as Frame)) as BoxElement
+      if (bp === 'base') {
+        const newRoot = updateInTree(state.root, id, (f) => ({ ...f, ...updates } as Frame)) as BoxElement
+        return { ...updateActiveRoot(state, newRoot), ...history }
+      }
+      // Write to responsive overrides
+      const newRoot = updateInTree(state.root, id, (f) => {
+        const existing = f.responsive?.[bp] ?? {}
+        const merged = { ...existing, ...updates } as ResponsiveOverrides
+        // Remove keys that match the base value (keep overrides sparse)
+        for (const key of Object.keys(merged) as (keyof ResponsiveOverrides)[]) {
+          if (JSON.stringify(merged[key]) === JSON.stringify((f as Record<string, unknown>)[key])) {
+            delete merged[key]
+          }
+        }
+        const responsive = { ...f.responsive, [bp]: Object.keys(merged).length > 0 ? merged : undefined }
+        // Clean up empty responsive object
+        if (!responsive.md && !responsive.sm) return { ...f, responsive: undefined } as Frame
+        return { ...f, responsive } as Frame
+      }) as BoxElement
       return { ...updateActiveRoot(state, newRoot), ...history }
     }),
 
   updateSpacing: (id, field, values) =>
     set((state) => {
+      const bp = state.activeBreakpoint
       const history = pushHistory(state)
       const ZERO: DesignValue<number> = { mode: 'custom', value: 0 }
-      const existing = (f: Frame) => {
+      const existingSpacing = (f: Frame) => {
         const s = f[field] as Spacing | undefined
         return { top: s?.top ?? ZERO, right: s?.right ?? ZERO, bottom: s?.bottom ?? ZERO, left: s?.left ?? ZERO }
       }
-      const newRoot = updateInTree(state.root, id, (f) => ({ ...f, [field]: { ...existing(f), ...values } })) as BoxElement
+      if (bp === 'base') {
+        const newRoot = updateInTree(state.root, id, (f) => ({ ...f, [field]: { ...existingSpacing(f), ...values } })) as BoxElement
+        return { ...updateActiveRoot(state, newRoot), ...history }
+      }
+      // Write spacing to responsive overrides
+      const newRoot = updateInTree(state.root, id, (f) => {
+        const existingOverride = (f.responsive?.[bp]?.[field as keyof ResponsiveOverrides] ?? existingSpacing(f)) as Spacing
+        const newSpacing = { ...existingOverride, ...values }
+        const existing = f.responsive?.[bp] ?? {}
+        const merged = { ...existing, [field]: newSpacing } as ResponsiveOverrides
+        // Remove if matches base
+        if (JSON.stringify(merged[field as keyof ResponsiveOverrides]) === JSON.stringify(f[field])) {
+          delete merged[field as keyof ResponsiveOverrides]
+        }
+        const responsive = { ...f.responsive, [bp]: Object.keys(merged).length > 0 ? merged : undefined }
+        if (!responsive.md && !responsive.sm) return { ...f, responsive: undefined } as Frame
+        return { ...f, responsive } as Frame
+      }) as BoxElement
       return { ...updateActiveRoot(state, newRoot), ...history }
     }),
 
   updateSize: (id, dimension, size) =>
     set((state) => {
+      const bp = state.activeBreakpoint
       const history = pushHistory(state)
-      const newRoot = updateInTree(state.root, id, (f) => ({ ...f, [dimension]: { ...f[dimension], ...size } })) as BoxElement
+      if (bp === 'base') {
+        const newRoot = updateInTree(state.root, id, (f) => ({ ...f, [dimension]: { ...f[dimension], ...size } })) as BoxElement
+        return { ...updateActiveRoot(state, newRoot), ...history }
+      }
+      // Write size to responsive overrides
+      const newRoot = updateInTree(state.root, id, (f) => {
+        const existingOverride = (f.responsive?.[bp]?.[dimension as keyof ResponsiveOverrides] ?? f[dimension]) as SizeValue
+        const newSize = { ...existingOverride, ...size }
+        const existing = f.responsive?.[bp] ?? {}
+        const merged = { ...existing, [dimension]: newSize } as ResponsiveOverrides
+        // Remove if matches base
+        if (JSON.stringify(merged[dimension as keyof ResponsiveOverrides]) === JSON.stringify(f[dimension])) {
+          delete merged[dimension as keyof ResponsiveOverrides]
+        }
+        const responsive = { ...f.responsive, [bp]: Object.keys(merged).length > 0 ? merged : undefined }
+        if (!responsive.md && !responsive.sm) return { ...f, responsive: undefined } as Frame
+        return { ...f, responsive } as Frame
+      }) as BoxElement
       return { ...updateActiveRoot(state, newRoot), ...history }
     }),
 
@@ -1090,6 +1176,34 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
     set((state) => {
       const history = pushHistory(state)
       const newRoot = updateInTree(state.root, id, (f) => ({ ...f, name })) as BoxElement
+      return { ...updateActiveRoot(state, newRoot), ...history }
+    }),
+
+  clearResponsiveOverrides: (id, bp) =>
+    set((state) => {
+      const history = pushHistory(state)
+      const newRoot = updateInTree(state.root, id, (f) => {
+        const responsive = { ...f.responsive, [bp]: undefined }
+        if (!responsive.md && !responsive.sm) return { ...f, responsive: undefined } as Frame
+        return { ...f, responsive } as Frame
+      }) as BoxElement
+      return { ...updateActiveRoot(state, newRoot), ...history }
+    }),
+
+  removeResponsiveKeys: (id, bp, keys) =>
+    set((state) => {
+      const history = pushHistory(state)
+      const newRoot = updateInTree(state.root, id, (f) => {
+        const existing = f.responsive?.[bp]
+        if (!existing) return f
+        const updated = { ...existing }
+        for (const key of keys) {
+          delete updated[key as keyof typeof updated]
+        }
+        const responsive = { ...f.responsive, [bp]: Object.keys(updated).length > 0 ? updated : undefined }
+        if (!responsive.md && !responsive.sm) return { ...f, responsive: undefined } as Frame
+        return { ...f, responsive } as Frame
+      }) as BoxElement
       return { ...updateActiveRoot(state, newRoot), ...history }
     }),
 
@@ -1259,6 +1373,15 @@ export const useFrameStore = create<FrameStore>((set, get) => ({
     saveViewPrefs({ previewMode: s.previewMode, canvasWidth: width, advancedMode: s.advancedMode })
     return { canvasWidth: width }
   }),
+  setActiveBreakpoint: (bp) => {
+    saveViewPrefs({ activeBreakpoint: bp })
+    set({ activeBreakpoint: bp })
+  },
+  getEffectiveFrame: (frame) => {
+    const bp = get().activeBreakpoint
+    if (bp === 'base') return frame
+    return mergeResponsiveOverrides(frame, bp)
+  },
   setCanvasZoom: (zoom) => set({ canvasZoom: zoom }),
   setCanvasTool: (tool) => set({ canvasTool: tool }),
   clearPendingTextEdit: () => set({ pendingTextEdit: null }),

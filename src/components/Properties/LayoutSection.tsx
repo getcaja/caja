@@ -11,7 +11,7 @@ import { SpacingControl } from '../ui/SpacingControl'
 import { SPACING_SCALE, SIZE_CONSTRAINT_SCALE, GRID_COLS_SCALE, GRID_ROWS_SCALE, GROW_SCALE, SHRINK_SCALE, COL_SPAN_SCALE, ROW_SPAN_SCALE, MARGIN_SCALE } from '../../data/scales'
 import { ALIGN_SELF_OPTIONS } from './constants'
 
-export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolean }) {
+export function LayoutSection({ frame, isRoot, hasOverrides, onResetOverrides }: { frame: Frame; isRoot?: boolean; hasOverrides?: boolean; onResetOverrides?: () => void }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
   const updateSize = useFrameStore((s) => s.updateSize)
   const updateSpacing = useFrameStore((s) => s.updateSpacing)
@@ -53,7 +53,7 @@ export function LayoutSection({ frame, isRoot }: { frame: Frame; isRoot?: boolea
   const currentA = boxFrame?.align === 'stretch' ? 'start' : (boxFrame?.align as 'start' | 'center' | 'end') ?? 'start'
 
   return (
-    <Section title="Layout">
+    <Section title="Layout" hasOverrides={hasOverrides} onResetOverrides={onResetOverrides}>
       <div className="flex flex-col gap-2">
         {/* Display mode */}
         {isBox && (

@@ -1,3 +1,4 @@
+import { useMemo, useCallback } from 'react'
 import { useFrameStore } from '../../store/frameStore'
 import { PagePanel } from './PagePanel'
 import { ElementSection } from './ElementSection'
@@ -12,11 +13,42 @@ import { TransformSection } from './TransformSection'
 import { TransitionSection } from './TransitionSection'
 import { AdvancedSection } from './AdvancedSection'
 
+const SECTION_KEYS: Record<string, string[]> = {
+  Layout: ['display', 'direction', 'justify', 'align', 'gap', 'wrap', 'gridCols', 'gridRows', 'padding', 'margin', 'width', 'height', 'minWidth', 'maxWidth', 'minHeight', 'maxHeight', 'grow', 'shrink', 'alignSelf'],
+  Typography: ['fontSize', 'fontWeight', 'lineHeight', 'textAlign'],
+  Fill: ['bg'],
+  Appearance: ['opacity', 'hidden'],
+}
+
+function sectionHasOverrides(section: string, overrideKeys: Set<string>): boolean {
+  const keys = SECTION_KEYS[section]
+  if (!keys) return false
+  return keys.some((k) => overrideKeys.has(k))
+}
+
 export function Properties() {
   const selected = useFrameStore((s) => s.getSelected())
   const multiCount = useFrameStore((s) => s.selectedIds.size)
   const rootId = useFrameStore((s) => s.getRootId())
   const pageSelected = useFrameStore((s) => s.pageSelected)
+  const activeBreakpoint = useFrameStore((s) => s.activeBreakpoint)
+  const getEffectiveFrame = useFrameStore((s) => s.getEffectiveFrame)
+  const removeResponsiveKeys = useFrameStore((s) => s.removeResponsiveKeys)
+
+  // Compute which keys have responsive overrides at the current breakpoint
+  const overrideKeys = useMemo(() => {
+    if (!selected || activeBreakpoint === 'base') return new Set<string>()
+    const overrides = selected.responsive?.[activeBreakpoint]
+    if (!overrides) return new Set<string>()
+    return new Set(Object.keys(overrides))
+  }, [selected, activeBreakpoint])
+
+  const makeResetHandler = useCallback((section: string) => {
+    if (!selected || activeBreakpoint === 'base') return undefined
+    const keys = SECTION_KEYS[section]
+    if (!keys || !sectionHasOverrides(section, overrideKeys)) return undefined
+    return () => removeResponsiveKeys(selected.id, activeBreakpoint as 'md' | 'sm', keys)
+  }, [selected, activeBreakpoint, overrideKeys, removeResponsiveKeys])
 
   if (multiCount > 1) return null
 
@@ -25,22 +57,25 @@ export function Properties() {
     return null
   }
 
+  // Merge responsive overrides for the active breakpoint
+  const effective = activeBreakpoint !== 'base' ? getEffectiveFrame(selected) : selected
+
   const isRoot = selected.id === rootId
-  const hasTextStyles = 'fontSize' in selected
+  const hasTextStyles = 'fontSize' in effective
 
   return (
     <div key={selected.id} className="">
-      <ElementSection frame={selected} isRoot={isRoot} />
-      <PositionSection frame={selected} />
-      <LayoutSection frame={selected} isRoot={isRoot} />
-      {hasTextStyles && <TypographySection frame={selected} />}
-      <AppearanceSection frame={selected} />
-      <FillSection frame={selected} />
-      <BorderSection frame={selected} />
-      <EffectsSection frame={selected} />
-      <TransformSection frame={selected} />
-      <TransitionSection frame={selected} />
-      <AdvancedSection frame={selected} />
+      <ElementSection frame={effective} isRoot={isRoot} />
+      <PositionSection frame={effective} />
+      <LayoutSection frame={effective} isRoot={isRoot} hasOverrides={sectionHasOverrides('Layout', overrideKeys)} onResetOverrides={makeResetHandler('Layout')} />
+      {hasTextStyles && <TypographySection frame={effective} hasOverrides={sectionHasOverrides('Typography', overrideKeys)} onResetOverrides={makeResetHandler('Typography')} />}
+      <AppearanceSection frame={effective} hasOverrides={sectionHasOverrides('Appearance', overrideKeys)} onResetOverrides={makeResetHandler('Appearance')} />
+      <FillSection frame={effective} hasOverrides={sectionHasOverrides('Fill', overrideKeys)} onResetOverrides={makeResetHandler('Fill')} />
+      <BorderSection frame={effective} />
+      <EffectsSection frame={effective} />
+      <TransformSection frame={effective} />
+      <TransitionSection frame={effective} />
+      <AdvancedSection frame={effective} />
     </div>
   )
 }
