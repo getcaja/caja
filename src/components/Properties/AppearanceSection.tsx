@@ -6,12 +6,12 @@ import { TokenInput } from '../ui/TokenInput'
 import { BorderRadiusControl } from '../ui/BorderRadiusControl'
 import { OPACITY_SCALE } from '../../data/scales'
 
-export function AppearanceSection({ frame }: { frame: Frame }) {
+export function AppearanceSection({ frame, hasOverrides, onResetOverrides }: { frame: Frame; hasOverrides?: boolean; onResetOverrides?: () => void }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
   const updateBorderRadius = useFrameStore((s) => s.updateBorderRadius)
 
   return (
-    <Section title="Appearance">
+    <Section title="Appearance" hasOverrides={hasOverrides} onResetOverrides={onResetOverrides}>
       <div className="flex flex-col gap-2">
         <BorderRadiusControl
           value={frame.borderRadius}

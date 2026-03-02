@@ -105,6 +105,9 @@ interface BaseElement {
   // Advanced
   tailwindClasses: string
 
+  // Responsive overrides — sparse per-breakpoint property patches (desktop-first)
+  responsive?: Partial<Record<'md' | 'sm', ResponsiveOverrides>>
+
   // Origin tracking — populated when inserting from a component source (passive, informational)
   _origin?: { libraryId?: string; componentId?: string }
 
@@ -235,6 +238,26 @@ export interface Page {
   root: BoxElement
   isComponentPage?: boolean  // hidden page that stores component masters
 }
+
+// Responsive breakpoints — desktop-first: base = desktop, md ≤768px, sm ≤640px
+export type Breakpoint = 'base' | 'md' | 'sm'
+
+// Sparse partial overrides — only properties that differ from base
+export type ResponsiveOverrides = Partial<
+  Pick<BaseElement,
+    | 'width' | 'height' | 'padding' | 'margin'
+    | 'minWidth' | 'maxWidth' | 'minHeight' | 'maxHeight'
+    | 'grow' | 'shrink' | 'alignSelf'
+    | 'bg' | 'opacity' | 'hidden'
+  > &
+  Pick<BoxElement,
+    | 'display' | 'direction' | 'justify' | 'align' | 'gap' | 'wrap'
+    | 'gridCols' | 'gridRows'
+  > &
+  Pick<TextStyles,
+    | 'fontSize' | 'fontWeight' | 'lineHeight' | 'textAlign'
+  >
+>
 
 // Union type
 export type Frame = BoxElement | TextElement | ImageElement | ButtonElement | InputElement | TextareaElement | SelectElement

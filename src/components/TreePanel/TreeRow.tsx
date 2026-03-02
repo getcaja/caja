@@ -22,6 +22,7 @@ export interface TreeRowProps {
   onMouseLeave?: () => void
   chevron?: 'expanded' | 'collapsed' | 'leaf' | 'none'
   onChevronClick?: () => void
+  badges?: React.ReactNode
   trailing?: React.ReactNode
   indent?: number
   isDragging?: boolean
@@ -51,6 +52,7 @@ export function TreeRow({
   onMouseLeave,
   chevron,
   onChevronClick,
+  badges,
   trailing,
   indent,
   isDragging,
@@ -151,8 +153,9 @@ export function TreeRow({
             className={INPUT_CLASS}
           />
         ) : (
-          <span className={`flex-1 h-5 flex items-center text-[12px] truncate ${nameClassName ?? ''}`}>
-            {name}
+          <span className={`flex-1 h-5 flex items-center gap-1.5 text-[12px] truncate ${nameClassName ?? ''}`}>
+            <span className="truncate">{name}</span>
+            {badges}
           </span>
         )}
 

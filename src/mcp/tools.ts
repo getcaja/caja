@@ -3,7 +3,7 @@
 
 import { useFrameStore, findInTree, cloneWithNewIds, normalizeFrame } from '../store/frameStore'
 import { useCatalogStore } from '../store/catalogStore'
-import type { Frame, SizeValue } from '../types/frame'
+import type { Frame, SizeValue, Breakpoint, ResponsiveOverrides } from '../types/frame'
 import type { ToolName } from './schema'
 import { parseTailwindClasses } from '../utils/parseTailwindClasses'
 import { exportLibrary } from '../lib/libraryOps'
@@ -58,6 +58,11 @@ export function summaryTree(frame: Frame): Record<string, unknown> {
     node.display = frame.display
     node.childCount = frame.children.length
     node.children = frame.children.map(summaryTree)
+  }
+  // Flag frames with responsive overrides so agents know they exist
+  if (frame.responsive) {
+    const bps = Object.keys(frame.responsive).filter((k) => frame.responsive?.[k as 'md' | 'sm'])
+    if (bps.length > 0) node.responsive = bps
   }
   return node
 }
@@ -179,6 +184,19 @@ const handlers: Record<string, ToolHandler> = {
     }
 
     const sanitized = sanitizeFrameProperties(mergedProps, frame)
+
+    // Deep-merge responsive: merge per-breakpoint instead of replacing the whole object
+    if (sanitized.responsive && typeof sanitized.responsive === 'object' && frame.responsive) {
+      const incoming = sanitized.responsive as Record<string, ResponsiveOverrides | undefined>
+      const merged: Frame['responsive'] = { ...frame.responsive }
+      for (const bp of ['md', 'sm'] as const) {
+        if (incoming[bp]) {
+          merged[bp] = { ...(merged[bp] ?? {}), ...incoming[bp] }
+        }
+      }
+      sanitized.responsive = merged
+    }
+
     store.updateFrame(id, sanitized as Partial<Frame>)
     const updated = findInTree(getStore().root, id)
     return { success: true, data: updated ? compactSnapshot(updated) : undefined }
@@ -583,6 +601,76 @@ const handlers: Record<string, ToolHandler> = {
     if (!page) return { success: false, error: `Page ${id} not found` }
     store.removePage(id)
     return { success: true, data: { removed: id } }
+  },
+
+  // --- Responsive tools ---
+
+  set_breakpoint(params) {
+    const { breakpoint } = params as { breakpoint: Breakpoint }
+    const valid: Breakpoint[] = ['base', 'md', 'sm']
+    if (!valid.includes(breakpoint)) {
+      return { success: false, error: `Invalid breakpoint "${breakpoint}". Must be one of: base, md, sm` }
+    }
+    const store = getStore()
+    // Sync canvas width to match breakpoint
+    const widthMap: Record<Breakpoint, number | null> = { base: null, md: 767, sm: 375 }
+    store.setCanvasWidth(widthMap[breakpoint])
+    store.setActiveBreakpoint(breakpoint)
+    return {
+      success: true,
+      data: { breakpoint, canvasWidth: widthMap[breakpoint] },
+      hint: breakpoint === 'base'
+        ? 'Editing base (desktop) properties. All update_frame/update_spacing/update_size calls write to the base frame.'
+        : `Editing ${breakpoint} overrides. All update_frame/update_spacing/update_size calls now write to the ${breakpoint} breakpoint. Only changed properties are stored as overrides. Call set_breakpoint({ breakpoint: "base" }) when done to return to desktop editing.`,
+    }
+  },
+
+  get_breakpoint() {
+    const store = getStore()
+    return {
+      success: true,
+      data: { breakpoint: store.activeBreakpoint, canvasWidth: store.canvasWidth },
+    }
+  },
+
+  get_responsive_overrides(params) {
+    const { id } = params as { id: string }
+    const store = getStore()
+    const frame = findInTree(store.root, id)
+    if (!frame) return { success: false, error: `Frame ${id} not found` }
+    return {
+      success: true,
+      data: {
+        id: frame.id,
+        name: frame.name,
+        responsive: frame.responsive ?? null,
+      },
+    }
+  },
+
+  clear_responsive_overrides(params) {
+    const { id, breakpoint, keys } = params as { id: string; breakpoint: 'md' | 'sm'; keys?: string[] }
+    const store = getStore()
+    const frame = findInTree(store.root, id)
+    if (!frame) return { success: false, error: `Frame ${id} not found` }
+    if (breakpoint !== 'md' && breakpoint !== 'sm') {
+      return { success: false, error: `Invalid breakpoint "${breakpoint}". Must be "md" or "sm"` }
+    }
+    if (keys && keys.length > 0) {
+      store.removeResponsiveKeys(id, breakpoint, keys)
+    } else {
+      store.clearResponsiveOverrides(id, breakpoint)
+    }
+    const updated = findInTree(getStore().root, id)
+    return {
+      success: true,
+      data: {
+        id,
+        breakpoint,
+        cleared: keys || 'all',
+        responsive: updated?.responsive ?? null,
+      },
+    }
   },
 
   async upload_asset(params) {

@@ -1,4 +1,4 @@
-import type { Frame, Spacing, Inset, BorderRadius, Border, DesignValue } from '../types/frame'
+import type { Frame, Spacing, Inset, BorderRadius, Border, DesignValue, ResponsiveOverrides } from '../types/frame'
 import { toGoogleFontClass } from './googleFonts'
 import { resolveRenderSrc } from '../lib/assetOps'
 
@@ -427,9 +427,147 @@ export function frameToClasses(frame: Frame): string {
   // Manual classes (user-added)
   if (frame.tailwindClasses) cls.push(frame.tailwindClasses)
 
+  // Responsive override classes
+  const responsiveClasses = generateResponsiveClasses(frame)
+  if (responsiveClasses) cls.push(responsiveClasses)
+
   return cls.join(' ')
   } catch (err) {
     console.warn(`[frameToClasses] Error for frame ${frame?.id}:`, err)
     return frame?.tailwindClasses || ''
   }
+}
+
+/**
+ * Generate prefixed classes for responsive overrides.
+ * Desktop-first: max-md: for tablet, max-sm: for mobile.
+ */
+function generateResponsiveClasses(frame: Frame): string {
+  if (!frame.responsive) return ''
+  const cls: string[] = []
+  const bps: Array<{ key: 'md' | 'sm'; prefix: string }> = [
+    { key: 'md', prefix: 'max-md:' },
+    { key: 'sm', prefix: 'max-sm:' },
+  ]
+  for (const { key, prefix } of bps) {
+    const overrides = frame.responsive[key]
+    if (!overrides || Object.keys(overrides).length === 0) continue
+    cls.push(...overrideClasses(overrides, frame, prefix))
+  }
+  return cls.join(' ')
+}
+
+/** Generate Tailwind classes for a sparse set of responsive overrides. */
+function overrideClasses(ov: ResponsiveOverrides, base: Frame, prefix: string): string[] {
+  const cls: string[] = []
+  const p = (c: string) => `${prefix}${c}`
+
+  // Hidden
+  if (ov.hidden !== undefined) cls.push(p(ov.hidden ? 'hidden' : 'block'))
+
+  // Display / direction / justify / align / gap / wrap (box-only)
+  if (ov.display !== undefined) {
+    if (ov.display === 'flex' || ov.display === 'inline-flex') {
+      cls.push(p(ov.display === 'inline-flex' ? 'inline-flex' : 'flex'))
+    } else if (ov.display === 'grid') {
+      cls.push(p('grid'))
+    } else if (ov.display !== 'block') {
+      cls.push(p(ov.display))
+    } else {
+      cls.push(p('block'))
+    }
+  }
+  if (ov.direction !== undefined) {
+    const dirMap: Record<string, string> = { row: 'flex-row', column: 'flex-col', 'row-reverse': 'flex-row-reverse', 'column-reverse': 'flex-col-reverse' }
+    cls.push(p(dirMap[ov.direction] ?? 'flex-col'))
+  }
+  if (ov.justify !== undefined) {
+    const justifyMap: Record<string, string> = { start: 'justify-start', center: 'justify-center', end: 'justify-end', between: 'justify-between', around: 'justify-around' }
+    if (justifyMap[ov.justify]) cls.push(p(justifyMap[ov.justify]))
+  }
+  if (ov.align !== undefined) {
+    const alignMap: Record<string, string> = { start: 'items-start', center: 'items-center', end: 'items-end', stretch: 'items-stretch' }
+    if (alignMap[ov.align]) cls.push(p(alignMap[ov.align]))
+  }
+  if (ov.gap !== undefined && !dvIsZero(ov.gap)) cls.push(p(dvClass('gap', ov.gap)))
+  if (ov.wrap !== undefined) cls.push(p(ov.wrap ? 'flex-wrap' : 'flex-nowrap'))
+  if (ov.gridCols !== undefined && !dvIsZero(ov.gridCols)) cls.push(p(dvClass('grid-cols', ov.gridCols, '')))
+  if (ov.gridRows !== undefined && !dvIsZero(ov.gridRows)) cls.push(p(dvClass('grid-rows', ov.gridRows, '')))
+
+  // Size
+  if (ov.width !== undefined) {
+    if (ov.width.mode === 'hug') cls.push(p('w-fit'))
+    else if (ov.width.mode === 'fill') cls.push(p('w-full'))
+    else if (ov.width.mode === 'fixed') cls.push(p(dvClass('w', ov.width.value)))
+    else cls.push(p('w-auto'))
+  }
+  if (ov.height !== undefined) {
+    if (ov.height.mode === 'hug') cls.push(p('h-fit'))
+    else if (ov.height.mode === 'fill') cls.push(p('h-full'))
+    else if (ov.height.mode === 'fixed') cls.push(p(dvClass('h', ov.height.value)))
+    else cls.push(p('h-auto'))
+  }
+
+  // Spacing
+  if (ov.padding !== undefined) {
+    for (const c of spacingClasses('p', ov.padding)) cls.push(p(c))
+  }
+  if (ov.margin !== undefined) {
+    for (const c of spacingClasses('m', ov.margin)) cls.push(p(c))
+  }
+
+  // Size constraints
+  if (ov.minWidth !== undefined) { if (!dvIsZero(ov.minWidth)) cls.push(p(dvClass('min-w', ov.minWidth))); else cls.push(p('min-w-0')) }
+  if (ov.maxWidth !== undefined) { if (!dvIsZero(ov.maxWidth)) cls.push(p(dvClass('max-w', ov.maxWidth))); else cls.push(p('max-w-none')) }
+  if (ov.minHeight !== undefined) { if (!dvIsZero(ov.minHeight)) cls.push(p(dvClass('min-h', ov.minHeight))); else cls.push(p('min-h-0')) }
+  if (ov.maxHeight !== undefined) { if (!dvIsZero(ov.maxHeight)) cls.push(p(dvClass('max-h', ov.maxHeight))); else cls.push(p('max-h-none')) }
+
+  // Flex grow / shrink
+  if (ov.grow !== undefined) {
+    const growVal = ov.grow.value
+    if (growVal === 0) cls.push(p('grow-0'))
+    else if (growVal === 1) cls.push(p('grow'))
+    else cls.push(p(`grow-[${growVal}]`))
+  }
+  if (ov.shrink !== undefined) {
+    const shrinkVal = ov.shrink.value
+    if (shrinkVal === 0) cls.push(p('shrink-0'))
+    else if (shrinkVal === 1) cls.push(p('shrink'))
+    else cls.push(p(`shrink-[${shrinkVal}]`))
+  }
+
+  // Align self
+  if (ov.alignSelf !== undefined && ov.alignSelf !== 'auto') {
+    const selfMapLocal: Record<string, string> = { start: 'self-start', center: 'self-center', end: 'self-end', stretch: 'self-stretch' }
+    if (selfMapLocal[ov.alignSelf]) cls.push(p(selfMapLocal[ov.alignSelf]))
+  }
+
+  // Background
+  if (ov.bg !== undefined && ov.bg.value) cls.push(p(dvColorClass('bg', ov.bg)))
+
+  // Opacity
+  if (ov.opacity !== undefined) {
+    if (ov.opacity.mode === 'token') cls.push(p(`opacity-${ov.opacity.token}`))
+    else if (ov.opacity.value < 100) cls.push(p(`opacity-[${ov.opacity.value / 100}]`))
+  }
+
+  // Text styles
+  if (ov.fontSize !== undefined && !dvIsZero(ov.fontSize)) {
+    if (ov.fontSize.mode === 'token') cls.push(p(`text-${ov.fontSize.token}`))
+    else cls.push(p(`text-[${ov.fontSize.value}px]`))
+  }
+  if (ov.fontWeight !== undefined && ov.fontWeight.value !== 400) {
+    if (ov.fontWeight.mode === 'token') cls.push(p(`font-${ov.fontWeight.token}`))
+    else {
+      const w = weightMap[ov.fontWeight.value]
+      cls.push(p(w || `font-[${ov.fontWeight.value}]`))
+    }
+  }
+  if (ov.lineHeight !== undefined && !dvIsZero(ov.lineHeight)) {
+    if (ov.lineHeight.mode === 'token') cls.push(p(`leading-${ov.lineHeight.token}`))
+    else cls.push(p(`leading-[${ov.lineHeight.value}]`))
+  }
+  if (ov.textAlign !== undefined && ov.textAlign !== 'left') cls.push(p(`text-${ov.textAlign}`))
+
+  return cls
 }

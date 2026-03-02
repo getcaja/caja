@@ -37,7 +37,7 @@ const BG_REPEAT_OPTIONS = [
 
 type FillMode = 'solid' | 'image'
 
-export function FillSection({ frame }: { frame: Frame }) {
+export function FillSection({ frame, hasOverrides, onResetOverrides }: { frame: Frame; hasOverrides?: boolean; onResetOverrides?: () => void }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
   const [mode, setMode] = useState<FillMode>(frame.bgImage ? 'image' : 'solid')
 
@@ -46,7 +46,7 @@ export function FillSection({ frame }: { frame: Frame }) {
     || frame.bgRepeat !== 'repeat'
 
   return (
-    <Section title="Fill">
+    <Section title="Fill" hasOverrides={hasOverrides} onResetOverrides={onResetOverrides}>
       <div className="flex flex-col gap-2">
         {/* Mode toggle */}
         <div className="flex items-center gap-2">

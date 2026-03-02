@@ -30,7 +30,7 @@ export const toolSchemas = {
 
   update_frame: {
     name: 'update_frame',
-    description: 'Update properties of an existing frame. Settable properties by category:\n\nBooleans: wrap, disabled, hidden, checked.\nEnums: display ("flex"|"inline-flex"|"block"|"inline-block"|"inline"|"grid"), direction ("row"|"column"|"row-reverse"|"column-reverse"), justify, align, overflow, boxShadow, cursor, fontStyle, textDecoration, textAlign, textAlignVertical ("start"|"center"|"end"), textTransform, whiteSpace, alignSelf, objectFit, inputType, border.style, position ("static"|"relative"|"absolute"|"fixed"|"sticky"), bgSize ("auto"|"cover"|"contain"), bgPosition ("center"|"top"|"bottom"|"left"|"right"|"top-left"|"top-right"|"bottom-left"|"bottom-right"), bgRepeat ("repeat"|"no-repeat"|"repeat-x"|"repeat-y"), transition ("none"|"all"|"colors"|"opacity"|"shadow"|"transform"), ease ("linear"|"in"|"out"|"in-out").\nScale (DesignValue<number>): gap, fontSize, fontWeight, lineHeight, letterSpacing, opacity, grow, shrink, minWidth, maxWidth, minHeight, maxHeight, padding.*, margin.*, inset.*, border.top, border.right, border.bottom, border.left (per-side width), borderRadius.*, zIndex, gridCols, gridRows, colSpan, rowSpan, rotate, scaleVal, translateX, translateY, duration, blur, backdropBlur.\nColors (DesignValue<string>): bg, color, border.color.\nText: content, placeholder, src, alt, href, className, htmlId, tailwindClasses, tag, options, rows, bgImage, inputName, inputValue.\nNumbers: min, max, step, defaultValue.\n[Experimental] fontFamily: Google Font name string (e.g. "Playfair Display", "Roboto Mono"). Loads the font automatically.\n\nNumeric and color fields accept either a raw value (number/string) or a DesignValue object: { mode: "custom", value: N } or { mode: "token", token: "4", value: 16 }. Raw values are auto-wrapped with token matching.',
+    description: 'Update properties of an existing frame. When a responsive breakpoint is active (via set_breakpoint), writes go to that breakpoint\'s overrides instead of the base frame.\n\nSettable properties by category:\n\nBooleans: wrap, disabled, hidden, checked.\nEnums: display ("flex"|"inline-flex"|"block"|"inline-block"|"inline"|"grid"), direction ("row"|"column"|"row-reverse"|"column-reverse"), justify, align, overflow, boxShadow, cursor, fontStyle, textDecoration, textAlign, textAlignVertical ("start"|"center"|"end"), textTransform, whiteSpace, alignSelf, objectFit, inputType, border.style, position ("static"|"relative"|"absolute"|"fixed"|"sticky"), bgSize ("auto"|"cover"|"contain"), bgPosition ("center"|"top"|"bottom"|"left"|"right"|"top-left"|"top-right"|"bottom-left"|"bottom-right"), bgRepeat ("repeat"|"no-repeat"|"repeat-x"|"repeat-y"), transition ("none"|"all"|"colors"|"opacity"|"shadow"|"transform"), ease ("linear"|"in"|"out"|"in-out").\nScale (DesignValue<number>): gap, fontSize, fontWeight, lineHeight, letterSpacing, opacity, grow, shrink, minWidth, maxWidth, minHeight, maxHeight, padding.*, margin.*, inset.*, border.top, border.right, border.bottom, border.left (per-side width), borderRadius.*, zIndex, gridCols, gridRows, colSpan, rowSpan, rotate, scaleVal, translateX, translateY, duration, blur, backdropBlur.\nColors (DesignValue<string>): bg, color, border.color.\nText: content, placeholder, src, alt, href, className, htmlId, tailwindClasses, tag, options, rows, bgImage, inputName, inputValue.\nNumbers: min, max, step, defaultValue.\nResponsive: You can also pass responsive overrides directly as properties.responsive: { md: { gap: 8 }, sm: { hidden: true } }. Per-breakpoint objects are deep-merged with existing overrides. However, prefer using set_breakpoint + normal update calls for a cleaner workflow.\n[Experimental] fontFamily: Google Font name string (e.g. "Playfair Display", "Roboto Mono"). Loads the font automatically.\n\nNumeric and color fields accept either a raw value (number/string) or a DesignValue object: { mode: "custom", value: N } or { mode: "token", token: "4", value: 16 }. Raw values are auto-wrapped with token matching.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -51,7 +51,7 @@ export const toolSchemas = {
 
   update_spacing: {
     name: 'update_spacing',
-    description: 'Update padding, margin, or inset of a frame. Values: { top, right, bottom, left }. Each side accepts a number (pixels) or a DesignValue object: { mode: "token", token: "4", value: 16 }. Inset controls top/right/bottom/left offsets for positioned elements.',
+    description: 'Update padding, margin, or inset of a frame. When a responsive breakpoint is active (via set_breakpoint), writes go to that breakpoint\'s overrides. Values: { top, right, bottom, left }. Each side accepts a number (pixels) or a DesignValue object: { mode: "token", token: "4", value: 16 }. Inset controls top/right/bottom/left offsets for positioned elements.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -74,7 +74,7 @@ export const toolSchemas = {
 
   update_size: {
     name: 'update_size',
-    description: 'Update width or height of a frame. Mode can be: default, hug, fill, or fixed. Value accepts a number (pixels) or a DesignValue object: { mode: "token", token: "64", value: 256 }.',
+    description: 'Update width or height of a frame. When a responsive breakpoint is active (via set_breakpoint), writes go to that breakpoint\'s overrides. Mode can be: default, hug, fill, or fixed. Value accepts a number (pixels) or a DesignValue object: { mode: "token", token: "64", value: 256 }.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -364,6 +364,58 @@ export const toolSchemas = {
         url: { type: 'string', description: 'The external image URL to download (must be http:// or https://)' },
       },
       required: ['url'],
+    },
+  },
+
+  // --- Responsive tools ---
+  set_breakpoint: {
+    name: 'set_breakpoint',
+    description: 'Switch the active responsive breakpoint. Desktop-first: "base" = desktop (default), "md" = tablet (≤768px), "sm" = mobile (≤640px). After switching, ALL update_frame/update_spacing/update_size calls write to that breakpoint\'s overrides instead of the base frame. Only changed properties are stored (sparse overrides). The canvas width is also adjusted to match. Call set_breakpoint({ breakpoint: "base" }) to return to desktop editing when done.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        breakpoint: { type: 'string', enum: ['base', 'md', 'sm'], description: 'The breakpoint to activate. "base" = desktop, "md" = tablet ≤768px, "sm" = mobile ≤640px.' },
+      },
+      required: ['breakpoint'],
+    },
+  },
+
+  get_breakpoint: {
+    name: 'get_breakpoint',
+    description: 'Get the currently active responsive breakpoint and canvas width.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {},
+    },
+  },
+
+  get_responsive_overrides: {
+    name: 'get_responsive_overrides',
+    description: 'Get the responsive overrides for a frame. Returns the sparse override objects for each breakpoint (md, sm), or null if no overrides exist. Use this to inspect what properties differ per breakpoint before making changes.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        id: { type: 'string', description: 'ID of the frame to inspect' },
+      },
+      required: ['id'],
+    },
+  },
+
+  clear_responsive_overrides: {
+    name: 'clear_responsive_overrides',
+    description: 'Clear responsive overrides for a frame at a breakpoint. If keys are provided, only those specific properties are removed. If no keys, all overrides at the breakpoint are cleared.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        id: { type: 'string', description: 'ID of the frame' },
+        breakpoint: { type: 'string', enum: ['md', 'sm'], description: 'The breakpoint to clear overrides for' },
+        keys: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Optional list of specific property keys to remove. If omitted, all overrides at the breakpoint are cleared.',
+        },
+      },
+      required: ['id', 'breakpoint'],
     },
   },
 } as const

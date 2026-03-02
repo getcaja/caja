@@ -213,5 +213,16 @@ export function sanitizeFrameProperties(props: Record<string, unknown>, existing
     if (v) sanitized.border = v
   }
 
+  // responsive: sanitize each breakpoint's overrides
+  if ('responsive' in sanitized && sanitized.responsive && typeof sanitized.responsive === 'object') {
+    const resp = sanitized.responsive as Record<string, unknown>
+    for (const bp of ['md', 'sm'] as const) {
+      if (resp[bp] && typeof resp[bp] === 'object') {
+        resp[bp] = sanitizeFrameProperties(resp[bp] as Record<string, unknown>, existingFrame)
+      }
+    }
+    sanitized.responsive = resp
+  }
+
   return sanitized
 }

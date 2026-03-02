@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, RotateCcw } from 'lucide-react'
 
 function getStorageKey(title: string) {
   return `caja-section-${title}`
@@ -19,12 +19,16 @@ export function Section({
   icon,
   collapsible = true,
   defaultCollapsed = false,
+  hasOverrides = false,
+  onResetOverrides,
 }: {
   title: string
   children: React.ReactNode
   icon?: React.ReactNode
   collapsible?: boolean
   defaultCollapsed?: boolean
+  hasOverrides?: boolean
+  onResetOverrides?: () => void
 }) {
   const [collapsed, setCollapsed] = useState(() => collapsible ? readCollapsed(title, defaultCollapsed) : false)
 
@@ -49,6 +53,17 @@ export function Section({
         )}
         {icon && <span className="text-text-muted">{icon}</span>}
         <span className={`c-section-title${collapsible ? ' cursor-pointer select-none' : ''}`} onClick={collapsible ? toggle : undefined}>{title}</span>
+        {hasOverrides && <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0 ml-1" title="Modified at this breakpoint" />}
+        <div className="flex-1" />
+        {hasOverrides && onResetOverrides && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onResetOverrides() }}
+            className="w-4 h-4 flex items-center justify-center rounded text-text-muted hover:text-text-secondary opacity-0 group-hover/section:opacity-100"
+            title="Reset overrides for this section"
+          >
+            <RotateCcw size={10} />
+          </button>
+        )}
       </div>
       {!collapsed && children}
     </div>
