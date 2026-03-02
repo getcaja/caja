@@ -3,6 +3,7 @@ import { exportToJSX } from '../../utils/exportTailwind'
 import { exportToHTML, exportToHTMLDocument } from '../../utils/exportHtml'
 import { useMemo, useState } from 'react'
 import { Dialog } from '../ui/Dialog'
+import { X } from 'lucide-react'
 import * as RadixTabs from '@radix-ui/react-tabs'
 
 interface ExportModalProps {
@@ -48,43 +49,40 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
       <RadixTabs.Root
         value={format}
         onValueChange={(v) => setFormat(v as ExportFormat)}
-        className="bg-surface-1 border border-border-accent rounded-xl w-[640px] max-h-[80vh] flex flex-col shadow-2xl"
+        className="bg-surface-1 border border-border rounded-xl w-[640px] max-h-[80vh] flex flex-col shadow-xl"
       >
+        {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <div className="flex items-center gap-1">
-            <span className="text-[12px] text-text-secondary font-medium mr-2">Export</span>
-            <RadixTabs.List className="flex items-center gap-0.5">
-              {FORMAT_TABS.map((tab) => (
-                <RadixTabs.Trigger
-                  key={tab.value}
-                  value={tab.value}
-                  className={`px-2.5 py-1 text-[12px] rounded-md transition-all ${
-                    format === tab.value
-                      ? 'bg-surface-2 text-text-primary'
-                      : 'text-text-muted hover:text-text-secondary'
-                  }`}
-                >
-                  {tab.label}
-                </RadixTabs.Trigger>
-              ))}
-            </RadixTabs.List>
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              className="px-3 py-1.5 text-[12px] bg-accent text-surface-0 font-medium rounded-md hover:opacity-85 transition-opacity"
-              onClick={handleCopy}
-            >
-              {copied ? 'Copied!' : 'Copy'}
-            </button>
-            <button
-              type="button"
-              className="px-3 py-1.5 text-[12px] text-text-muted hover:text-text-primary bg-surface-2 hover:bg-surface-3 rounded-md transition-all"
-              onClick={() => onOpenChange(false)}
-            >
-              Close
-            </button>
-          </div>
+          <h2 className="text-[13px] font-semibold text-text-primary">Export</h2>
+          <button className="w-5 h-5 c-icon-btn hover:text-text-secondary hover:bg-surface-2/60" onClick={() => onOpenChange(false)}>
+            <X size={14} />
+          </button>
+        </div>
+
+        {/* Tabs + Copy */}
+        <div className="flex items-center justify-between px-4 pt-3 pb-3">
+          <RadixTabs.List className="flex items-center gap-0.5">
+            {FORMAT_TABS.map((tab) => (
+              <RadixTabs.Trigger
+                key={tab.value}
+                value={tab.value}
+                className={`px-2.5 py-1.5 text-[12px] rounded-md transition-all ${
+                  format === tab.value
+                    ? 'bg-surface-3 text-text-primary'
+                    : 'text-text-muted hover:text-text-secondary'
+                }`}
+              >
+                {tab.label}
+              </RadixTabs.Trigger>
+            ))}
+          </RadixTabs.List>
+          <button
+            type="button"
+            className="px-3 py-1.5 text-[12px] bg-accent text-white font-medium rounded-md hover:bg-accent-hover transition-colors"
+            onClick={handleCopy}
+          >
+            {copied ? 'Copied!' : 'Copy'}
+          </button>
         </div>
         <pre className="flex-1 overflow-auto p-4 text-[12px] text-text-primary font-mono leading-relaxed">
           {code}

@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { Dialog } from '../ui/Dialog'
-import { Check, Copy, ChevronDown, ChevronRight } from 'lucide-react'
+import { Check, Copy, ChevronDown, ChevronRight, X } from 'lucide-react'
 
 interface McpModalProps {
   open: boolean
@@ -89,20 +89,23 @@ export function McpModal({ open, onOpenChange }: McpModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <div className="bg-surface-1 border border-border rounded-xl w-[480px] max-h-[80vh] overflow-hidden">
+      <div className="bg-surface-1 border border-border rounded-xl shadow-xl w-[480px] max-h-[80vh] overflow-hidden">
         {/* Header */}
-        <div className="px-5 pt-5 pb-3">
-          <h2 className="text-[14px] font-semibold text-text-primary">MCP Server</h2>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <h2 className="text-[13px] font-semibold text-text-primary">MCP Server</h2>
+          <button className="w-5 h-5 c-icon-btn hover:text-text-secondary hover:bg-surface-2/60" onClick={() => onOpenChange(false)}>
+            <X size={14} />
+          </button>
         </div>
 
         {/* Description */}
-        <p className="px-5 pb-4 text-[12px] text-text-secondary leading-relaxed">
+        <p className="px-4 pt-3 pb-3 text-[12px] text-text-secondary leading-relaxed">
           Connect AI agents to Caja's design canvas. The MCP server lets
           external tools read, create, and modify frames in real time.
         </p>
 
         {/* Client tabs */}
-        <div className="flex gap-1 px-5 pb-3">
+        <div className="flex gap-1 px-4 pb-3">
           {CLIENTS.map((c) => (
             <button
               key={c.id}
@@ -120,11 +123,11 @@ export function McpModal({ open, onOpenChange }: McpModalProps) {
 
         {/* Install button */}
         {isTauri && (
-          <div className="px-5 pb-3">
+          <div className="px-4 pb-3">
             <button
               onClick={handleInstall}
               disabled={installState !== 'idle'}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-accent text-white text-[12px] font-medium hover:bg-accent-hover transition-colors disabled:opacity-60"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-accent text-white text-[12px] font-medium hover:bg-accent-hover transition-colors disabled:opacity-60"
             >
               {installState === 'idle' && <>Add to {CLIENTS.find((c) => c.id === activeClient)!.label}</>}
               {installState === 'installed' && <><Check size={14} /> Installed</>}
@@ -135,7 +138,7 @@ export function McpModal({ open, onOpenChange }: McpModalProps) {
         )}
 
         {/* Manual setup (collapsible) */}
-        <div className="px-5 pb-5">
+        <div className="px-4 pb-4">
           <button
             type="button"
             onClick={() => setShowManual(!showManual)}

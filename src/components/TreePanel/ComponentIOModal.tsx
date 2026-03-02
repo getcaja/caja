@@ -4,6 +4,7 @@ import { readCjlFile, exportLibrary } from '../../lib/libraryOps'
 import type { CjlFileData } from '../../lib/libraryOps'
 import type { Component } from '../../types/component'
 import { X, Check } from 'lucide-react'
+import { Dialog } from '../ui/Dialog'
 
 interface ComponentIOModalProps {
   open: boolean
@@ -63,24 +64,22 @@ export function ComponentIOModal({ open, mode, onOpenChange }: ComponentIOModalP
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, mode])
 
-  if (!open) return null
-
   // ── Import mode ──
   if (mode === 'import') {
     if (importLoading) {
       return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
-          <div className="bg-surface-1 border border-border rounded-lg shadow-xl w-[360px] p-6 text-center">
+        <Dialog open={open} onOpenChange={onOpenChange}>
+          <div className="bg-surface-1 border border-border rounded-xl shadow-xl w-[360px] p-6 text-center">
             <span className="text-[12px] text-text-muted">Reading .cjl file...</span>
           </div>
-        </div>
+        </Dialog>
       )
     }
 
     if (importError) {
       return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50" onClick={() => onOpenChange(false)}>
-          <div className="bg-surface-1 border border-border rounded-lg shadow-xl w-[360px] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <Dialog open={open} onOpenChange={onOpenChange}>
+          <div className="bg-surface-1 border border-border rounded-xl shadow-xl w-[360px] flex flex-col">
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">
               <h2 className="text-[13px] font-semibold text-text-primary">Import Error</h2>
               <button className="w-5 h-5 c-icon-btn hover:text-text-secondary hover:bg-surface-2/60" onClick={() => onOpenChange(false)}>
@@ -96,7 +95,7 @@ export function ComponentIOModal({ open, mode, onOpenChange }: ComponentIOModalP
               </button>
             </div>
           </div>
-        </div>
+        </Dialog>
       )
     }
 
@@ -136,12 +135,12 @@ export function ComponentIOModal({ open, mode, onOpenChange }: ComponentIOModalP
     }
 
     return (
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50" onClick={() => onOpenChange(false)}>
-        <div className="bg-surface-1 border border-border rounded-lg shadow-xl w-[360px] max-h-[500px] flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <div className="bg-surface-1 border border-border rounded-xl shadow-xl w-[360px] max-h-[500px] flex flex-col">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <div>
               <h2 className="text-[13px] font-semibold text-text-primary">Import from {cjlData.name}</h2>
-              {cjlData.author && <p className="text-[10px] text-text-muted">by {cjlData.author}</p>}
+              {cjlData.author && <p className="text-[12px] text-text-muted">By {cjlData.author}</p>}
             </div>
             <button className="w-5 h-5 c-icon-btn hover:text-text-secondary hover:bg-surface-2/60" onClick={() => onOpenChange(false)}>
               <X size={14} />
@@ -174,7 +173,7 @@ export function ComponentIOModal({ open, mode, onOpenChange }: ComponentIOModalP
                     </div>
                     <span className="truncate">{item.name}</span>
                     {item.tags.length > 0 && (
-                      <span className="text-[10px] text-text-muted ml-auto shrink-0">{item.tags[0]}</span>
+                      <span className="px-1.5 py-0.5 text-[10px] leading-none font-medium rounded bg-surface-3/60 text-text-muted ml-auto shrink-0">{item.tags[0]}</span>
                     )}
                   </button>
                 ))}
@@ -187,7 +186,7 @@ export function ComponentIOModal({ open, mode, onOpenChange }: ComponentIOModalP
               Cancel
             </button>
             <button
-              className="px-3 py-1.5 rounded-md text-[12px] text-surface-0 font-medium bg-accent hover:bg-accent-hover transition-colors disabled:opacity-50"
+              className="px-3 py-1.5 rounded-md text-[12px] text-white font-medium bg-accent hover:bg-accent-hover transition-colors disabled:opacity-50"
               onClick={handleImport}
               disabled={selected.size === 0}
             >
@@ -195,7 +194,7 @@ export function ComponentIOModal({ open, mode, onOpenChange }: ComponentIOModalP
             </button>
           </div>
         </div>
-      </div>
+      </Dialog>
     )
   }
 
@@ -243,8 +242,8 @@ export function ComponentIOModal({ open, mode, onOpenChange }: ComponentIOModalP
   }
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50" onClick={() => onOpenChange(false)}>
-      <div className="bg-surface-1 border border-border rounded-lg shadow-xl w-[360px] max-h-[600px] flex flex-col" onClick={(e) => e.stopPropagation()}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <div className="bg-surface-1 border border-border rounded-xl shadow-xl w-[360px] max-h-[600px] flex flex-col">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <h2 className="text-[13px] font-semibold text-text-primary">Export .cjl</h2>
           <button className="w-5 h-5 c-icon-btn hover:text-text-secondary hover:bg-surface-2/60" onClick={() => onOpenChange(false)}>
@@ -320,7 +319,7 @@ export function ComponentIOModal({ open, mode, onOpenChange }: ComponentIOModalP
                   </div>
                   <span className="truncate">{c.name}</span>
                   {c.tags.length > 0 && (
-                    <span className="text-[10px] text-text-muted ml-auto shrink-0">{c.tags[0]}</span>
+                    <span className="px-1.5 py-0.5 text-[10px] leading-none font-medium rounded bg-surface-3/60 text-text-muted ml-auto shrink-0">{c.tags[0]}</span>
                   )}
                 </button>
               ))}
@@ -333,7 +332,7 @@ export function ComponentIOModal({ open, mode, onOpenChange }: ComponentIOModalP
             Cancel
           </button>
           <button
-            className="px-3 py-1.5 rounded-md text-[12px] text-surface-0 font-medium bg-accent hover:bg-accent-hover transition-colors disabled:opacity-50"
+            className="px-3 py-1.5 rounded-md text-[12px] text-white font-medium bg-accent hover:bg-accent-hover transition-colors disabled:opacity-50"
             onClick={handleExport}
             disabled={!name.trim() || selected.size === 0 || exporting}
           >
@@ -341,6 +340,6 @@ export function ComponentIOModal({ open, mode, onOpenChange }: ComponentIOModalP
           </button>
         </div>
       </div>
-    </div>
+    </Dialog>
   )
 }
