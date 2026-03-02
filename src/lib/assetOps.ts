@@ -75,10 +75,24 @@ export function getAssetSnapshot() {
   return assetVersion
 }
 
-/** Create a blob URL from a Uint8Array */
-function createBlobUrl(data: Uint8Array, ext: string): string {
+/** Create a blob URL from a Uint8Array, revoking any previous blob for the same key */
+function createBlobUrl(data: Uint8Array, ext: string, cacheKey?: string): string {
+  // Revoke previous blob URL for this key to prevent memory leak
+  if (cacheKey) {
+    const prev = blobCache.get(cacheKey)
+    if (prev) URL.revokeObjectURL(prev)
+  }
   const blob = new Blob([data], { type: mimeFromExt(ext) })
   return URL.createObjectURL(blob)
+}
+
+/** Revoke all cached blob URLs (e.g. on File > New) */
+export function revokeAllBlobUrls(): void {
+  for (const url of blobCache.values()) {
+    URL.revokeObjectURL(url)
+  }
+  blobCache.clear()
+  bumpAssetVersion()
 }
 
 // --- Public API ---
@@ -147,7 +161,7 @@ export async function downloadAsset(url: string, projectPath: string | null): Pr
   // Create blob URL for canvas (reuse cached if available)
   let assetUrl = blobCache.get(localPath)
   if (!assetUrl) {
-    assetUrl = createBlobUrl(data, ext)
+    assetUrl = createBlobUrl(data, ext, localPath)
     blobCache.set(localPath, assetUrl)
     bumpAssetVersion()
   }
@@ -168,7 +182,7 @@ export async function restoreAssetUrl(localPath: string): Promise<string | null>
     if (!(await exists(localPath))) return null
     const data = await readFile(localPath)
     const ext = localPath.split('.').pop() || 'png'
-    const blobUrl = createBlobUrl(data, ext)
+    const blobUrl = createBlobUrl(data, ext, localPath)
     blobCache.set(localPath, blobUrl)
     bumpAssetVersion()
     return blobUrl
