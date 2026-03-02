@@ -1,5 +1,5 @@
 import type { Frame, BoxElement, TextElement, ImageElement, ButtonElement, InputElement, TextareaElement, SelectElement, TextStyles, Spacing, Inset, SizeValue, BorderRadius, Border, DesignValue } from '../types/frame'
-import { generateId } from './frameStore'
+import { generateId } from './treeHelpers'
 
 // --- DesignValue helpers ---
 export function dvNum(v: number): DesignValue<number> {

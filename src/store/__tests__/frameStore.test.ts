@@ -784,7 +784,7 @@ describe('frameStore', () => {
       addChild('image')
       store().newFile()
       expect(rootChildren()).toHaveLength(0)
-      expect(store().selectedId).toBeNull()
+      expect(store().selectedId).toBe(store().root.id)
       expect(store().dirty).toBe(false)
       expect(store().filePath).toBeNull()
     })

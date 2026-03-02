@@ -1,5 +1,5 @@
 import type { Frame, BoxElement, BoxTag, BoxDisplay, TextElement, ImageElement, ButtonElement, InputElement, TextareaElement, SelectElement, TextStyles, Spacing, SizeValue, BorderRadius, Border, DesignValue } from '../types/frame'
-import { generateId, isRootId } from './frameStore'
+import { generateId, isRootId } from './treeHelpers'
 import {
   dvNum, dvStr, zeroSpacing, zeroBorderRadius, uniformBorderRadius,
   createInternalRoot, normalizeFrame,
