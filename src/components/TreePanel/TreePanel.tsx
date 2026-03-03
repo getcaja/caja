@@ -10,7 +10,7 @@ import { ComponentIOModal } from './ComponentIOModal'
 import { PageNode } from './PageNode'
 import { useContextMenu } from './hooks/useContextMenu'
 import { useTreeKeyboard } from './hooks/useTreeKeyboard'
-import { Plus, X, ChevronRight, ChevronsDownUp, ChevronsUpDown } from 'lucide-react'
+import { Plus, X, ChevronRight } from 'lucide-react'
 
 function TreeSection({ label, collapsed, onToggle, trailing, children }: {
   label: string
@@ -45,9 +45,6 @@ export function TreePanel() {
   const selectedId = useFrameStore((s) => s.selectedId)
   const addChild = useFrameStore((s) => s.addChild)
   const addPage = useFrameStore((s) => s.addPage)
-  const collapseAll = useFrameStore((s) => s.collapseAll)
-  const expandAll = useFrameStore((s) => s.expandAll)
-  const collapsedIds = useFrameStore((s) => s.collapsedIds)
   const rawTab = useFrameStore((s) => s.treePanelTab)
   const tab = rawTab === 'layers' || rawTab === 'components' ? rawTab : 'layers'
   const setTab = useFrameStore((s) => s.setTreePanelTab)
@@ -55,6 +52,7 @@ export function TreePanel() {
   const enterComponentEditMode = useFrameStore((s) => s.enterComponentEditMode)
   const exitComponentEditMode = useFrameStore((s) => s.exitComponentEditMode)
   const renameFrame = useFrameStore((s) => s.renameFrame)
+  const hasComponents = useCatalogStore((s) => s.components.length > 0 || s.emptyCategories.length > 0)
   const renameComponent = useCatalogStore((s) => s.renameComponent)
   const handleRenameComponent = useCallback((id: string, name: string) => {
     renameFrame(id, name)
@@ -64,6 +62,7 @@ export function TreePanel() {
   const [menuPos, setMenuPos] = useState({ x: 0, y: 0 })
   const [pagesCollapsed, setPagesCollapsed] = useState(false)
   const [layersCollapsed, setLayersCollapsed] = useState(false)
+  const [componentsCollapsed, setComponentsCollapsed] = useState(false)
   const addBtnRef = useRef<HTMLButtonElement>(null)
 
   // Components "+" menu
@@ -78,9 +77,18 @@ export function TreePanel() {
   const layersKeyboardConfig = useMemo(() => ({
     isActive: tab === 'layers' && !editingComponentId,
     getSelectedIds: () => useFrameStore.getState().selectedIds,
-    getPrimaryId: () => useFrameStore.getState().selectedId,
+    getPrimaryId: () => {
+      const s = useFrameStore.getState()
+      return s.selectedId ?? (s.pageSelected ? s.activePageId : null)
+    },
     deleteSelected: () => {
       const s = useFrameStore.getState()
+      // Page selected — delete the active page (if more than 1)
+      if (s.pageSelected) {
+        const userPages = s.pages.filter((p) => !p.isComponentPage)
+        if (userPages.length > 1) s.removePage(s.activePageId)
+        return
+      }
       if (s.selectedIds.size > 1) {
         s.removeSelected()
       } else if (s.selectedId && !isRootId(s.selectedId)) {
@@ -89,6 +97,10 @@ export function TreePanel() {
     },
     duplicateSelected: () => {
       const s = useFrameStore.getState()
+      if (s.pageSelected) {
+        s.duplicatePage(s.activePageId)
+        return
+      }
       if (s.selectedId && !isRootId(s.selectedId)) s.duplicateFrame(s.selectedId)
     },
     copySelected: () => useFrameStore.getState().copySelected(),
@@ -152,7 +164,15 @@ export function TreePanel() {
     deleteSelected: () => {
       const cs = useCatalogStore.getState()
       for (const id of cs.highlightIds) {
-        if (!id.startsWith('__cat:')) cs.deleteComponent(id)
+        if (id.startsWith('__cat:')) {
+          const tag = id.slice(6)
+          for (const s of cs.components) {
+            if (s.tags[0] === tag) cs.updateComponentTags(s.id, s.tags.slice(1))
+          }
+          cs.removeEmptyCategory(tag)
+        } else {
+          cs.deleteComponent(id)
+        }
       }
     },
     duplicateSelected: () => {
@@ -236,9 +256,8 @@ export function TreePanel() {
   if (editingMaster) {
     return (
       <div className="h-full bg-surface-1/80 flex flex-col">
-        <div className="px-4 py-2.5 border-b border-border flex items-center justify-between">
+        <div className="pl-2.5 pr-4 py-2.5 border-b border-border flex items-center justify-between">
           <div className="flex items-center gap-1 min-w-0">
-            <span className="text-[12px] font-semibold px-1.5 py-0.5 text-text-muted shrink-0">Edit</span>
             <input
               className="text-[12px] font-semibold px-1.5 py-0.5 text-text-primary bg-transparent min-w-0 rounded focus:bg-surface-2 outline-none"
               value={editingMaster.name}
@@ -254,12 +273,36 @@ export function TreePanel() {
             <X size={12} />
           </button>
         </div>
+        {showAdd && (
+          <AddMenu
+            x={menuPos.x}
+            y={menuPos.y}
+            onAdd={handleAdd}
+
+            onClose={() => setShowAdd(false)}
+          />
+        )}
         <TreeDndProvider>
-          <div
-            className="flex-1 overflow-y-auto py-0.5 px-1"
-            onClick={(e) => { if (e.target === e.currentTarget) useFrameStore.getState().select(null) }}
-          >
-            <TreeNode frame={editingMaster} depth={0} isRoot />
+          <div className="flex-1 overflow-y-auto flex flex-col">
+            <TreeSection
+              label="Layers"
+              collapsed={layersCollapsed}
+              onToggle={() => setLayersCollapsed((v) => !v)}
+              trailing={
+                <button
+                  ref={addBtnRef}
+                  className="w-5 h-5 c-icon-btn hover:text-accent hover:bg-accent/10 opacity-0 group-hover/section:opacity-100"
+                  onClick={(e) => { e.stopPropagation(); openAddMenu() }}
+                  title="Insert"
+                >
+                  <Plus size={12} />
+                </button>
+              }
+            >
+              <div className="flex-1 overflow-y-auto pb-0.5">
+                <TreeNode frame={editingMaster} depth={0} isRoot />
+              </div>
+            </TreeSection>
           </div>
         </TreeDndProvider>
       </div>
@@ -283,26 +326,6 @@ export function TreePanel() {
             Assets
           </button>
         </div>
-        {tab === 'layers' && (
-          <button
-            ref={addBtnRef}
-            className="w-5 h-5 c-icon-btn hover:text-accent hover:bg-accent/10"
-            onClick={openAddMenu}
-            title="Add element"
-          >
-            <Plus size={12} />
-          </button>
-        )}
-        {tab === 'components' && (
-          <button
-            ref={componentBtnRef}
-            className="w-5 h-5 c-icon-btn hover:text-accent hover:bg-accent/10"
-            onClick={openComponentMenu}
-            title="Add"
-          >
-            <Plus size={12} />
-          </button>
-        )}
       </div>
 
       {showAdd && (
@@ -347,9 +370,7 @@ export function TreePanel() {
 
       {tab === 'layers' && (
         <TreeDndProvider>
-          <div
-            className="flex-1 overflow-y-auto flex flex-col"
-          >
+          <div className="flex-1 overflow-y-auto flex flex-col">
             {/* Pages section */}
             <TreeSection
               label="Pages"
@@ -357,9 +378,9 @@ export function TreePanel() {
               onToggle={() => setPagesCollapsed((v) => !v)}
               trailing={
                 <button
-                  className="w-5 h-5 c-icon-btn text-text-muted hover:text-accent hover:bg-accent/10"
-                  onClick={() => addPage()}
-                  title="Add page"
+                  className="w-5 h-5 c-icon-btn hover:text-accent hover:bg-accent/10 opacity-0 group-hover/section:opacity-100"
+                  onClick={(e) => { e.stopPropagation(); addPage() }}
+                  title="Add Page"
                 >
                   <Plus size={12} />
                 </button>
@@ -379,17 +400,16 @@ export function TreePanel() {
               onToggle={() => setLayersCollapsed((v) => !v)}
               trailing={
                 <button
-                  className="w-5 h-5 c-icon-btn text-text-muted hover:text-accent hover:bg-accent/10"
-                  onClick={() => collapsedIds.size > 0 ? expandAll() : collapseAll()}
-                  title={collapsedIds.size > 0 ? 'Expand all' : 'Collapse all'}
+                  ref={addBtnRef}
+                  className="w-5 h-5 c-icon-btn hover:text-accent hover:bg-accent/10 opacity-0 group-hover/section:opacity-100"
+                  onClick={(e) => { e.stopPropagation(); openAddMenu() }}
+                  title="Insert"
                 >
-                  {collapsedIds.size > 0 ? <ChevronsUpDown size={12} /> : <ChevronsDownUp size={12} />}
+                  <Plus size={12} />
                 </button>
               }
             >
-              <div
-                className="flex-1 overflow-y-auto pb-0.5"
-              >
+              <div className="flex-1 overflow-y-auto pb-0.5">
                 {activePage && (
                   <TreeNode frame={activePage.root} depth={0} isRoot />
                 )}
@@ -401,11 +421,33 @@ export function TreePanel() {
 
       {tab === 'components' && (
         <div className="flex-1 flex flex-col overflow-hidden">
-          <ComponentsPanel
-            ref={componentPanelRef}
-            source={{ type: 'internal' }}
-            onEditComponent={enterComponentEditMode}
-          />
+          {hasComponents ? (
+            <TreeSection
+              label="Components"
+              collapsed={componentsCollapsed}
+              onToggle={() => setComponentsCollapsed((v) => !v)}
+              trailing={
+                <button
+                  ref={componentBtnRef}
+                  className="w-5 h-5 c-icon-btn hover:text-accent hover:bg-accent/10 opacity-0 group-hover/section:opacity-100"
+                  onClick={(e) => { e.stopPropagation(); openComponentMenu() }}
+                  title="Add"
+                >
+                  <Plus size={12} />
+                </button>
+              }
+            >
+              <ComponentsPanel
+                ref={componentPanelRef}
+                source={{ type: 'internal' }}
+                onEditComponent={enterComponentEditMode}
+              />
+            </TreeSection>
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <span className="text-text-muted text-[12px]">No components yet</span>
+            </div>
+          )}
         </div>
       )}
 

@@ -16,11 +16,13 @@ export function useCanvasContextMenu() {
     const el = (e.target as HTMLElement).closest('[data-frame-id]')
     const frameId = el?.getAttribute('data-frame-id') ?? null
 
-    if (frameId) {
-      const { selectedIds } = useFrameStore.getState()
-      if (!selectedIds.has(frameId)) {
-        useFrameStore.getState().select(frameId)
-      }
+    // Don't show empty menu for root or canvas background
+    const isRoot = frameId?.startsWith('__root__')
+    if (!frameId || isRoot) return
+
+    const { selectedIds } = useFrameStore.getState()
+    if (!selectedIds.has(frameId)) {
+      useFrameStore.getState().select(frameId)
     }
 
     setMenu({ x: e.clientX, y: e.clientY, frameId })

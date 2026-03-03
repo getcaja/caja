@@ -40,10 +40,13 @@ export const createPageSlice: StateCreator<FrameStore, [], [], PageSlice> = (set
     if (id === COMPONENT_PAGE_ID) return {} // never remove components page
     const regularPages = state.pages.filter((p) => !p.isComponentPage)
     if (regularPages.length <= 1) return {} // min 1 regular page
+    const idx = regularPages.findIndex((p) => p.id === id)
     const pages = state.pages.filter((p) => p.id !== id)
     const wasActive = state.activePageId === id
     if (wasActive) {
-      const newActive = pages.find((p) => !p.isComponentPage) || pages[0]
+      // Pick the previous sibling, or the next if deleting the first
+      const neighbor = idx > 0 ? regularPages[idx - 1] : regularPages[idx + 1]
+      const newActive = neighbor || pages.find((p) => !p.isComponentPage) || pages[0]
       // Clean up undo stacks for removed page
       const { [id]: _pastRemoved, ...pastRest } = state.past
       const { [id]: _futureRemoved, ...futureRest } = state.future
@@ -54,6 +57,7 @@ export const createPageSlice: StateCreator<FrameStore, [], [], PageSlice> = (set
         selectedId: null,
         selectedIds: new Set(),
         hoveredId: null,
+        pageSelected: true,
         past: pastRest,
         future: futureRest,
         dirty: true,

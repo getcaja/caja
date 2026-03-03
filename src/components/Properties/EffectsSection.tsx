@@ -1,4 +1,4 @@
-import { Eclipse, MousePointer2, Droplets, Layers } from 'lucide-react'
+import { Eclipse, MousePointer2, Droplet, Droplets } from 'lucide-react'
 import type { Frame } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { Section } from '../ui/Section'
@@ -39,7 +39,7 @@ export function EffectsSection({ frame }: { frame: Frame }) {
             value={frame.blur}
             onChange={(v) => updateFrame(frame.id, { blur: v })}
             min={0}
-            inlineLabel={<Droplets size={12} />}
+            inlineLabel={<Droplet size={12} />}
             classPrefix="blur"
             defaultValue={0}
             placeholder="None"
@@ -50,7 +50,7 @@ export function EffectsSection({ frame }: { frame: Frame }) {
             value={frame.backdropBlur}
             onChange={(v) => updateFrame(frame.id, { backdropBlur: v })}
             min={0}
-            inlineLabel={<Layers size={12} />}
+            inlineLabel={<Droplets size={12} />}
             classPrefix="backdrop-blur"
             defaultValue={0}
             placeholder="None"

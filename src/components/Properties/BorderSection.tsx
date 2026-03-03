@@ -80,7 +80,7 @@ export function BorderSection({ frame }: { frame: Frame }) {
             onChange={(v) => updateFrame(frame.id, { border: { ...frame.border, ...v } })}
             label="Width"
             classPrefix="border"
-            labelPrefix="B"
+            labelPrefix="W"
             scale={BORDER_WIDTH_SCALE}
           />
         )}

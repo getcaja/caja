@@ -28,6 +28,7 @@ function sectionHasOverrides(section: string, overrideKeys: Set<string>): boolea
 
 export function Properties() {
   const selected = useFrameStore((s) => s.getSelected())
+  const root = useFrameStore((s) => s.root)
   const multiCount = useFrameStore((s) => s.selectedIds.size)
   const rootId = useFrameStore((s) => s.getRootId())
   const pageSelected = useFrameStore((s) => s.pageSelected)
@@ -35,36 +36,35 @@ export function Properties() {
   const getEffectiveFrame = useFrameStore((s) => s.getEffectiveFrame)
   const removeResponsiveKeys = useFrameStore((s) => s.removeResponsiveKeys)
 
+  // Store auto-selects root when selection clears; keep UI fallback as safety net
+  const frame = selected ?? root
+
   // Compute which keys have responsive overrides at the current breakpoint
   const overrideKeys = useMemo(() => {
-    if (!selected || activeBreakpoint === 'base') return new Set<string>()
-    const overrides = selected.responsive?.[activeBreakpoint]
+    if (activeBreakpoint === 'base') return new Set<string>()
+    const overrides = frame.responsive?.[activeBreakpoint]
     if (!overrides) return new Set<string>()
     return new Set(Object.keys(overrides))
-  }, [selected, activeBreakpoint])
+  }, [frame, activeBreakpoint])
 
   const makeResetHandler = useCallback((section: string) => {
-    if (!selected || activeBreakpoint === 'base') return undefined
+    if (activeBreakpoint === 'base') return undefined
     const keys = SECTION_KEYS[section]
     if (!keys || !sectionHasOverrides(section, overrideKeys)) return undefined
-    return () => removeResponsiveKeys(selected.id, activeBreakpoint as 'md' | 'sm', keys)
-  }, [selected, activeBreakpoint, overrideKeys, removeResponsiveKeys])
+    return () => removeResponsiveKeys(frame.id, activeBreakpoint as 'md' | 'sm', keys)
+  }, [frame, activeBreakpoint, overrideKeys, removeResponsiveKeys])
 
   if (multiCount > 1) return null
-
-  if (!selected) {
-    if (pageSelected) return <PagePanel />
-    return null
-  }
+  if (pageSelected && !selected) return <PagePanel />
 
   // Merge responsive overrides for the active breakpoint
-  const effective = activeBreakpoint !== 'base' ? getEffectiveFrame(selected) : selected
+  const effective = activeBreakpoint !== 'base' ? getEffectiveFrame(frame) : frame
 
-  const isRoot = selected.id === rootId
+  const isRoot = frame.id === rootId
   const hasTextStyles = 'fontSize' in effective
 
   return (
-    <div key={selected.id} className="">
+    <div key={frame.id} className="">
       <ElementSection frame={effective} isRoot={isRoot} />
       <PositionSection frame={effective} />
       <LayoutSection frame={effective} isRoot={isRoot} hasOverrides={sectionHasOverrides('Layout', overrideKeys)} onResetOverrides={makeResetHandler('Layout')} />

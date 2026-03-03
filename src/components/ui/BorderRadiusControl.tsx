@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Scan, SquareArrowUpLeft, SquareArrowUpRight, SquareArrowDownLeft, SquareArrowDownRight, Squircle } from 'lucide-react'
+import { Scan } from 'lucide-react'
 import type { BorderRadius, DesignValue } from '../../types/frame'
 import { TokenInput } from './TokenInput'
 import { BORDER_RADIUS_SCALE } from '../../data/scales'
@@ -7,6 +7,8 @@ import { BORDER_RADIUS_SCALE } from '../../data/scales'
 function dvSame(a: DesignValue<number>, b: DesignValue<number>): boolean {
   return a.mode === b.mode && a.value === b.value && a.token === b.token
 }
+
+const txtLbl = (s: string) => <span className="text-[12px]">{s}</span>
 
 export function BorderRadiusControl({
   value,
@@ -35,8 +37,8 @@ export function BorderRadiusControl({
       <div className="flex items-center gap-2">
         {expanded ? (
           <>
-            <TokenInput scale={BORDER_RADIUS_SCALE} value={value.topLeft} onChange={(v) => onChange({ topLeft: v })} min={0} classPrefix="rounded-tl" inlineLabel={<SquareArrowUpLeft size={12} />} tooltip="Top Left Radius" />
-            <TokenInput scale={BORDER_RADIUS_SCALE} value={value.topRight} onChange={(v) => onChange({ topRight: v })} min={0} classPrefix="rounded-tr" inlineLabel={<SquareArrowUpRight size={12} />} tooltip="Top Right Radius" />
+            <TokenInput scale={BORDER_RADIUS_SCALE} value={value.topLeft} onChange={(v) => onChange({ topLeft: v })} min={0} classPrefix="rounded-tl" inlineLabel={txtLbl('TL')} tooltip="Top Left Radius" />
+            <TokenInput scale={BORDER_RADIUS_SCALE} value={value.topRight} onChange={(v) => onChange({ topRight: v })} min={0} classPrefix="rounded-tr" inlineLabel={txtLbl('TR')} tooltip="Top Right Radius" />
           </>
         ) : (
           <TokenInput
@@ -45,7 +47,7 @@ export function BorderRadiusControl({
             onChange={(v) => onChange({ topLeft: v, topRight: v, bottomRight: v, bottomLeft: v })}
             min={0}
             classPrefix="rounded"
-            inlineLabel={<Squircle size={12} />}
+            inlineLabel={<Scan size={12} />}
             tooltip="Border Radius"
           />
         )}
@@ -64,8 +66,8 @@ export function BorderRadiusControl({
       </div>
       {expanded && (
         <div className="flex items-center gap-2">
-          <TokenInput scale={BORDER_RADIUS_SCALE} value={value.bottomLeft} onChange={(v) => onChange({ bottomLeft: v })} min={0} classPrefix="rounded-bl" inlineLabel={<SquareArrowDownLeft size={12} />} tooltip="Bottom Left Radius" />
-          <TokenInput scale={BORDER_RADIUS_SCALE} value={value.bottomRight} onChange={(v) => onChange({ bottomRight: v })} min={0} classPrefix="rounded-br" inlineLabel={<SquareArrowDownRight size={12} />} tooltip="Bottom Right Radius" />
+          <TokenInput scale={BORDER_RADIUS_SCALE} value={value.bottomLeft} onChange={(v) => onChange({ bottomLeft: v })} min={0} classPrefix="rounded-bl" inlineLabel={txtLbl('BL')} tooltip="Bottom Left Radius" />
+          <TokenInput scale={BORDER_RADIUS_SCALE} value={value.bottomRight} onChange={(v) => onChange({ bottomRight: v })} min={0} classPrefix="rounded-br" inlineLabel={txtLbl('BR')} tooltip="Bottom Right Radius" />
           <div className="w-5 shrink-0" />
         </div>
       )}

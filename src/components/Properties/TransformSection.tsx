@@ -1,8 +1,10 @@
+import { RotateCw, Scaling, MoveHorizontal, MoveVertical, Italic, Crosshair } from 'lucide-react'
 import type { Frame } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { Section } from '../ui/Section'
 import { TokenInput } from '../ui/TokenInput'
-import { SPACING_SCALE, ROTATE_SCALE, SCALE_SCALE } from '../../data/scales'
+import { SPACING_SCALE, ROTATE_SCALE, SCALE_SCALE, SKEW_SCALE } from '../../data/scales'
+import { TRANSFORM_ORIGIN_OPTIONS } from './constants'
 
 export function TransformSection({ frame }: { frame: Frame }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
@@ -15,10 +17,11 @@ export function TransformSection({ frame }: { frame: Frame }) {
             scale={ROTATE_SCALE}
             value={frame.rotate}
             onChange={(v) => updateFrame(frame.id, { rotate: v })}
-            inlineLabel="R"
+            inlineLabel={<RotateCw size={12} />}
             classPrefix="rotate"
             defaultValue={0}
             placeholder="0°"
+            unit="°"
             tooltip="Rotate"
           />
           <TokenInput
@@ -26,10 +29,11 @@ export function TransformSection({ frame }: { frame: Frame }) {
             value={frame.scaleVal}
             onChange={(v) => updateFrame(frame.id, { scaleVal: v })}
             min={0}
-            inlineLabel="S"
+            inlineLabel={<Scaling size={12} />}
             classPrefix="scale"
             defaultValue={100}
             placeholder="100%"
+            unit="%"
             tooltip="Scale"
           />
           <div className="w-5 shrink-0" />
@@ -39,19 +43,58 @@ export function TransformSection({ frame }: { frame: Frame }) {
             scale={SPACING_SCALE}
             value={frame.translateX}
             onChange={(v) => updateFrame(frame.id, { translateX: v })}
-            inlineLabel="X"
+            inlineLabel={<MoveHorizontal size={12} />}
             classPrefix="translate-x"
             defaultValue={0}
+            placeholder="0"
             tooltip="Translate X"
           />
           <TokenInput
             scale={SPACING_SCALE}
             value={frame.translateY}
             onChange={(v) => updateFrame(frame.id, { translateY: v })}
-            inlineLabel="Y"
+            inlineLabel={<MoveVertical size={12} />}
             classPrefix="translate-y"
             defaultValue={0}
+            placeholder="0"
             tooltip="Translate Y"
+          />
+          <div className="w-5 shrink-0" />
+        </div>
+        <div className="flex items-center gap-2">
+          <TokenInput
+            scale={SKEW_SCALE}
+            value={frame.skewX}
+            onChange={(v) => updateFrame(frame.id, { skewX: v })}
+            inlineLabel={<Italic size={12} />}
+            classPrefix="skew-x"
+            defaultValue={0}
+            placeholder="0°"
+            unit="°"
+            tooltip="Skew X"
+          />
+          <TokenInput
+            scale={SKEW_SCALE}
+            value={frame.skewY}
+            onChange={(v) => updateFrame(frame.id, { skewY: v })}
+            inlineLabel={<Italic size={12} />}
+            classPrefix="skew-y"
+            defaultValue={0}
+            placeholder="0°"
+            unit="°"
+            tooltip="Skew Y"
+          />
+          <div className="w-5 shrink-0" />
+        </div>
+        <div className="flex items-center gap-2">
+          <TokenInput
+            value={frame.transformOrigin}
+            options={TRANSFORM_ORIGIN_OPTIONS}
+            onChange={(v) => updateFrame(frame.id, { transformOrigin: v })}
+            inlineLabel={<Crosshair size={12} />}
+            classPrefix="origin"
+            initialValue="center"
+            tooltip="Transform Origin"
           />
           <div className="w-5 shrink-0" />
         </div>

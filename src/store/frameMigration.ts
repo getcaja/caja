@@ -71,7 +71,7 @@ export function migrateSizeValue(raw: unknown): SizeValue {
 export function migrateTextStyles(raw: Record<string, unknown>): TextStyles {
   return {
     fontSize: migrateDVNum(raw.fontSize, 0),
-    fontWeight: migrateDVNum(raw.fontWeight, 400),
+    fontWeight: migrateDVNum(raw.fontWeight, 0),
     lineHeight: migrateDVNum(raw.lineHeight, 0),
     textAlign: (raw.textAlign as TextStyles['textAlign']) || 'left',
     textAlignVertical: (raw.textAlignVertical as TextStyles['textAlignVertical']) || 'start',
@@ -80,7 +80,7 @@ export function migrateTextStyles(raw: Record<string, unknown>): TextStyles {
     letterSpacing: migrateDVNum(raw.letterSpacing, 0),
     textTransform: (raw.textTransform as TextStyles['textTransform']) || 'none',
     whiteSpace: (raw.whiteSpace as TextStyles['whiteSpace']) || 'normal',
-    fontFamily: (raw.fontFamily as string) || 'sans',
+    fontFamily: (raw.fontFamily as string) === 'sans' ? '' : ((raw.fontFamily as string) || ''),
   }
 }
 
@@ -132,6 +132,9 @@ export function migrateFrame(raw: Record<string, unknown>): Frame {
     scaleVal: migrateDVNum(raw.scaleVal, 100),
     translateX: migrateDVNum(raw.translateX, 0),
     translateY: migrateDVNum(raw.translateY, 0),
+    skewX: migrateDVNum(raw.skewX, 0),
+    skewY: migrateDVNum(raw.skewY, 0),
+    transformOrigin: (raw.transformOrigin as string) || 'center',
     transition: (raw.transition as Frame['transition']) || 'none',
     duration: migrateDVNum(raw.duration, 0),
     ease: (raw.ease as Frame['ease']) || 'linear',

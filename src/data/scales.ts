@@ -1,18 +1,20 @@
 export interface ScaleOption {
   token: string
   value: number
+  label?: string
+  group?: string  // group header shown before this item in dropdown
 }
 
 export const FONT_WEIGHT_SCALE: ScaleOption[] = [
-  { token: 'thin', value: 100 },
-  { token: 'extralight', value: 200 },
-  { token: 'light', value: 300 },
-  { token: 'normal', value: 400 },
-  { token: 'medium', value: 500 },
-  { token: 'semibold', value: 600 },
-  { token: 'bold', value: 700 },
-  { token: 'extrabold', value: 800 },
-  { token: 'black', value: 900 },
+  { token: 'thin', value: 100, label: 'Thin' },
+  { token: 'extralight', value: 200, label: 'Extra Light' },
+  { token: 'light', value: 300, label: 'Light' },
+  { token: 'normal', value: 400, label: 'Regular' },
+  { token: 'medium', value: 500, label: 'Medium' },
+  { token: 'semibold', value: 600, label: 'Semi Bold' },
+  { token: 'bold', value: 700, label: 'Bold' },
+  { token: 'extrabold', value: 800, label: 'Extra Bold' },
+  { token: 'black', value: 900, label: 'Black' },
 ]
 
 export const GROW_SCALE: ScaleOption[] = [
@@ -26,19 +28,19 @@ export const SHRINK_SCALE: ScaleOption[] = [
 ]
 
 export const FONT_SIZE_SCALE: ScaleOption[] = [
-  { token: 'xs', value: 12 },
-  { token: 'sm', value: 14 },
-  { token: 'base', value: 16 },
-  { token: 'lg', value: 18 },
-  { token: 'xl', value: 20 },
-  { token: '2xl', value: 24 },
-  { token: '3xl', value: 30 },
-  { token: '4xl', value: 36 },
-  { token: '5xl', value: 48 },
-  { token: '6xl', value: 60 },
-  { token: '7xl', value: 72 },
-  { token: '8xl', value: 96 },
-  { token: '9xl', value: 128 },
+  { token: 'xs', value: 12, label: 'Extra Small' },
+  { token: 'sm', value: 14, label: 'Small' },
+  { token: 'base', value: 16, label: 'Base' },
+  { token: 'lg', value: 18, label: 'Large' },
+  { token: 'xl', value: 20, label: 'Extra Large' },
+  { token: '2xl', value: 24, label: '2X Large' },
+  { token: '3xl', value: 30, label: '3X Large' },
+  { token: '4xl', value: 36, label: '4X Large' },
+  { token: '5xl', value: 48, label: '5X Large' },
+  { token: '6xl', value: 60, label: '6X Large' },
+  { token: '7xl', value: 72, label: '7X Large' },
+  { token: '8xl', value: 96, label: '8X Large' },
+  { token: '9xl', value: 128, label: '9X Large' },
 ]
 
 export const OPACITY_SCALE: ScaleOption[] = [
@@ -97,12 +99,12 @@ export const SPACING_SCALE: ScaleOption[] = [
 ]
 
 export const LINE_HEIGHT_SCALE: ScaleOption[] = [
-  { token: 'none', value: 1 },
-  { token: 'tight', value: 1.25 },
-  { token: 'snug', value: 1.375 },
-  { token: 'normal', value: 1.5 },
-  { token: 'relaxed', value: 1.625 },
-  { token: 'loose', value: 2 },
+  { token: 'none', value: 1, label: 'None' },
+  { token: 'tight', value: 1.25, label: 'Tight' },
+  { token: 'snug', value: 1.375, label: 'Snug' },
+  { token: 'normal', value: 1.5, label: 'Normal' },
+  { token: 'relaxed', value: 1.625, label: 'Relaxed' },
+  { token: 'loose', value: 2, label: 'Loose' },
 ]
 
 // Default lineHeight token for each fontSize token (typographic conventions)
@@ -132,12 +134,12 @@ export function getCompoundLineHeight(fontSizeToken: string): { mode: 'token'; t
 }
 
 export const LETTER_SPACING_SCALE: ScaleOption[] = [
-  { token: 'tighter', value: -0.8 },
-  { token: 'tight', value: -0.4 },
-  { token: 'normal', value: 0 },
-  { token: 'wide', value: 0.4 },
-  { token: 'wider', value: 0.8 },
-  { token: 'widest', value: 1.6 },
+  { token: 'tighter', value: -0.8, label: 'Tighter' },
+  { token: 'tight', value: -0.4, label: 'Tight' },
+  { token: 'normal', value: 0, label: 'Normal' },
+  { token: 'wide', value: 0.4, label: 'Wide' },
+  { token: 'wider', value: 0.8, label: 'Wider' },
+  { token: 'widest', value: 1.6, label: 'Widest' },
 ]
 
 export const BORDER_WIDTH_SCALE: ScaleOption[] = [
@@ -149,26 +151,25 @@ export const BORDER_WIDTH_SCALE: ScaleOption[] = [
 ]
 
 export const BORDER_RADIUS_SCALE: ScaleOption[] = [
-  { token: 'none', value: 0 },
-  { token: 'sm', value: 2 },
-  { token: 'DEFAULT', value: 4 },
-  { token: 'md', value: 6 },
-  { token: 'lg', value: 8 },
-  { token: 'xl', value: 12 },
-  { token: '2xl', value: 16 },
-  { token: '3xl', value: 24 },
-  { token: 'full', value: 9999 },
+  { token: 'none', value: 0, label: 'None' },
+  { token: 'sm', value: 2, label: 'Small', group: 'Sizes' },
+  { token: 'DEFAULT', value: 4, label: 'Default' },
+  { token: 'md', value: 6, label: 'Medium' },
+  { token: 'lg', value: 8, label: 'Large' },
+  { token: 'xl', value: 12, label: 'XL' },
+  { token: '2xl', value: 16, label: '2XL' },
+  { token: '3xl', value: 24, label: '3XL' },
+  { token: 'full', value: 9999, label: 'Full' },
 ]
 
 export const MARGIN_SCALE: ScaleOption[] = [
-  { token: 'auto', value: 0 },
-  ...SPACING_SCALE,
+  { token: 'auto', value: 0, label: 'Auto' },
+  { ...SPACING_SCALE[0], group: 'Fixed' },
+  ...SPACING_SCALE.slice(1),
 ]
 
 export const SIZE_CONSTRAINT_SCALE: ScaleOption[] = [
   ...SPACING_SCALE,
-  { token: 'xs', value: 320 },
-  { token: 'sm', value: 384 },
   { token: 'md', value: 448 },
   { token: 'lg', value: 512 },
   { token: 'xl', value: 576 },
@@ -255,6 +256,15 @@ export const ROTATE_SCALE: ScaleOption[] = [
   { token: '180', value: 180 },
 ]
 
+export const SKEW_SCALE: ScaleOption[] = [
+  { token: '0', value: 0 },
+  { token: '1', value: 1 },
+  { token: '2', value: 2 },
+  { token: '3', value: 3 },
+  { token: '6', value: 6 },
+  { token: '12', value: 12 },
+]
+
 export const SCALE_SCALE: ScaleOption[] = [
   { token: '0', value: 0 },
   { token: '50', value: 50 },
@@ -280,12 +290,12 @@ export const DURATION_SCALE: ScaleOption[] = [
 ]
 
 export const BLUR_SCALE: ScaleOption[] = [
-  { token: '0', value: 0 },
-  { token: 'sm', value: 4 },
-  { token: 'DEFAULT', value: 8 },
-  { token: 'md', value: 12 },
-  { token: 'lg', value: 16 },
-  { token: 'xl', value: 24 },
-  { token: '2xl', value: 40 },
-  { token: '3xl', value: 64 },
+  { token: '0', value: 0, label: 'None' },
+  { token: 'sm', value: 4, label: 'Small', group: 'Presets' },
+  { token: 'DEFAULT', value: 8, label: 'Default' },
+  { token: 'md', value: 12, label: 'Medium' },
+  { token: 'lg', value: 16, label: 'Large' },
+  { token: 'xl', value: 24, label: 'XL' },
+  { token: '2xl', value: 40, label: '2XL' },
+  { token: '3xl', value: 64, label: '3XL' },
 ]

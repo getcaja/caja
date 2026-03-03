@@ -2,6 +2,7 @@ import { save, open } from '@tauri-apps/plugin-dialog'
 import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs'
 import type { Page } from '../types/frame'
 import type { ComponentData } from '../store/catalogStore'
+import { relativizeAssetPaths, absolutizeAssetPaths, migrateAssetsOnSave } from './assetOps'
 
 const FILE_EXTENSION = 'caja'
 const FILE_FILTER = { name: 'Caja Layout', extensions: [FILE_EXTENSION] }
@@ -16,7 +17,9 @@ interface CajaFileData {
 
 export async function saveFile(pages: Page[], activePageId: string, components: ComponentData, currentPath: string | null): Promise<string | null> {
   if (currentPath) {
-    const data: CajaFileData = { pages, activePageId, components }
+    await migrateAssetsOnSave(pages, currentPath)
+    const portablePages = relativizeAssetPaths(pages)
+    const data: CajaFileData = { pages: portablePages as Page[], activePageId, components }
     await writeTextFile(currentPath, JSON.stringify(data, null, 2))
     return currentPath
   }
@@ -29,7 +32,9 @@ export async function saveFileAs(pages: Page[], activePageId: string, components
     defaultPath: `layout.${FILE_EXTENSION}`,
   })
   if (!path) return null
-  const data: CajaFileData = { pages, activePageId, components }
+  await migrateAssetsOnSave(pages, path)
+  const portablePages = relativizeAssetPaths(pages)
+  const data: CajaFileData = { pages: portablePages as Page[], activePageId, components }
   await writeTextFile(path, JSON.stringify(data, null, 2))
   return path
 }
@@ -70,5 +75,10 @@ export async function openFile(): Promise<{ path: string; data: Record<string, u
   if (!validateCajaData(data)) {
     throw new Error('File is not a valid .caja file (missing pages or root)')
   }
-  return { path, data }
+  // Convert relative asset paths back to absolute based on .caja location
+  const d = data as Record<string, unknown>
+  if (Array.isArray(d.pages)) {
+    d.pages = await absolutizeAssetPaths(d.pages, path)
+  }
+  return { path, data: d }
 }

@@ -401,11 +401,17 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
     )
   }
 
+  // --- Inline style for bgImage (spaces in paths break Tailwind arbitrary values) ---
+  const bgStyle = frame.bgImage
+    ? { backgroundImage: `url('${resolveRenderSrc(frame.bgImage)}')` }
+    : undefined
+
   // --- Non-void elements ---
   return (
     <Tag
       data-frame-id={frame.id}
       className={`${tailwind} ${stateClasses}`}
+      style={bgStyle}
       {...editorHandlers}
       {...(((isText && frame.tag === 'a') || (isButton && frame.href)) && frame.href
         ? previewMode

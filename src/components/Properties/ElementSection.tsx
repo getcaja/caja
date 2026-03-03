@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { Eye, EyeOff, Plus, X, Check, Code, Link, Pencil, RotateCcw, Unlink } from 'lucide-react'
+import { Plus, X, Check, Code, Link, ImageIcon, Upload, MessageSquareQuote, Scaling, Component, Pencil, RotateCcw, Unlink, Hash, Tag } from 'lucide-react'
 import type { Frame, TextElement, ImageElement, ButtonElement, InputElement, TextareaElement, SelectElement, SelectOption } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { TokenInput } from '../ui/TokenInput'
 import { ToggleGroup } from '../ui/ToggleGroup'
 import { Select } from '../ui/Select'
+import { Popover } from '../ui/Popover'
 import { TYPE_BADGE_STYLES, TYPE_BADGE_LABELS, getBadgeKey, BOX_TAG_OPTIONS, TEXT_TAG_OPTIONS, INPUT_TYPE_OPTIONS } from './constants'
 
 function getTagOptions(type: Frame['type'], tag?: string) {
@@ -18,7 +19,7 @@ function getTagDefault(type: Frame['type']) {
   if (type === 'text') return 'p'
   return ''
 }
-import { isExternalUrl, isLocalAssetPath, downloadAsset } from '../../lib/assetOps'
+import { isExternalUrl, isLocalAssetPath, downloadAsset, importLocalAsset, getAssetDisplayName } from '../../lib/assetOps'
 
 const TEXT_LIKE = new Set(['text', 'email', 'password', 'number', 'search', 'tel', 'url'])
 
@@ -84,19 +85,87 @@ function HrefPicker({ value, onChange }: { value: string; onChange: (v: string) 
   )
 }
 
+function ComponentButton({ frame, isRoot, isMaster }: { frame: Frame; isRoot: boolean; isMaster: boolean }) {
+  const [open, setOpen] = useState(false)
+  const isInstance = !!frame._componentId
+
+  // Root → no button, just the 20px slot
+  if (isRoot) return <div className="w-5 shrink-0" />
+
+  // Master → dimmed icon, no action
+  if (isMaster) {
+    return (
+      <div className="w-5 shrink-0 flex items-center justify-center text-purple-400 opacity-50">
+        <Component size={12} />
+      </div>
+    )
+  }
+
+  // Regular frame → click to create component
+  if (!isInstance) {
+    return (
+      <button
+        onClick={() => useFrameStore.getState().createComponent(frame.id)}
+        className="w-5 h-5 flex items-center justify-center shrink-0 rounded text-text-muted hover:text-text-secondary"
+        title="Create Component"
+      >
+        <Component size={12} />
+      </button>
+    )
+  }
+
+  // Instance → purple icon, popover with actions
+  const menuItem = 'flex items-center gap-2 w-full px-3 py-1.5 text-[12px] text-text-secondary hover:bg-surface-3 cursor-default first:rounded-t-lg last:rounded-b-lg'
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={setOpen}
+      trigger={
+        <button
+          className="w-5 h-5 flex items-center justify-center shrink-0 rounded bg-purple-500 text-white hover:bg-purple-400"
+          title="Component instance"
+        >
+          <Component size={12} />
+        </button>
+      }
+      align="end"
+    >
+      <div className="py-1 min-w-[160px]">
+        <button className={menuItem} onClick={() => {
+          const cid = frame._componentId
+          if (cid) useFrameStore.getState().enterComponentEditMode(cid)
+          setOpen(false)
+        }}>
+          <Pencil size={12} /> Edit Master
+        </button>
+        <button className={menuItem} onClick={() => {
+          useFrameStore.getState().resetInstance(frame.id)
+          setOpen(false)
+        }}>
+          <RotateCcw size={12} /> Reset
+        </button>
+        <button className={menuItem} onClick={() => {
+          useFrameStore.getState().detachInstance(frame.id)
+          setOpen(false)
+        }}>
+          <Unlink size={12} /> Detach
+        </button>
+      </div>
+    </Popover>
+  )
+}
+
 export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolean }) {
   const renameFrame = useFrameStore((s) => s.renameFrame)
   const updateFrame = useFrameStore((s) => s.updateFrame)
-  const toggleHidden = useFrameStore((s) => s.toggleHidden)
-  const advancedMode = useFrameStore((s) => s.advancedMode)
   const filePath = useFrameStore((s) => s.filePath)
   const [downloading, setDownloading] = useState(false)
 
   const frameTag = 'tag' in frame ? (frame as { tag?: string }).tag : undefined
-  const isInstance = !!frame._componentId
   const isOnComponentPage = useFrameStore((s) => s.pages.find((p) => p.id === s.activePageId)?.isComponentPage ?? false)
   const isMaster = isOnComponentPage && !isRoot
-  const key = getBadgeKey(frame.type, isRoot, frameTag, { isInstance, isMaster })
+  const key = getBadgeKey(frame.type, isRoot, frameTag, { isMaster })
   const tagOptions = getTagOptions(frame.type, frameTag)
   const currentTag = frameTag || getTagDefault(frame.type)
 
@@ -137,33 +206,22 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
 
   return (
     <div className="px-4 py-3 border-b border-border flex flex-col gap-2">
-      {/* Header: badge + name + eye */}
+      {/* Header: badge + name + component action */}
       <div className="flex items-center gap-2">
         <span className={`text-[12px] px-1.5 py-0.5 rounded-md font-medium ${TYPE_BADGE_STYLES[key]}`}>
           {TYPE_BADGE_LABELS[key]}
         </span>
         {!isRoot ? (
-          <>
-            <input
-              type="text"
-              value={frame.name}
-              onChange={(e) => renameFrame(frame.id, e.target.value)}
-              className="flex-1 c-input min-w-0"
-            />
-            <button
-              type="button"
-              onClick={() => toggleHidden(frame.id)}
-              className={`w-5 h-5 flex items-center justify-center rounded shrink-0 ${
-                frame.hidden ? 'text-destructive' : 'text-text-muted hover:text-text-secondary'
-              }`}
-              title={frame.hidden ? 'Show element' : 'Hide element'}
-            >
-              {frame.hidden ? <EyeOff size={12} /> : <Eye size={12} />}
-            </button>
-          </>
+          <input
+            type="text"
+            value={frame.name}
+            onChange={(e) => renameFrame(frame.id, e.target.value)}
+            className="flex-1 c-input min-w-0"
+          />
         ) : (
           <div className="flex-1" />
         )}
+        <ComponentButton frame={frame} isRoot={isRoot} isMaster={isMaster} />
       </div>
 
       {/* Tag selector */}
@@ -205,67 +263,116 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
       {/* Image */}
       {frame.type === 'image' && (() => {
         const img = frame as ImageElement
+        const isLocal = img.src && isLocalAssetPath(img.src)
         return (
           <>
+            {/* Image source */}
             <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                {isLocalAssetPath(img.src) ? (
-                  <div className="flex items-center gap-1">
-                    <span className="flex-1 c-input text-text-muted truncate" title={img.src}>
-                      {img.src.split('/').pop()}
+              <div className="flex-1 min-w-0">
+                {isLocal ? (
+                  /* Read-only display for local assets — show filename only */
+                  <div className="c-scale-input flex items-center gap-0.5 pr-6 overflow-hidden relative">
+                    <span className="w-4 shrink-0 flex items-center justify-center text-text-secondary">
+                      <ImageIcon size={12} />
+                    </span>
+                    <span className="flex-1 min-w-[20px] text-[12px] text-text-secondary truncate select-none">
+                      {getAssetDisplayName(img.src)}
                     </span>
                     <button
-                      className="shrink-0 text-[10px] text-text-muted hover:text-text-primary"
+                      type="button"
+                      tabIndex={-1}
                       onClick={() => updateFrame(frame.id, { src: '' })}
-                      title="Remove image"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-destructive hover:bg-surface-2"
                     >
-                      Clear
+                      <X size={12} />
                     </button>
                   </div>
                 ) : (
-                  <>
+                  /* Editable input for URLs or empty state */
+                  <div
+                    className="c-scale-input flex items-center gap-0.5 pr-6 overflow-hidden cursor-text relative"
+                    onClick={(e) => { if (e.target === e.currentTarget) (e.currentTarget.querySelector('input') as HTMLInputElement)?.focus() }}
+                  >
+                    <span className={`w-4 shrink-0 flex items-center justify-center ${img.src ? 'text-text-secondary' : 'text-text-muted'}`}>
+                      <ImageIcon size={12} />
+                    </span>
                     <input
                       type="text"
                       value={img.src}
                       onChange={(e) => updateFrame(frame.id, { src: e.target.value })}
                       onBlur={handleImageSrcBlur}
-                      placeholder="https://..."
-                      className="w-full c-input"
+                      placeholder="None"
+                      className="flex-1 min-w-[20px] text-[12px] text-text-primary"
                     />
-                    {downloading && (
-                      <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-text-muted animate-pulse">
-                        Downloading...
+                    {downloading ? (
+                      <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-text-muted animate-pulse">
+                        ...
                       </span>
+                    ) : img.src ? (
+                      <button
+                        type="button"
+                        tabIndex={-1}
+                        onClick={() => updateFrame(frame.id, { src: '' })}
+                        className="absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-destructive hover:bg-surface-2"
+                      >
+                        <X size={12} />
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        tabIndex={-1}
+                        onClick={async () => {
+                          try {
+                            const result = await importLocalAsset(filePath)
+                            if (result) updateFrame(frame.id, { src: result.localPath })
+                          } catch (err) {
+                            console.error('Import asset failed:', err)
+                          }
+                        }}
+                        className="absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-text-secondary hover:bg-surface-2"
+                      >
+                        <Upload size={12} />
+                      </button>
                     )}
-                  </>
+                  </div>
                 )}
               </div>
               <div className="w-5 shrink-0" />
             </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={img.alt}
-                onChange={(e) => updateFrame(frame.id, { alt: e.target.value })}
-                placeholder="Alt text..."
-                className="flex-1 c-input"
-              />
-              <div className="w-5 shrink-0" />
-            </div>
-            <div className="flex items-center gap-2">
-              <ToggleGroup
-                value={img.objectFit}
-                options={[
-                  { value: 'cover', label: 'Cover', tooltip: 'Object Fit: Cover' },
-                  { value: 'contain', label: 'Contain', tooltip: 'Object Fit: Contain' },
-                  { value: 'fill', label: 'Fill', tooltip: 'Object Fit: Fill' },
-                  { value: 'none', label: 'None', tooltip: 'Object Fit: None' },
-                ]}
-                onChange={(v) => updateFrame(frame.id, { objectFit: v as ImageElement['objectFit'] })}
-                className="flex-1"
-              />
-              <div className="w-5 shrink-0" />
-            </div>
+            {/* Alt + Object fit — only when image is set */}
+            {img.src && (
+              <div className="flex items-center gap-2">
+                <TokenInput
+                  value={img.objectFit}
+                  options={[
+                    { value: 'cover', label: 'Cover' },
+                    { value: 'contain', label: 'Contain' },
+                    { value: 'fill', label: 'Fill' },
+                    { value: 'none', label: 'None' },
+                  ]}
+                  onChange={(v) => updateFrame(frame.id, { objectFit: v as ImageElement['objectFit'] })}
+                  classPrefix="object"
+                  inlineLabel={<Scaling size={12} />}
+                  tooltip="Object Fit"
+                />
+                <div className="flex-1 min-w-0">
+                  <div
+                    className="c-scale-input flex items-center gap-0.5 overflow-hidden cursor-text"
+                    onClick={(e) => { if (e.target === e.currentTarget) (e.currentTarget.querySelector('input') as HTMLInputElement)?.focus() }}
+                  >
+                    <span className={`w-4 shrink-0 flex items-center justify-center ${img.alt ? 'text-text-secondary' : 'text-text-muted'}`}><MessageSquareQuote size={12} /></span>
+                    <input
+                      type="text"
+                      value={img.alt}
+                      onChange={(e) => updateFrame(frame.id, { alt: e.target.value })}
+                      placeholder=""
+                      className="flex-1 min-w-[20px] text-[12px] text-text-primary"
+                    />
+                  </div>
+                </div>
+                <div className="w-5 shrink-0" />
+              </div>
+            )}
           </>
         )
       })()}
@@ -437,62 +544,33 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
         )
       })()}
 
-      {/* Attributes (advancedMode) */}
-      {advancedMode && !isRoot && (
+      {/* Attributes */}
+      {!isRoot && (
         <div className="flex items-center gap-2">
-          <input
-            type="text"
-            value={frame.className}
-            onChange={(e) => updateFrame(frame.id, { className: e.target.value })}
-            placeholder=".class"
-            className="flex-1 c-input text-[11px] min-w-0"
-          />
-          <input
-            type="text"
-            value={frame.htmlId}
-            onChange={(e) => updateFrame(frame.id, { htmlId: e.target.value })}
-            placeholder="#id"
-            className="flex-1 c-input text-[11px] min-w-0"
-          />
+          <div className="flex-1 min-w-0 c-scale-input flex items-center gap-0.5 overflow-hidden cursor-text" onClick={(e) => { if (e.target === e.currentTarget) (e.currentTarget.querySelector('input') as HTMLInputElement)?.focus() }}>
+            <span className={`w-4 shrink-0 flex items-center justify-center ${frame.className ? 'text-text-secondary' : 'text-text-muted'}`}><Tag size={12} /></span>
+            <input
+              type="text"
+              value={frame.className}
+              onChange={(e) => updateFrame(frame.id, { className: e.target.value })}
+              placeholder="Class"
+              className="flex-1 min-w-[20px] text-[12px] text-text-primary"
+            />
+          </div>
+          <div className="flex-1 min-w-0 c-scale-input flex items-center gap-0.5 overflow-hidden cursor-text" onClick={(e) => { if (e.target === e.currentTarget) (e.currentTarget.querySelector('input') as HTMLInputElement)?.focus() }}>
+            <span className={`w-4 shrink-0 flex items-center justify-center ${frame.htmlId ? 'text-text-secondary' : 'text-text-muted'}`}><Hash size={12} /></span>
+            <input
+              type="text"
+              value={frame.htmlId}
+              onChange={(e) => updateFrame(frame.id, { htmlId: e.target.value })}
+              placeholder="ID"
+              className="flex-1 min-w-[20px] text-[12px] text-text-primary"
+            />
+          </div>
           <div className="w-5 shrink-0" />
         </div>
       )}
 
-      {/* Component instance actions */}
-      {isInstance && frame._componentId && (
-        <>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="flex-1 h-6 px-1.5 text-[12px] rounded flex items-center justify-center gap-1 bg-surface-2 text-text-muted hover:text-text-secondary hover:bg-surface-3"
-              onClick={() => {
-                const cid = frame._componentId
-                if (cid) useFrameStore.getState().enterComponentEditMode(cid)
-              }}
-            >
-              <Pencil size={10} /> Edit Master
-            </button>
-            <div className="w-5 shrink-0" />
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="flex-1 h-6 px-1.5 text-[12px] rounded flex items-center justify-center gap-1 bg-surface-2 text-text-muted hover:text-text-secondary hover:bg-surface-3"
-              onClick={() => useFrameStore.getState().resetInstance(frame.id)}
-            >
-              <RotateCcw size={10} /> Reset
-            </button>
-            <button
-              type="button"
-              className="flex-1 h-6 px-1.5 text-[12px] rounded flex items-center justify-center gap-1 bg-surface-2 text-text-muted hover:text-text-secondary hover:bg-surface-3"
-              onClick={() => useFrameStore.getState().detachInstance(frame.id)}
-            >
-              <Unlink size={10} /> Detach
-            </button>
-            <div className="w-5 shrink-0" />
-          </div>
-        </>
-      )}
     </div>
   )
 }

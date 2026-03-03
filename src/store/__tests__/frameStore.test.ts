@@ -139,11 +139,11 @@ describe('frameStore', () => {
       expect(isRootId(root().id)).toBe(true)
     })
 
-    it('clears selection if removed frame was selected', () => {
+    it('selects root if removed frame was selected', () => {
       const id = addChild('box')
       store().select(id)
       store().removeFrame(id)
-      expect(store().selectedId).toBeNull()
+      expect(store().selectedId).toBe(root().id)
     })
 
     it('removes nested children', () => {
@@ -287,12 +287,12 @@ describe('frameStore', () => {
       expect(store().selectedIds.has(id)).toBe(true)
     })
 
-    it('deselects with null', () => {
+    it('select(null) falls back to root', () => {
       const id = addChild('text')
       store().select(id)
       store().select(null)
-      expect(store().selectedId).toBeNull()
-      expect(store().selectedIds.size).toBe(0)
+      expect(store().selectedId).toBe(root().id)
+      expect(store().selectedIds).toEqual(new Set([root().id]))
     })
 
     it('selectMulti toggles frames in selection set', () => {
@@ -322,7 +322,7 @@ describe('frameStore', () => {
       store().selectMulti(id2)
       store().removeSelected()
       expect(rootChildren()).toHaveLength(0)
-      expect(store().selectedId).toBeNull()
+      expect(store().selectedId).toBe(root().id)
     })
 
     it('skips root in selection', () => {
@@ -556,10 +556,10 @@ describe('frameStore', () => {
       expect(isRootId(root().id)).toBe(true)
     })
 
-    it('clears selection on page switch', () => {
+    it('selects new root on page switch', () => {
       addChild('text')
       store().addPage()
-      expect(store().selectedId).toBeNull()
+      expect(store().selectedId).toBe(root().id)
     })
   })
 
@@ -977,9 +977,9 @@ describe('frameStore', () => {
       expect(store().getSelected()?.id).toBe(id)
     })
 
-    it('returns null when nothing selected', () => {
+    it('returns root when nothing explicitly selected', () => {
       store().select(null)
-      expect(store().getSelected()).toBeNull()
+      expect(store().getSelected()?.id).toBe(root().id)
     })
   })
 

@@ -1,14 +1,13 @@
-import { Zap, Timer } from 'lucide-react'
+import { Zap, Timer, Spline } from 'lucide-react'
 import type { Frame } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { Section } from '../ui/Section'
 import { TokenInput } from '../ui/TokenInput'
-import { ToggleGroup } from '../ui/ToggleGroup'
 import { DURATION_SCALE } from '../../data/scales'
 
 const TRANSITION_OPTIONS = [
   { value: 'none', label: 'None' },
-  { value: 'all', label: 'All' },
+  { value: 'all', label: 'All', group: 'Properties' },
   { value: 'colors', label: 'Colors' },
   { value: 'opacity', label: 'Opacity' },
   { value: 'shadow', label: 'Shadow' },
@@ -16,10 +15,10 @@ const TRANSITION_OPTIONS = [
 ]
 
 const EASE_OPTIONS = [
-  { value: 'linear', label: 'Linear', tooltip: 'Ease: Linear' },
-  { value: 'in', label: 'In', tooltip: 'Ease: In' },
-  { value: 'out', label: 'Out', tooltip: 'Ease: Out' },
-  { value: 'in-out', label: 'In Out', tooltip: 'Ease: In Out' },
+  { value: 'linear', label: 'Linear' },
+  { value: 'in', label: 'Ease In' },
+  { value: 'out', label: 'Ease Out' },
+  { value: 'in-out', label: 'Ease In Out' },
 ]
 
 export function TransitionSection({ frame }: { frame: Frame }) {
@@ -41,30 +40,30 @@ export function TransitionSection({ frame }: { frame: Frame }) {
           <div className="w-5 shrink-0" />
         </div>
         {frame.transition !== 'none' && (
-          <>
-            <div className="flex items-center gap-2">
-              <TokenInput
-                scale={DURATION_SCALE}
-                value={frame.duration}
-                onChange={(v) => updateFrame(frame.id, { duration: v })}
-                min={0}
-                inlineLabel={<Timer size={12} />}
-                classPrefix="duration"
-                defaultValue={0}
-                tooltip="Duration"
-              />
-              <div className="w-5 shrink-0" />
-            </div>
-            <div className="flex items-center gap-2">
-              <ToggleGroup
-                value={frame.ease}
-                options={EASE_OPTIONS}
-                onChange={(v) => updateFrame(frame.id, { ease: v as Frame['ease'] })}
-                className="flex-1"
-              />
-              <div className="w-5 shrink-0" />
-            </div>
-          </>
+          <div className="flex items-center gap-2">
+            <TokenInput
+              scale={DURATION_SCALE}
+              value={frame.duration}
+              onChange={(v) => updateFrame(frame.id, { duration: v })}
+              min={0}
+              inlineLabel={<Timer size={12} />}
+              classPrefix="duration"
+              defaultValue={0}
+              placeholder="0"
+              unit="ms"
+              tooltip="Duration"
+            />
+            <TokenInput
+              value={frame.ease}
+              options={EASE_OPTIONS}
+              onChange={(v) => updateFrame(frame.id, { ease: v as Frame['ease'] })}
+              inlineLabel={<Spline size={12} />}
+              classPrefix="ease"
+              initialValue="linear"
+              tooltip="Easing"
+            />
+            <div className="w-5 shrink-0" />
+          </div>
         )}
       </div>
     </Section>

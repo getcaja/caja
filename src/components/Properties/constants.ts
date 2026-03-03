@@ -51,17 +51,17 @@ export const OVERFLOW_OPTIONS = [
 
 export const BOX_SHADOW_OPTIONS = [
   { value: 'none', label: 'None' },
-  { value: 'sm', label: 'Small' },
+  { value: 'sm', label: 'Small', group: 'Presets' },
   { value: 'base', label: 'Default', token: '' },
   { value: 'md', label: 'Medium' },
   { value: 'lg', label: 'Large' },
-  { value: 'xl', label: 'Extra Large' },
+  { value: 'xl', label: 'XL' },
   { value: '2xl', label: '2XL' },
 ]
 
 export const CURSOR_OPTIONS = [
   { value: 'auto', label: 'Auto' },
-  { value: 'default', label: 'Default' },
+  { value: 'default', label: 'Default', group: 'Cursors' },
   { value: 'pointer', label: 'Pointer' },
   { value: 'text', label: 'Text' },
   { value: 'not-allowed', label: 'Not Allowed' },
@@ -89,6 +89,18 @@ export const ALIGN_SELF_OPTIONS = [
   { value: 'stretch', label: 'Stretch' },
 ]
 
+export const TRANSFORM_ORIGIN_OPTIONS = [
+  { value: 'center', label: 'Center' },
+  { value: 'top', label: 'Top', group: 'Edges' },
+  { value: 'right', label: 'Right' },
+  { value: 'bottom', label: 'Bottom' },
+  { value: 'left', label: 'Left' },
+  { value: 'top-left', label: 'Top Left', group: 'Corners' },
+  { value: 'top-right', label: 'Top Right' },
+  { value: 'bottom-right', label: 'Bottom Right' },
+  { value: 'bottom-left', label: 'Bottom Left' },
+]
+
 const BADGE = 'bg-accent/15 text-accent'
 const COMPONENT_BADGE = 'bg-purple-500/15 text-purple-400'
 
@@ -102,7 +114,6 @@ export const TYPE_BADGE_STYLES: Record<string, string> = {
   textarea: BADGE,
   select: BADGE,
   link: BADGE,
-  component: COMPONENT_BADGE,
   master: COMPONENT_BADGE,
 }
 
@@ -116,14 +127,12 @@ export const TYPE_BADGE_LABELS: Record<string, string> = {
   textarea: 'Textarea',
   select: 'Select',
   link: 'Link',
-  component: 'Component',
   master: 'Master',
 }
 
-export function getBadgeKey(type: ElementType, isRoot: boolean, tag?: string, opts?: { isInstance?: boolean; isMaster?: boolean }): string {
+export function getBadgeKey(type: ElementType, isRoot: boolean, tag?: string, opts?: { isMaster?: boolean }): string {
   if (isRoot) return 'root'
   if (opts?.isMaster) return 'master'
-  if (opts?.isInstance) return 'component'
   if (type === 'text' && tag === 'a') return 'link'
   return type
 }

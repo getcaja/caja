@@ -11,7 +11,6 @@ interface ViewPrefs {
   previewMode: boolean
   canvasWidth: number | null
   activeBreakpoint: Breakpoint
-  advancedMode: boolean
   collapsedIds: string[]
 }
 
@@ -24,12 +23,11 @@ export function loadViewPrefs(): ViewPrefs {
         previewMode: parsed.previewMode ?? false,
         canvasWidth: parsed.canvasWidth ?? null,
         activeBreakpoint: (['base', 'md', 'sm'].includes(parsed.activeBreakpoint) ? parsed.activeBreakpoint : 'base') as Breakpoint,
-        advancedMode: parsed.advancedMode ?? false,
         collapsedIds: parsed.collapsedIds ?? [],
       }
     }
   } catch (err) { console.warn('Failed to load view preferences:', err) }
-  return { previewMode: false, canvasWidth: null, activeBreakpoint: 'base' as Breakpoint, advancedMode: false, collapsedIds: [] }
+  return { previewMode: false, canvasWidth: null, activeBreakpoint: 'base' as Breakpoint, collapsedIds: [] }
 }
 
 export function saveViewPrefs(prefs: Partial<ViewPrefs>) {
@@ -89,7 +87,6 @@ export interface UiSlice {
   canvasZoom: number
   canvasTool: 'pointer' | 'frame' | 'text'
   pendingTextEdit: string | null
-  advancedMode: boolean
   treePanelTab: 'layers' | 'components'
   _layersPageId: string | null
 
@@ -105,7 +102,6 @@ export interface UiSlice {
   setCanvasZoom: (zoom: number) => void
   setCanvasTool: (tool: 'pointer' | 'frame' | 'text') => void
   clearPendingTextEdit: () => void
-  setAdvancedMode: (value: boolean) => void
   setTreePanelTab: (tab: 'layers' | 'components') => void
 }
 
@@ -120,7 +116,6 @@ export const createUiSlice: StateCreator<FrameStore, [], [], UiSlice> = (set, ge
     canvasZoom: 1,
     canvasTool: 'pointer',
     pendingTextEdit: null,
-    advancedMode: initialViewPrefs.advancedMode,
     treePanelTab: 'layers' as const,
     _layersPageId: null as string | null,
 
@@ -172,15 +167,15 @@ export const createUiSlice: StateCreator<FrameStore, [], [], UiSlice> = (set, ge
 
     togglePreviewMode: () => set((s) => {
       const next = !s.previewMode
-      saveViewPrefs({ previewMode: next, canvasWidth: s.canvasWidth, advancedMode: s.advancedMode })
+      saveViewPrefs({ previewMode: next, canvasWidth: s.canvasWidth })
       return { previewMode: next, canvasTool: 'pointer' as const, ...(next ? { selectedId: null, hoveredId: null } : {}) }
     }),
     setPreviewMode: (value) => set((s) => {
-      saveViewPrefs({ previewMode: value, canvasWidth: s.canvasWidth, advancedMode: s.advancedMode })
+      saveViewPrefs({ previewMode: value, canvasWidth: s.canvasWidth })
       return { previewMode: value, canvasTool: 'pointer' as const, ...(value ? { selectedId: null, hoveredId: null } : {}) }
     }),
     setCanvasWidth: (width) => set((s) => {
-      saveViewPrefs({ previewMode: s.previewMode, canvasWidth: width, advancedMode: s.advancedMode })
+      saveViewPrefs({ previewMode: s.previewMode, canvasWidth: width })
       return { canvasWidth: width }
     }),
     setActiveBreakpoint: (bp) => {
@@ -195,11 +190,6 @@ export const createUiSlice: StateCreator<FrameStore, [], [], UiSlice> = (set, ge
     setCanvasZoom: (zoom) => set({ canvasZoom: zoom }),
     setCanvasTool: (tool) => set({ canvasTool: tool }),
     clearPendingTextEdit: () => set({ pendingTextEdit: null }),
-    setAdvancedMode: (value) => set((s) => {
-      saveViewPrefs({ previewMode: s.previewMode, canvasWidth: s.canvasWidth, advancedMode: value })
-      return { advancedMode: value }
-    }),
-
     setTreePanelTab: (tab) => {
       const state = get()
       const prevTab = state.treePanelTab

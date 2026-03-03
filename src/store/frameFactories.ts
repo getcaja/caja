@@ -48,6 +48,9 @@ export function newFeatureDefaults() {
     scaleVal: dvNum(100),
     translateX: dvNum(0),
     translateY: dvNum(0),
+    skewX: dvNum(0),
+    skewY: dvNum(0),
+    transformOrigin: 'center',
     transition: 'none' as const,
     duration: dvNum(0),
     ease: 'linear' as const,
@@ -58,9 +61,9 @@ export function newFeatureDefaults() {
 
 export function defaultTextStyles(): TextStyles {
   return {
-    fontSize: dvNum(16),
-    fontWeight: dvNum(400),
-    lineHeight: dvNum(0),     // 0 = inherit
+    fontSize: dvNum(0),        // 0 = inherit
+    fontWeight: dvNum(0),      // 0 = inherit
+    lineHeight: dvNum(0),      // 0 = inherit
     textAlign: 'left',
     textAlignVertical: 'start',
     fontStyle: 'normal',
@@ -68,7 +71,7 @@ export function defaultTextStyles(): TextStyles {
     letterSpacing: dvNum(0),
     textTransform: 'none',
     whiteSpace: 'normal',
-    fontFamily: 'sans',
+    fontFamily: '',
   }
 }
 

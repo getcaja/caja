@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { Ellipsis, Link2, Upload } from 'lucide-react'
+import { ImageIcon, Upload, X } from 'lucide-react'
 import type { Frame } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
+import { importLocalAsset, isLocalAssetPath, getAssetDisplayName } from '../../lib/assetOps'
 import { Section } from '../ui/Section'
 import { ColorInput } from '../ui/ColorInput'
 import { TokenInput } from '../ui/TokenInput'
 import { ToggleGroup } from '../ui/ToggleGroup'
-import { Popover } from '../ui/Popover'
 
 const lbl = (text: string) => <span className="text-[12px]">{text}</span>
 
@@ -39,11 +39,8 @@ type FillMode = 'solid' | 'image'
 
 export function FillSection({ frame, hasOverrides, onResetOverrides }: { frame: Frame; hasOverrides?: boolean; onResetOverrides?: () => void }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
+  const filePath = useFrameStore((s) => s.filePath)
   const [mode, setMode] = useState<FillMode>(frame.bgImage ? 'image' : 'solid')
-
-  const imagePropsActive = frame.bgSize !== 'auto'
-    || frame.bgPosition !== 'center'
-    || frame.bgRepeat !== 'repeat'
 
   return (
     <Section title="Fill" hasOverrides={hasOverrides} onResetOverrides={onResetOverrides}>
@@ -56,10 +53,7 @@ export function FillSection({ frame, hasOverrides, onResetOverrides }: { frame: 
               { value: 'solid', label: 'Solid', tooltip: 'Solid Color' },
               { value: 'image', label: 'Image', tooltip: 'Background Image' },
             ]}
-            onChange={(v) => {
-              setMode(v as FillMode)
-              if (v === 'solid') updateFrame(frame.id, { bgImage: '' })
-            }}
+            onChange={(v) => setMode(v as FillMode)}
             className="flex-1"
           />
           <div className="w-5 shrink-0" />
@@ -81,78 +75,109 @@ export function FillSection({ frame, hasOverrides, onResetOverrides }: { frame: 
 
         {/* Image mode */}
         {mode === 'image' && (
-          <div className="flex items-center gap-2">
-            <div className="flex-1 min-w-0">
-              <div
-                className="c-scale-input flex items-center gap-0.5 pr-6 overflow-hidden cursor-text relative"
-                onClick={(e) => { if (e.target === e.currentTarget) (e.currentTarget.querySelector('input') as HTMLInputElement)?.focus() }}
-              >
-                <span className="w-4 shrink-0 flex items-center justify-center text-text-muted">
-                  <Link2 size={12} />
-                </span>
-                <input
-                  type="text"
-                  value={frame.bgImage}
-                  onChange={(e) => updateFrame(frame.id, { bgImage: e.target.value })}
-                  placeholder="https://"
-                  className="flex-1 min-w-[20px] text-[12px] text-text-primary"
-                />
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  className="absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-text-secondary hover:bg-surface-2"
-                >
-                  <Upload size={12} />
-                </button>
+          <>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 min-w-0">
+                {frame.bgImage && isLocalAssetPath(frame.bgImage) ? (
+                  /* Read-only display for local assets — show filename only */
+                  <div className="c-scale-input flex items-center gap-0.5 pr-6 overflow-hidden relative">
+                    <span className="w-4 shrink-0 flex items-center justify-center text-text-secondary">
+                      <ImageIcon size={12} />
+                    </span>
+                    <span className="flex-1 min-w-[20px] text-[12px] text-text-secondary truncate select-none">
+                      {getAssetDisplayName(frame.bgImage)}
+                    </span>
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      onClick={() => updateFrame(frame.id, { bgImage: '' })}
+                      className="absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-destructive hover:bg-surface-2"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                ) : (
+                  /* Editable input for URLs or empty state */
+                  <div
+                    className="c-scale-input flex items-center gap-0.5 pr-6 overflow-hidden cursor-text relative"
+                    onClick={(e) => { if (e.target === e.currentTarget) (e.currentTarget.querySelector('input') as HTMLInputElement)?.focus() }}
+                  >
+                    <span className={`w-4 shrink-0 flex items-center justify-center ${frame.bgImage ? 'text-text-secondary' : 'text-text-muted'}`}>
+                      <ImageIcon size={12} />
+                    </span>
+                    <input
+                      type="text"
+                      value={frame.bgImage}
+                      onChange={(e) => updateFrame(frame.id, { bgImage: e.target.value })}
+                      placeholder="None"
+                      className="flex-1 min-w-[20px] text-[12px] text-text-primary"
+                    />
+                    {frame.bgImage ? (
+                      <button
+                        type="button"
+                        tabIndex={-1}
+                        onClick={() => updateFrame(frame.id, { bgImage: '' })}
+                        className="absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-destructive hover:bg-surface-2"
+                      >
+                        <X size={12} />
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        tabIndex={-1}
+                        onClick={async () => {
+                          try {
+                            const result = await importLocalAsset(filePath)
+                            if (result) updateFrame(frame.id, { bgImage: result.localPath })
+                          } catch (err) {
+                            console.error('Import asset failed:', err)
+                          }
+                        }}
+                        className="absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-text-secondary hover:bg-surface-2"
+                      >
+                        <Upload size={12} />
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
+              <div className="w-5 shrink-0" />
             </div>
-            <Popover
-              trigger={
-                <button
-                  type="button"
-                  title="Image Properties"
-                  className={`w-5 h-5 shrink-0 flex items-center justify-center rounded ${
-                    imagePropsActive
-                      ? 'text-blue-400 bg-blue-400/10'
-                      : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'
-                  }`}
-                >
-                  <Ellipsis size={12} />
-                </button>
-              }
-              align="end"
-            >
-              <div className="flex flex-col gap-2 p-2 w-[200px]">
-                <TokenInput
-                  value={frame.bgSize}
-                  options={BG_SIZE_OPTIONS}
-                  onChange={(v) => updateFrame(frame.id, { bgSize: v as Frame['bgSize'] })}
-                  classPrefix="bg"
-                  initialValue="auto"
-                  inlineLabel={lbl('Sz')}
-                  tooltip="Background Size"
-                />
-                <TokenInput
-                  value={frame.bgPosition}
-                  options={BG_POSITION_OPTIONS}
-                  onChange={(v) => updateFrame(frame.id, { bgPosition: v as Frame['bgPosition'] })}
-                  classPrefix="bg"
-                  initialValue="center"
-                  inlineLabel={lbl('Ps')}
-                  tooltip="Background Position"
-                />
-                <TokenInput
-                  value={frame.bgRepeat}
-                  options={BG_REPEAT_OPTIONS}
-                  onChange={(v) => updateFrame(frame.id, { bgRepeat: v as Frame['bgRepeat'] })}
-                  classPrefix="bg"
-                  initialValue="repeat"
-                  inlineLabel={lbl('Rp')}
-                  tooltip="Background Repeat"
-                />
-              </div>
-            </Popover>
-          </div>
+            {frame.bgImage && (
+              <>
+                <div className="flex items-center gap-2">
+                  <TokenInput
+                    value={frame.bgSize}
+                    options={BG_SIZE_OPTIONS}
+                    onChange={(v) => updateFrame(frame.id, { bgSize: v as Frame['bgSize'] })}
+                    classPrefix="bg"
+                    inlineLabel={lbl('Sz')}
+                    tooltip="Background Size"
+                  />
+                  <TokenInput
+                    value={frame.bgPosition}
+                    options={BG_POSITION_OPTIONS}
+                    onChange={(v) => updateFrame(frame.id, { bgPosition: v as Frame['bgPosition'] })}
+                    classPrefix="bg"
+                    inlineLabel={lbl('Ps')}
+                    tooltip="Background Position"
+                  />
+                  <div className="w-5 shrink-0" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <TokenInput
+                    value={frame.bgRepeat}
+                    options={BG_REPEAT_OPTIONS}
+                    onChange={(v) => updateFrame(frame.id, { bgRepeat: v as Frame['bgRepeat'] })}
+                    classPrefix="bg"
+                    inlineLabel={lbl('Rp')}
+                    tooltip="Background Repeat"
+                  />
+                  <div className="w-5 shrink-0" />
+                </div>
+              </>
+            )}
+          </>
         )}
       </div>
     </Section>

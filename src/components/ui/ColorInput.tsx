@@ -66,7 +66,7 @@ export function ColorInput({
 
   const stableToken = showGrid ? committedTokenRef.current : token
   const displayValue = focused ? draft : (stableToken ? '' : colorValue)
-  const isActive = !!stableToken || (colorValue !== '' && colorValue !== '#000000')
+  const isEmpty = !stableToken && colorValue === ''
 
   return (
     <div className="relative flex-1 min-w-0">
@@ -76,7 +76,7 @@ export function ColorInput({
       >
         <span title={tooltip} className="w-4 shrink-0 flex items-center justify-center">
           <span
-            className="w-3 h-3 rounded-sm border border-border"
+            className="w-3 h-3 rounded-full border border-text-muted"
             style={{ backgroundColor: colorValue || 'transparent' }}
           />
         </span>
@@ -104,7 +104,7 @@ export function ColorInput({
           onBlur={() => commitDraft()}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={stableToken ? '' : '#000000'}
+          placeholder={stableToken ? '' : (isEmpty ? 'Default' : '#000000')}
           className={`flex-1 ${stableToken ? 'min-w-0' : 'min-w-[20px]'} text-[12px]`}
         />
 

@@ -4,7 +4,7 @@ import { Section } from '../ui/Section'
 import { Select } from '../ui/Select'
 import { TokenInput } from '../ui/TokenInput'
 import { SPACING_SCALE, Z_INDEX_SCALE } from '../../data/scales'
-import { PanelTop, PanelRight, PanelBottom, PanelLeft } from 'lucide-react'
+import { PanelTop, PanelRight, PanelBottom, PanelLeft, Layers } from 'lucide-react'
 
 const POSITION_OPTIONS = [
   { value: 'static', label: 'Static' },
@@ -74,8 +74,6 @@ function AnchorBox({ frame }: { frame: Frame }) {
 export function PositionSection({ frame }: { frame: Frame }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
   const updateSpacing = useFrameStore((s) => s.updateSpacing)
-  const advancedMode = useFrameStore((s) => s.advancedMode)
-
   const isPositioned = frame.position !== 'static' && frame.position !== 'relative'
 
   return (
@@ -143,21 +141,24 @@ export function PositionSection({ frame }: { frame: Frame }) {
               <div className="w-5 shrink-0" />
             </div>
 
-            {advancedMode && (
-              <div className="flex items-center gap-2">
-                <TokenInput
-                  scale={Z_INDEX_SCALE}
-                  value={frame.zIndex}
-                  onChange={(v) => updateFrame(frame.id, { zIndex: v })}
-                  min={0}
-                  label="Z-Index"
-                  classPrefix="z"
-                  defaultValue={0}
-                  placeholder="Auto"
-                />
-                <div className="w-5 shrink-0" />
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              <TokenInput
+                scale={Z_INDEX_SCALE}
+                value={frame.zIndex}
+                onChange={(v) => updateFrame(frame.id, { zIndex: v })}
+                min={0}
+                inlineLabel={<Layers size={12} />}
+                classPrefix="z"
+                defaultValue={0}
+                tooltip="Z-Index"
+                autoOption={{
+                  label: 'Auto',
+                  active: frame.zIndex.mode === 'custom' && frame.zIndex.value === 0,
+                  onToggle: () => updateFrame(frame.id, { zIndex: { mode: 'custom', value: 0 } }),
+                }}
+              />
+              <div className="w-5 shrink-0" />
+            </div>
           </>
         )}
       </div>

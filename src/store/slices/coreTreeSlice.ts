@@ -141,7 +141,12 @@ export const createCoreTreeSlice: StateCreator<FrameStore, [], [], CoreTreeSlice
 
   addChild: (parentId, type, overrides) =>
     set((state) => {
-      if (isInstanceOrInsideInstance(state.root, parentId)) return {} // instances are sealed
+      // If target is an instance, insert as sibling in the instance's parent instead
+      if (isInstanceOrInsideInstance(state.root, parentId)) {
+        const parent = findParent(state.root, parentId)
+        if (parent) parentId = parent.id
+        else return {}
+      }
       const prefixMap = { text: 'text', image: 'image', button: 'button', input: 'input', textarea: 'textarea', select: 'select', link: 'link', box: 'frame' } as const
       const prefix = prefixMap[type]
       const name = overrides?.name || nextName(prefix, state.root)

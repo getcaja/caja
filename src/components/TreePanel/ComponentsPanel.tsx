@@ -1,8 +1,8 @@
 import { useState, useMemo, useCallback, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
-import { useFrameStore, findInTree, cloneWithNewIds, normalizeFrame } from '../../store/frameStore'
+import { useFrameStore, findInTree, findParent, cloneWithNewIds, normalizeFrame } from '../../store/frameStore'
 import { useCatalogStore } from '../../store/catalogStore'
-import { ChevronDown, ChevronRight, Diamond, Folder } from 'lucide-react'
+import { ChevronDown, ChevronRight, Diamond, Folder, Pencil } from 'lucide-react'
 import type { Component } from '../../types/component'
 import { ComponentPreview } from './ComponentPreview'
 import { useComponentsData } from './useComponentsData'
@@ -126,7 +126,14 @@ export const ComponentsPanel = forwardRef<ComponentsPanelHandle, ComponentsPanel
   function getInsertParent(): string {
     if (selectedId) {
       const sel = findInTree(root, selectedId)
-      if (sel?.type === 'box') return sel.id
+      if (sel?.type === 'box') {
+        // If selected is a component instance, insert as sibling (in parent)
+        if (sel._componentId) {
+          const parent = findParent(root, selectedId)
+          if (parent) return parent.id
+        }
+        return sel.id
+      }
     }
     return root.id
   }
@@ -252,7 +259,7 @@ export const ComponentsPanel = forwardRef<ComponentsPanelHandle, ComponentsPanel
     <div
       ref={panelRef}
       data-component-dnd-panel
-      className="h-full flex flex-col overflow-y-auto py-1 px-1"
+      className="h-full flex flex-col overflow-y-auto"
       onClick={(e) => { if (e.target === e.currentTarget) setHighlightId(null) }}
     >
       {hasContent && (
@@ -335,34 +342,35 @@ export const ComponentsPanel = forwardRef<ComponentsPanelHandle, ComponentsPanel
             )
           })}
 
-          {/* New category being created */}
-          {editingCategoryTag === '__new__' && (
-            <TreeRow
-              id="__new__"
-              depth={0}
-              icon={<span className="text-text-muted"><Folder size={12} /></span>}
-              name=""
-              isSelected={false}
-              isMulti={false}
-              editing={true}
-              editValue={editCategoryValue}
-              onEditChange={setEditCategoryValue}
-              onEditCommit={commitCategoryRename}
-              onEditCancel={() => setEditingCategoryTag(null)}
-              onClick={() => {}}
-              onContextMenu={() => {}}
-              chevron="expanded"
-            />
-          )}
         </>
       )}
 
-      {!hasContent && (
+      {!hasContent && editingCategoryTag !== '__new__' && (
         <div className="flex-1 flex items-center justify-center">
           <span className="text-text-muted text-[12px]">
             {readOnly ? 'This library is empty.' : 'No components yet'}
           </span>
         </div>
+      )}
+
+      {/* New category being created */}
+      {editingCategoryTag === '__new__' && (
+        <TreeRow
+          id="__new__"
+          depth={0}
+          icon={<span className="text-text-muted"><Folder size={12} /></span>}
+          name=""
+          isSelected={false}
+          isMulti={false}
+          editing={true}
+          editValue={editCategoryValue}
+          onEditChange={setEditCategoryValue}
+          onEditCommit={commitCategoryRename}
+          onEditCancel={() => setEditingCategoryTag(null)}
+          onClick={() => {}}
+          onContextMenu={() => {}}
+          chevron="expanded"
+        />
       )}
 
       {/* Component context menu */}
@@ -566,7 +574,7 @@ function ComponentRow({
             onClick={(e) => { e.stopPropagation(); onEnterEditMode() }}
             title="Edit component"
           >
-            <ChevronRight size={12} />
+            <Pencil size={10} />
           </button>
         ) : <div className="w-5 shrink-0" />}
         rowRef={mergedRef}

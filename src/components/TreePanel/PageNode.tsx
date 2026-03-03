@@ -16,17 +16,19 @@ export function PageNode({ page }: PageNodeProps) {
   const renamePage = useFrameStore((s) => s.renamePage)
   const duplicatePage = useFrameStore((s) => s.duplicatePage)
   const removePage = useFrameStore((s) => s.removePage)
-  const select = useFrameStore((s) => s.select)
 
+  const pageSelected = useFrameStore((s) => s.pageSelected)
   const isActive = page.id === activePageId
+  const isFocused = isActive && pageSelected
 
   const nameEdit = useInlineEdit((v) => renamePage(page.id, v))
   const ctxMenu = useContextMenu()
 
   const handleClick = () => {
     if (!isActive) setActivePage(page.id)
-    select(null)
-    useFrameStore.setState({ pageSelected: true })
+    // Must set pageSelected atomically with selectedId=null,
+    // otherwise the auto-select-root subscriber fires in between
+    useFrameStore.setState({ selectedId: null, selectedIds: new Set(), pageSelected: true, hoveredId: null })
   }
 
   return (
@@ -37,8 +39,9 @@ export function PageNode({ page }: PageNodeProps) {
         indent={16}
         name={page.name}
         nameClassName="font-semibold"
-        isSelected={false}
+        isSelected={isFocused}
         isMulti={false}
+        selectionStyle="neutral"
         editing={nameEdit.editing}
         editValue={nameEdit.value}
         onEditChange={nameEdit.setValue}

@@ -16,12 +16,12 @@ import { canvasZoomTo } from './components/Canvas/CanvasInline'
 import { switchTheme, getThemePreference } from './lib/theme'
 import { checkForUpdates } from './lib/updater'
 
-const LEFT_MIN = 150
+const LEFT_MIN = 320
 const LEFT_MAX = 400
-const LEFT_DEFAULT = 224
-const RIGHT_MIN = 180
+const LEFT_DEFAULT = 320
+const RIGHT_MIN = 320
 const RIGHT_MAX = 400
-const RIGHT_DEFAULT = 240
+const RIGHT_DEFAULT = 320
 
 const STORAGE_KEY = 'caja-panel-state'
 
@@ -59,6 +59,7 @@ function App() {
   const [rightWidth, setRightWidth] = useState(initial.current.rightWidth)
   const [leftCollapsed, setLeftCollapsed] = useState(false)
   const [rightCollapsed, setRightCollapsed] = useState(false)
+  const [layoutResetKey, setLayoutResetKey] = useState(0)
 
   // Persist panel state on change
   useEffect(() => {
@@ -167,10 +168,8 @@ function App() {
     // Sync initial view prefs to native menu check states
     if (isTauri) {
       import('@tauri-apps/api/core').then(({ invoke }) => {
-        const { advancedMode } = useFrameStore.getState()
         safeMenuSync(invoke, 'toggle-left-panel', true)
         safeMenuSync(invoke, 'toggle-right-panel', true)
-        safeMenuSync(invoke, 'toggle-advanced-mode', advancedMode)
         // Sync theme radio checks
         const pref = getThemePreference()
         for (const tid of ['system', 'default-dark', 'default-light']) {
@@ -212,11 +211,54 @@ function App() {
           case 'check-for-updates':
             checkForUpdates()
             break
+          case 'undo':
+            useFrameStore.getState().undo()
+            break
+          case 'redo':
+            useFrameStore.getState().redo()
+            break
+          case 'cut':
+            useFrameStore.getState().cutSelected()
+            break
+          case 'copy':
+            useFrameStore.getState().copySelected()
+            break
+          case 'paste':
+            useFrameStore.getState().pasteClipboard()
+            break
+          case 'duplicate': {
+            const s = useFrameStore.getState()
+            if (s.selectedId) s.duplicateFrame(s.selectedId)
+            break
+          }
+          case 'select-all':
+            useFrameStore.getState().selectAllSiblings()
+            break
+          case 'delete':
+            useFrameStore.getState().removeSelected()
+            break
           case 'collapse-all':
             useFrameStore.getState().collapseAll()
             break
           case 'expand-all':
             useFrameStore.getState().expandAll()
+            break
+          case 'reset-layout':
+            setLeftWidth(LEFT_DEFAULT)
+            setRightWidth(RIGHT_DEFAULT)
+            setLeftCollapsed(false)
+            setRightCollapsed(false)
+            useFrameStore.getState().expandAll()
+            // Reset section collapse states to defaults
+            for (let i = localStorage.length - 1; i >= 0; i--) {
+              const key = localStorage.key(i)
+              if (key?.startsWith('caja-section-')) localStorage.removeItem(key)
+            }
+            setLayoutResetKey((k) => k + 1)
+            import('@tauri-apps/api/core').then(({ invoke }) => {
+              safeMenuSync(invoke, 'toggle-left-panel', true)
+              safeMenuSync(invoke, 'toggle-right-panel', true)
+            })
             break
           default:
             // Theme menu items: "theme-<id>" → strip prefix
@@ -236,8 +278,6 @@ function App() {
           setLeftCollapsed(!checked)
         } else if (id === 'toggle-right-panel') {
           setRightCollapsed(!checked)
-        } else if (id === 'toggle-advanced-mode') {
-          useFrameStore.getState().setAdvancedMode(checked)
         }
       }).then((fn) => {
         if (active) unlisteners.push(fn); else fn()
@@ -307,8 +347,8 @@ function App() {
         e.preventDefault()
         handleOpen()
       }
-      // Panel toggles
-      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === '\\') {
+      // Panel toggles (Cmd+1 / Cmd+2)
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === '1') {
         e.preventDefault()
         setLeftCollapsed((v) => {
           const next = !v
@@ -316,23 +356,13 @@ function App() {
           return next
         })
       }
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '\\') {
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === '2') {
         e.preventDefault()
         setRightCollapsed((v) => {
           const next = !v
           if (isTauri) import('@tauri-apps/api/core').then(({ invoke }) => safeMenuSync(invoke, 'toggle-right-panel', !next))
           return next
         })
-      }
-      // Advanced mode toggle
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'a') {
-        e.preventDefault()
-        const store = useFrameStore.getState()
-        const next = !store.advancedMode
-        store.setAdvancedMode(next)
-        if (isTauri) {
-          import('@tauri-apps/api/core').then(({ invoke }) => safeMenuSync(invoke, 'toggle-advanced-mode', next))
-        }
       }
       // Preview mode toggle
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'p') {
@@ -427,7 +457,7 @@ function App() {
           <WorkspaceDndProvider>
             {!previewMode && !leftCollapsed && (
               <div style={{ width: leftWidth }} className="shrink-0 border-r border-border relative">
-                <TreePanel />
+                <TreePanel key={layoutResetKey} />
                 <div
                   className="absolute top-0 -right-[3px] bottom-0 w-[7px] cursor-col-resize hover:bg-accent/40 transition-colors z-10"
                   onPointerDown={(e) => startDrag('left', e)}
@@ -443,7 +473,7 @@ function App() {
                   className="absolute top-0 -left-[3px] bottom-0 w-[7px] cursor-col-resize hover:bg-accent/40 transition-colors z-10"
                   onPointerDown={(e) => startDrag('right', e)}
                 />
-                <RightPanel />
+                <RightPanel key={layoutResetKey} />
               </div>
             )}
           </WorkspaceDndProvider>

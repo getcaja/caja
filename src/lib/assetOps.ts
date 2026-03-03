@@ -5,9 +5,10 @@
 // Rendering: resolveRenderSrc() maps localPath → blob URL at render time.
 // Export: resolveAssetSrc() maps localPath → ./assets/filename.ext for HTML/JSX.
 
-import { writeFile, readFile, exists, mkdir } from '@tauri-apps/plugin-fs'
+import { writeFile, readFile, copyFile, exists, mkdir } from '@tauri-apps/plugin-fs'
 import { join, dirname, appDataDir } from '@tauri-apps/api/path'
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http'
+import { open } from '@tauri-apps/plugin-dialog'
 
 // --- Helpers ---
 
@@ -98,8 +99,8 @@ export function revokeAllBlobUrls(): void {
 // --- Public API ---
 
 /** Get the assets directory path for a project file */
-export function getAssetsDir(projectPath: string): Promise<string> {
-  const dir = dirname(projectPath)
+export async function getAssetsDir(projectPath: string): Promise<string> {
+  const dir = await dirname(projectPath)
   return join(dir, 'assets')
 }
 
@@ -170,6 +171,106 @@ export async function downloadAsset(url: string, projectPath: string | null): Pr
 }
 
 /**
+ * Open a native file picker for images, copy the selected file into the
+ * local assets directory (hash-based dedup), and return localPath + blob URL.
+ * Returns null if the user cancels the dialog.
+ */
+export async function importLocalAsset(projectPath: string | null): Promise<DownloadResult | null> {
+  const selected = await open({
+    filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'avif', 'bmp', 'ico'] }],
+    multiple: false,
+    directory: false,
+  })
+  if (!selected) return null
+
+  const filePath = typeof selected === 'string' ? selected : (selected as any).path ?? String(selected)
+  const data = await readFile(filePath)
+  const hash = await hashArrayBuffer(data.slice().buffer)
+  const ext = filePath.split('.').pop()?.toLowerCase() || 'png'
+  // Preserve original filename (sanitized) for display: hash-originalname.ext
+  const rawName = filePath.split('/').pop()?.replace(/\.[^.]+$/, '') || 'image'
+  const safeName = rawName.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 32)
+
+  const assetsDir = projectPath
+    ? await getAssetsDir(projectPath)
+    : await getTempAssetsDir()
+  await ensureAssetsDir(assetsDir)
+
+  const filename = `${hash}-${safeName}.${ext}`
+  const localPath = await join(assetsDir, filename)
+
+  if (!(await exists(localPath))) {
+    await writeFile(localPath, data)
+  }
+
+  let assetUrl = blobCache.get(localPath)
+  if (!assetUrl) {
+    assetUrl = createBlobUrl(data, ext, localPath)
+    blobCache.set(localPath, assetUrl)
+    bumpAssetVersion()
+  }
+
+  return { localPath, assetUrl }
+}
+
+/**
+ * Migrate temp-assets to the real assets/ directory on save.
+ * Walks frame trees, copies files from temp-assets → assets/ next to the .caja,
+ * and updates frame paths in-place. Also re-keys the blobCache.
+ * Returns the mutated pages (same references, paths updated).
+ */
+export async function migrateAssetsOnSave(pages: any[], projectPath: string): Promise<void> {
+  const assetsDir = await getAssetsDir(projectPath)
+  await ensureAssetsDir(assetsDir)
+  const tempDir = await getTempAssetsDir()
+
+  const migrations = new Map<string, string>() // oldPath → newPath
+
+  // Collect all temp-asset paths
+  function walk(frame: any) {
+    if (frame.type === 'image' && frame.src && frame.src.includes('/temp-assets/')) {
+      const filename = frame.src.split('/').pop()
+      migrations.set(frame.src, `${assetsDir}/${filename}`)
+    }
+    if (frame.bgImage && frame.bgImage.includes('/temp-assets/')) {
+      const filename = frame.bgImage.split('/').pop()
+      migrations.set(frame.bgImage, `${assetsDir}/${filename}`)
+    }
+    if (Array.isArray(frame.children)) frame.children.forEach(walk)
+  }
+  for (const page of pages) walk(page.root)
+
+  if (migrations.size === 0) return
+
+  // Copy files and update blob cache keys
+  await Promise.all([...migrations.entries()].map(async ([oldPath, newPath]) => {
+    if (!(await exists(newPath))) {
+      await copyFile(oldPath, newPath)
+    }
+    // Re-key blob cache: old temp path → new real path
+    const blobUrl = blobCache.get(oldPath)
+    if (blobUrl) {
+      blobCache.delete(oldPath)
+      blobCache.set(newPath, blobUrl)
+    }
+  }))
+
+  // Update frame paths in-place
+  function rewrite(frame: any) {
+    if (frame.type === 'image' && frame.src && migrations.has(frame.src)) {
+      frame.src = migrations.get(frame.src)
+    }
+    if (frame.bgImage && migrations.has(frame.bgImage)) {
+      frame.bgImage = migrations.get(frame.bgImage)
+    }
+    if (Array.isArray(frame.children)) frame.children.forEach(rewrite)
+  }
+  for (const page of pages) rewrite(page.root)
+
+  bumpAssetVersion()
+}
+
+/**
  * Restore a blob URL from a local asset path (e.g. after loading a .caja file).
  * Returns the blob URL, or null if the file doesn't exist.
  */
@@ -192,6 +293,18 @@ export async function restoreAssetUrl(localPath: string): Promise<string | null>
 }
 
 /**
+ * Extract a display-friendly name from a local asset path.
+ * Strips the hash prefix from filenames like "dc2d9cde-imagen.png" → "imagen.png".
+ * Falls back to the raw filename if no hash prefix is detected.
+ */
+export function getAssetDisplayName(src: string): string {
+  const filename = src.split('/').pop() || 'Image'
+  // Match hash-name.ext pattern (16 hex chars + dash + name)
+  const match = filename.match(/^[0-9a-f]{16}-(.+)$/)
+  return match ? match[1] : filename
+}
+
+/**
  * Check if a URL is an external (http/https) URL that should be downloaded.
  * Returns false for data: URIs, blob: URLs, relative paths, etc.
  */
@@ -208,14 +321,71 @@ export function isLocalAssetPath(src: string): boolean {
 }
 
 /**
+ * Convert absolute asset paths to relative `./assets/filename` for portable .caja files.
+ * Deep-clones pages so the originals are not mutated.
+ */
+export function relativizeAssetPaths(pages: any[]): any[] {
+  function rewriteSrc(src: string): string {
+    if (!src || !isLocalAssetPath(src)) return src
+    const filename = src.split('/').pop()
+    return `./assets/${filename}`
+  }
+  function walkFrame(frame: any): any {
+    const clone = { ...frame }
+    if (clone.type === 'image' && clone.src) clone.src = rewriteSrc(clone.src)
+    if (clone.bgImage) clone.bgImage = rewriteSrc(clone.bgImage)
+    if (Array.isArray(clone.children)) {
+      clone.children = clone.children.map(walkFrame)
+    }
+    return clone
+  }
+  return pages.map(p => ({ ...p, root: walkFrame(p.root) }))
+}
+
+/**
+ * Convert relative `./assets/filename` paths back to absolute paths
+ * based on the .caja file's directory.
+ */
+export async function absolutizeAssetPaths(pages: any[], cajaFilePath: string): Promise<any[]> {
+  const dir = await dirname(cajaFilePath)
+  const assetsDir = await join(dir, 'assets')
+  function rewriteSrc(src: string): string {
+    if (!src || !src.startsWith('./assets/')) return src
+    const filename = src.replace('./assets/', '')
+    // Build synchronously — we know the pattern: assetsDir + / + filename
+    return `${assetsDir}/${filename}`
+  }
+  function walkFrame(frame: any): any {
+    const clone = { ...frame }
+    if (clone.type === 'image' && clone.src) clone.src = rewriteSrc(clone.src)
+    if (clone.bgImage) clone.bgImage = rewriteSrc(clone.bgImage)
+    if (Array.isArray(clone.children)) {
+      clone.children = clone.children.map(walkFrame)
+    }
+    return clone
+  }
+  return pages.map(p => ({ ...p, root: walkFrame(p.root) }))
+}
+
+/**
  * Resolve a src for rendering: local filesystem paths → blob URLs.
  * Everything else (http, blob, data, empty) passes through unchanged.
  */
+// Tracks paths currently being restored to avoid duplicate restoreAssetUrl calls
+const _restoring = new Set<string>()
+
 export function resolveRenderSrc(src: string): string {
   if (!src) return src
   if (src.startsWith('blob:') || src.startsWith('data:') || src.startsWith('http')) return src
   // Local filesystem path — resolve through blob cache
-  return blobCache.get(src) || src
+  const cached = blobCache.get(src)
+  if (cached) return cached
+  // Not in cache — try restoring in background (e.g. after HMR clears blobCache)
+  if (isLocalAssetPath(src) && !_restoring.has(src) && typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window) {
+    _restoring.add(src)
+    restoreAssetUrl(src).finally(() => _restoring.delete(src))
+  }
+  return src
 }
 
 /**

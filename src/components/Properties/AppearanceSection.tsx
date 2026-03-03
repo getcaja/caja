@@ -23,9 +23,11 @@ export function AppearanceSection({ frame, hasOverrides, onResetOverrides }: { f
             value={frame.opacity}
             onChange={(v) => updateFrame(frame.id, { opacity: v })}
             min={0}
+            max={100}
             unit="%"
             classPrefix="opacity"
             defaultValue={100}
+            placeholder="100%"
             inlineLabel={<Blend size={12} />}
             tooltip="Opacity"
           />

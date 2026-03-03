@@ -352,14 +352,15 @@ describe('Background', () => {
     expect(c.some(cl => cl.startsWith('bg-'))).toBe(false)
   })
 
-  it('emits background image classes', () => {
+  it('emits background image classes (url via inline style)', () => {
     const c = classes(makeBox({
       bgImage: 'https://example.com/img.jpg',
       bgSize: 'cover',
       bgPosition: 'top-left',
       bgRepeat: 'no-repeat',
     }))
-    expect(c).toContain("bg-[url('https://example.com/img.jpg')]")
+    // bg-[url(...)] is no longer emitted — image URL is set via inline style
+    expect(c).not.toContain("bg-[url('https://example.com/img.jpg')]")
     expect(c).toContain('bg-cover')
     expect(c).toContain('bg-left-top') // Tailwind v4 format
     expect(c).toContain('bg-no-repeat')

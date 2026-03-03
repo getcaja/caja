@@ -12,7 +12,8 @@ import { TEXT_TRANSFORM_OPTIONS, WHITE_SPACE_OPTIONS } from './constants'
 const lbl = (text: string) => <span className="text-[12px]">{text}</span>
 
 const FONT_FAMILY_OPTIONS = [
-  { value: 'sans', label: 'Sans Serif', token: 'sans' },
+  { value: '', label: 'Default', token: '' },
+  { value: 'sans', label: 'Sans Serif', token: 'sans', group: 'Fonts' },
   { value: 'serif', label: 'Serif', token: 'serif' },
   { value: 'mono', label: 'Monospace', token: 'mono' },
 ]
@@ -35,7 +36,7 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides }: { f
             value={frame.fontFamily}
             onChange={(v) => updateFrame(frame.id, { fontFamily: v })}
             classPrefix="font"
-            initialValue="sans"
+            initialValue=""
             inlineLabel={<Type size={12} />}
             tooltip="Font Family"
           />
@@ -67,10 +68,15 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides }: { f
             value={frame.fontWeight}
             onChange={(v) => updateFrame(frame.id, { fontWeight: v })}
             classPrefix="font"
-            defaultValue={400}
+            defaultValue={0}
             placeholder="Regular"
             inlineLabel={lbl('W')}
             tooltip="Font Weight"
+            autoOption={{
+              label: 'Default',
+              active: frame.fontWeight.mode === 'custom' && frame.fontWeight.value === 0,
+              onToggle: () => updateFrame(frame.id, { fontWeight: { mode: 'custom', value: 0 } }),
+            }}
           />
           <TokenInput
             scale={FONT_SIZE_SCALE}
@@ -84,11 +90,16 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides }: { f
               updateFrame(frame.id, updates)
             }}
             min={1}
-            defaultValue={16}
+            defaultValue={0}
             placeholder="16"
             classPrefix="text"
             inlineLabel={lbl('S')}
             tooltip="Font Size"
+            autoOption={{
+              label: 'Default',
+              active: frame.fontSize.mode === 'custom' && frame.fontSize.value === 0,
+              onToggle: () => updateFrame(frame.id, { fontSize: { mode: 'custom', value: 0 } }),
+            }}
           />
           <div className="w-5 shrink-0" />
         </div>
@@ -106,6 +117,11 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides }: { f
             classPrefix="leading"
             inlineLabel={<MoveVertical size={12} />}
             tooltip="Line Height"
+            autoOption={{
+              label: 'Default',
+              active: frame.lineHeight.mode === 'custom' && frame.lineHeight.value === 0,
+              onToggle: () => updateFrame(frame.id, { lineHeight: { mode: 'custom', value: 0 } }),
+            }}
           />
           <TokenInput
             scale={LETTER_SPACING_SCALE}
@@ -118,6 +134,11 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides }: { f
             classPrefix="tracking"
             inlineLabel={<MoveHorizontal size={12} />}
             tooltip="Letter Spacing"
+            autoOption={{
+              label: 'Default',
+              active: frame.letterSpacing.mode === 'custom' && frame.letterSpacing.value === 0,
+              onToggle: () => updateFrame(frame.id, { letterSpacing: { mode: 'custom', value: 0 } }),
+            }}
           />
           <div className="w-5 shrink-0" />
         </div>

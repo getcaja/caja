@@ -92,6 +92,9 @@ interface BaseElement {
   scaleVal: DesignValue<number>    // percentage (100 = normal)
   translateX: DesignValue<number>  // px
   translateY: DesignValue<number>  // px
+  skewX: DesignValue<number>       // degrees
+  skewY: DesignValue<number>       // degrees
+  transformOrigin: string          // center, top, top-right, etc.
 
   // Transitions
   transition: 'none' | 'all' | 'colors' | 'opacity' | 'shadow' | 'transform'

@@ -401,6 +401,7 @@ pub fn run() {
                 .expect("failed to load app icon");
             let about = AboutMetadata {
                 icon: Some(icon),
+                copyright: Some("© 2026 Miguel Estupiñán".into()),
                 ..Default::default()
             };
             let check_updates_item = MenuItemBuilder::with_id("check-for-updates", "Check for Updates…")
@@ -446,27 +447,43 @@ pub fn run() {
                 .close_window()
                 .build()?;
 
+            let undo_item = MenuItemBuilder::with_id("undo", "Undo")
+                .build(app)?;
+            let redo_item = MenuItemBuilder::with_id("redo", "Redo")
+                .build(app)?;
+            let cut_item = MenuItemBuilder::with_id("cut", "Cut")
+                .build(app)?;
+            let copy_item = MenuItemBuilder::with_id("copy", "Copy")
+                .build(app)?;
+            let paste_item = MenuItemBuilder::with_id("paste", "Paste")
+                .build(app)?;
+            let duplicate_item = MenuItemBuilder::with_id("duplicate", "Duplicate")
+                .build(app)?;
+            let select_all_item = MenuItemBuilder::with_id("select-all", "Select All")
+                .build(app)?;
+            let delete_item = MenuItemBuilder::with_id("delete", "Delete")
+                .build(app)?;
+
             let edit_menu = SubmenuBuilder::new(app, "Edit")
-                .undo()
-                .redo()
+                .item(&undo_item)
+                .item(&redo_item)
                 .separator()
-                .cut()
-                .copy()
-                .paste()
-                .select_all()
+                .item(&cut_item)
+                .item(&copy_item)
+                .item(&paste_item)
+                .item(&duplicate_item)
+                .separator()
+                .item(&select_all_item)
+                .item(&delete_item)
                 .build()?;
 
             let toggle_left_panel = CheckMenuItemBuilder::with_id("toggle-left-panel", "Left Panel")
                 .checked(true)
-                .accelerator("CmdOrCtrl+\\")
+                .accelerator("CmdOrCtrl+1")
                 .build(app)?;
             let toggle_right_panel = CheckMenuItemBuilder::with_id("toggle-right-panel", "Right Panel")
                 .checked(true)
-                .accelerator("CmdOrCtrl+Shift+\\")
-                .build(app)?;
-
-            let advanced_mode_item = CheckMenuItemBuilder::with_id("toggle-advanced-mode", "Advanced Mode")
-                .accelerator("CmdOrCtrl+Shift+A")
+                .accelerator("CmdOrCtrl+2")
                 .build(app)?;
 
             let theme_system = CheckMenuItemBuilder::with_id("theme-system", "System")
@@ -487,6 +504,8 @@ pub fn run() {
                 .build(app)?;
             let expand_all = MenuItemBuilder::with_id("expand-all", "Expand All Layers")
                 .build(app)?;
+            let reset_layout = MenuItemBuilder::with_id("reset-layout", "Reset Layout")
+                .build(app)?;
 
             let view_menu = SubmenuBuilder::new(app, "View")
                 .item(&toggle_left_panel)
@@ -495,9 +514,7 @@ pub fn run() {
                 .item(&collapse_all)
                 .item(&expand_all)
                 .separator()
-                .item(&advanced_mode_item)
-                .separator()
-                .item(&themes_submenu)
+                .item(&reset_layout)
                 .build()?;
 
             let window_menu = SubmenuBuilder::new(app, "Window")
@@ -629,7 +646,7 @@ pub fn run() {
 
             // For check menu items, emit their new checked state
             match id {
-                "toggle-left-panel" | "toggle-right-panel" | "toggle-advanced-mode" => {
+                "toggle-left-panel" | "toggle-right-panel" => {
                     use tauri::menu::MenuItemKind;
                     if let Some(menu) = app.menu() {
                         for item in menu.items().unwrap_or_default() {

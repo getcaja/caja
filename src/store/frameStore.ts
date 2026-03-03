@@ -38,6 +38,21 @@ export const useFrameStore = create<FrameStore>()((...a) => ({
 
 // --- Subscribers ---
 
+// Auto-select root when selection is empty (keeps tree + canvas + properties in sync)
+useFrameStore.subscribe((state, prev) => {
+  if (
+    state.selectedId === null &&
+    prev.selectedId !== null &&
+    !state.previewMode &&
+    !state.pageSelected
+  ) {
+    useFrameStore.setState({
+      selectedId: state.root.id,
+      selectedIds: new Set([state.root.id]),
+    })
+  }
+})
+
 // Auto-save
 let saveTimeout: ReturnType<typeof setTimeout>
 useFrameStore.subscribe((state) => {

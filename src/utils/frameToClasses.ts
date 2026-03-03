@@ -1,6 +1,5 @@
 import type { Frame, Spacing, Inset, BorderRadius, Border, DesignValue, ResponsiveOverrides } from '../types/frame'
 import { toGoogleFontClass } from './googleFonts'
-import { resolveRenderSrc } from '../lib/assetOps'
 
 const weightMap: Record<number, string> = {
   100: 'font-thin',
@@ -16,8 +15,18 @@ const weightMap: Record<number, string> = {
 
 // --- DesignValue class helpers ---
 
+// Container-size tokens only work with width in Tailwind v4 (w-md, w-lg, etc.)
+// For height/min-height/max-height, fall back to arbitrary values.
+const CONTAINER_TOKENS = new Set(['xs', 'sm', 'md', 'lg', 'xl', '2xl', '3xl', '4xl', '5xl', '6xl', '7xl'])
+const HEIGHT_PREFIXES = new Set(['h', 'min-h', 'max-h'])
+
 function dvClass(prefix: string, dv: DesignValue<number>, unit = 'px'): string {
-  if (dv.mode === 'token') return `${prefix}-${dv.token}`
+  if (dv.mode === 'token') {
+    if (HEIGHT_PREFIXES.has(prefix) && CONTAINER_TOKENS.has(dv.token)) {
+      return `${prefix}-[${dv.value}${unit}]`
+    }
+    return `${prefix}-${dv.token}`
+  }
   return `${prefix}-[${dv.value}${unit}]`
 }
 
@@ -282,7 +291,7 @@ export function frameToClasses(frame: Frame): string {
         cls.push(`leading-[${frame.lineHeight.value}]`)
       }
     }
-    if (frame.fontWeight.value !== 400) {
+    if (!dvIsZero(frame.fontWeight) && frame.fontWeight.value !== 400) {
       if (frame.fontWeight.mode === 'token') {
         cls.push(`font-${frame.fontWeight.token}`)
       } else {
@@ -365,9 +374,8 @@ export function frameToClasses(frame: Frame): string {
   // Background
   if (frame.bg.value) cls.push(dvColorClass('bg', frame.bg))
 
-  // Background image
+  // Background image (size/position/repeat classes only — url set via inline style)
   if (frame.bgImage) {
-    cls.push(`bg-[url('${resolveRenderSrc(frame.bgImage)}')]`)
     if (frame.bgSize !== 'auto') cls.push(`bg-${frame.bgSize}`)
     if (frame.bgPosition !== 'center') {
       // Tailwind v4 format: bg-left-top, not bg-top-left
@@ -413,6 +421,9 @@ export function frameToClasses(frame: Frame): string {
   if (frame.scaleVal.value !== 100) cls.push(dvClass('scale', frame.scaleVal, ''))
   if (!dvIsZero(frame.translateX)) cls.push(dvClassSigned('translate-x', frame.translateX))
   if (!dvIsZero(frame.translateY)) cls.push(dvClassSigned('translate-y', frame.translateY))
+  if (!dvIsZero(frame.skewX)) cls.push(dvClassSigned('skew-x', frame.skewX, 'deg'))
+  if (!dvIsZero(frame.skewY)) cls.push(dvClassSigned('skew-y', frame.skewY, 'deg'))
+  if (frame.transformOrigin && frame.transformOrigin !== 'center') cls.push(`origin-${frame.transformOrigin}`)
 
   // Transitions
   if (frame.transition !== 'none') {
@@ -556,7 +567,7 @@ function overrideClasses(ov: ResponsiveOverrides, base: Frame, prefix: string): 
     if (ov.fontSize.mode === 'token') cls.push(p(`text-${ov.fontSize.token}`))
     else cls.push(p(`text-[${ov.fontSize.value}px]`))
   }
-  if (ov.fontWeight !== undefined && ov.fontWeight.value !== 400) {
+  if (ov.fontWeight !== undefined && !dvIsZero(ov.fontWeight) && ov.fontWeight.value !== 400) {
     if (ov.fontWeight.mode === 'token') cls.push(p(`font-${ov.fontWeight.token}`))
     else {
       const w = weightMap[ov.fontWeight.value]

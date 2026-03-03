@@ -40,8 +40,10 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
   const [draft, setDraft] = useState('')
   const [selectedIdx, setSelectedIdx] = useState(0)
   const [showSuggestions, setShowSuggestions] = useState(false)
+  const [dropAbove, setDropAbove] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   const manualClasses = frame.tailwindClasses.split(' ').filter(Boolean)
   const manualSet = useMemo(() => new Set(manualClasses), [manualClasses.join(' ')])
@@ -59,7 +61,16 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
   )
 
   useEffect(() => { setSelectedIdx(0) }, [suggestions])
-  useEffect(() => { setShowSuggestions(suggestions.length > 0 && draft.length > 0) }, [suggestions, draft])
+  useEffect(() => {
+    const show = suggestions.length > 0 && draft.length > 0
+    if (show && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect()
+      const spaceBelow = window.innerHeight - rect.bottom
+      const spaceAbove = rect.top
+      setDropAbove(spaceBelow < 220 && spaceAbove > spaceBelow)
+    }
+    setShowSuggestions(show)
+  }, [suggestions, draft])
 
   const copyAll = () => {
     navigator.clipboard.writeText(allText)
@@ -105,19 +116,16 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
   }, [selectedIdx, showSuggestions])
 
   return (
-    <Section title="Classes" defaultCollapsed>
+    <Section title="Output" defaultCollapsed>
       <div className="flex flex-col gap-2">
         {/* Computed classes — read-only */}
-        <div className="flex items-start gap-2">
-          <div className="flex-1 min-w-0 bg-surface-2 rounded px-1.5 py-1 flex flex-wrap gap-1 min-h-[24px]">
-            {computedClasses.map((cls, i) => (
-              <span key={i} className="c-pill bg-surface-3/60 text-text-muted">{cls}</span>
-            ))}
-            {computedClasses.length === 0 && (
-              <span className="text-[11px] text-text-muted py-0.5">No computed classes</span>
-            )}
-          </div>
-          {allText ? (
+        {computedClasses.length > 0 && (
+          <div className="flex items-start gap-2">
+            <div className="flex-1 min-w-0 bg-surface-2 rounded px-1.5 py-1 flex flex-wrap gap-1 min-h-[24px]">
+              {computedClasses.map((cls, i) => (
+                <span key={i} className="c-pill bg-surface-3/60 text-text-muted">{cls}</span>
+              ))}
+            </div>
             <button
               onClick={copyAll}
               className={`w-5 h-5 shrink-0 flex items-center justify-center rounded ${
@@ -127,36 +135,37 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
             >
               {copied ? <Check size={12} /> : <Copy size={12} />}
             </button>
-          ) : (
-            <div className="w-5 shrink-0" />
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Manual classes — editable */}
         {manualClasses.length > 0 && (
-          <div className="bg-surface-2 rounded px-1.5 py-1 flex flex-wrap gap-1">
-            {manualClasses.map((cls, i) => (
-              <span key={`${i}-${cls}`} className="c-pill bg-surface-3 text-text-primary">
-                {cls}
-                <button
-                  onClick={() => removeClass(cls)}
-                  className="ml-0.5 w-4 h-4 flex items-center justify-center rounded hover:bg-destructive/20 hover:text-destructive text-current opacity-70 hover:opacity-100"
-                >
-                  <X size={10} />
-                </button>
-              </span>
-            ))}
+          <div className="flex items-start gap-2">
+            <div className="flex-1 min-w-0 bg-surface-2 rounded px-1.5 py-1 flex flex-wrap gap-1">
+              {manualClasses.map((cls, i) => (
+                <span key={`${i}-${cls}`} className="c-pill bg-surface-3/60 text-text-muted">
+                  {cls}
+                  <button
+                    onClick={() => removeClass(cls)}
+                    className="-mr-0.5 flex items-center justify-center rounded hover:bg-destructive/20 hover:text-destructive text-current opacity-70 hover:opacity-100"
+                  >
+                    <X size={10} />
+                  </button>
+                </span>
+              ))}
+            </div>
+            <div className="w-5 shrink-0" />
           </div>
         )}
 
         {/* Add input */}
         <div className="flex items-center gap-2">
-          <div className="relative flex-1 min-w-0">
+          <div ref={containerRef} className="relative flex-1 min-w-0">
             <div
               className="c-scale-input flex items-center gap-1 cursor-text"
               onClick={() => inputRef.current?.focus()}
             >
-              <span className="w-4 shrink-0 flex items-center justify-center text-text-muted/50">
+              <span className="w-4 shrink-0 flex items-center justify-center text-text-muted">
                 <Plus size={12} />
               </span>
               <input
@@ -172,7 +181,7 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
                   }, 150)
                 }}
                 onFocus={() => { if (suggestions.length > 0 && draft.length > 0) setShowSuggestions(true) }}
-                placeholder="New Class"
+                placeholder="New Tailwind Class"
                 className="flex-1 min-w-[20px] text-[12px] text-text-primary"
               />
             </div>
@@ -180,7 +189,7 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
             {showSuggestions && suggestions.length > 0 && (
               <div
                 ref={suggestionsRef}
-                className="absolute left-0 right-0 top-full mt-1 z-50 bg-surface-2 border border-border-accent rounded-lg shadow-2xl overflow-y-auto max-h-[200px] py-1"
+                className={`absolute left-0 right-0 z-50 bg-surface-2 border border-border-accent rounded-lg shadow-2xl overflow-y-auto max-h-[200px] py-1 ${dropAbove ? 'bottom-full mb-1' : 'top-full mt-1'}`}
               >
                 {suggestions.map((cls, i) => (
                   <button

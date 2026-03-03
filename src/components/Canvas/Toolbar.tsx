@@ -6,6 +6,8 @@ import {
 } from 'lucide-react'
 import { useFrameStore, isRootId } from '../../store/frameStore'
 import type { Frame, Breakpoint } from '../../types/frame'
+import { ZOOM_LEVELS } from './ZoomBar'
+import { canvasZoomTo } from './CanvasInline'
 
 type ElementType = 'box' | 'text' | 'image' | 'button' | 'input' | 'textarea' | 'select' | 'link'
 
@@ -91,6 +93,58 @@ function Divider() {
   return <div className="w-px self-stretch bg-border shrink-0" />
 }
 
+/* ---------- Zoom ---------- */
+function ZoomSection() {
+  const canvasZoom = useFrameStore((s) => s.canvasZoom)
+  const [open, setOpen] = useState(false)
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const [pos, setPos] = useState({ x: 0, y: 0 })
+
+  const handleClick = () => {
+    if (!open && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect()
+      setPos({ x: rect.left + rect.width / 2, y: rect.top - 8 })
+    }
+    setOpen((p) => !p)
+  }
+
+  return (
+    <>
+      <div className="flex items-center py-1 pr-1">
+        <button
+          ref={btnRef}
+          onClick={handleClick}
+          className={`h-7 px-1.5 flex items-center gap-0.5 rounded-md ${open ? 'bg-surface-3 text-text-primary' : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'}`}
+          title="Zoom"
+        >
+          <span className="text-[11px] tabular-nums">{Math.round(canvasZoom * 100)}%</span>
+          <ChevronDown size={10} />
+        </button>
+      </div>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div
+            className="fixed c-menu-popup min-w-[120px] z-50"
+            style={{ left: pos.x, bottom: window.innerHeight - pos.y, transform: 'translateX(-50%)' }}
+            onClick={(e) => { e.stopPropagation(); setOpen(false) }}
+          >
+            {ZOOM_LEVELS.map((z) => (
+              <button
+                key={z}
+                className={`c-menu-item ${Math.abs(canvasZoom - z) < 0.001 ? '!text-text-primary !bg-surface-3/60' : ''}`}
+                onClick={() => canvasZoomTo(z)}
+              >
+                {Math.round(z * 100)}%
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </>
+  )
+}
+
 /* ---------- Toolbar ---------- */
 export function Toolbar() {
   const previewMode = useFrameStore((s) => s.previewMode)
@@ -146,44 +200,15 @@ export function Toolbar() {
     <div className="fixed bottom-3 inset-x-0 z-40 flex justify-center pointer-events-none">
       <div className="flex items-stretch bg-surface-1 border border-border rounded-lg pointer-events-auto">
 
-        {/* Section 1: Add */}
+        {/* Section 1: Tools + Add */}
         <div style={{
           display: 'flex', alignItems: 'center', overflow: 'hidden',
-          maxWidth: previewMode ? 0 : 200, opacity: previewMode ? 0 : 1,
+          maxWidth: previewMode ? 0 : 300, opacity: previewMode ? 0 : 1,
           transition: previewMode
             ? 'max-width 200ms ease, opacity 150ms ease'
             : 'max-width 300ms ease-out, opacity 250ms ease-out 50ms',
         }}>
           <div className="flex items-center gap-0.5 py-1 pl-1.5 pr-1">
-            <DropdownButton
-              icon={<Plus size={14} />}
-              title="Add"
-              menu={<>
-                {PRIMITIVES.map((item) => (
-                  <button
-                    key={item.type}
-                    className="c-menu-item"
-                    onClick={() => handleInsert(item.type)}
-                  >
-                    {item.icon}
-                    {item.label}
-                  </button>
-                ))}
-              </>}
-            />
-          </div>
-          <Divider />
-        </div>
-
-        {/* Section 2: Tools */}
-        <div style={{
-          display: 'flex', alignItems: 'center', overflow: 'hidden',
-          maxWidth: previewMode ? 0 : 200, opacity: previewMode ? 0 : 1,
-          transition: previewMode
-            ? 'max-width 200ms ease, opacity 150ms ease'
-            : 'max-width 300ms ease-out, opacity 250ms ease-out 50ms',
-        }}>
-          <div className="flex items-center gap-0.5 py-1 px-1">
             <div className="flex items-center bg-surface-0/50 rounded-md">
               <button
                 onClick={() => { setPreviewMode(false); setCanvasTool('pointer') }}
@@ -207,10 +232,26 @@ export function Toolbar() {
                 <Type size={14} />
               </button>
             </div>
+            <DropdownButton
+              icon={<Plus size={14} />}
+              title="Insert"
+              menu={<>
+                {PRIMITIVES.map((item) => (
+                  <button
+                    key={item.type}
+                    className="c-menu-item"
+                    onClick={() => handleInsert(item.type)}
+                  >
+                    {item.icon}
+                    {item.label}
+                  </button>
+                ))}
+              </>}
+            />
           </div>
         </div>
 
-        {/* Section 3: Viewport (always visible) */}
+        {/* Section 3: Viewport + Zoom */}
         {!previewMode && <Divider />}
         <div className="flex items-center gap-0.5 py-1 px-1">
           <DropdownButton
@@ -245,9 +286,11 @@ export function Toolbar() {
             })}
           />
         </div>
+        <ZoomSection />
 
-        {/* Section 4: Preview (always visible, far right) */}
-        <div className="flex items-center gap-0.5 py-1 pr-1.5">
+        {/* Section 4: Preview */}
+        <Divider />
+        <div className="flex items-center gap-0.5 py-1 pr-1.5 pl-1">
           <button
             onClick={() => { setPreviewMode(!previewMode); if (!previewMode) setCanvasTool('pointer') }}
             className={`${btnIcon} ${previewMode ? 'bg-surface-3 text-text-primary' : 'text-text-muted hover:text-text-secondary'}`}

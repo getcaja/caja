@@ -170,6 +170,7 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
           nameEdit.start(frame.name)
         }}
         onContextMenu={(e) => {
+          if (isRoot) { e.preventDefault(); return }
           if (!selectedIds.has(frame.id)) select(frame.id)
           ctxMenu.open(e)
         }}

@@ -64,6 +64,9 @@ function newFeatureDefaults() {
     ease: 'linear' as const,
     colSpan: dvNum(0),
     rowSpan: dvNum(0),
+    skewX: dvNum(0),
+    skewY: dvNum(0),
+    transformOrigin: 'center',
   }
 }
 

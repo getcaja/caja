@@ -8,7 +8,7 @@ import {
   BORDER_WIDTH_SCALE, BORDER_RADIUS_SCALE, SIZE_CONSTRAINT_SCALE, OPACITY_SCALE,
   GROW_SCALE, SHRINK_SCALE,
   Z_INDEX_SCALE, GRID_COLS_SCALE, GRID_ROWS_SCALE, COL_SPAN_SCALE, ROW_SPAN_SCALE,
-  ROTATE_SCALE, SCALE_SCALE, DURATION_SCALE, BLUR_SCALE,
+  ROTATE_SCALE, SCALE_SCALE, SKEW_SCALE, DURATION_SCALE, BLUR_SCALE,
 } from '../data/scales'
 import { COLOR_GRID, SPECIAL_COLORS } from '../data/colors'
 
@@ -46,6 +46,7 @@ export const GRID_ROWS_LOOKUP = buildNumLookup(GRID_ROWS_SCALE)
 export const COL_SPAN_LOOKUP = buildNumLookup(COL_SPAN_SCALE)
 export const ROW_SPAN_LOOKUP = buildNumLookup(ROW_SPAN_SCALE)
 export const ROTATE_LOOKUP = buildNumLookup(ROTATE_SCALE)
+export const SKEW_LOOKUP = buildNumLookup(SKEW_SCALE)
 export const SCALE_LOOKUP = buildNumLookup(SCALE_SCALE)
 export const DURATION_LOOKUP = buildNumLookup(DURATION_SCALE)
 export const BLUR_LOOKUP = buildNumLookup(BLUR_SCALE)
@@ -172,6 +173,8 @@ export function sanitizeFrameProperties(props: Record<string, unknown>, existing
     scaleVal: SCALE_LOOKUP,
     translateX: SPACING_LOOKUP,
     translateY: SPACING_LOOKUP,
+    skewX: SKEW_LOOKUP,
+    skewY: SKEW_LOOKUP,
     duration: DURATION_LOOKUP,
     blur: BLUR_LOOKUP,
     backdropBlur: BLUR_LOOKUP,
