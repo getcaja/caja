@@ -6,7 +6,7 @@ on:
       - 'v*'
 
 jobs:
-  release:
+  build:
     permissions:
       contents: write
     strategy:
@@ -15,8 +15,10 @@ jobs:
         include:
           - platform: macos-latest
             args: '--target aarch64-apple-darwin'
+            arch: aarch64
           - platform: macos-latest
             args: '--target x86_64-apple-darwin'
+            arch: x64
     runs-on: ${{ matrix.platform }}
 
     steps:
@@ -44,3 +46,55 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+          includeUpdaterJson: false
+
+      # tauri-action can't find .sig files for cross-compiled targets — upload manually
+      - name: Upload updater signature
+        run: |
+          SIG_FILE=$(find src-tauri/target -name "*.app.tar.gz.sig" -type f | head -1)
+          if [ -n "$SIG_FILE" ]; then
+            gh release upload "${{ github.ref_name }}" "$SIG_FILE#Caja_${{ matrix.arch }}.app.tar.gz.sig" --clobber
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  updater:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Generate latest.json
+        run: |
+          TAG="${{ github.ref_name }}"
+          VERSION="${TAG#v}"
+
+          # Download sig files from the release
+          gh release download "$TAG" --repo "${{ github.repository }}" --pattern "*.sig" --dir sigs/
+
+          AARCH64_SIG=$(cat sigs/Caja_aarch64.app.tar.gz.sig)
+          X64_SIG=$(cat sigs/Caja_x64.app.tar.gz.sig)
+
+          PUB_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          cat > latest.json << EOF
+          {
+            "version": "$VERSION",
+            "notes": "Caja v$VERSION",
+            "pub_date": "$PUB_DATE",
+            "platforms": {
+              "darwin-aarch64": {
+                "signature": "$AARCH64_SIG",
+                "url": "https://github.com/${{ github.repository }}/releases/download/$TAG/Caja_aarch64.app.tar.gz"
+              },
+              "darwin-x86_64": {
+                "signature": "$X64_SIG",
+                "url": "https://github.com/${{ github.repository }}/releases/download/$TAG/Caja_x64.app.tar.gz"
+              }
+            }
+          }
+          EOF
+
+          gh release upload "$TAG" latest.json --repo "${{ github.repository }}" --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
