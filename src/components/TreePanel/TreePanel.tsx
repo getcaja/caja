@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useCallback } from 'react'
+import { useState, useRef, useMemo, useCallback, useEffect } from 'react'
 import { findInTree, cloneWithNewIds, normalizeFrame } from '../../store/frameStore'
 import { useFrameStore, isRootId } from '../../store/frameStore'
 import { useCatalogStore } from '../../store/catalogStore'
@@ -223,12 +223,20 @@ export function TreePanel() {
   }
 
   const openAddMenu = () => {
+    window.dispatchEvent(new Event('close-menus'))
     if (addBtnRef.current) {
       const rect = addBtnRef.current.getBoundingClientRect()
       setMenuPos({ x: rect.left, y: rect.bottom + 4 })
     }
     setShowAdd(true)
   }
+
+  // Close when another menu opens
+  useEffect(() => {
+    const close = () => setShowAdd(false)
+    window.addEventListener('close-menus', close)
+    return () => window.removeEventListener('close-menus', close)
+  }, [])
 
   const handleAdd = (type: 'box' | 'text' | 'image' | 'button' | 'input' | 'textarea' | 'select' | 'link') => {
     addChild(getTargetParentId(), type)

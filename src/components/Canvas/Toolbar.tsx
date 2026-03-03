@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from 'react'
+import { useState, useRef, useMemo, useEffect } from 'react'
 import {
   Monitor, Tablet, Smartphone,
   Plus, MousePointer2, Type, Eye,
@@ -51,10 +51,20 @@ function DropdownButton({ icon, title, isActive, menu, menuClassName, children }
   const btnRef = useRef<HTMLButtonElement>(null)
   const [pos, setPos] = useState({ x: 0, y: 0 })
 
+  // Close when another menu opens
+  useEffect(() => {
+    const close = () => setOpen(false)
+    window.addEventListener('close-menus', close)
+    return () => window.removeEventListener('close-menus', close)
+  }, [])
+
   const handleClick = () => {
-    if (!open && btnRef.current) {
-      const rect = btnRef.current.getBoundingClientRect()
-      setPos({ x: rect.left + rect.width / 2, y: rect.top - 8 })
+    if (!open) {
+      window.dispatchEvent(new Event('close-menus'))
+      if (btnRef.current) {
+        const rect = btnRef.current.getBoundingClientRect()
+        setPos({ x: rect.left + rect.width / 2, y: rect.top - 8 })
+      }
     }
     setOpen((p) => !p)
   }
