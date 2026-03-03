@@ -9,13 +9,10 @@ import { parseTailwindClasses } from '../utils/parseTailwindClasses'
 import { exportLibrary } from '../lib/libraryOps'
 import { downloadAsset, isExternalUrl } from '../lib/assetOps'
 import {
-  sanitizeDVNum, sanitizeSpacingValues, sanitizeBorderRadius,
+  sanitizeDVNum, sanitizeSpacingValues,
   sanitizeFrameProperties, SIZE_CONSTRAINT_LOOKUP,
 } from './sanitize'
 import { resolveRefs, extractResultId } from './batchRefs'
-
-// 1×1 transparent PNG — fallback for unresolvable images during screenshot
-const IMG_PLACEHOLDER = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
 
 interface ToolResult {
   success: boolean
@@ -379,7 +376,7 @@ const handlers: Record<string, ToolHandler> = {
         }
       }
       if (Object.keys(readResults).length > 0) {
-        response.data.results = readResults
+        (response.data as Record<string, unknown>).results = readResults
       }
       // Nudge about components when building many similar structures
       if (results.length >= 8) {

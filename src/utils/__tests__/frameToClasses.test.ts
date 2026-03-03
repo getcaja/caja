@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { frameToClasses } from '../frameToClasses'
 import {
   makeBox, makeText, makeImage, makeButton, makeInput, makeTextarea, makeSelect,
-  dvNum, dvStr, dvToken, dvColorToken, zeroSpacing, zeroBorderRadius,
+  dvNum, dvStr, dvToken, dvColorToken, zeroBorderRadius,
 } from './helpers'
 
 // ── Helper: check class string contains / does not contain ──

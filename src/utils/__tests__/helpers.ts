@@ -3,7 +3,7 @@
  * Mirrors the store's create functions but without store dependency.
  */
 import type {
-  Frame, BoxElement, TextElement, ImageElement, ButtonElement,
+  BoxElement, TextElement, ImageElement, ButtonElement,
   InputElement, TextareaElement, SelectElement, TextStyles,
   Spacing, Inset, SizeValue, BorderRadius, Border, DesignValue,
 } from '../../types/frame'
@@ -76,6 +76,7 @@ function defaultTextStyles(): TextStyles {
     fontWeight: dvNum(400),
     lineHeight: dvNum(0),
     textAlign: 'left',
+    textAlignVertical: 'start',
     fontStyle: 'normal',
     textDecoration: 'none',
     letterSpacing: dvNum(0),

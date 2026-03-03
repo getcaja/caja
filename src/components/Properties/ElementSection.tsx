@@ -3,7 +3,6 @@ import { Plus, X, Check, Code, Link, ImageIcon, Upload, MessageSquareQuote, Scal
 import type { Frame, TextElement, ImageElement, ButtonElement, InputElement, TextareaElement, SelectElement, SelectOption } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { TokenInput } from '../ui/TokenInput'
-import { ToggleGroup } from '../ui/ToggleGroup'
 import { Select } from '../ui/Select'
 import { Popover } from '../ui/Popover'
 import { TYPE_BADGE_STYLES, TYPE_BADGE_LABELS, getBadgeKey, BOX_TAG_OPTIONS, TEXT_TAG_OPTIONS, INPUT_TYPE_OPTIONS } from './constants'
@@ -230,7 +229,7 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
           <TokenInput
             value={currentTag}
             options={tagOptions}
-            onChange={(v) => updateFrame(frame.id, { tag: v })}
+            onChange={(v) => updateFrame(frame.id, { tag: v } as Partial<Frame>)}
             inlineLabel={<Code size={12} />}
             classPrefix="tag"
             tooltip="HTML Tag"

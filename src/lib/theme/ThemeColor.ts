@@ -3,12 +3,17 @@
  * Immutable — all operations return new instances.
  */
 export class ThemeColor {
-  constructor(
-    readonly h: number,
-    readonly s: number,
-    readonly l: number,
-    readonly a: number = 1,
-  ) {}
+  readonly h: number
+  readonly s: number
+  readonly l: number
+  readonly a: number
+
+  constructor(h: number, s: number, l: number, a: number = 1) {
+    this.h = h
+    this.s = s
+    this.l = l
+    this.a = a
+  }
 
   /** Parse #rgb, #rrggbb, rgb(), hsl() */
   static parse(css: string): ThemeColor {

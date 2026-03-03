@@ -333,7 +333,6 @@ export function TreePanel() {
           x={menuPos.x}
           y={menuPos.y}
           onAdd={handleAdd}
-          onAddPage={addPage}
           onClose={() => setShowAdd(false)}
         />
       )}

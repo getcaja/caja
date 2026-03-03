@@ -11,13 +11,14 @@ import { SpacingControl } from '../ui/SpacingControl'
 import { SPACING_SCALE, SIZE_CONSTRAINT_SCALE, GRID_COLS_SCALE, GRID_ROWS_SCALE, GROW_SCALE, SHRINK_SCALE, COL_SPAN_SCALE, ROW_SPAN_SCALE, MARGIN_SCALE } from '../../data/scales'
 import { ALIGN_SELF_OPTIONS } from './constants'
 
-export function LayoutSection({ frame, isRoot, hasOverrides, onResetOverrides }: { frame: Frame; isRoot?: boolean; hasOverrides?: boolean; onResetOverrides?: () => void }) {
+export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOverrides }: { frame: Frame; isRoot?: boolean; hasOverrides?: boolean; onResetOverrides?: () => void }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
   const updateSize = useFrameStore((s) => s.updateSize)
   const updateSpacing = useFrameStore((s) => s.updateSpacing)
   const [constraintsOpen, setConstraintsOpen] = useState(false)
   const [childPropsOpen, setChildPropsOpen] = useState(false)
   const [displayOptsOpen, setDisplayOptsOpen] = useState(false)
+  const [overflowOptsOpen, setOverflowOptsOpen] = useState(false)
   const parentDisplay = useFrameStore((s) => s.getParentDisplay(frame.id))
 
   const isBox = frame.type === 'box'
@@ -506,21 +507,23 @@ export function LayoutSection({ frame, isRoot, hasOverrides, onResetOverrides }:
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => updateFrame(frame.id, { overflow: frame.overflow === 'hidden' ? 'visible' : 'hidden' })}
+            onClick={() => updateFrame(frame.id, { overflow: frame.overflow !== 'visible' ? 'visible' : 'hidden' })}
             className="flex items-center gap-1.5 cursor-pointer select-none"
           >
             <span className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center ${
-              frame.overflow === 'hidden'
+              frame.overflow !== 'visible'
                 ? 'bg-accent border-accent text-white'
                 : 'border-border-accent bg-surface-2'
             }`}>
-              {frame.overflow === 'hidden' && <Check size={10} strokeWidth={3} />}
+              {frame.overflow !== 'visible' && <Check size={10} strokeWidth={3} />}
             </span>
-            <span className={`text-[12px] ${frame.overflow === 'hidden' ? 'text-text-primary' : 'text-text-muted'}`}>Clip Content</span>
+            <span className={`text-[12px] ${frame.overflow !== 'visible' ? 'text-text-primary' : 'text-text-muted'}`}>Clip Content</span>
           </button>
           <div className="flex-1" />
-          {frame.overflow === 'hidden' ? (
+          {frame.overflow !== 'visible' ? (
             <Popover
+                open={overflowOptsOpen}
+                onOpenChange={setOverflowOptsOpen}
                 trigger={
                   <button
                     type="button"
@@ -540,7 +543,7 @@ export function LayoutSection({ frame, isRoot, hasOverrides, onResetOverrides }:
                 <div className="flex flex-col gap-1.5 p-2.5 min-w-[120px]">
                   <button
                     type="button"
-                    onClick={() => updateFrame(frame.id, { overflow: frame.overflow === 'scroll' ? 'visible' : 'scroll' })}
+                    onClick={() => updateFrame(frame.id, { overflow: frame.overflow === 'scroll' ? 'hidden' : 'scroll' })}
                     className="flex items-center gap-1.5 cursor-pointer select-none"
                   >
                     <span className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center ${

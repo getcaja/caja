@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Diamond, Check } from 'lucide-react'
-import type { SizeValue, DesignValue } from '../../types/frame'
+import type { SizeValue } from '../../types/frame'
 import { SIZE_CONSTRAINT_SCALE, type ScaleOption } from '../../data/scales'
 import { useFrameStore } from '../../store/frameStore'
 
@@ -28,7 +28,7 @@ function sizeToKeyword(value: SizeValue): string | null {
   return null
 }
 
-export function SizeInput({ value, onChange, label, classPrefix, parentIsFlex, tooltip }: SizeInputProps) {
+export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, parentIsFlex, tooltip }: SizeInputProps) {
   const startPreview = useFrameStore((s) => s.startPreview)
   const endPreview = useFrameStore((s) => s.endPreview)
   const [showDropdown, setShowDropdown] = useState(false)

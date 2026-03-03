@@ -17,8 +17,8 @@ import { useCatalogStore } from '../catalogStore'
 
 const MAX_HISTORY = 50
 
-export function pushHistory(state: { root: BoxElement; past: Record<string, BoxElement[]>; future: Record<string, BoxElement[]>; activePageId: string; _previewSnapshot: BoxElement | null }) {
-  if (state._previewSnapshot) return {}
+export function pushHistory(state: { root: BoxElement; past: Record<string, BoxElement[]>; future: Record<string, BoxElement[]>; activePageId: string; _previewSnapshot: BoxElement | null }): { past: Record<string, BoxElement[]>; future: Record<string, BoxElement[]>; dirty: boolean } {
+  if (state._previewSnapshot) return { past: state.past, future: state.future, dirty: true }
   const pageId = state.activePageId
   const pagePast = state.past[pageId] || []
   return {
@@ -253,7 +253,6 @@ export const createCoreTreeSlice: StateCreator<FrameStore, [], [], CoreTreeSlice
       if (!parent) return {}
       // Collect children in their original order
       const selected = parent.children.filter((c) => ids.has(c.id))
-      const firstIdx = parent.children.findIndex((c) => ids.has(c.id))
       const wrapper = createBox({ children: selected })
       // Replace the selected children with the wrapper at the first selected position
       const newChildren: Frame[] = []
@@ -397,7 +396,7 @@ export const createCoreTreeSlice: StateCreator<FrameStore, [], [], CoreTreeSlice
         const merged = { ...existing, ...updates } as ResponsiveOverrides
         // Remove keys that match the base value (keep overrides sparse)
         for (const key of Object.keys(merged) as (keyof ResponsiveOverrides)[]) {
-          if (JSON.stringify(merged[key]) === JSON.stringify((f as Record<string, unknown>)[key])) {
+          if (JSON.stringify(merged[key]) === JSON.stringify((f as unknown as Record<string, unknown>)[key])) {
             delete merged[key]
           }
         }
@@ -605,7 +604,7 @@ export const createCoreTreeSlice: StateCreator<FrameStore, [], [], CoreTreeSlice
     return { _previewSnapshot: cloneTree(state.root) as BoxElement }
   }),
 
-  endPreview: (commit) => set((state) => {
+  endPreview: (commit) => set((state): Partial<FrameStore> => {
     if (!state._previewSnapshot) return {}
     if (commit) {
       const pageId = state.activePageId

@@ -1,5 +1,6 @@
 import { Type, MoveVertical, MoveHorizontal, AlignLeft, AlignCenter, AlignRight, Italic, Underline, Strikethrough, Ellipsis } from 'lucide-react'
-import type { TextStyles } from '../../types/frame'
+import { useState } from 'react'
+import type { TextStyles, DesignValue } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { Section } from '../ui/Section'
 import { TokenInput } from '../ui/TokenInput'
@@ -18,8 +19,9 @@ const FONT_FAMILY_OPTIONS = [
   { value: 'mono', label: 'Monospace', token: 'mono' },
 ]
 
-export function TypographySection({ frame, hasOverrides, onResetOverrides }: { frame: TextStyles & { id: string }; hasOverrides?: boolean; onResetOverrides?: () => void }) {
+export function TypographySection({ frame, hasOverrides, onResetOverrides }: { frame: TextStyles & { id: string; color: DesignValue<string> }; hasOverrides?: boolean; onResetOverrides?: () => void }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
+  const [moreOpen, setMoreOpen] = useState(false)
 
   const moreActive = frame.fontStyle !== 'normal'
     || frame.textDecoration !== 'none'
@@ -166,6 +168,8 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides }: { f
             className="flex-1"
           />
           <Popover
+            open={moreOpen}
+            onOpenChange={setMoreOpen}
             trigger={
               <button
                 type="button"

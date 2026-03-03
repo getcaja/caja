@@ -5,7 +5,9 @@ import { TokenInput } from './TokenInput'
 import { BORDER_RADIUS_SCALE } from '../../data/scales'
 
 function dvSame(a: DesignValue<number>, b: DesignValue<number>): boolean {
-  return a.mode === b.mode && a.value === b.value && a.token === b.token
+  if (a.mode !== b.mode || a.value !== b.value) return false
+  if (a.mode === 'token' && b.mode === 'token') return a.token === b.token
+  return true
 }
 
 const txtLbl = (s: string) => <span className="text-[12px]">{s}</span>

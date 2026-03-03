@@ -83,7 +83,7 @@ function createBlobUrl(data: Uint8Array, ext: string, cacheKey?: string): string
     const prev = blobCache.get(cacheKey)
     if (prev) URL.revokeObjectURL(prev)
   }
-  const blob = new Blob([data], { type: mimeFromExt(ext) })
+  const blob = new Blob([data as BlobPart], { type: mimeFromExt(ext) })
   return URL.createObjectURL(blob)
 }
 
@@ -222,7 +222,6 @@ export async function importLocalAsset(projectPath: string | null): Promise<Down
 export async function migrateAssetsOnSave(pages: any[], projectPath: string): Promise<void> {
   const assetsDir = await getAssetsDir(projectPath)
   await ensureAssetsDir(assetsDir)
-  const tempDir = await getTempAssetsDir()
 
   const migrations = new Map<string, string>() // oldPath → newPath
 

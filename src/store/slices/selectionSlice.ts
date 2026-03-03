@@ -16,7 +16,7 @@ export interface SelectionSlice {
   selectAllSiblings: () => void
   hover: (id: string | null) => void
   getSelected: () => Frame | null
-  getParentDirection: (id: string) => 'row' | 'column'
+  getParentDirection: (id: string) => BoxElement['direction']
   getParentDisplay: (id: string) => BoxElement['display'] | null
   getRootId: () => string
 }

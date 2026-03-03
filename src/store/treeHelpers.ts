@@ -240,7 +240,7 @@ export function maxIdInTree(frame: Frame): number {
 }
 
 // Update both root and the active page's root in the pages array
-export function updateActiveRoot(state: { pages: { id: string; root: BoxElement }[]; activePageId: string }, newRoot: BoxElement): { pages: typeof state.pages; root: BoxElement } {
+export function updateActiveRoot<P extends { id: string; root: BoxElement }>(state: { pages: P[]; activePageId: string }, newRoot: BoxElement): { pages: P[]; root: BoxElement } {
   return {
     root: newRoot,
     pages: state.pages.map((p) => p.id === state.activePageId ? { ...p, root: newRoot } : p),

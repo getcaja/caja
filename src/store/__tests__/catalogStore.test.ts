@@ -120,7 +120,7 @@ describe('catalogStore', () => {
     it('moveComponent reorders within the list', () => {
       const store = useCatalogStore.getState()
       const a = store.saveComponent('A', [], makeFrame())
-      const b = store.saveComponent('B', [], makeFrame())
+      store.saveComponent('B', [], makeFrame())
       const c = store.saveComponent('C', [], makeFrame())
 
       // Move C before A
@@ -132,7 +132,7 @@ describe('catalogStore', () => {
     it('moveComponent after target', () => {
       const store = useCatalogStore.getState()
       const a = store.saveComponent('A', [], makeFrame())
-      const b = store.saveComponent('B', [], makeFrame())
+      store.saveComponent('B', [], makeFrame())
       const c = store.saveComponent('C', [], makeFrame())
 
       useCatalogStore.getState().moveComponent(a.id, c.id, 'after')

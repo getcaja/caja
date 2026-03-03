@@ -74,7 +74,7 @@ interface NormalizedItem {
 }
 
 export function TokenInput(props: TokenInputProps) {
-  const { label, classPrefix, inlineLabel, tooltip } = props
+  const { label, classPrefix: _classPrefix, inlineLabel, tooltip } = props
   const isScale = 'scale' in props && props.scale !== undefined
   const startPreview = useFrameStore((s) => s.startPreview)
   const endPreview = useFrameStore((s) => s.endPreview)
@@ -433,7 +433,7 @@ export function TokenInput(props: TokenInputProps) {
   // --- Committed value for check mark (stays on original during preview) ---
   const scaleCommittedToken = isScale
     ? (originalRef.current !== null
-        ? ((originalRef.current as DesignValue<number>).mode === 'token' ? (originalRef.current as DesignValue<number>).token : null)
+        ? (() => { const dv = originalRef.current as DesignValue<number>; return dv.mode === 'token' ? dv.token : null })()
         : scaleToken)
     : null
   const enumCommittedValue = enumProps ? (originalRef.current as string | null) ?? enumProps.value : ''

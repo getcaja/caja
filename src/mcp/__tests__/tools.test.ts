@@ -2,8 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   sanitizeDVNum, sanitizeDVStr, sanitizeSpacingValues,
   sanitizeBorderRadius, sanitizeBorder, sanitizeFrameProperties,
-  SPACING_LOOKUP, COLOR_LOOKUP, BORDER_WIDTH_LOOKUP, BORDER_RADIUS_LOOKUP,
-  FONT_SIZE_LOOKUP,
+  SPACING_LOOKUP, COLOR_LOOKUP,
 } from '../sanitize'
 import { resolveRefs, extractResultId } from '../batchRefs'
 import { compactSnapshot, summaryTree } from '../tools'

@@ -60,7 +60,7 @@ function StaticFrame({ frame, style }: { frame: Frame; style?: React.CSSProperti
 /** Inline display styles — forces display via inline style (beats any CSS specificity). */
 const INLINE_DISPLAYS = new Set(['inline-flex', 'inline-block', 'inline'])
 function getRootStyle(frame: Frame): React.CSSProperties | undefined {
-  if (INLINE_DISPLAYS.has(frame.display)) return { display: frame.display as any }
+  if (frame.type === 'box' && INLINE_DISPLAYS.has(frame.display)) return { display: frame.display as any }
   return undefined
 }
 
@@ -93,7 +93,7 @@ export interface ComponentPreviewProps {
 }
 
 export const ComponentPreview = memo(function ComponentPreview({
-  frame, name, sourceName, anchorY, panelRight,
+  frame, name, sourceName: _sourceName, anchorY, panelRight,
   onInsert, onEdit, onPopupEnter, onPopupLeave,
 }: ComponentPreviewProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null)

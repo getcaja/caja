@@ -10,7 +10,9 @@ type SpacingMode = 'all' | 'axis' | 'sides'
 function dvSame(a: DesignValue<number> | undefined, b: DesignValue<number> | undefined): boolean {
   if (!a || !b) return a === b
   if (!('mode' in a) || !('mode' in b)) return false
-  return a.mode === b.mode && a.value === b.value && a.token === b.token
+  if (a.mode !== b.mode || a.value !== b.value) return false
+  if (a.mode === 'token' && b.mode === 'token') return a.token === b.token
+  return true
 }
 
 function detectMode(v: Spacing): SpacingMode {

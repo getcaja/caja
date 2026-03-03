@@ -8,7 +8,7 @@ vi.stubGlobal('localStorage', {
   removeItem: (key: string) => storage.delete(key),
 })
 
-import { useFrameStore, findInTree, findParent, isRootId, normalizeFrame, COMPONENT_PAGE_ID } from '../frameStore'
+import { useFrameStore, findInTree, isRootId, normalizeFrame, COMPONENT_PAGE_ID } from '../frameStore'
 import type { BoxElement, Frame, InputElement, TextElement } from '../../types/frame'
 
 // --- Helpers ---
@@ -1207,7 +1207,6 @@ describe('frameStore', () => {
         const componentId = store().createComponent(boxId)!
 
         // Manually add overrides via updateFrame
-        const instance = findInTree(store().root, boxId)!
         store().updateFrame(boxId, {
           _overrides: { 'some-child': { content: 'override' } },
         } as any)

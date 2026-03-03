@@ -469,7 +469,7 @@ function generateResponsiveClasses(frame: Frame): string {
 }
 
 /** Generate Tailwind classes for a sparse set of responsive overrides. */
-function overrideClasses(ov: ResponsiveOverrides, base: Frame, prefix: string): string[] {
+function overrideClasses(ov: ResponsiveOverrides, _base: Frame, prefix: string): string[] {
   const cls: string[] = []
   const p = (c: string) => `${prefix}${c}`
 

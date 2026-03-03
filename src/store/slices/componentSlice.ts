@@ -61,20 +61,20 @@ function collectUserOverrides(
 
   for (const key of OVERRIDE_KEYS) {
     if (key in instance && key in original) {
-      const instVal = (instance as Record<string, unknown>)[key]
-      const origVal = (original as Record<string, unknown>)[key]
+      const instVal = (instance as unknown as Record<string, unknown>)[key]
+      const origVal = (original as unknown as Record<string, unknown>)[key]
       if (instVal !== origVal) diff[key] = instVal
     }
   }
 
   if ('bg' in instance && 'bg' in original) {
-    const iBg = (instance as Record<string, unknown>).bg
-    const oBg = (original as Record<string, unknown>).bg
+    const iBg = (instance as unknown as Record<string, unknown>).bg
+    const oBg = (original as unknown as Record<string, unknown>).bg
     if (JSON.stringify(iBg) !== JSON.stringify(oBg)) diff.bg = iBg
   }
   if ('color' in instance && 'color' in original) {
-    const iColor = (instance as Record<string, unknown>).color
-    const oColor = (original as Record<string, unknown>).color
+    const iColor = (instance as unknown as Record<string, unknown>).color
+    const oColor = (original as unknown as Record<string, unknown>).color
     if (JSON.stringify(iColor) !== JSON.stringify(oColor)) diff.color = iColor
   }
 
@@ -225,7 +225,7 @@ export const createComponentSlice: StateCreator<FrameStore, [], [], ComponentSli
   },
 
   addComponentMaster: (master) => {
-    const compPage = get().ensureComponentPage()
+    get().ensureComponentPage()
     const compPageRoot = get().pages.find((p) => p.isComponentPage)!.root
     const newCompRoot = addChildInTree(compPageRoot, compPageRoot.id, master) as BoxElement
     const pages = updatePageRoot(get().pages, COMPONENT_PAGE_ID, newCompRoot)
@@ -238,7 +238,7 @@ export const createComponentSlice: StateCreator<FrameStore, [], [], ComponentSli
     if (!frame || isRootId(frameId)) return null
 
     // Ensure components page exists
-    const compPage = get().ensureComponentPage()
+    get().ensureComponentPage()
 
     // Clone frame as master (gets new IDs)
     const master = cloneWithNewIds(normalizeFrame(frame))
@@ -265,7 +265,6 @@ export const createComponentSlice: StateCreator<FrameStore, [], [], ComponentSli
     set({
       root: newRoot,
       pages,
-      dirty: true,
       ...history,
     })
 
@@ -429,8 +428,8 @@ export const createComponentSlice: StateCreator<FrameStore, [], [], ComponentSli
 // pushHistory is defined inline to avoid circular deps with coreTreeSlice — same logic
 const MAX_HISTORY = 50
 
-function pushHistory(state: { root: BoxElement; past: Record<string, BoxElement[]>; future: Record<string, BoxElement[]>; activePageId: string; _previewSnapshot: BoxElement | null }) {
-  if (state._previewSnapshot) return {}
+function pushHistory(state: { root: BoxElement; past: Record<string, BoxElement[]>; future: Record<string, BoxElement[]>; activePageId: string; _previewSnapshot: BoxElement | null }): { past: Record<string, BoxElement[]>; future: Record<string, BoxElement[]>; dirty: boolean } {
+  if (state._previewSnapshot) return { past: state.past, future: state.future, dirty: true }
   const pageId = state.activePageId
   const pagePast = state.past[pageId] || []
   return {

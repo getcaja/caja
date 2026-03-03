@@ -1,7 +1,7 @@
 import type { StateCreator } from 'zustand'
 import type { BoxElement, Page } from '../../types/frame'
 import type { FrameStore } from '../frameStore'
-import { generatePageId, rootIdForPage, cloneWithNewIds, updateActiveRoot } from '../treeHelpers'
+import { generatePageId, rootIdForPage, cloneWithNewIds } from '../treeHelpers'
 import { createInternalRoot, cloneTree } from '../frameFactories'
 import { COMPONENT_PAGE_ID } from './componentSlice'
 

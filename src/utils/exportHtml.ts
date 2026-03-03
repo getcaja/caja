@@ -1,4 +1,4 @@
-import type { Frame } from '../types/frame'
+import type { BoxElement, Frame } from '../types/frame'
 import { buildClassString, detectLabelPairs, escapeAttr, escapeText, type LabelAssociation } from './exportShared'
 import { collectGoogleFonts, toGoogleFontUrl, toGoogleFontStyleRule } from './googleFonts'
 import { resolveAssetSrc } from '../lib/assetOps'
@@ -108,10 +108,10 @@ export function exportToHTML(
   return `${pad}<${tag}${idAttr}${classAttr}></${tag}>\n`
 }
 
-export function exportToHTMLDocument(root: Frame): string {
+export function exportToHTMLDocument(root: BoxElement): string {
   const bodyClasses = buildClassString(root)
   const bodyClassAttr = bodyClasses ? ` class="${bodyClasses}"` : ''
-  const body = root.children.map((f) => exportToHTML(f, 2)).join('\n')
+  const body = root.children.map((f: Frame) => exportToHTML(f, 2)).join('\n')
 
   // [Experimental] Google Fonts — collect all used fonts and generate <link> + <style>
   const googleFonts = collectGoogleFonts(root.children)

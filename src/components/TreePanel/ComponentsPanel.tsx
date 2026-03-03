@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect, useRef, forwardRef, useImper
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { useFrameStore, findInTree, findParent, cloneWithNewIds, normalizeFrame } from '../../store/frameStore'
 import { useCatalogStore } from '../../store/catalogStore'
-import { ChevronDown, ChevronRight, Diamond, Folder, Pencil } from 'lucide-react'
+import { Diamond, Folder, Pencil } from 'lucide-react'
 import type { Component } from '../../types/component'
 import { ComponentPreview } from './ComponentPreview'
 import { useComponentsData } from './useComponentsData'
@@ -25,12 +25,15 @@ interface ComponentsPanelProps {
 
 export const ComponentsPanel = forwardRef<ComponentsPanelHandle, ComponentsPanelProps>(function ComponentsPanel({ source = { type: 'internal' }, onEditComponent }, ref) {
   const {
-    components, readOnly, sourceName, root, selectedId, insertFrame,
-    highlightId, highlightIds, setHighlightId, highlightMulti, highlightRange,
+    components, root, selectedId, insertFrame,
+    highlightIds, setHighlightId, highlightMulti, highlightRange,
     emptyCategories, deleteComponent,
-    renameComponent, updateComponentTags, moveComponent, addEmptyCategory,
-    removeEmptyCategory, moveCategory,
-  } = useComponentsData(source)
+    renameComponent, updateComponentTags, addEmptyCategory,
+    removeEmptyCategory,
+  } = useComponentsData()
+
+  const readOnly = source.type === 'library'
+  const sourceName = source.type === 'library' ? source.libraryId : 'Internal'
 
   const { activeId: dragId } = useWorkspaceDnd()
 
@@ -378,7 +381,6 @@ export const ComponentsPanel = forwardRef<ComponentsPanelHandle, ComponentsPanel
       {contextMenu && (
         <ComponentContextMenu
           contextMenu={contextMenu}
-          readOnly={readOnly}
           multiCount={highlightIds.size}
           onEdit={onEditComponent}
           onInsert={handleInsert}
@@ -414,7 +416,7 @@ function CategoryRow({
   tag, items, readOnly, isCollapsed, isEditingCat, editCategoryValue,
   isHighlighted, isMulti,
   onToggle, onClick, onEditChange, onEditCommit, onEditCancel,
-  onDoubleClick, onDeleteCategory, onContextMenu, children,
+  onDoubleClick, onDeleteCategory: _onDeleteCategory, onContextMenu, children,
 }: {
   tag: string
   items: Component[]

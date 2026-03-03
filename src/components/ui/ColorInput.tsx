@@ -9,7 +9,7 @@ const VALID_HEX = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
 export function ColorInput({
   value,
   onChange,
-  label,
+  label: _label,
   classPrefix,
   tooltip,
 }: {

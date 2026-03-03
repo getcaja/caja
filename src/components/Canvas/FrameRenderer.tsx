@@ -79,7 +79,6 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
   const isText = frame.type === 'text'
   const isImage = frame.type === 'image'
   const isButton = frame.type === 'button'
-  const isInput = frame.type === 'input'
   const isTextarea = frame.type === 'textarea'
   const isSelect = frame.type === 'select'
   // A childless box that would collapse to 0×0 without min-size assist
@@ -98,7 +97,7 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
   const tailwind = toContainerQueries(frameToClasses(frame))
 
   // In preview mode, infer cursor from semantic tag
-  const previewCursor = previewMode && 'tag' in frame && (frame.tag === 'a' || frame.tag === 'button' || frame.type === 'button')
+  const previewCursor = previewMode && ('tag' in frame && frame.tag === 'a' || frame.type === 'button')
     ? 'cursor-pointer' : ''
 
   // Editor state classes (selection/hover via CSS outline, no layout impact)

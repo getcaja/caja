@@ -30,7 +30,7 @@ describe('CajaFileData format', () => {
       activePageId: 'page-1',
       components: makeComponentData(),
     }
-    const data = fileContent as CajaFileData
+    const data = fileContent as unknown as CajaFileData
     const loaded = data.components
     expect(loaded).toBeDefined()
     expect(loaded!.items).toHaveLength(1)
@@ -42,7 +42,7 @@ describe('CajaFileData format', () => {
       pages: [],
       activePageId: 'page-1',
     }
-    const data = fileContent as CajaFileData
+    const data = fileContent as unknown as CajaFileData
     expect(data.components).toBeUndefined()
   })
 

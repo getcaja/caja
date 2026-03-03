@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { isExternalUrl, isLocalAssetPath, resolveRenderSrc, resolveAssetSrc } from '../assetOps'
 
 // Mock Tauri modules so the module can be imported in a non-Tauri environment.
