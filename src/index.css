@@ -88,13 +88,13 @@ input[type=number] {
 @layer components {
   /* --- Inputs --- */
   .c-input {
-    @apply h-6 bg-surface-2 border border-border rounded px-2 text-[12px] text-text-primary outline-none;
+    @apply h-6 bg-surface-2 border border-transparent rounded px-2 text-[12px] text-text-primary outline-none;
   }
   .c-scale-input {
-    @apply h-6 bg-surface-2 border border-border rounded px-1 text-[12px] text-text-primary;
+    @apply h-6 bg-surface-2 border border-transparent rounded px-1 text-[12px] text-text-primary;
   }
   .c-textarea {
-    @apply bg-surface-2 border border-border rounded px-2 py-1 text-[12px] text-text-primary outline-none resize-none;
+    @apply bg-surface-2 border border-transparent rounded px-2 py-1 text-[12px] text-text-primary outline-none resize-none;
   }
 
   /* --- Labels --- */
