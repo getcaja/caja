@@ -62,7 +62,7 @@ export const createFileSlice: StateCreator<FrameStore, [], [], FileSlice> = (set
           for (const p of pages) maxId = Math.max(maxId, maxIdInTree(p.root))
           const maxPid = Math.max(...pages.map((p) => parseInt(p.id.replace('page-', '')) || 0))
           resetIdCounters(maxId + 1, maxPid + 1)
-          set({ pages, activePageId: activePage.id, root: activePage.root, past: {}, future: {} })
+          set({ pages, activePageId: activePage.id, root: activePage.root, selectedId: activePage.root.id, selectedIds: new Set([activePage.root.id]), past: {}, future: {} })
           syncCatalogFromComponentsPage(pages)
         } else if (parsed.root) {
           // Legacy single-root format → wrap in one page
@@ -70,7 +70,7 @@ export const createFileSlice: StateCreator<FrameStore, [], [], FileSlice> = (set
           const root = migrateToInternalRoot(parsed.root, pageId)
           resetIdCounters(maxIdInTree(root) + 1, 2)
           const pages: Page[] = [{ id: pageId, name: 'Page 1', route: '/page-1', root }]
-          set({ pages, activePageId: pageId, root, past: {}, future: {} })
+          set({ pages, activePageId: pageId, root, selectedId: root.id, selectedIds: new Set([root.id]), past: {}, future: {} })
         }
       }
     } catch (err) {
