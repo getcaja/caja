@@ -21,49 +21,49 @@ export function AddMenu({ x, y, onAdd, onClose }: AddMenuProps) {
         className="c-menu-item"
         onClick={() => onAdd('box')}
       >
-        <Frame size={12} /> Frame
+        <Frame size={12} /> Add Frame
       </button>
       <button
         className="c-menu-item"
         onClick={() => onAdd('text')}
       >
-        <Type size={12} /> Text
+        <Type size={12} /> Add Text
       </button>
       <button
         className="c-menu-item"
         onClick={() => onAdd('link')}
       >
-        <Link size={12} /> Link
+        <Link size={12} /> Add Link
       </button>
       <button
         className="c-menu-item"
         onClick={() => onAdd('image')}
       >
-        <ImageIcon size={12} /> Image
+        <ImageIcon size={12} /> Add Image
       </button>
       <button
         className="c-menu-item"
         onClick={() => onAdd('button')}
       >
-        <RectangleHorizontal size={12} /> Button
+        <RectangleHorizontal size={12} /> Add Button
       </button>
       <button
         className="c-menu-item"
         onClick={() => onAdd('input')}
       >
-        <TextCursorInput size={12} /> Input
+        <TextCursorInput size={12} /> Add Input
       </button>
       <button
         className="c-menu-item"
         onClick={() => onAdd('textarea')}
       >
-        <AlignLeft size={12} /> Textarea
+        <AlignLeft size={12} /> Add Textarea
       </button>
       <button
         className="c-menu-item"
         onClick={() => onAdd('select')}
       >
-        <ChevronDown size={12} /> Select
+        <ChevronDown size={12} /> Add Select
       </button>
     </div>
     </>

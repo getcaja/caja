@@ -213,32 +213,9 @@ function App() {
           case 'check-for-updates':
             checkForUpdates()
             break
-          case 'undo':
-            useFrameStore.getState().undo()
-            break
-          case 'redo':
-            useFrameStore.getState().redo()
-            break
-          case 'cut':
-            useFrameStore.getState().cutSelected()
-            break
-          case 'copy':
-            useFrameStore.getState().copySelected()
-            break
-          case 'paste':
-            useFrameStore.getState().pasteClipboard()
-            break
-          case 'duplicate': {
-            const s = useFrameStore.getState()
-            if (s.selectedId) s.duplicateFrame(s.selectedId)
-            break
-          }
-          case 'select-all':
-            useFrameStore.getState().selectAllSiblings()
-            break
-          case 'delete':
-            useFrameStore.getState().removeSelected()
-            break
+          // Edit menu uses native WebView items (undo/redo/cut/copy/paste/select-all).
+          // They are NOT emitted as menu-event — the WebView handles them natively,
+          // so they work correctly in inputs, text fields, and dev tools.
           case 'collapse-all':
             useFrameStore.getState().collapseAll()
             break
@@ -386,11 +363,28 @@ function App() {
             const s = useFrameStore.getState()
             if (!s.previewMode) s.setCanvasTool('text')
           }
+          if (key === 'i') {
+            e.preventDefault()
+            const s = useFrameStore.getState()
+            if (!s.previewMode) {
+              s.setCanvasTool('image')
+              import('./lib/assetOps').then(({ importLocalAsset }) => {
+                importLocalAsset(useFrameStore.getState().filePath).then((result) => {
+                  if (result) {
+                    useFrameStore.getState().setPendingImageSrc(result.localPath)
+                  } else {
+                    useFrameStore.getState().setCanvasTool('pointer')
+                  }
+                })
+              })
+            }
+          }
           if (key === 'v' || key === 'escape') {
             const s = useFrameStore.getState()
             if (s.canvasTool !== 'pointer') {
               e.preventDefault()
               s.setCanvasTool('pointer')
+              s.setPendingImageSrc(null)
             }
           }
         }

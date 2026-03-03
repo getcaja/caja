@@ -93,6 +93,15 @@ export function CanvasInline() {
       store.addChild(store.root.id, 'box')
       return
     }
+    if (store.canvasTool === 'image') {
+      const src = store.pendingImageSrc
+      if (src) {
+        store.addChild(store.root.id, 'image', { src })
+        store.setPendingImageSrc(null)
+        store.setCanvasTool('pointer')
+      }
+      return
+    }
     store.select(store.root.id)
   }, [])
 
@@ -245,7 +254,7 @@ export function CanvasInline() {
         ref={canvasRef}
         id="caja-canvas"
         className="@container"
-        style={{ ...canvasStyle, ...((canvasTool === 'text' || canvasTool === 'frame') && !previewMode ? { cursor: 'crosshair' } : {}) }}
+        style={{ ...canvasStyle, ...((canvasTool === 'text' || canvasTool === 'frame' || canvasTool === 'image') && !previewMode ? { cursor: 'crosshair' } : {}) }}
         onMouseLeave={previewMode ? undefined : () => hover(null)}
         onClick={previewMode ? onPreviewClick : onCanvasClick}
         onContextMenu={previewMode ? undefined : ctxMenu.onContextMenu}

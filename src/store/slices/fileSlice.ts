@@ -34,6 +34,7 @@ export const createFileSlice: StateCreator<FrameStore, [], [], FileSlice> = (set
       pages, activePageId: pageId, root, filePath: null, dirty: false,
       selectedId: root.id, selectedIds: new Set([root.id]), past: {}, future: {},
       collapsedIds: new Set(), hoveredId: null,
+      canvasTool: 'pointer' as const, pendingImageSrc: null,
       editingComponentId: null, _beforeEditState: null,
     })
     useCatalogStore.getState().resetComponents()

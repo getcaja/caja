@@ -28,12 +28,18 @@ export function toGoogleFontStyleRule(name: string): string {
   return `.${toGoogleFontClass(name)} { font-family: '${name.trim()}', sans-serif; }`
 }
 
-/** Walk a frame tree and collect all unique non-empty fontFamily values */
+/** Built-in Tailwind font families — not Google Fonts */
+const BUILTIN_FONTS = new Set(['sans', 'serif', 'mono'])
+
+/** Walk a frame tree and collect all unique Google Font family names */
 export function collectGoogleFonts(frames: Frame[]): string[] {
   const fonts = new Set<string>()
   function walk(frame: Frame) {
     if ('fontFamily' in frame && frame.fontFamily) {
-      fonts.add(frame.fontFamily.trim())
+      const family = frame.fontFamily.trim()
+      if (family && !BUILTIN_FONTS.has(family)) {
+        fonts.add(family)
+      }
     }
     if ('children' in frame) {
       for (const child of frame.children) walk(child)

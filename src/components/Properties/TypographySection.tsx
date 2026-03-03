@@ -42,13 +42,7 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides }: { f
             inlineLabel={<Type size={12} />}
             tooltip="Font Family"
           />
-          <button
-            type="button"
-            title="More Fonts"
-            className="w-5 h-5 shrink-0 flex items-center justify-center rounded text-text-muted hover:text-text-secondary hover:bg-surface-2"
-          >
-            <Ellipsis size={12} />
-          </button>
+          <div className="w-5 shrink-0" />
         </div>
 
         {/* Color */}

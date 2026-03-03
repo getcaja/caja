@@ -305,7 +305,7 @@ export function TreePanel() {
                   ref={addBtnRef}
                   className="w-5 h-5 c-icon-btn hover:text-accent hover:bg-accent/10 opacity-0 group-hover/section:opacity-100"
                   onClick={(e) => { e.stopPropagation(); openAddMenu() }}
-                  title="Insert"
+                  title="Add Element"
                 >
                   <Plus size={12} />
                 </button>
@@ -414,7 +414,7 @@ export function TreePanel() {
                   ref={addBtnRef}
                   className="w-5 h-5 c-icon-btn hover:text-accent hover:bg-accent/10 opacity-0 group-hover/section:opacity-100"
                   onClick={(e) => { e.stopPropagation(); openAddMenu() }}
-                  title="Insert"
+                  title="Add Element"
                 >
                   <Plus size={12} />
                 </button>

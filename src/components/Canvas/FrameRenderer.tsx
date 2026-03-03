@@ -107,7 +107,7 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
     !previewMode && isEmpty && !isRoot && 'is-empty',
     isDragged && 'is-line-drop',
     isMcpHighlighted && 'mcp-highlight',
-    !previewMode && (editingText ? 'cursor-text' : canvasTool === 'text' ? (isText ? 'cursor-text' : 'cursor-crosshair') : canvasTool === 'frame' ? 'cursor-crosshair' : 'cursor-default'),
+    !previewMode && (editingText ? 'cursor-text' : canvasTool === 'text' ? (isText ? 'cursor-text' : 'cursor-crosshair') : (canvasTool === 'frame' || canvasTool === 'image') ? 'cursor-crosshair' : 'cursor-default'),
     previewCursor,
   ].filter(Boolean).join(' ')
 
@@ -297,6 +297,19 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
           store.addChild(parentId, 'text', { content: '' })
           const newId = useFrameStore.getState().selectedId
           if (newId) useFrameStore.setState({ pendingTextEdit: newId })
+        }
+        return
+      }
+
+      // Image tool: insert pending image as child of box, or in root for non-box
+      if (canvasTool === 'image') {
+        const store = useFrameStore.getState()
+        const src = store.pendingImageSrc
+        if (src) {
+          const parentId = isBox ? frame.id : store.root.id
+          store.addChild(parentId, 'image', { src })
+          store.setPendingImageSrc(null)
+          store.setCanvasTool('pointer')
         }
         return
       }

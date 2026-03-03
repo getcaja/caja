@@ -82,7 +82,7 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
   // Determine icon
   const iconEl = isMaster ? <Diamond size={12} fill="currentColor" />
     : isInstance ? <Diamond size={12} />
-    : isRoot ? <FileText size={12} />
+    : isRoot && !editingComponentId ? <FileText size={12} />
     : frame.type === 'text' && 'tag' in frame && frame.tag === 'a' ? <Link size={12} />
     : frame.type === 'text' ? <Type size={12} />
     : frame.type === 'image' ? <ImageIcon size={12} />

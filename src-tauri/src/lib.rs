@@ -447,34 +447,17 @@ pub fn run() {
                 .close_window()
                 .build()?;
 
-            let undo_item = MenuItemBuilder::with_id("undo", "Undo")
-                .build(app)?;
-            let redo_item = MenuItemBuilder::with_id("redo", "Redo")
-                .build(app)?;
-            let cut_item = MenuItemBuilder::with_id("cut", "Cut")
-                .build(app)?;
-            let copy_item = MenuItemBuilder::with_id("copy", "Copy")
-                .build(app)?;
-            let paste_item = MenuItemBuilder::with_id("paste", "Paste")
-                .build(app)?;
-            let duplicate_item = MenuItemBuilder::with_id("duplicate", "Duplicate")
-                .build(app)?;
-            let select_all_item = MenuItemBuilder::with_id("select-all", "Select All")
-                .build(app)?;
-            let delete_item = MenuItemBuilder::with_id("delete", "Delete")
-                .build(app)?;
-
+            // Use native Edit menu — undo/redo/cut/copy/paste/select-all are handled
+            // by the WebView natively. Custom items would intercept Cmd+C/V/Z etc.
+            // and break text editing in inputs, dev tools, etc.
             let edit_menu = SubmenuBuilder::new(app, "Edit")
-                .item(&undo_item)
-                .item(&redo_item)
+                .undo()
+                .redo()
                 .separator()
-                .item(&cut_item)
-                .item(&copy_item)
-                .item(&paste_item)
-                .item(&duplicate_item)
-                .separator()
-                .item(&select_all_item)
-                .item(&delete_item)
+                .cut()
+                .copy()
+                .paste()
+                .select_all()
                 .build()?;
 
             let toggle_left_panel = CheckMenuItemBuilder::with_id("toggle-left-panel", "Left Panel")

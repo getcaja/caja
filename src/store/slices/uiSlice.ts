@@ -85,8 +85,9 @@ export interface UiSlice {
   canvasWidth: number | null
   activeBreakpoint: Breakpoint
   canvasZoom: number
-  canvasTool: 'pointer' | 'frame' | 'text'
+  canvasTool: 'pointer' | 'frame' | 'text' | 'image'
   pendingTextEdit: string | null
+  pendingImageSrc: string | null
   treePanelTab: 'layers' | 'components'
   _layersPageId: string | null
 
@@ -100,8 +101,9 @@ export interface UiSlice {
   setActiveBreakpoint: (bp: Breakpoint) => void
   getEffectiveFrame: (frame: Frame) => Frame
   setCanvasZoom: (zoom: number) => void
-  setCanvasTool: (tool: 'pointer' | 'frame' | 'text') => void
+  setCanvasTool: (tool: 'pointer' | 'frame' | 'text' | 'image') => void
   clearPendingTextEdit: () => void
+  setPendingImageSrc: (src: string | null) => void
   setTreePanelTab: (tab: 'layers' | 'components') => void
 }
 
@@ -116,6 +118,7 @@ export const createUiSlice: StateCreator<FrameStore, [], [], UiSlice> = (set, ge
     canvasZoom: 1,
     canvasTool: 'pointer',
     pendingTextEdit: null,
+    pendingImageSrc: null,
     treePanelTab: 'layers' as const,
     _layersPageId: null as string | null,
 
@@ -190,6 +193,7 @@ export const createUiSlice: StateCreator<FrameStore, [], [], UiSlice> = (set, ge
     setCanvasZoom: (zoom) => set({ canvasZoom: zoom }),
     setCanvasTool: (tool) => set({ canvasTool: tool }),
     clearPendingTextEdit: () => set({ pendingTextEdit: null }),
+    setPendingImageSrc: (src) => set({ pendingImageSrc: src }),
     setTreePanelTab: (tab) => {
       const state = get()
       const prevTab = state.treePanelTab

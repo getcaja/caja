@@ -1,10 +1,11 @@
-import { useState, useRef, useMemo, useEffect } from 'react'
+import { useState, useRef, useMemo, useEffect, useCallback } from 'react'
 import {
   Monitor, Tablet, Smartphone,
   Plus, MousePointer2, Type, Eye,
   Frame as FrameIcon, Link, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ChevronDown,
 } from 'lucide-react'
 import { useFrameStore, isRootId } from '../../store/frameStore'
+import { importLocalAsset } from '../../lib/assetOps'
 import type { Frame, Breakpoint } from '../../types/frame'
 import { ZOOM_LEVELS } from './ZoomBar'
 import { canvasZoomTo } from './CanvasInline'
@@ -12,20 +13,20 @@ import { canvasZoomTo } from './CanvasInline'
 type ElementType = 'box' | 'text' | 'image' | 'button' | 'input' | 'textarea' | 'select' | 'link'
 
 const BREAKPOINTS: { label: string; width: number | null; icon: typeof Monitor; bp: Breakpoint }[] = [
-  { label: 'Full', width: null, icon: Monitor, bp: 'base' },
+  { label: 'Desktop', width: null, icon: Monitor, bp: 'base' },
   { label: 'Tablet', width: 767, icon: Tablet, bp: 'md' },
   { label: 'Mobile', width: 375, icon: Smartphone, bp: 'sm' },
 ]
 
 const PRIMITIVES: { type: ElementType; icon: React.ReactNode; label: string }[] = [
-  { type: 'box', icon: <FrameIcon size={12} />, label: 'Frame' },
-  { type: 'text', icon: <Type size={12} />, label: 'Text' },
-  { type: 'link', icon: <Link size={12} />, label: 'Link' },
-  { type: 'image', icon: <ImageIcon size={12} />, label: 'Image' },
-  { type: 'button', icon: <RectangleHorizontal size={12} />, label: 'Button' },
-  { type: 'input', icon: <TextCursorInput size={12} />, label: 'Input' },
-  { type: 'textarea', icon: <AlignLeft size={12} />, label: 'Textarea' },
-  { type: 'select', icon: <ChevronDown size={12} />, label: 'Select' },
+  { type: 'box', icon: <FrameIcon size={12} />, label: 'Add Frame' },
+  { type: 'text', icon: <Type size={12} />, label: 'Add Text' },
+  { type: 'link', icon: <Link size={12} />, label: 'Add Link' },
+  { type: 'image', icon: <ImageIcon size={12} />, label: 'Add Image' },
+  { type: 'button', icon: <RectangleHorizontal size={12} />, label: 'Add Button' },
+  { type: 'input', icon: <TextCursorInput size={12} />, label: 'Add Input' },
+  { type: 'textarea', icon: <AlignLeft size={12} />, label: 'Add Textarea' },
+  { type: 'select', icon: <ChevronDown size={12} />, label: 'Add Select' },
 ]
 
 function findParentBox(root: Frame, id: string): Frame | null {
@@ -207,6 +208,36 @@ export function Toolbar() {
     useFrameStore.getState().setTreePanelTab('layers')
   }
 
+  // Image button: delay single-click picker so double-click can cancel it
+  const imgClickTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const onImageClick = useCallback(() => {
+    setPreviewMode(false)
+    setCanvasTool('image')
+    imgClickTimer.current = setTimeout(async () => {
+      imgClickTimer.current = null
+      const result = await importLocalAsset(useFrameStore.getState().filePath)
+      if (result) {
+        useFrameStore.getState().setPendingImageSrc(result.localPath)
+      } else {
+        useFrameStore.getState().setCanvasTool('pointer')
+      }
+    }, 250)
+  }, [setPreviewMode, setCanvasTool])
+
+  const onImageDoubleClick = useCallback(async () => {
+    if (imgClickTimer.current) { clearTimeout(imgClickTimer.current); imgClickTimer.current = null }
+    setPreviewMode(false)
+    const result = await importLocalAsset(useFrameStore.getState().filePath)
+    if (result) {
+      handleInsert('image')
+      const s = useFrameStore.getState()
+      if (s.selectedId) s.updateFrame(s.selectedId, { src: result.localPath })
+    }
+    setCanvasTool('pointer')
+    useFrameStore.getState().setPendingImageSrc(null)
+  }, [setPreviewMode, setCanvasTool, handleInsert])
+
   const btnIcon = 'w-7 h-7 flex items-center justify-center rounded-md'
 
   return (
@@ -217,7 +248,7 @@ export function Toolbar() {
         {/* Section 1: Tools + Add */}
         <div style={{
           display: 'flex', alignItems: 'center', overflow: 'hidden',
-          maxWidth: previewMode ? 0 : 300, opacity: previewMode ? 0 : 1,
+          maxWidth: previewMode ? 0 : 340, opacity: previewMode ? 0 : 1,
           transition: previewMode
             ? 'max-width 200ms ease, opacity 150ms ease'
             : 'max-width 300ms ease-out, opacity 250ms ease-out 50ms',
@@ -233,6 +264,7 @@ export function Toolbar() {
               </button>
               <button
                 onClick={() => { setPreviewMode(false); setCanvasTool('frame') }}
+                onDoubleClick={() => { setPreviewMode(false); handleInsert('box'); setCanvasTool('pointer') }}
                 className={`${btnIcon} ${!previewMode && canvasTool === 'frame' ? 'bg-surface-3 text-text-primary' : 'text-text-muted hover:text-text-secondary'}`}
                 title="Frame (F)"
               >
@@ -240,15 +272,24 @@ export function Toolbar() {
               </button>
               <button
                 onClick={() => { setPreviewMode(false); setCanvasTool('text') }}
+                onDoubleClick={() => { setPreviewMode(false); handleInsert('text'); setCanvasTool('pointer') }}
                 className={`${btnIcon} ${!previewMode && canvasTool === 'text' ? 'bg-surface-3 text-text-primary' : 'text-text-muted hover:text-text-secondary'}`}
                 title="Text (T)"
               >
                 <Type size={14} />
               </button>
+              <button
+                onClick={onImageClick}
+                onDoubleClick={onImageDoubleClick}
+                className={`${btnIcon} ${!previewMode && canvasTool === 'image' ? 'bg-surface-3 text-text-primary' : 'text-text-muted hover:text-text-secondary'}`}
+                title="Image (I)"
+              >
+                <ImageIcon size={14} />
+              </button>
             </div>
             <DropdownButton
               icon={<Plus size={14} />}
-              title="Insert"
+              title="Add Element"
               menu={<>
                 {PRIMITIVES.map((item) => (
                   <button
@@ -271,7 +312,7 @@ export function Toolbar() {
           <DropdownButton
             icon={<span className="relative">
               <CurrentIcon size={14} />
-              {activeBreakpoint !== 'base' && (
+              {activeBreakpoint !== 'base' && overrideCounts[activeBreakpoint] > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-accent" />
               )}
             </span>}
