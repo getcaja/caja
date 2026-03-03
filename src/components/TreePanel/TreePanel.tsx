@@ -231,11 +231,15 @@ export function TreePanel() {
     setShowAdd(true)
   }
 
-  // Close when another menu opens
+  // Close when another menu opens or window resizes
   useEffect(() => {
     const close = () => setShowAdd(false)
     window.addEventListener('close-menus', close)
-    return () => window.removeEventListener('close-menus', close)
+    window.addEventListener('resize', close)
+    return () => {
+      window.removeEventListener('close-menus', close)
+      window.removeEventListener('resize', close)
+    }
   }, [])
 
   const handleAdd = (type: 'box' | 'text' | 'image' | 'button' | 'input' | 'textarea' | 'select' | 'link') => {

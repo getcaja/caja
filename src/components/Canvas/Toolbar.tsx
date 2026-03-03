@@ -51,11 +51,15 @@ function DropdownButton({ icon, title, isActive, menu, menuClassName, children }
   const btnRef = useRef<HTMLButtonElement>(null)
   const [pos, setPos] = useState({ x: 0, y: 0 })
 
-  // Close when another menu opens
+  // Close when another menu opens or window resizes
   useEffect(() => {
     const close = () => setOpen(false)
     window.addEventListener('close-menus', close)
-    return () => window.removeEventListener('close-menus', close)
+    window.addEventListener('resize', close)
+    return () => {
+      window.removeEventListener('close-menus', close)
+      window.removeEventListener('resize', close)
+    }
   }, [])
 
   const handleClick = () => {
