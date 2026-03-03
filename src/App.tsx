@@ -14,7 +14,7 @@ import { TitleBar } from './components/TitleBar/TitleBar'
 import { ZOOM_LEVELS } from './components/Canvas/ZoomBar'
 import { canvasZoomTo } from './components/Canvas/CanvasInline'
 import { switchTheme, getThemePreference } from './lib/theme'
-import { checkForUpdates } from './lib/updater'
+import { checkForUpdates, checkForUpdatesOnStartup } from './lib/updater'
 
 const LEFT_MIN = 320
 const LEFT_MAX = 400
@@ -177,6 +177,8 @@ function App() {
         }
       }).catch((err) => console.warn('Failed to load Tauri core for menu sync:', err))
     }
+
+    if (isTauri) checkForUpdatesOnStartup()
 
     return () => stopMcpBridge()
   }, [loadFromStorage])
