@@ -67,4 +67,4 @@ Create frames, style with Tailwind, manage pages, export patterns, and more — 
 
 ## License
 
-[AGPL-3.0](LICENSE)
+[MIT](LICENSE)
