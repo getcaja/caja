@@ -48,23 +48,29 @@ jobs:
           args: ${{ matrix.args }}
           includeUpdaterJson: false
 
-      # Debug: show what files the build produced
-      - name: List bundle artifacts
-        if: always()
-        run: find src-tauri/target -name "*.tar.gz*" -o -name "*.sig" | sort
-
-      # Upload the .sig file that tauri-action misses for cross-compiled targets
-      - name: Upload updater signature
-        run: |
-          SIG_FILE=$(find src-tauri/target -name "*.app.tar.gz.sig" -type f | head -1)
-          echo "Found sig file: '$SIG_FILE'"
-          if [ -n "$SIG_FILE" ]; then
-            gh release upload "${{ github.ref_name }}" "$SIG_FILE#Caja_${{ matrix.arch }}.app.tar.gz.sig" --clobber
-          else
-            echo "::warning::No .sig file found — signing key may be misconfigured"
-          fi
+      # tauri-action repackages .app into .tar.gz, invalidating the CLI's .sig.
+      # Re-sign the repackaged .tar.gz and upload the new .sig.
+      - name: Sign and upload updater signature
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          TAR_FILE=$(find src-tauri/target -name "Caja.app.tar.gz" -type f | head -1)
+          echo "Tar file: $TAR_FILE"
+          if [ -z "$TAR_FILE" ]; then
+            echo "::error::No .tar.gz found"
+            exit 1
+          fi
+
+          # Re-sign the repackaged tar.gz
+          npx tauri signer sign "$TAR_FILE" --private-key "$TAURI_SIGNING_PRIVATE_KEY" --password "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD"
+
+          SIG_FILE="${TAR_FILE}.sig"
+          echo "Sig file: $SIG_FILE"
+          ls -la "$SIG_FILE"
+
+          gh release upload "${{ github.ref_name }}" "$SIG_FILE#Caja_${{ matrix.arch }}.app.tar.gz.sig" --clobber
 
   updater:
     needs: build
@@ -79,16 +85,10 @@ jobs:
         run: |
           VERSION="${TAG#v}"
 
-          # Download sig files from the release
           mkdir -p sigs
-          gh release download "$TAG" --repo "${{ github.repository }}" --pattern "*.sig" --dir sigs/ || true
+          gh release download "$TAG" --repo "${{ github.repository }}" --pattern "*.sig" --dir sigs/
 
           ls -la sigs/
-
-          if [ ! -f sigs/Caja_aarch64.app.tar.gz.sig ] || [ ! -f sigs/Caja_x64.app.tar.gz.sig ]; then
-            echo "::error::Missing .sig files — cannot generate latest.json"
-            exit 1
-          fi
 
           AARCH64_SIG=$(cat sigs/Caja_aarch64.app.tar.gz.sig)
           X64_SIG=$(cat sigs/Caja_x64.app.tar.gz.sig)
