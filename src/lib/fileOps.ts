@@ -29,7 +29,7 @@ export async function saveFile(pages: Page[], activePageId: string, components: 
 export async function saveFileAs(pages: Page[], activePageId: string, components: ComponentData): Promise<string | null> {
   const path = await save({
     filters: [FILE_FILTER],
-    defaultPath: `layout.${FILE_EXTENSION}`,
+    defaultPath: `Untitled.${FILE_EXTENSION}`,
   })
   if (!path) return null
   await migrateAssetsOnSave(pages, path)

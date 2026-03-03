@@ -221,7 +221,6 @@ export async function importLocalAsset(projectPath: string | null): Promise<Down
  */
 export async function migrateAssetsOnSave(pages: any[], projectPath: string): Promise<void> {
   const assetsDir = await getAssetsDir(projectPath)
-  await ensureAssetsDir(assetsDir)
 
   const migrations = new Map<string, string>() // oldPath → newPath
 
@@ -240,6 +239,9 @@ export async function migrateAssetsOnSave(pages: any[], projectPath: string): Pr
   for (const page of pages) walk(page.root)
 
   if (migrations.size === 0) return
+
+  // Only create assets dir when there are actual assets to migrate
+  await ensureAssetsDir(assetsDir)
 
   // Copy files and update blob cache keys
   await Promise.all([...migrations.entries()].map(async ([oldPath, newPath]) => {
