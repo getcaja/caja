@@ -70,7 +70,10 @@ jobs:
           echo "Sig file: $SIG_FILE"
           ls -la "$SIG_FILE"
 
-          gh release upload "${{ github.ref_name }}" "$SIG_FILE#Caja_${{ matrix.arch }}.app.tar.gz.sig" --clobber
+          # Rename to arch-specific filename so both builds have unique asset names
+          NAMED_SIG="Caja_${{ matrix.arch }}.app.tar.gz.sig"
+          cp "$SIG_FILE" "$NAMED_SIG"
+          gh release upload "${{ github.ref_name }}" "$NAMED_SIG" --clobber
 
   updater:
     needs: build
