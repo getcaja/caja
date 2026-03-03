@@ -50,7 +50,7 @@ export function PageNode({ page }: PageNodeProps) {
         onClick={handleClick}
         onDoubleClick={() => nameEdit.start(page.name)}
         onContextMenu={ctxMenu.open}
-        trailing={isActive ? <span className="w-5 h-5 flex items-center justify-center shrink-0"><Check size={12} className="text-text-secondary" /></span> : undefined}
+        trailing={isActive ? <span className="w-5 h-5 flex items-center justify-center shrink-0"><Check size={12} className="fg-icon-muted" /></span> : undefined}
       />
 
       {ctxMenu.backdrop}

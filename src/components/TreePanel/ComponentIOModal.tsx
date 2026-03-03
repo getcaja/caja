@@ -70,7 +70,7 @@ export function ComponentIOModal({ open, mode, onOpenChange }: ComponentIOModalP
       return (
         <Dialog open={open} onOpenChange={onOpenChange}>
           <div className="bg-surface-1 border border-border rounded-xl shadow-xl w-[360px] p-6 text-center">
-            <span className="text-[12px] text-text-muted">Reading .cjl file...</span>
+            <span className="text-[12px] fg-subtle">Reading .cjl file...</span>
           </div>
         </Dialog>
       )
@@ -81,8 +81,8 @@ export function ComponentIOModal({ open, mode, onOpenChange }: ComponentIOModalP
         <Dialog open={open} onOpenChange={onOpenChange}>
           <div className="bg-surface-1 border border-border rounded-xl shadow-xl w-[360px] flex flex-col">
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-              <h2 className="text-[13px] font-semibold text-text-primary">Import Error</h2>
-              <button className="w-5 h-5 c-icon-btn hover:text-text-secondary hover:bg-surface-2/60" onClick={() => onOpenChange(false)}>
+              <h2 className="text-[13px] font-semibold fg-default">Import Error</h2>
+              <button className="w-5 h-5 c-icon-btn hover:fg-icon-muted hover:bg-subtle" onClick={() => onOpenChange(false)}>
                 <X size={14} />
               </button>
             </div>
@@ -90,7 +90,7 @@ export function ComponentIOModal({ open, mode, onOpenChange }: ComponentIOModalP
               <p className="text-[12px] text-destructive">{importError}</p>
             </div>
             <div className="px-4 py-3 border-t border-border flex justify-end">
-              <button className="px-3 py-1.5 rounded-md text-[12px] text-text-secondary hover:text-text-primary hover:bg-surface-2/60" onClick={() => onOpenChange(false)}>
+              <button className="px-3 py-1.5 rounded-md text-[12px] fg-muted hover:fg-default hover:bg-subtle" onClick={() => onOpenChange(false)}>
                 Close
               </button>
             </div>
@@ -139,22 +139,22 @@ export function ComponentIOModal({ open, mode, onOpenChange }: ComponentIOModalP
         <div className="bg-surface-1 border border-border rounded-xl shadow-xl w-[360px] max-h-[500px] flex flex-col">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <div>
-              <h2 className="text-[13px] font-semibold text-text-primary">Import from {cjlData.name}</h2>
-              {cjlData.author && <p className="text-[12px] text-text-muted">By {cjlData.author}</p>}
+              <h2 className="text-[13px] font-semibold fg-default">Import from {cjlData.name}</h2>
+              {cjlData.author && <p className="text-[12px] fg-subtle">By {cjlData.author}</p>}
             </div>
-            <button className="w-5 h-5 c-icon-btn hover:text-text-secondary hover:bg-surface-2/60" onClick={() => onOpenChange(false)}>
+            <button className="w-5 h-5 c-icon-btn hover:fg-icon-muted hover:bg-subtle" onClick={() => onOpenChange(false)}>
               <X size={14} />
             </button>
           </div>
 
           <div className="flex-1 overflow-y-auto">
             {items.length === 0 ? (
-              <div className="p-4 text-center text-[12px] text-text-muted">No components in this file.</div>
+              <div className="p-4 text-center text-[12px] fg-subtle">No components in this file.</div>
             ) : (
               <>
                 {/* Select all */}
                 <button
-                  className="w-full flex items-center gap-2 px-4 py-2 text-[12px] text-text-secondary hover:bg-surface-2/40 border-b border-border"
+                  className="w-full flex items-center gap-2 px-4 py-2 text-[12px] fg-muted hover:bg-subtle border-b border-border"
                   onClick={toggleAll}
                 >
                   <div className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center shrink-0 ${allSelected ? 'bg-accent border-accent' : 'border-border'}`}>
@@ -165,7 +165,7 @@ export function ComponentIOModal({ open, mode, onOpenChange }: ComponentIOModalP
                 {items.map((item) => (
                   <button
                     key={item.id}
-                    className="w-full flex items-center gap-2 px-4 py-1.5 text-[12px] text-text-primary hover:bg-surface-2/40"
+                    className="w-full flex items-center gap-2 px-4 py-1.5 text-[12px] fg-default hover:bg-subtle"
                     onClick={() => toggleItem(item.id)}
                   >
                     <div className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center shrink-0 ${selected.has(item.id) ? 'bg-accent border-accent' : 'border-border'}`}>
@@ -173,7 +173,7 @@ export function ComponentIOModal({ open, mode, onOpenChange }: ComponentIOModalP
                     </div>
                     <span className="truncate">{item.name}</span>
                     {item.tags.length > 0 && (
-                      <span className="px-1.5 py-0.5 text-[10px] leading-none font-medium rounded bg-surface-3/60 text-text-muted ml-auto shrink-0">{item.tags[0]}</span>
+                      <span className="px-1.5 py-0.5 text-[10px] leading-none font-medium rounded bg-inset fg-subtle ml-auto shrink-0">{item.tags[0]}</span>
                     )}
                   </button>
                 ))}
@@ -182,7 +182,7 @@ export function ComponentIOModal({ open, mode, onOpenChange }: ComponentIOModalP
           </div>
 
           <div className="px-4 py-3 border-t border-border flex justify-end gap-2">
-            <button className="px-3 py-1.5 rounded-md text-[12px] text-text-secondary hover:text-text-primary hover:bg-surface-2/60" onClick={() => onOpenChange(false)}>
+            <button className="px-3 py-1.5 rounded-md text-[12px] fg-muted hover:fg-default hover:bg-subtle" onClick={() => onOpenChange(false)}>
               Cancel
             </button>
             <button
@@ -245,8 +245,8 @@ export function ComponentIOModal({ open, mode, onOpenChange }: ComponentIOModalP
     <Dialog open={open} onOpenChange={onOpenChange}>
       <div className="bg-surface-1 border border-border rounded-xl shadow-xl w-[360px] max-h-[600px] flex flex-col">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <h2 className="text-[13px] font-semibold text-text-primary">Export .cjl</h2>
-          <button className="w-5 h-5 c-icon-btn hover:text-text-secondary hover:bg-surface-2/60" onClick={() => onOpenChange(false)}>
+          <h2 className="text-[13px] font-semibold fg-default">Export .cjl</h2>
+          <button className="w-5 h-5 c-icon-btn hover:fg-icon-muted hover:bg-subtle" onClick={() => onOpenChange(false)}>
             <X size={14} />
           </button>
         </div>
@@ -254,40 +254,40 @@ export function ComponentIOModal({ open, mode, onOpenChange }: ComponentIOModalP
         {/* Metadata form */}
         <div className="p-4 flex flex-col gap-3 border-b border-border">
           <div>
-            <label className="text-[11px] text-text-muted block mb-1">Library Name *</label>
+            <label className="text-[11px] fg-subtle block mb-1">Library Name *</label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full bg-surface-0 border border-border rounded-md px-2.5 py-1.5 text-[12px] text-text-primary outline-none focus:border-accent transition-colors"
+              className="w-full bg-surface-0 border border-border rounded-md px-2.5 py-1.5 text-[12px] fg-default outline-none focus:border-accent transition-colors"
               placeholder="Library name"
               autoFocus
             />
           </div>
           <div>
-            <label className="text-[11px] text-text-muted block mb-1">Author</label>
+            <label className="text-[11px] fg-subtle block mb-1">Author</label>
             <input
               value={author}
               onChange={(e) => setAuthor(e.target.value)}
-              className="w-full bg-surface-0 border border-border rounded-md px-2.5 py-1.5 text-[12px] text-text-primary outline-none focus:border-accent transition-colors"
+              className="w-full bg-surface-0 border border-border rounded-md px-2.5 py-1.5 text-[12px] fg-default outline-none focus:border-accent transition-colors"
               placeholder="Your name"
             />
           </div>
           <div>
-            <label className="text-[11px] text-text-muted block mb-1">Description</label>
+            <label className="text-[11px] fg-subtle block mb-1">Description</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full bg-surface-0 border border-border rounded-md px-2.5 py-1.5 text-[12px] text-text-primary outline-none focus:border-accent transition-colors resize-none"
+              className="w-full bg-surface-0 border border-border rounded-md px-2.5 py-1.5 text-[12px] fg-default outline-none focus:border-accent transition-colors resize-none"
               placeholder="What's in this library?"
               rows={2}
             />
           </div>
           <div>
-            <label className="text-[11px] text-text-muted block mb-1">Version</label>
+            <label className="text-[11px] fg-subtle block mb-1">Version</label>
             <input
               value={version}
               onChange={(e) => setVersion(e.target.value)}
-              className="w-full bg-surface-0 border border-border rounded-md px-2.5 py-1.5 text-[12px] text-text-primary outline-none focus:border-accent transition-colors"
+              className="w-full bg-surface-0 border border-border rounded-md px-2.5 py-1.5 text-[12px] fg-default outline-none focus:border-accent transition-colors"
               placeholder="1.0.0"
             />
           </div>
@@ -296,11 +296,11 @@ export function ComponentIOModal({ open, mode, onOpenChange }: ComponentIOModalP
         {/* Component picker */}
         <div className="flex-1 overflow-y-auto">
           {components.length === 0 ? (
-            <div className="p-4 text-center text-[12px] text-text-muted">No components to export.</div>
+            <div className="p-4 text-center text-[12px] fg-subtle">No components to export.</div>
           ) : (
             <>
               <button
-                className="w-full flex items-center gap-2 px-4 py-2 text-[12px] text-text-secondary hover:bg-surface-2/40 border-b border-border"
+                className="w-full flex items-center gap-2 px-4 py-2 text-[12px] fg-muted hover:bg-subtle border-b border-border"
                 onClick={toggleAll}
               >
                 <div className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center shrink-0 ${allSelected ? 'bg-accent border-accent' : 'border-border'}`}>
@@ -311,7 +311,7 @@ export function ComponentIOModal({ open, mode, onOpenChange }: ComponentIOModalP
               {components.map((c) => (
                 <button
                   key={c.id}
-                  className="w-full flex items-center gap-2 px-4 py-1.5 text-[12px] text-text-primary hover:bg-surface-2/40"
+                  className="w-full flex items-center gap-2 px-4 py-1.5 text-[12px] fg-default hover:bg-subtle"
                   onClick={() => toggleItem(c.id)}
                 >
                   <div className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center shrink-0 ${selected.has(c.id) ? 'bg-accent border-accent' : 'border-border'}`}>
@@ -319,7 +319,7 @@ export function ComponentIOModal({ open, mode, onOpenChange }: ComponentIOModalP
                   </div>
                   <span className="truncate">{c.name}</span>
                   {c.tags.length > 0 && (
-                    <span className="px-1.5 py-0.5 text-[10px] leading-none font-medium rounded bg-surface-3/60 text-text-muted ml-auto shrink-0">{c.tags[0]}</span>
+                    <span className="px-1.5 py-0.5 text-[10px] leading-none font-medium rounded bg-inset fg-subtle ml-auto shrink-0">{c.tags[0]}</span>
                   )}
                 </button>
               ))}
@@ -328,7 +328,7 @@ export function ComponentIOModal({ open, mode, onOpenChange }: ComponentIOModalP
         </div>
 
         <div className="px-4 py-3 border-t border-border flex justify-end gap-2">
-          <button className="px-3 py-1.5 rounded-md text-[12px] text-text-secondary hover:text-text-primary hover:bg-surface-2/60" onClick={() => onOpenChange(false)}>
+          <button className="px-3 py-1.5 rounded-md text-[12px] fg-muted hover:fg-default hover:bg-subtle" onClick={() => onOpenChange(false)}>
             Cancel
           </button>
           <button

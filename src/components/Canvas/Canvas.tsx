@@ -15,7 +15,7 @@ export function Canvas() {
         <CanvasInline />
         {!hasChildren && !previewMode && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <span className="text-text-muted text-[12px]">Add an element to start, or ask an Agent to build this page</span>
+            <span className="fg-subtle text-[12px]">Add an element to start, or ask an Agent to build this page</span>
           </div>
         )}
       </div>

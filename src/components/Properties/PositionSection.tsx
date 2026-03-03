@@ -33,15 +33,15 @@ function AnchorBox({ frame }: { frame: Frame }) {
   const pinCls = (active: boolean) =>
     active
       ? 'bg-accent hover:bg-accent-hover cursor-pointer'
-      : 'bg-surface-3 hover:bg-text-muted cursor-pointer'
+      : 'bg-emphasis hover:bg-text-muted cursor-pointer'
 
   return (
-    <div className="rounded-lg bg-surface-2 relative w-full h-full">
+    <div className="rounded-lg bg-inset relative w-full h-full">
       {/* Inner rectangle */}
       <div className="absolute inset-[30%] rounded border border-surface-3/50" />
       {/* Crosshair */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[9px] h-px bg-surface-3/50" />
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-px h-[9px] bg-surface-3/50" />
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[9px] h-px bg-subtle" />
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-px h-[9px] bg-subtle" />
 
       {/* Top pin — vertical */}
       <button

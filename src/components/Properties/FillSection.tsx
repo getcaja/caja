@@ -81,17 +81,17 @@ export function FillSection({ frame, hasOverrides, onResetOverrides }: { frame: 
                 {frame.bgImage && isLocalAssetPath(frame.bgImage) ? (
                   /* Read-only display for local assets — show filename only */
                   <div className="c-scale-input flex items-center gap-0.5 pr-6 overflow-hidden relative">
-                    <span className="w-4 shrink-0 flex items-center justify-center text-text-secondary">
+                    <span className="w-4 shrink-0 flex items-center justify-center fg-muted">
                       <ImageIcon size={12} />
                     </span>
-                    <span className="flex-1 min-w-[20px] text-[12px] text-text-secondary truncate select-none">
+                    <span className="flex-1 min-w-[20px] text-[12px] fg-muted truncate select-none">
                       {getAssetDisplayName(frame.bgImage)}
                     </span>
                     <button
                       type="button"
                       tabIndex={-1}
                       onClick={() => updateFrame(frame.id, { bgImage: '' })}
-                      className="absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-destructive hover:bg-surface-2"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-subtle hover:text-destructive hover:bg-inset"
                     >
                       <X size={12} />
                     </button>
@@ -102,7 +102,7 @@ export function FillSection({ frame, hasOverrides, onResetOverrides }: { frame: 
                     className="c-scale-input flex items-center gap-0.5 pr-6 overflow-hidden cursor-text relative"
                     onClick={(e) => { if (e.target === e.currentTarget) (e.currentTarget.querySelector('input') as HTMLInputElement)?.focus() }}
                   >
-                    <span className={`w-4 shrink-0 flex items-center justify-center ${frame.bgImage ? 'text-text-secondary' : 'text-text-muted'}`}>
+                    <span className={`w-4 shrink-0 flex items-center justify-center ${frame.bgImage ? 'fg-muted' : 'fg-subtle'}`}>
                       <ImageIcon size={12} />
                     </span>
                     <input
@@ -110,14 +110,14 @@ export function FillSection({ frame, hasOverrides, onResetOverrides }: { frame: 
                       value={frame.bgImage}
                       onChange={(e) => updateFrame(frame.id, { bgImage: e.target.value })}
                       placeholder="None"
-                      className="flex-1 min-w-[20px] text-[12px] text-text-primary"
+                      className="flex-1 min-w-[20px] text-[12px] fg-default"
                     />
                     {frame.bgImage ? (
                       <button
                         type="button"
                         tabIndex={-1}
                         onClick={() => updateFrame(frame.id, { bgImage: '' })}
-                        className="absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-destructive hover:bg-surface-2"
+                        className="absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-subtle hover:text-destructive hover:bg-inset"
                       >
                         <X size={12} />
                       </button>
@@ -133,7 +133,7 @@ export function FillSection({ frame, hasOverrides, onResetOverrides }: { frame: 
                             console.error('Import asset failed:', err)
                           }
                         }}
-                        className="absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-text-secondary hover:bg-surface-2"
+                        className="absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-subtle hover:fg-muted hover:bg-inset"
                       >
                         <Upload size={12} />
                       </button>

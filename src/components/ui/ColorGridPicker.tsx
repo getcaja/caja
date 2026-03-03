@@ -89,7 +89,7 @@ export function ColorGridPicker({
             className={`w-4 h-4 rounded-sm border ${
               activeToken === c.token
                 ? 'border-accent'
-                : 'border-surface-3 hover:border-text-muted'
+                : 'border-surface-3 hover:border-surface-3'
             }`}
             style={{ backgroundColor: c.value }}
             onMouseEnter={() => handleHover(c)}
@@ -98,7 +98,7 @@ export function ColorGridPicker({
         ))}
         {currentToken && (
           <button
-            className="text-[10px] text-text-muted hover:text-text-secondary ml-auto"
+            className="text-[10px] fg-subtle hover:fg-muted ml-auto"
             onClick={handleUnlink}
           >
             Unlink
@@ -135,11 +135,11 @@ export function ColorGridPicker({
       <div className="h-4 flex items-center justify-between text-[10px]">
         {display ? (
           <>
-            <span className="text-text-secondary font-medium">{label(display.token)}</span>
-            <span className="text-text-muted">{display.value}</span>
+            <span className="fg-muted font-medium">{label(display.token)}</span>
+            <span className="fg-subtle">{display.value}</span>
           </>
         ) : (
-          <span className="text-text-muted">Hover to preview</span>
+          <span className="fg-subtle">Hover to preview</span>
         )}
       </div>
     </div>

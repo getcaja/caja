@@ -460,7 +460,7 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
 
       {/* Image placeholder (no src and no bgImage — editor authoring state) */}
       {isImage && !frame.src && !frame.bgImage && (
-        <span className="frame-img-placeholder w-full h-full flex items-center justify-center text-text-muted/30">
+        <span className="frame-img-placeholder w-full h-full flex items-center justify-center fg-disabled">
           <ImageIcon size={16} />
         </span>
       )}

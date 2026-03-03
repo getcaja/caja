@@ -23,8 +23,8 @@ export function Tabs({ value, onValueChange, tabs, children }: TabsProps) {
             value={tab.value}
             className={`flex items-center gap-1.5 px-2.5 py-1 text-[12px] rounded-md transition-all ${
               value === tab.value
-                ? 'bg-surface-2 text-text-primary'
-                : 'text-text-muted hover:text-text-secondary'
+                ? 'bg-inset fg-default'
+                : 'fg-subtle hover:fg-muted'
             }`}
           >
             {tab.icon}

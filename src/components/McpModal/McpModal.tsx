@@ -46,7 +46,7 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={handleCopy}
-      className="flex items-center gap-1 px-2 py-1 rounded text-[11px] text-text-secondary hover:text-text-primary hover:bg-surface-2 transition-colors"
+      className="flex items-center gap-1 px-2 py-1 rounded text-[11px] fg-icon-muted hover:fg-default hover:bg-inset transition-colors"
     >
       {copied ? <Check size={12} /> : <Copy size={12} />}
       {copied ? 'Copied' : 'Copy'}
@@ -92,14 +92,14 @@ export function McpModal({ open, onOpenChange }: McpModalProps) {
       <div className="bg-surface-1 border border-border rounded-xl shadow-xl w-[480px] max-h-[80vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <h2 className="text-[13px] font-semibold text-text-primary">MCP Server</h2>
-          <button className="w-5 h-5 c-icon-btn hover:text-text-secondary hover:bg-surface-2/60" onClick={() => onOpenChange(false)}>
+          <h2 className="text-[13px] font-semibold fg-default">MCP Server</h2>
+          <button className="w-5 h-5 c-icon-btn hover:fg-icon-muted hover:bg-subtle" onClick={() => onOpenChange(false)}>
             <X size={14} />
           </button>
         </div>
 
         {/* Description */}
-        <p className="px-4 pt-3 pb-3 text-[12px] text-text-secondary leading-relaxed">
+        <p className="px-4 pt-3 pb-3 text-[12px] fg-muted leading-relaxed">
           Connect AI agents to Caja's design canvas. The MCP server lets
           external tools read, create, and modify frames in real time.
         </p>
@@ -112,8 +112,8 @@ export function McpModal({ open, onOpenChange }: McpModalProps) {
               onClick={() => { setActiveClient(c.id); setInstallState('idle') }}
               className={`px-2.5 py-1.5 rounded-md text-[12px] transition-colors ${
                 activeClient === c.id
-                  ? 'bg-surface-3 text-text-primary'
-                  : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'
+                  ? 'bg-emphasis fg-default'
+                  : 'fg-subtle hover:fg-muted hover:bg-inset'
               }`}
             >
               {c.label}
@@ -142,7 +142,7 @@ export function McpModal({ open, onOpenChange }: McpModalProps) {
           <button
             type="button"
             onClick={() => setShowManual(!showManual)}
-            className="flex items-center gap-1 text-[11px] text-text-muted hover:text-text-secondary transition-colors mb-2"
+            className="flex items-center gap-1 text-[11px] fg-subtle hover:fg-muted transition-colors mb-2"
           >
             {showManual ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
             Manual setup
@@ -150,16 +150,16 @@ export function McpModal({ open, onOpenChange }: McpModalProps) {
           {showManual && (
             <div className="rounded-lg bg-surface-0 border border-border overflow-hidden">
               <div className="flex items-center justify-between px-3 py-1.5 border-b border-border">
-                <span className="text-[11px] text-text-muted">Configuration</span>
+                <span className="text-[11px] fg-subtle">Configuration</span>
                 <CopyButton text={config} />
               </div>
-              <pre className="px-3 py-3 text-[11px] leading-relaxed text-text-secondary overflow-x-auto">
+              <pre className="px-3 py-3 text-[11px] leading-relaxed fg-muted overflow-x-auto">
                 {config}
               </pre>
             </div>
           )}
           {!showManual && (
-            <p className="text-[11px] text-text-muted leading-relaxed">
+            <p className="text-[11px] fg-subtle leading-relaxed">
               Caja must be running when the MCP client starts.
             </p>
           )}

@@ -32,7 +32,7 @@ export function ContextMenuItem({
       className={
         destructive
           ? 'flex items-center gap-2 px-3 py-1.5 text-[12px] outline-none cursor-pointer text-destructive data-[highlighted]:bg-destructive/10'
-          : 'flex items-center gap-2 px-3 py-1.5 text-[12px] outline-none cursor-pointer text-text-secondary data-[highlighted]:bg-surface-3/60 data-[highlighted]:text-text-primary'
+          : 'c-menu-item outline-none cursor-pointer'
       }
     >
       {children}

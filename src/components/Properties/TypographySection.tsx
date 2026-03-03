@@ -171,7 +171,7 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides }: { f
                 className={`w-5 h-5 shrink-0 flex items-center justify-center rounded ${
                   moreActive
                     ? 'text-blue-400 bg-blue-400/10'
-                    : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'
+                    : 'fg-subtle hover:fg-muted hover:bg-inset'
                 }`}
               >
                 <Ellipsis size={12} />
@@ -181,14 +181,14 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides }: { f
           >
             <div className="flex flex-col gap-2 p-2 w-[200px]">
               {/* Style: Italic / Underline / Strikethrough */}
-              <div className="flex bg-surface-2 rounded">
+              <div className="flex bg-inset rounded">
                 <button
                   type="button"
                   onClick={() => updateFrame(frame.id, { fontStyle: frame.fontStyle === 'italic' ? 'normal' : 'italic' })}
                   className={`flex-1 h-6 px-1.5 rounded flex items-center justify-center ${
                     frame.fontStyle === 'italic'
-                      ? 'bg-surface-3 text-text-primary shadow-sm'
-                      : 'text-text-muted hover:text-text-secondary'
+                      ? 'bg-emphasis fg-default shadow-sm'
+                      : 'fg-subtle hover:fg-muted'
                   }`}
                 >
                   <Italic size={12} />
@@ -198,8 +198,8 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides }: { f
                   onClick={() => updateFrame(frame.id, { textDecoration: frame.textDecoration === 'underline' ? 'none' : 'underline' })}
                   className={`flex-1 h-6 px-1.5 rounded flex items-center justify-center ${
                     frame.textDecoration === 'underline'
-                      ? 'bg-surface-3 text-text-primary shadow-sm'
-                      : 'text-text-muted hover:text-text-secondary'
+                      ? 'bg-emphasis fg-default shadow-sm'
+                      : 'fg-subtle hover:fg-muted'
                   }`}
                 >
                   <Underline size={12} />
@@ -209,8 +209,8 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides }: { f
                   onClick={() => updateFrame(frame.id, { textDecoration: frame.textDecoration === 'line-through' ? 'none' : 'line-through' })}
                   className={`flex-1 h-6 px-1.5 rounded flex items-center justify-center ${
                     frame.textDecoration === 'line-through'
-                      ? 'bg-surface-3 text-text-primary shadow-sm'
-                      : 'text-text-muted hover:text-text-secondary'
+                      ? 'bg-emphasis fg-default shadow-sm'
+                      : 'fg-subtle hover:fg-muted'
                   }`}
                 >
                   <Strikethrough size={12} />

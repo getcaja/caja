@@ -102,7 +102,7 @@ export function TreeRow({
     chevronEl = (
       <ChevronRight
         size={12}
-        className={`absolute top-1/2 -translate-y-1/2 text-text-muted cursor-pointer select-none opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto ${isExpanded ? 'rotate-90' : ''}`}
+        className={`absolute top-1/2 -translate-y-1/2 fg-icon-subtle cursor-pointer select-none opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto ${isExpanded ? 'rotate-90' : ''}`}
         style={{ left: depth * 16 + 4 }}
         onClick={(e: React.MouseEvent) => {
           e.stopPropagation()
@@ -120,10 +120,10 @@ export function TreeRow({
         {...(dndProps ?? {})}
         className={`relative flex items-center gap-1 py-1 cursor-default group ${
           isSelected
-            ? `${selectionStyle === 'neutral' ? 'tree-node-selected-neutral' : isMulti ? 'tree-node-multi-selected' : 'tree-node-selected'} text-text-primary`
+            ? `${selectionStyle === 'neutral' ? 'tree-node-selected-neutral' : isMulti ? 'tree-node-multi-selected' : 'tree-node-selected'} fg-default`
             : dropPosition === 'inside'
               ? 'bg-[var(--color-accent)]/10 outline outline-1 outline-[var(--color-accent)]/40'
-              : 'hover:bg-[var(--color-accent)]/8 text-text-secondary hover:text-text-primary'
+              : 'hover:bg-[var(--color-accent)]/8 fg-muted hover:fg-default'
         } ${className ?? ''}`}
         style={{ paddingLeft: indent ?? (depth * 16 + 16), paddingRight: 16 }}
         onClick={onClick}

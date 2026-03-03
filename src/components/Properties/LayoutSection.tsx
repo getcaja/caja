@@ -95,7 +95,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                       className={`w-5 h-5 flex items-center justify-center rounded shrink-0 ${
                         displayOptsActive
                           ? 'text-blue-400 bg-blue-400/10'
-                          : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'
+                          : 'fg-subtle hover:fg-muted hover:bg-inset'
                       }`}
                     >
                       <Ellipsis size={12} />
@@ -113,11 +113,11 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                           className="flex items-center gap-1.5 cursor-pointer select-none"
                         >
                           <span className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center ${
-                            boxFrame!.wrap ? 'bg-accent border-accent text-white' : 'border-border-accent bg-surface-2'
+                            boxFrame!.wrap ? 'bg-accent border-accent text-white' : 'border-border-accent bg-inset'
                           }`}>
                             {boxFrame!.wrap && <Check size={10} strokeWidth={3} />}
                           </span>
-                          <span className={`text-[12px] ${boxFrame!.wrap ? 'text-text-primary' : 'text-text-muted'}`}>Wrap</span>
+                          <span className={`text-[12px] ${boxFrame!.wrap ? 'fg-default' : 'fg-subtle'}`}>Wrap</span>
                         </button>
                         <button
                           type="button"
@@ -131,11 +131,11 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                           className="flex items-center gap-1.5 cursor-pointer select-none"
                         >
                           <span className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center ${
-                            isReverse ? 'bg-accent border-accent text-white' : 'border-border-accent bg-surface-2'
+                            isReverse ? 'bg-accent border-accent text-white' : 'border-border-accent bg-inset'
                           }`}>
                             {isReverse && <Check size={10} strokeWidth={3} />}
                           </span>
-                          <span className={`text-[12px] ${isReverse ? 'text-text-primary' : 'text-text-muted'}`}>Reverse</span>
+                          <span className={`text-[12px] ${isReverse ? 'fg-default' : 'fg-subtle'}`}>Reverse</span>
                         </button>
                       </>
                     )}
@@ -151,11 +151,11 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                       className="flex items-center gap-1.5 cursor-pointer select-none"
                     >
                       <span className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center ${
-                        isInline ? 'bg-accent border-accent text-white' : 'border-border-accent bg-surface-2'
+                        isInline ? 'bg-accent border-accent text-white' : 'border-border-accent bg-inset'
                       }`}>
                         {isInline && <Check size={10} strokeWidth={3} />}
                       </span>
-                      <span className={`text-[12px] ${isInline ? 'text-text-primary' : 'text-text-muted'}`}>Inline</span>
+                      <span className={`text-[12px] ${isInline ? 'fg-default' : 'fg-subtle'}`}>Inline</span>
                     </button>
                   </div>
                 </Popover>
@@ -194,7 +194,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                   className={`w-5 h-5 flex items-center justify-center rounded shrink-0 ${
                     constraintsActive || childPropsActive
                       ? 'text-blue-400 bg-blue-400/10'
-                      : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'
+                      : 'fg-subtle hover:fg-muted hover:bg-inset'
                   }`}
                 >
                   <Ellipsis size={12} />
@@ -305,7 +305,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
               <div className="flex gap-2 items-start">
                 <div className="flex-1 min-w-0">
                   <div
-                    className="grid gap-[2px] bg-surface-2 rounded p-1 w-full h-[56px]"
+                    className="grid gap-[2px] bg-inset rounded p-1 w-full h-[56px]"
                     style={{
                       gridTemplateColumns: 'repeat(3, 1fr)',
                       gridTemplateRows: 'repeat(3, 1fr)',
@@ -369,7 +369,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                         className={`w-5 h-5 flex items-center justify-center rounded shrink-0 ${
                           childPropsActive
                             ? 'text-blue-400 bg-blue-400/10'
-                            : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'
+                            : 'fg-subtle hover:fg-muted hover:bg-inset'
                         }`}
                       >
                         <Ellipsis size={12} />
@@ -507,57 +507,55 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => updateFrame(frame.id, { overflow: frame.overflow !== 'visible' ? 'visible' : 'hidden' })}
+            onClick={(e) => { e.stopPropagation(); updateFrame(frame.id, { overflow: frame.overflow !== 'visible' ? 'visible' : 'hidden' }) }}
             className="flex items-center gap-1.5 cursor-pointer select-none"
           >
             <span className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center ${
               frame.overflow !== 'visible'
                 ? 'bg-accent border-accent text-white'
-                : 'border-border-accent bg-surface-2'
+                : 'border-border-accent bg-inset'
             }`}>
               {frame.overflow !== 'visible' && <Check size={10} strokeWidth={3} />}
             </span>
-            <span className={`text-[12px] ${frame.overflow !== 'visible' ? 'text-text-primary' : 'text-text-muted'}`}>Clip Content</span>
+            <span className={`text-[12px] ${frame.overflow !== 'visible' ? 'fg-default' : 'fg-subtle'}`}>Clip Content</span>
           </button>
           <div className="flex-1" />
-          {frame.overflow !== 'visible' ? (
-            <Popover
-                open={overflowOptsOpen}
-                onOpenChange={setOverflowOptsOpen}
-                trigger={
-                  <button
-                    type="button"
-                    title="Overflow"
-                    className={`w-5 h-5 shrink-0 flex items-center justify-center rounded ${
-                      frame.overflow === 'scroll'
+          <Popover
+              open={overflowOptsOpen}
+              onOpenChange={setOverflowOptsOpen}
+              trigger={
+                <button
+                  type="button"
+                  title="Overflow"
+                  className={`w-5 h-5 shrink-0 flex items-center justify-center rounded ${
+                    frame.overflow === 'visible'
+                      ? 'invisible'
+                      : frame.overflow === 'scroll'
                         ? 'text-blue-400 bg-blue-400/10'
-                        : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'
-                    }`}
-                  >
-                    <Ellipsis size={12} />
-                  </button>
-                }
-                side="bottom"
-                align="end"
-              >
-                <div className="flex flex-col gap-1.5 p-2.5 min-w-[120px]">
-                  <button
-                    type="button"
-                    onClick={() => updateFrame(frame.id, { overflow: frame.overflow === 'scroll' ? 'hidden' : 'scroll' })}
-                    className="flex items-center gap-1.5 cursor-pointer select-none"
-                  >
-                    <span className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center ${
-                      frame.overflow === 'scroll' ? 'bg-accent border-accent text-white' : 'border-border-accent bg-surface-2'
-                    }`}>
-                      {frame.overflow === 'scroll' && <Check size={10} strokeWidth={3} />}
-                    </span>
-                    <span className={`text-[12px] ${frame.overflow === 'scroll' ? 'text-text-primary' : 'text-text-muted'}`}>Scroll</span>
-                  </button>
-                </div>
-              </Popover>
-          ) : (
-            <div className="w-5 shrink-0" />
-          )}
+                        : 'fg-subtle hover:fg-muted hover:bg-inset'
+                  }`}
+                >
+                  <Ellipsis size={12} />
+                </button>
+              }
+              side="bottom"
+              align="end"
+            >
+              <div className="flex flex-col gap-1.5 p-2.5 min-w-[120px]">
+                <button
+                  type="button"
+                  onClick={() => updateFrame(frame.id, { overflow: frame.overflow === 'scroll' ? 'hidden' : 'scroll' })}
+                  className="flex items-center gap-1.5 cursor-pointer select-none"
+                >
+                  <span className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center ${
+                    frame.overflow === 'scroll' ? 'bg-accent border-accent text-white' : 'border-border-accent bg-inset'
+                  }`}>
+                    {frame.overflow === 'scroll' && <Check size={10} strokeWidth={3} />}
+                  </span>
+                  <span className={`text-[12px] ${frame.overflow === 'scroll' ? 'fg-default' : 'fg-subtle'}`}>Scroll</span>
+                </button>
+              </div>
+            </Popover>
         </div>
       </div>
     </Section>

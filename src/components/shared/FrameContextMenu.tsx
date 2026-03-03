@@ -6,7 +6,7 @@ import { useFrameStore, findInTree } from '../../store/frameStore'
 import type { BoxElement } from '../../types/frame'
 
 function Shortcut({ children }: { children: string }) {
-  return <span className="ml-auto text-text-muted text-[11px] pl-4">{children}</span>
+  return <span className="ml-auto fg-subtle text-[11px] pl-4">{children}</span>
 }
 
 interface FrameContextMenuProps {

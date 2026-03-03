@@ -47,18 +47,18 @@ export function Section({
         {collapsible && (
           <ChevronRight
             size={12}
-            className={`absolute -left-3 top-1/2 -translate-y-1/2 text-text-muted cursor-pointer opacity-0 group-hover/section:opacity-100 ${collapsed ? '' : 'rotate-90'}`}
+            className={`absolute -left-3 top-1/2 -translate-y-1/2 fg-icon-subtle cursor-pointer opacity-0 group-hover/section:opacity-100 ${collapsed ? '' : 'rotate-90'}`}
             onClick={toggle}
           />
         )}
-        {icon && <span className="text-text-muted">{icon}</span>}
+        {icon && <span className="fg-icon-subtle">{icon}</span>}
         <span className={`c-section-title${collapsible ? ' cursor-pointer select-none' : ''}`} onClick={collapsible ? toggle : undefined}>{title}</span>
         {hasOverrides && <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0 ml-1" title="Modified at this breakpoint" />}
         <div className="flex-1" />
         {hasOverrides && onResetOverrides && (
           <button
             onClick={(e) => { e.stopPropagation(); onResetOverrides() }}
-            className="w-4 h-4 flex items-center justify-center rounded text-text-muted hover:text-text-secondary opacity-0 group-hover/section:opacity-100"
+            className="w-4 h-4 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted opacity-0 group-hover/section:opacity-100"
             title="Reset overrides for this section"
           >
             <RotateCcw size={10} />

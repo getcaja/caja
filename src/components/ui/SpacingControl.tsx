@@ -123,7 +123,7 @@ export function SpacingControl({
           className={`w-5 h-5 flex items-center justify-center rounded shrink-0 ${
             isActive
               ? 'text-blue-400 bg-blue-400/10'
-              : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'
+              : 'fg-icon-subtle hover:fg-icon-muted hover:bg-inset'
           }`}
           onClick={toggle}
         >

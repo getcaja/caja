@@ -314,7 +314,7 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
         onClick={() => inputRef.current?.focus()}
       >
         {/* Inline label */}
-        <span title={tooltip} className={`w-4 shrink-0 flex items-center justify-center ${value.mode !== 'default' ? 'text-text-secondary' : 'text-text-muted'}`}>{label}</span>
+        <span title={tooltip} className={`w-4 shrink-0 flex items-center justify-center ${value.mode !== 'default' ? 'fg-muted' : 'fg-subtle'}`}>{label}</span>
 
         {/* Pill for keyword or token */}
         {hasPill && (
@@ -326,7 +326,7 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
               e.stopPropagation()
               toggleDropdown()
             }}
-            className="flex items-center bg-surface-3 text-text-primary rounded px-1 text-[11px] leading-[18px] font-medium min-w-0 truncate cursor-pointer hover:bg-surface-3/80"
+            className="flex items-center bg-emphasis fg-default rounded px-1 text-[11px] leading-[18px] font-medium min-w-0 truncate cursor-pointer hover:bg-emphasis"
           >
             {pillText}
           </button>
@@ -343,7 +343,7 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
           onFocus={handleFocus}
           onBlur={handleBlur}
           placeholder=""
-          className={`flex-1 ${hasPill ? 'min-w-0' : 'min-w-[20px]'} text-[12px] text-text-primary`}
+          className={`flex-1 ${hasPill ? 'min-w-0' : 'min-w-[20px]'} text-[12px] fg-default`}
         />
 
         {/* Diamond button */}
@@ -355,7 +355,7 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
             toggleDropdown()
             inputRef.current?.focus()
           }}
-          className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-text-secondary hover:bg-surface-2 ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}
+          className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted hover:bg-inset ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}
         >
           <Diamond size={12} />
         </button>
@@ -373,7 +373,7 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
               {i === separatorIdx && separatorIdx > 0 && (
                 <>
                   <div className="border-t border-border my-1" />
-                  <div className="px-3 py-1 text-[11px] text-text-muted font-medium">Fixed</div>
+                  <div className="px-3 py-1 text-[11px] fg-subtle font-medium">Fixed</div>
                 </>
               )}
               <button
@@ -387,15 +387,15 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
                 }}
                 className={`w-full text-left px-3 py-1.5 text-[12px] flex items-center justify-between cursor-pointer ${
                   i === selectedIdx
-                    ? 'bg-surface-3/60 text-text-primary'
-                    : 'text-text-secondary hover:bg-surface-3/60 hover:text-text-primary'
+                    ? 'c-menu-item-active'
+                    : 'fg-muted hover:bg-inset hover:fg-default'
                 }`}
               >
                 <span className="flex items-center gap-1.5">
                   <span className="font-medium">{item.label}</span>
                   {item.key === committedKey && <Check size={10} />}
                 </span>
-                {item.description && <span className="text-text-muted">{item.description}</span>}
+                {item.description && <span className="fg-subtle">{item.description}</span>}
               </button>
             </div>
           ))}

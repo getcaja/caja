@@ -25,7 +25,7 @@ function BreakpointBar() {
       {hasOverrides && (
         <button
           onClick={() => clearResponsiveOverrides(selected!.id, activeBreakpoint as 'md' | 'sm')}
-          className="w-4 h-4 flex items-center justify-center rounded text-text-muted hover:text-accent hover:bg-accent/10"
+          className="w-4 h-4 flex items-center justify-center rounded fg-icon-subtle hover:text-accent hover:bg-accent/10"
           title="Reset all overrides at this breakpoint"
         >
           <RotateCcw size={10} />
@@ -39,7 +39,7 @@ export function RightPanel() {
   const selectedId = useFrameStore((s) => s.selectedId)
 
   return (
-    <div className="h-full bg-surface-1/80 flex flex-col">
+    <div className="h-full bg-overlay flex flex-col">
       <BreakpointBar />
       <div className="flex-1 overflow-y-auto">
         <ErrorBoundary fallback="inline" resetKey={selectedId}>

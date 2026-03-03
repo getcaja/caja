@@ -350,7 +350,7 @@ export const ComponentsPanel = forwardRef<ComponentsPanelHandle, ComponentsPanel
 
       {!hasContent && editingCategoryTag !== '__new__' && (
         <div className="flex-1 flex items-center justify-center">
-          <span className="text-text-muted text-[12px]">
+          <span className="fg-subtle text-[12px]">
             {readOnly ? 'This library is empty.' : 'No components yet'}
           </span>
         </div>
@@ -361,7 +361,7 @@ export const ComponentsPanel = forwardRef<ComponentsPanelHandle, ComponentsPanel
         <TreeRow
           id="__new__"
           depth={0}
-          icon={<span className="text-text-muted"><Folder size={12} /></span>}
+          icon={<span className="fg-icon-subtle"><Folder size={12} /></span>}
           name=""
           isSelected={false}
           isMulti={false}
@@ -467,7 +467,7 @@ function CategoryRow({
       <TreeRow
         id={catId}
         depth={0}
-        icon={<span className="text-text-muted"><Folder size={12} /></span>}
+        icon={<span className="fg-icon-subtle"><Folder size={12} /></span>}
         name={tag}
         isSelected={isHighlighted}
         isMulti={isMulti ?? false}
@@ -572,7 +572,7 @@ function ComponentRow({
         dropPosition={isOver ? overPosition : null}
         trailing={onEnterEditMode ? (
           <button
-            className="w-5 h-5 c-icon-btn shrink-0 hidden group-hover:flex text-text-muted hover:text-text-secondary"
+            className="w-5 h-5 c-icon-btn shrink-0 hidden group-hover:flex fg-icon-subtle hover:fg-icon-muted"
             onClick={(e) => { e.stopPropagation(); onEnterEditMode() }}
             title="Edit component"
           >

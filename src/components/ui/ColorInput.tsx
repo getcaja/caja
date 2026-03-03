@@ -6,6 +6,9 @@ import type { DesignValue } from '../../types/frame'
 
 const VALID_HEX = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
 
+/** Capitalize token for pill display: "white" → "White", "slate-500" → "Slate 500" */
+const formatToken = (t: string) => t.replace(/^[a-z]/, (c) => c.toUpperCase()).replace(/-/g, ' ')
+
 export function ColorInput({
   value,
   onChange,
@@ -76,8 +79,8 @@ export function ColorInput({
       >
         <span title={tooltip} className="w-4 shrink-0 flex items-center justify-center">
           <span
-            className="w-3 h-3 rounded-full border border-text-muted"
-            style={{ backgroundColor: colorValue || 'transparent' }}
+            className="w-3 h-3 rounded-full border"
+            style={{ borderColor: 'var(--fg-subtle)', backgroundColor: colorValue || 'transparent' }}
           />
         </span>
 
@@ -90,9 +93,9 @@ export function ColorInput({
               e.stopPropagation()
               setShowGrid(true)
             }}
-            className="flex items-center bg-surface-3 text-text-primary rounded px-1 text-[11px] leading-[18px] font-medium min-w-0 truncate cursor-pointer hover:bg-surface-3/80"
+            className="flex items-center bg-emphasis fg-default rounded px-1 text-[11px] leading-[18px] font-medium min-w-0 truncate cursor-pointer hover:bg-emphasis"
           >
-            {stableToken}
+            {formatToken(stableToken)}
           </button>
         )}
 
@@ -116,7 +119,7 @@ export function ColorInput({
               type="button"
               tabIndex={-1}
               onMouseDown={(e) => e.stopPropagation()}
-              className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-text-secondary hover:bg-surface-2 ${showGrid ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}
+              className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted hover:bg-inset ${showGrid ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}
             >
               <Diamond size={12} />
             </button>

@@ -20,7 +20,8 @@ export function ToggleGroup<T extends string>({
       type="single"
       value={value}
       onValueChange={(v) => { if (v) onChange(v as T) }}
-      className={`flex bg-surface-2 rounded ${className ?? ''}`}
+      className={`flex rounded ${className ?? ''}`}
+      style={{ backgroundColor: 'var(--bg-inset)' }}
     >
       {options.map((opt) => (
         <RadixToggleGroup.Item
@@ -29,11 +30,12 @@ export function ToggleGroup<T extends string>({
           title={opt.tooltip}
           className={`${compact ? '' : 'flex-1 '}h-6 px-1.5 text-[12px] rounded flex items-center justify-center ${
             opt.disabled
-              ? 'text-text-muted/40 cursor-not-allowed'
+              ? 'fg-disabled cursor-not-allowed'
               : value === opt.value
-                ? 'bg-surface-3 text-text-primary'
-                : 'text-text-muted hover:text-text-secondary'
+                ? 'fg-default'
+                : 'fg-subtle hover:fg-muted'
           }`}
+          style={!opt.disabled && value === opt.value ? { backgroundColor: 'var(--bg-emphasis)' } : undefined}
           disabled={opt.disabled}
         >
           {opt.label}

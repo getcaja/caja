@@ -53,8 +53,8 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <h2 className="text-[13px] font-semibold text-text-primary">Export</h2>
-          <button className="w-5 h-5 c-icon-btn hover:text-text-secondary hover:bg-surface-2/60" onClick={() => onOpenChange(false)}>
+          <h2 className="text-[13px] font-semibold fg-default">Export</h2>
+          <button className="w-5 h-5 c-icon-btn hover:fg-muted hover:bg-subtle" onClick={() => onOpenChange(false)}>
             <X size={14} />
           </button>
         </div>
@@ -68,8 +68,8 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
                 value={tab.value}
                 className={`px-2.5 py-1.5 text-[12px] rounded-md transition-all ${
                   format === tab.value
-                    ? 'bg-surface-3 text-text-primary'
-                    : 'text-text-muted hover:text-text-secondary'
+                    ? 'bg-emphasis fg-default'
+                    : 'fg-subtle hover:fg-muted'
                 }`}
               >
                 {tab.label}
@@ -84,7 +84,7 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
             {copied ? 'Copied!' : 'Copy'}
           </button>
         </div>
-        <pre className="flex-1 overflow-auto p-4 text-[12px] text-text-primary font-mono leading-relaxed">
+        <pre className="flex-1 overflow-auto p-4 text-[12px] fg-default font-mono leading-relaxed">
           {code}
         </pre>
       </RadixTabs.Root>

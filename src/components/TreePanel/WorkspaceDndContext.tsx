@@ -58,10 +58,10 @@ function ComponentDragGhost({ id, count }: { id: string; count: number }) {
 
   return (
     <div
-      className="flex items-center gap-1.5 py-1 px-2 bg-surface-2 rounded-md text-text-primary text-[12px] shadow-lg border border-border pointer-events-none"
+      className="flex items-center gap-1.5 py-1 px-2 bg-inset rounded-md fg-default text-[12px] shadow-lg border border-border pointer-events-none"
       style={{ opacity: 0.6 }}
     >
-      <span className="shrink-0 text-text-muted">
+      <span className="shrink-0 fg-icon-subtle">
         {isCategory ? <Folder size={12} /> : <Code size={12} />}
       </span>
       <span className="truncate max-w-[140px]">{name}</span>

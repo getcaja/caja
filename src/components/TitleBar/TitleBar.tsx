@@ -17,16 +17,16 @@ export function TitleBar() {
 
   return (
     <div
-      className="relative flex items-center bg-surface-0/60 backdrop-blur-md border-b border-border select-none"
+      className="relative flex items-center bg-overlay border-b border-border select-none"
       data-tauri-drag-region
       style={{ height: TITLE_BAR_HEIGHT, paddingLeft: TRAFFIC_LIGHT_WIDTH }}
     >
       {/* Centered title — absolute so it's truly centered across full width */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <span className="text-[12px] text-text-secondary">
+        <span className="text-[12px] fg-muted">
           {fileName}
           {dirty && (
-            <span className="text-text-muted text-[10px] ml-1" title="Unsaved changes">●</span>
+            <span className="fg-subtle text-[10px] ml-1" title="Unsaved changes">●</span>
           )}
         </span>
       </div>
@@ -38,7 +38,7 @@ export function TitleBar() {
       <div className="flex items-center pr-4">
         <button
           onClick={() => setShowMcp(true)}
-          className="w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-text-secondary hover:bg-surface-2"
+          className="w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted hover:bg-inset"
           title={mcpConnected ? 'MCP Connected' : 'MCP Offline'}
         >
           {mcpBusy ? (

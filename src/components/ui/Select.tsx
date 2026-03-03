@@ -18,7 +18,7 @@ export function Select({ value, options, onChange, className, tooltip }: SelectP
       >
         <RadixSelect.Value />
         <RadixSelect.Icon>
-          <ChevronDown size={10} className="text-text-muted" />
+          <ChevronDown size={10} className="fg-icon-subtle" />
         </RadixSelect.Icon>
       </RadixSelect.Trigger>
 
@@ -33,7 +33,7 @@ export function Select({ value, options, onChange, className, tooltip }: SelectP
               <RadixSelect.Item
                 key={opt.value}
                 value={opt.value}
-                className="flex items-center gap-2 px-3 py-1.5 text-[12px] text-text-secondary hover:bg-surface-3/60 hover:text-text-primary outline-none cursor-pointer data-[highlighted]:bg-surface-3/60 data-[highlighted]:text-text-primary"
+                className="c-menu-item outline-none cursor-pointer"
               >
                 <RadixSelect.ItemText>{opt.label}</RadixSelect.ItemText>
                 <RadixSelect.ItemIndicator>

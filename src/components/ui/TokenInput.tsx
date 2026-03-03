@@ -125,7 +125,7 @@ export function TokenInput(props: TokenInputProps) {
 
   // --- Inline label (with optional title tooltip) ---
   const inlineLabelEl = inlineLabel ? (
-    <span title={tooltip} className={`w-4 shrink-0 flex items-center justify-center ${isActive ? 'text-text-secondary' : 'text-text-muted/50'}`}>{inlineLabel}</span>
+    <span title={tooltip} className={`w-4 shrink-0 flex items-center justify-center ${isActive ? 'fg-muted' : 'fg-subtle'}`}>{inlineLabel}</span>
   ) : null
 
   // --- Normalize items for dropdown ---
@@ -456,15 +456,15 @@ export function TokenInput(props: TokenInputProps) {
           }}
           className={`w-full text-left px-3 py-1.5 text-[12px] flex items-center justify-between cursor-pointer border-b border-border mb-1 ${
             autoOptActiveAtOpenRef.current
-              ? 'bg-surface-3/60 text-text-primary'
-              : 'text-text-secondary hover:bg-surface-3/60 hover:text-text-primary'
+              ? 'c-menu-item-active'
+              : 'fg-muted hover:bg-inset hover:fg-default'
           }`}
         >
           <span className="flex items-center gap-1.5">
             <span className="font-medium">{autoOpt.label}</span>
             {autoOptActiveAtOpenRef.current && <Check size={10} />}
           </span>
-          {autoOpt.hint && <span className="text-text-muted">{autoOpt.hint}</span>}
+          {autoOpt.hint && <span className="fg-subtle">{autoOpt.hint}</span>}
         </button>
       )}
       {items.map((item, i) => (
@@ -481,8 +481,8 @@ export function TokenInput(props: TokenInputProps) {
             }}
             className={`w-full text-left px-3 py-1.5 text-[12px] flex items-center justify-between cursor-pointer ${
               i === selectedIdx
-                ? 'bg-surface-3/60 text-text-primary'
-                : 'text-text-secondary hover:bg-surface-3/60 hover:text-text-primary'
+                ? 'c-menu-item-active'
+                : 'fg-muted hover:bg-inset hover:fg-default'
             }`}
           >
             <span className="flex items-center gap-1.5">
@@ -492,8 +492,8 @@ export function TokenInput(props: TokenInputProps) {
                 : !autoOptActiveAtOpenRef.current && item.key === enumCommittedValue && <Check size={10} />
               }
             </span>
-            {item.label && <span className="text-text-muted">{item.displayRight}</span>}
-            {item.hint && <span className="text-text-muted">{item.hint}</span>}
+            {item.label && <span className="fg-subtle">{item.displayRight}</span>}
+            {item.hint && <span className="fg-subtle">{item.hint}</span>}
           </button>
         </div>
       ))}
@@ -526,11 +526,11 @@ export function TokenInput(props: TokenInputProps) {
               {inlineLabelEl}
               {autoOpt.pill ? (
                 <>
-                  <span className="flex items-center bg-surface-3 text-text-primary rounded px-1 text-[11px] leading-[18px] font-medium min-w-0 truncate">{autoOpt.label}</span>
+                  <span className="flex items-center bg-emphasis fg-default rounded px-1 text-[11px] leading-[18px] font-medium min-w-0 truncate">{autoOpt.label}</span>
                   <span className="flex-1" />
                 </>
               ) : (
-                <span className="flex-1 min-w-0 text-[12px] text-text-muted pl-0.5 truncate">{autoOpt.label}</span>
+                <span className="flex-1 min-w-0 text-[12px] fg-subtle pl-0.5 truncate">{autoOpt.label}</span>
               )}
               <button
                 type="button"
@@ -542,7 +542,7 @@ export function TokenInput(props: TokenInputProps) {
                   toggleDropdown()
                   ;(e.currentTarget.parentElement as HTMLElement)?.focus()
                 }}
-                className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-text-secondary hover:bg-surface-2 ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted hover:bg-inset ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
               >
                 <Diamond size={12} />
               </button>
@@ -564,7 +564,7 @@ export function TokenInput(props: TokenInputProps) {
               onFocus={handleFocus}
               onBlur={handleBlur}
               placeholder={scaleIsUnset ? (scaleProps!.placeholder ?? String(scaleResetValue)) : undefined}
-              className={`flex-1 min-w-[20px] text-[12px] text-text-primary${showDropdown ? ' caret-transparent' : ''}`}
+              className={`flex-1 min-w-[20px] text-[12px] fg-default${showDropdown ? ' caret-transparent' : ''}`}
             />
 
             <button
@@ -575,7 +575,7 @@ export function TokenInput(props: TokenInputProps) {
                 toggleDropdown()
                 inputRef.current?.focus()
               }}
-              className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-text-secondary hover:bg-surface-2 ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}
+              className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted hover:bg-inset ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}
             >
               <Diamond size={12} />
             </button>
@@ -597,7 +597,7 @@ export function TokenInput(props: TokenInputProps) {
               }}
             >
               {inlineLabelEl}
-              <span className="flex-1 min-w-0 text-[12px] text-text-muted pl-0.5 truncate">{autoOpt.label}</span>
+              <span className="flex-1 min-w-0 text-[12px] fg-subtle pl-0.5 truncate">{autoOpt.label}</span>
               <button
                 type="button"
                 tabIndex={-1}
@@ -608,7 +608,7 @@ export function TokenInput(props: TokenInputProps) {
                   toggleDropdown()
                   ;(e.currentTarget.parentElement as HTMLElement)?.focus()
                 }}
-                className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-text-secondary hover:bg-surface-2 ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted hover:bg-inset ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
               >
                 <Diamond size={12} />
               </button>
@@ -622,7 +622,7 @@ export function TokenInput(props: TokenInputProps) {
             >
               {inlineLabelEl}
               <>
-                <span className="flex items-center bg-surface-3 text-text-primary rounded px-1 text-[11px] leading-[18px] font-medium min-w-0 truncate">
+                <span className="flex items-center bg-emphasis fg-default rounded px-1 text-[11px] leading-[18px] font-medium min-w-0 truncate">
                   {enumCurrentLabel}
                 </span>
                 <span className="flex-1" />
@@ -637,7 +637,7 @@ export function TokenInput(props: TokenInputProps) {
                   toggleDropdown()
                   ;(e.currentTarget.parentElement as HTMLElement)?.focus()
                 }}
-                className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded text-text-muted hover:text-text-secondary hover:bg-surface-2 ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted hover:bg-inset ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
               >
                 <Diamond size={12} />
               </button>

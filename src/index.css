@@ -4,11 +4,11 @@
   --font-mono: SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, monospace;
   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 
-  /* Surfaces — translucent for vibrancy */
-  --color-surface-0: #191919;
-  --color-surface-1: #222222;
-  --color-surface-2: rgb(255 255 255 / 0.15);
-  --color-surface-3: rgb(255 255 255 / 0.14);
+  /* Surfaces */
+  --color-surface-0: #0e0e0e;
+  --color-surface-1: #161616;
+  --color-surface-2: #27272a;
+  --color-surface-3: #3f3f46;
 
   /* Accent — single color for the entire UI */
   --color-accent: #0c8ce9;
@@ -29,6 +29,57 @@
   /* Canvas */
   --color-canvas-bg: #0e0e11;
 }
+
+/* ── Design tokens (Primer-inspired fg/bg/border) ──
+   Vibrancy-safe: white overlays that stack on translucent panels.
+   More layers = brighter. Works on any background. */
+:root {
+  /* Foreground — text & icons (solid to avoid SVG stroke-overlap artifacts) */
+  --fg-default:  #fff;
+  --fg-muted:    #a1a1a1;
+  --fg-subtle:   #737373;
+  --fg-disabled: #333;
+
+  /* Background — overlays on vibrancy panels */
+  --bg-overlay:  rgb(20 20 20 / 0.75);
+  --bg-subtle:   rgb(255 255 255 / 0.05);
+  --bg-inset:    rgb(255 255 255 / 0.10);
+  --bg-emphasis: rgb(255 255 255 / 0.15);
+}
+
+/* ── Utility classes ── */
+
+/* fg */
+.fg-default  { color: var(--fg-default); }
+.fg-muted    { color: var(--fg-muted); }
+.fg-subtle   { color: var(--fg-subtle); }
+.fg-disabled { color: var(--fg-disabled); }
+
+/* bg */
+.bg-overlay  { background-color: var(--bg-overlay); }
+.bg-subtle   { background-color: var(--bg-subtle); }
+.bg-inset    { background-color: var(--bg-inset); }
+.bg-emphasis { background-color: var(--bg-emphasis); }
+
+/* fg-icon — aliases (all fg vars are now solid) */
+.fg-icon-muted  { color: var(--fg-muted); }
+.fg-icon-subtle { color: var(--fg-subtle); }
+
+/* hover:fg */
+.hover\:fg-default:hover { color: var(--fg-default); }
+.hover\:fg-muted:hover   { color: var(--fg-muted); }
+.hover\:fg-icon-muted:hover { color: var(--fg-muted); }
+
+/* hover:bg */
+.hover\:bg-subtle:hover   { background-color: var(--bg-subtle); }
+.hover\:bg-inset:hover    { background-color: var(--bg-inset); }
+.hover\:bg-emphasis:hover { background-color: var(--bg-emphasis); }
+
+/* focus:bg */
+.focus\:bg-inset:focus { background-color: var(--bg-inset); }
+
+/* fill (SVG arrows) */
+.fill-emphasis { fill: var(--bg-emphasis); }
 
 html, body, #root {
   height: 100%;
@@ -88,42 +139,106 @@ input[type=number] {
 @layer components {
   /* --- Inputs --- */
   .c-input {
-    @apply h-6 bg-surface-2 border border-transparent rounded px-2 text-[12px] text-text-primary outline-none;
+    height: 1.5rem;
+    border: 1px solid transparent;
+    border-radius: 0.25rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    font-size: 12px;
+    color: var(--fg-default);
+    outline: none;
+    background-color: var(--bg-inset);
   }
   .c-scale-input {
-    @apply h-6 bg-surface-2 border border-transparent rounded px-1 text-[12px] text-text-primary;
+    height: 1.5rem;
+    border: 1px solid transparent;
+    border-radius: 0.25rem;
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+    font-size: 12px;
+    color: var(--fg-default);
+    background-color: var(--bg-inset);
   }
   .c-textarea {
-    @apply bg-surface-2 border border-transparent rounded px-2 py-1 text-[12px] text-text-primary outline-none resize-none;
+    border: 1px solid transparent;
+    border-radius: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 12px;
+    color: var(--fg-default);
+    outline: none;
+    resize: none;
+    background-color: var(--bg-inset);
   }
 
   /* --- Labels --- */
   .c-label {
-    @apply text-text-muted text-[12px] w-14 shrink-0;
+    color: var(--fg-subtle);
+    font-size: 12px;
+    width: 3.5rem;
+    flex-shrink: 0;
   }
   .c-label-sm {
-    @apply text-text-muted text-[12px] w-5 shrink-0;
+    color: var(--fg-subtle);
+    font-size: 12px;
+    width: 1.25rem;
+    flex-shrink: 0;
   }
 
   /* --- Section heading --- */
   .c-section-title {
-    @apply text-text-primary text-[12px] font-semibold;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
   }
 
   /* --- Menus & popups --- */
   .c-menu-popup {
-    @apply bg-surface-2 border border-border-accent rounded-lg shadow-2xl z-[9999] py-1.5;
+    background-color: var(--color-surface-2);
+    border: 1px solid var(--color-border-accent);
+    border-radius: 0.5rem;
+    box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+    z-index: 9999;
+    padding-top: 0.375rem;
+    padding-bottom: 0.375rem;
   }
   .c-menu-item {
-    @apply w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-text-secondary hover:bg-surface-3/60 hover:text-text-primary;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.75rem;
+    font-size: 12px;
+    color: var(--fg-muted);
+  }
+  .c-menu-item:hover,
+  .c-menu-item[data-highlighted] {
+    background-color: var(--bg-inset);
+    color: var(--fg-default);
+  }
+  .c-menu-item-active {
+    background-color: var(--bg-inset);
+    color: var(--fg-default);
   }
   .c-menu-item-destructive {
-    @apply w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-destructive hover:bg-destructive/10;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.75rem;
+    font-size: 12px;
+    color: var(--color-destructive);
+  }
+  .c-menu-item-destructive:hover {
+    background-color: color-mix(in srgb, var(--color-destructive) 10%, transparent);
   }
 
   /* --- Icon buttons --- */
   .c-icon-btn {
-    @apply flex items-center justify-center rounded text-text-muted;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.25rem;
+    color: var(--fg-subtle);
   }
 
   /* --- Component preview insert button --- */
@@ -135,12 +250,19 @@ input[type=number] {
   .c-input::placeholder,
   .c-scale-input input::placeholder,
   .c-textarea::placeholder {
-    color: var(--color-text-muted);
+    color: var(--fg-subtle);
   }
 
   /* --- Class pills (Advanced section) --- */
   .c-pill {
-    @apply inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] leading-none select-none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.125rem;
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    font-size: 11px;
+    line-height: 1;
+    user-select: none;
   }
 }
 
@@ -165,7 +287,7 @@ input[type=number] {
 
 /* Tree node selected state — neutral (for pages) */
 .tree-node-selected-neutral {
-  background: var(--color-surface-2);
+  background: var(--bg-inset);
 }
 
 /* TokenInput — reset the inner input */

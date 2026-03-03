@@ -121,15 +121,15 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
         {/* Computed classes — read-only */}
         {computedClasses.length > 0 && (
           <div className="flex items-start gap-2">
-            <div className="flex-1 min-w-0 bg-surface-2 rounded px-1.5 py-1 flex flex-wrap gap-1 min-h-[24px]">
+            <div className="flex-1 min-w-0 bg-inset rounded px-1.5 py-1 flex flex-wrap gap-1 min-h-[24px]">
               {computedClasses.map((cls, i) => (
-                <span key={i} className="c-pill bg-surface-3/60 text-text-muted">{cls}</span>
+                <span key={i} className="c-pill bg-inset fg-subtle">{cls}</span>
               ))}
             </div>
             <button
               onClick={copyAll}
               className={`w-5 h-5 shrink-0 flex items-center justify-center rounded ${
-                copied ? 'text-blue-400 bg-blue-400/10' : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'
+                copied ? 'text-blue-400 bg-blue-400/10' : 'fg-subtle hover:fg-muted hover:bg-inset'
               }`}
               title="Copy all classes"
             >
@@ -141,9 +141,9 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
         {/* Manual classes — editable */}
         {manualClasses.length > 0 && (
           <div className="flex items-start gap-2">
-            <div className="flex-1 min-w-0 bg-surface-2 rounded px-1.5 py-1 flex flex-wrap gap-1">
+            <div className="flex-1 min-w-0 bg-inset rounded px-1.5 py-1 flex flex-wrap gap-1">
               {manualClasses.map((cls, i) => (
-                <span key={`${i}-${cls}`} className="c-pill bg-surface-3/60 text-text-muted">
+                <span key={`${i}-${cls}`} className="c-pill bg-inset fg-subtle">
                   {cls}
                   <button
                     onClick={() => removeClass(cls)}
@@ -165,7 +165,7 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
               className="c-scale-input flex items-center gap-1 cursor-text"
               onClick={() => inputRef.current?.focus()}
             >
-              <span className="w-4 shrink-0 flex items-center justify-center text-text-muted">
+              <span className="w-4 shrink-0 flex items-center justify-center fg-subtle">
                 <Plus size={12} />
               </span>
               <input
@@ -182,7 +182,7 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
                 }}
                 onFocus={() => { if (suggestions.length > 0 && draft.length > 0) setShowSuggestions(true) }}
                 placeholder="New Tailwind Class"
-                className="flex-1 min-w-[20px] text-[12px] text-text-primary"
+                className="flex-1 min-w-[20px] text-[12px] fg-default"
               />
             </div>
 
@@ -198,8 +198,8 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
                     onMouseEnter={() => setSelectedIdx(i)}
                     className={`w-full text-left px-3 py-1.5 text-[12px] cursor-pointer ${
                       i === selectedIdx
-                        ? 'bg-surface-3/60 text-text-primary'
-                        : 'text-text-secondary hover:bg-surface-3/60 hover:text-text-primary'
+                        ? 'bg-inset fg-default'
+                        : 'fg-muted hover:bg-inset hover:fg-default'
                     }`}
                   >
                     {cls}

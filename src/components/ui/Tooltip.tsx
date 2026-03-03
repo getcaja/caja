@@ -21,7 +21,7 @@ export function Tooltip({ content, children, side = 'bottom', sideOffset = 6 }: 
         <RadixTooltip.Content
           side={side}
           sideOffset={sideOffset}
-          className="bg-surface-3 text-text-primary text-[11px] px-2 py-1 rounded-md shadow-lg z-50"
+          className="bg-surface-3 fg-default text-[11px] px-2 py-1 rounded-md shadow-lg z-50"
         >
           {content}
           <RadixTooltip.Arrow className="fill-surface-3" />

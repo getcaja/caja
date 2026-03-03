@@ -124,7 +124,7 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
     return (
       <span className="flex items-center gap-0.5 shrink-0">
         {bps.map((bp) => (
-          <span key={bp} className="px-1 py-px text-[9px] leading-none font-medium rounded bg-surface-3/50 text-text-muted select-none">
+          <span key={bp} className="px-1 py-px text-[9px] leading-none font-medium rounded bg-subtle fg-subtle select-none">
             {bp}
           </span>
         ))}
@@ -135,7 +135,7 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
   // Visibility button as trailing
   const trailing = !isRoot ? (
     <button
-      className={`w-4 h-4 c-icon-btn text-[10px] shrink-0 ${frame.hidden ? '' : 'hidden group-hover:flex'} ${frame.hidden ? 'text-text-muted' : 'hover:text-text-secondary hover:bg-surface-2/60'}`}
+      className={`w-4 h-4 c-icon-btn text-[10px] shrink-0 ${frame.hidden ? '' : 'hidden group-hover:flex'} ${frame.hidden ? 'fg-icon-subtle' : 'hover:fg-icon-muted hover:bg-subtle'}`}
       onClick={(e) => {
         e.stopPropagation()
         toggleHidden(frame.id)

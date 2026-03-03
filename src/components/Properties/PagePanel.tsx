@@ -24,14 +24,14 @@ export function PagePanel() {
         {/* Name */}
         <div className="flex items-center gap-2">
           <div className="c-scale-input flex-1 flex items-center gap-0.5 overflow-hidden cursor-text">
-            <span title="Page Name" className="w-4 shrink-0 flex items-center justify-center text-text-muted">
+            <span title="Page Name" className="w-4 shrink-0 flex items-center justify-center fg-subtle">
               <Type size={12} />
             </span>
             <input
               type="text"
               value={page.name}
               onChange={(e) => renamePage(page.id, e.target.value)}
-              className="flex-1 min-w-0 text-[12px] text-text-primary"
+              className="flex-1 min-w-0 text-[12px] fg-default"
               placeholder="Page name"
             />
           </div>
@@ -41,14 +41,14 @@ export function PagePanel() {
         {/* Route */}
         <div className="flex items-center gap-2">
           <div className="c-scale-input flex-1 flex items-center gap-0.5 overflow-hidden cursor-text">
-            <span title="Page Route" className="w-4 shrink-0 flex items-center justify-center text-text-muted">
+            <span title="Page Route" className="w-4 shrink-0 flex items-center justify-center fg-subtle">
               <Globe size={12} />
             </span>
             <input
               type="text"
               value={page.route}
               onChange={(e) => setPageRoute(page.id, e.target.value)}
-              className="flex-1 min-w-0 text-[12px] text-text-primary"
+              className="flex-1 min-w-0 text-[12px] fg-default"
               placeholder="/page-route"
             />
           </div>

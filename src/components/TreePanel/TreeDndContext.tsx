@@ -67,8 +67,8 @@ function DragGhost({ id, count }: { id: string; count: number }) {
     : <Square size={12} />
 
   return (
-    <div className="flex items-center gap-1.5 py-1 px-2 bg-surface-2 rounded-md text-text-primary text-[12px] shadow-lg border border-border pointer-events-none" style={{ opacity: 0.6 }}>
-      <span className="shrink-0 text-text-muted">{icon}</span>
+    <div className="flex items-center gap-1.5 py-1 px-2 bg-inset rounded-md fg-default text-[12px] shadow-lg border border-border pointer-events-none" style={{ opacity: 0.6 }}>
+      <span className="shrink-0 fg-icon-subtle">{icon}</span>
       <span className="truncate max-w-[140px]">{frame.name}</span>
       {count > 1 && (
         <span className="shrink-0 bg-accent text-white text-[10px] font-semibold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">{count}</span>

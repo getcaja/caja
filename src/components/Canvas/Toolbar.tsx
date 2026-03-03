@@ -81,7 +81,7 @@ function DropdownButton({ icon, title, isActive, menu, menuClassName, children }
       <button
         ref={btnRef}
         onClick={handleClick}
-        className={`${btnIconCls} ${open || isActive ? 'bg-surface-3 text-text-primary' : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'}`}
+        className={`${btnIconCls} text-white ${open || isActive ? 'bg-accent' : 'opacity-60 hover:opacity-100'}`}
         title={title}
       >
         {icon ?? children}
@@ -129,7 +129,7 @@ function ZoomSection() {
         <button
           ref={btnRef}
           onClick={handleClick}
-          className={`h-7 px-1.5 flex items-center gap-0.5 rounded-md ${open ? 'bg-surface-3 text-text-primary' : 'text-text-muted hover:text-text-secondary hover:bg-surface-2'}`}
+          className={`h-7 px-1.5 flex items-center gap-0.5 rounded-md text-white ${open ? 'bg-accent' : 'opacity-60 hover:opacity-100'}`}
           title="Zoom"
         >
           <span className="text-[11px] tabular-nums">{Math.round(canvasZoom * 100)}%</span>
@@ -147,7 +147,7 @@ function ZoomSection() {
             {ZOOM_LEVELS.map((z) => (
               <button
                 key={z}
-                className={`c-menu-item ${Math.abs(canvasZoom - z) < 0.001 ? '!text-text-primary !bg-surface-3/60' : ''}`}
+                className={`c-menu-item ${Math.abs(canvasZoom - z) < 0.001 ? 'c-menu-item-active' : ''}`}
                 onClick={() => canvasZoomTo(z)}
               >
                 {Math.round(z * 100)}%
@@ -254,41 +254,41 @@ export function Toolbar() {
             : 'max-width 300ms ease-out, opacity 250ms ease-out 50ms',
         }}>
           <div className="flex items-center gap-0.5 py-1 pl-1.5 pr-1">
-            <div className="flex items-center bg-surface-0/50 rounded-md">
+            <div className="flex items-center bg-overlay rounded-md">
               <button
                 onClick={() => { setPreviewMode(false); setCanvasTool('pointer') }}
-                className={`${btnIcon} ${!previewMode && canvasTool === 'pointer' ? 'bg-surface-3 text-text-primary' : 'text-text-muted hover:text-text-secondary'}`}
+                className={`${btnIcon} text-white ${!previewMode && canvasTool === 'pointer' ? 'bg-accent' : 'opacity-60 hover:opacity-100'}`}
                 title="Pointer (V)"
               >
-                <MousePointer2 size={14} />
+                <MousePointer2 size={12} />
               </button>
               <button
                 onClick={() => { setPreviewMode(false); setCanvasTool('frame') }}
                 onDoubleClick={() => { setPreviewMode(false); handleInsert('box'); setCanvasTool('pointer') }}
-                className={`${btnIcon} ${!previewMode && canvasTool === 'frame' ? 'bg-surface-3 text-text-primary' : 'text-text-muted hover:text-text-secondary'}`}
+                className={`${btnIcon} text-white ${!previewMode && canvasTool === 'frame' ? 'bg-accent' : 'opacity-60 hover:opacity-100'}`}
                 title="Frame (F)"
               >
-                <FrameIcon size={14} />
+                <FrameIcon size={12} />
               </button>
               <button
                 onClick={() => { setPreviewMode(false); setCanvasTool('text') }}
                 onDoubleClick={() => { setPreviewMode(false); handleInsert('text'); setCanvasTool('pointer') }}
-                className={`${btnIcon} ${!previewMode && canvasTool === 'text' ? 'bg-surface-3 text-text-primary' : 'text-text-muted hover:text-text-secondary'}`}
+                className={`${btnIcon} text-white ${!previewMode && canvasTool === 'text' ? 'bg-accent' : 'opacity-60 hover:opacity-100'}`}
                 title="Text (T)"
               >
-                <Type size={14} />
+                <Type size={12} />
               </button>
               <button
                 onClick={onImageClick}
                 onDoubleClick={onImageDoubleClick}
-                className={`${btnIcon} ${!previewMode && canvasTool === 'image' ? 'bg-surface-3 text-text-primary' : 'text-text-muted hover:text-text-secondary'}`}
+                className={`${btnIcon} text-white ${!previewMode && canvasTool === 'image' ? 'bg-accent' : 'opacity-60 hover:opacity-100'}`}
                 title="Image (I)"
               >
-                <ImageIcon size={14} />
+                <ImageIcon size={12} />
               </button>
             </div>
             <DropdownButton
-              icon={<Plus size={14} />}
+              icon={<Plus size={12} />}
               title="Add Element"
               menu={<>
                 {PRIMITIVES.map((item) => (
@@ -311,7 +311,7 @@ export function Toolbar() {
         <div className="flex items-center gap-0.5 py-1 px-1">
           <DropdownButton
             icon={<span className="relative">
-              <CurrentIcon size={14} />
+              <CurrentIcon size={12} />
               {activeBreakpoint !== 'base' && overrideCounts[activeBreakpoint] > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-accent" />
               )}
@@ -325,7 +325,7 @@ export function Toolbar() {
               return (
                 <button
                   key={bpItem.label}
-                  className={`c-menu-item ${active ? '!text-text-primary !bg-surface-3/60' : ''}`}
+                  className={`c-menu-item ${active ? 'c-menu-item-active' : ''}`}
                   onClick={() => { setCanvasWidth(bpItem.width); setActiveBreakpoint(bpItem.bp) }}
                 >
                   <span className="relative">
@@ -333,9 +333,9 @@ export function Toolbar() {
                     {hasOverrides && <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-accent" />}
                   </span>
                   {bpItem.label}
-                  {bpItem.bp !== 'base' && <span className="px-1 py-px text-[9px] leading-none font-medium rounded bg-surface-3/50 text-text-muted">{bpItem.bp}</span>}
+                  {bpItem.bp !== 'base' && <span className="px-1 py-px text-[9px] leading-none font-medium rounded bg-subtle fg-subtle">{bpItem.bp}</span>}
                   <span className="flex-1" />
-                  {bpItem.width && <span className="text-text-muted text-[10px]">{bpItem.width}px</span>}
+                  {bpItem.width && <span className="fg-subtle text-[10px]">{bpItem.width}px</span>}
                 </button>
               )
             })}
@@ -348,10 +348,10 @@ export function Toolbar() {
         <div className="flex items-center gap-0.5 py-1 pr-1.5 pl-1">
           <button
             onClick={() => { setPreviewMode(!previewMode); if (!previewMode) setCanvasTool('pointer') }}
-            className={`${btnIcon} ${previewMode ? 'bg-surface-3 text-text-primary' : 'text-text-muted hover:text-text-secondary'}`}
+            className={`${btnIcon} text-white ${previewMode ? 'bg-accent' : 'opacity-60 hover:opacity-100'}`}
             title="Preview (⌘⇧P)"
           >
-            <Eye size={14} />
+            <Eye size={12} />
           </button>
         </div>
       </div>
