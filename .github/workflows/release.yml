@@ -75,6 +75,15 @@ jobs:
           cp "$SIG_FILE" "$NAMED_SIG"
           gh release upload "${{ github.ref_name }}" "$NAMED_SIG" --clobber
 
+      # Upload a version-free DMG alias for stable download URLs
+      - name: Upload stable DMG link
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DMG_FILE=$(find src-tauri/target -name "*.dmg" -type f | head -1)
+          cp "$DMG_FILE" "Caja_${{ matrix.arch }}.dmg"
+          gh release upload "${{ github.ref_name }}" "Caja_${{ matrix.arch }}.dmg" --clobber
+
   updater:
     needs: build
     runs-on: ubuntu-latest
