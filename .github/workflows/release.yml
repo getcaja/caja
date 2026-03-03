@@ -48,12 +48,20 @@ jobs:
           args: ${{ matrix.args }}
           includeUpdaterJson: false
 
-      # tauri-action can't find .sig files for cross-compiled targets — upload manually
+      # Debug: show what files the build produced
+      - name: List bundle artifacts
+        if: always()
+        run: find src-tauri/target -name "*.tar.gz*" -o -name "*.sig" | sort
+
+      # Upload the .sig file that tauri-action misses for cross-compiled targets
       - name: Upload updater signature
         run: |
           SIG_FILE=$(find src-tauri/target -name "*.app.tar.gz.sig" -type f | head -1)
+          echo "Found sig file: '$SIG_FILE'"
           if [ -n "$SIG_FILE" ]; then
             gh release upload "${{ github.ref_name }}" "$SIG_FILE#Caja_${{ matrix.arch }}.app.tar.gz.sig" --clobber
+          else
+            echo "::warning::No .sig file found — signing key may be misconfigured"
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -65,36 +73,43 @@ jobs:
       contents: write
     steps:
       - name: Generate latest.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
         run: |
-          TAG="${{ github.ref_name }}"
           VERSION="${TAG#v}"
 
           # Download sig files from the release
-          gh release download "$TAG" --repo "${{ github.repository }}" --pattern "*.sig" --dir sigs/
+          mkdir -p sigs
+          gh release download "$TAG" --repo "${{ github.repository }}" --pattern "*.sig" --dir sigs/ || true
+
+          ls -la sigs/
+
+          if [ ! -f sigs/Caja_aarch64.app.tar.gz.sig ] || [ ! -f sigs/Caja_x64.app.tar.gz.sig ]; then
+            echo "::error::Missing .sig files — cannot generate latest.json"
+            exit 1
+          fi
 
           AARCH64_SIG=$(cat sigs/Caja_aarch64.app.tar.gz.sig)
           X64_SIG=$(cat sigs/Caja_x64.app.tar.gz.sig)
-
           PUB_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-          cat > latest.json << EOF
-          {
-            "version": "$VERSION",
-            "notes": "Caja v$VERSION",
-            "pub_date": "$PUB_DATE",
-            "platforms": {
-              "darwin-aarch64": {
-                "signature": "$AARCH64_SIG",
-                "url": "https://github.com/${{ github.repository }}/releases/download/$TAG/Caja_aarch64.app.tar.gz"
-              },
-              "darwin-x86_64": {
-                "signature": "$X64_SIG",
-                "url": "https://github.com/${{ github.repository }}/releases/download/$TAG/Caja_x64.app.tar.gz"
+          jq -n \
+            --arg version "$VERSION" \
+            --arg pub_date "$PUB_DATE" \
+            --arg aarch64_sig "$AARCH64_SIG" \
+            --arg aarch64_url "https://github.com/${{ github.repository }}/releases/download/$TAG/Caja_aarch64.app.tar.gz" \
+            --arg x64_sig "$X64_SIG" \
+            --arg x64_url "https://github.com/${{ github.repository }}/releases/download/$TAG/Caja_x64.app.tar.gz" \
+            '{
+              version: $version,
+              notes: ("Caja v" + $version),
+              pub_date: $pub_date,
+              platforms: {
+                "darwin-aarch64": { signature: $aarch64_sig, url: $aarch64_url },
+                "darwin-x86_64": { signature: $x64_sig, url: $x64_url }
               }
-            }
-          }
-          EOF
+            }' > latest.json
 
+          cat latest.json
           gh release upload "$TAG" latest.json --repo "${{ github.repository }}" --clobber
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
