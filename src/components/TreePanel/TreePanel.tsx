@@ -432,12 +432,16 @@ export function TreePanel() {
 
       {tab === 'components' && (
         <div className="flex-1 flex flex-col overflow-hidden">
-          {hasComponents ? (
-            <TreeSection
-              label="Components"
-              collapsed={componentsCollapsed}
-              onToggle={() => setComponentsCollapsed((v) => !v)}
-              trailing={
+          <div className={`py-3 border-b border-border flex-1 flex flex-col${!componentsCollapsed && hasComponents ? ' overflow-auto' : ''}`}>
+            <div className={`px-4${componentsCollapsed ? '' : ' mb-2'}`}>
+              <div className="relative flex items-center group/section">
+                <ChevronRight
+                  size={12}
+                  className={`absolute -left-3 top-1/2 -translate-y-1/2 fg-subtle cursor-pointer opacity-0 group-hover/section:opacity-100 ${componentsCollapsed ? '' : 'rotate-90'}`}
+                  onClick={() => setComponentsCollapsed((v) => !v)}
+                />
+                <span className="c-section-title cursor-pointer select-none" onClick={() => setComponentsCollapsed((v) => !v)}>Components</span>
+                <span className="flex-1" />
                 <button
                   ref={componentBtnRef}
                   className="w-5 h-5 c-icon-btn hover:text-accent hover:bg-accent/10 opacity-0 group-hover/section:opacity-100"
@@ -446,19 +450,22 @@ export function TreePanel() {
                 >
                   <Plus size={12} />
                 </button>
-              }
-            >
-              <ComponentsPanel
-                ref={componentPanelRef}
-                source={{ type: 'internal' }}
-                onEditComponent={enterComponentEditMode}
-              />
-            </TreeSection>
-          ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <span className="fg-subtle text-[12px]">No components yet</span>
+              </div>
             </div>
-          )}
+            {!componentsCollapsed && (
+              hasComponents ? (
+                <ComponentsPanel
+                  ref={componentPanelRef}
+                  source={{ type: 'internal' }}
+                  onEditComponent={enterComponentEditMode}
+                />
+              ) : (
+                <div className="flex-1 flex items-center justify-center">
+                  <span className="fg-subtle text-[12px]">No components yet</span>
+                </div>
+              )
+            )}
+          </div>
         </div>
       )}
 

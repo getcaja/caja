@@ -67,9 +67,7 @@ export function TreeRow({
   // Scroll into view when selected
   useEffect(() => {
     if (!isSelected) return
-    const el = rowRef
-      ? (typeof rowRef === 'function' ? null : rowRef.current)
-      : internalRef.current
+    const el = internalRef.current
     if (el) {
       requestAnimationFrame(() => {
         el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
@@ -116,7 +114,11 @@ export function TreeRow({
     <div className="relative" style={isDragging ? { opacity: 0.3 } : undefined}>
       {dropIndicator}
       <div
-        ref={rowRef ?? internalRef}
+        ref={(el: HTMLDivElement | null) => {
+          internalRef.current = el
+          if (typeof rowRef === 'function') rowRef(el)
+          else if (rowRef) (rowRef as React.MutableRefObject<HTMLDivElement | null>).current = el
+        }}
         {...(dndProps ?? {})}
         className={`relative flex items-center gap-1 py-1 cursor-default group ${
           isSelected

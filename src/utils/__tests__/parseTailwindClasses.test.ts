@@ -327,11 +327,12 @@ describe('parseTailwindClasses', () => {
   // ---------------------------------------------------------------------------
 
   describe('Text', () => {
-    it('text-sm → fontSize token sm (value 14) + default lineHeight normal', () => {
+    it('text-sm → fontSize token sm (value 14), no auto lineHeight', () => {
       const { properties: props } = parseTailwindClasses('text-sm')
       expect(props.fontSize).toEqual(dvToken('sm', 14))
-      // sm default leading is 'normal' (value 1.5)
-      expect(props.lineHeight).toEqual(dvToken('normal', 1.5))
+      // Standalone text-sm should NOT auto-set lineHeight — Tailwind v4's
+      // compound class already includes the correct line-height.
+      expect(props.lineHeight).toBeUndefined()
     })
 
     it('text-[20px] → fontSize custom 20', () => {
@@ -817,17 +818,18 @@ describe('parseTailwindClasses', () => {
       expect(props.lineHeight).toEqual(dvCustom(1.1))
     })
 
-    it('text-sm → fontSize sm (14) + default lineHeight normal (1.5)', () => {
+    it('text-sm → fontSize sm (14), no auto lineHeight', () => {
       const { properties: props } = parseTailwindClasses('text-sm')
       expect(props.fontSize).toEqual(dvToken('sm', 14))
-      expect(props.lineHeight).toEqual(dvToken('normal', 1.5))
+      // Standalone text-sm should NOT auto-set lineHeight
+      expect(props.lineHeight).toBeUndefined()
     })
 
-    it('text-3xl → fontSize 3xl (30) + default lineHeight tight (1.25)', () => {
+    it('text-3xl → fontSize 3xl (30), no auto lineHeight', () => {
       const { properties: props } = parseTailwindClasses('text-3xl')
       expect(props.fontSize).toEqual(dvToken('3xl', 30))
-      // 3xl default leading is 'tight' (value 1.25)
-      expect(props.lineHeight).toEqual(dvToken('tight', 1.25))
+      // Standalone text-3xl should NOT auto-set lineHeight
+      expect(props.lineHeight).toBeUndefined()
     })
   })
 })

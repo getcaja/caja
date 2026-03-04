@@ -108,31 +108,6 @@ export const LINE_HEIGHT_SCALE: ScaleOption[] = [
 ]
 
 // Default lineHeight token for each fontSize token (typographic conventions)
-export const FONT_SIZE_DEFAULT_LEADING: Record<string, string> = {
-  'xs': 'normal',
-  'sm': 'normal',
-  'base': 'normal',
-  'lg': 'normal',
-  'xl': 'snug',
-  '2xl': 'snug',
-  '3xl': 'tight',
-  '4xl': 'tight',
-  '5xl': 'none',
-  '6xl': 'none',
-  '7xl': 'none',
-  '8xl': 'none',
-  '9xl': 'none',
-}
-
-// Helper to get the DesignValue for a compound default
-export function getCompoundLineHeight(fontSizeToken: string): { mode: 'token'; token: string; value: number } | null {
-  const lhToken = FONT_SIZE_DEFAULT_LEADING[fontSizeToken]
-  if (!lhToken) return null
-  const entry = LINE_HEIGHT_SCALE.find(s => s.token === lhToken)
-  if (!entry) return null
-  return { mode: 'token', token: entry.token, value: entry.value }
-}
-
 export const LETTER_SPACING_SCALE: ScaleOption[] = [
   { token: 'tighter', value: -0.8, label: 'Tighter' },
   { token: 'tight', value: -0.4, label: 'Tight' },

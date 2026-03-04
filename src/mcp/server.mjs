@@ -348,6 +348,28 @@ server.tool(
   }
 )
 
+server.tool(
+  'edit_component',
+  'Enter component edit mode. Switches the canvas to show the component in isolation for editing. Use update_frame, add_frame, etc. to modify it, then call exit_component_edit when done.',
+  {
+    component_id: z.string().describe('ID of the component to edit'),
+  },
+  async ({ component_id }) => {
+    const result = await callTool('edit_component', { component_id })
+    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
+  }
+)
+
+server.tool(
+  'exit_component_edit',
+  'Exit component edit mode. Returns to the previous page and auto-propagates changes to all instances of the component.',
+  {},
+  async () => {
+    const result = await callTool('exit_component_edit', {})
+    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
+  }
+)
+
 // ── Library tools ──
 
 server.tool(

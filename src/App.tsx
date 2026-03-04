@@ -12,6 +12,7 @@ import { WorkspaceDndProvider } from './components/TreePanel/WorkspaceDndContext
 import { startMcpBridge, stopMcpBridge } from './mcp/bridge'
 import { TitleBar } from './components/TitleBar/TitleBar'
 import { ZOOM_LEVELS } from './components/Canvas/ZoomBar'
+import { isRootId } from './store/treeHelpers'
 import { canvasZoomTo } from './components/Canvas/CanvasInline'
 import { switchTheme, getThemePreference } from './lib/theme'
 import { checkForUpdates, checkForUpdatesOnStartup } from './lib/updater'
@@ -313,6 +314,77 @@ function App() {
         e.preventDefault()
         const s = useFrameStore.getState()
         if (s.selectedId) s.ungroupFrame(s.selectedId)
+      }
+      // Delete / Backspace — delete selected frame (global)
+      if ((e.key === 'Delete' || e.key === 'Backspace') && !e.metaKey && !e.ctrlKey) {
+        const tag = (e.target as HTMLElement).tagName
+        const isEditable = (e.target as HTMLElement).isContentEditable
+        if (tag !== 'INPUT' && tag !== 'TEXTAREA' && !isEditable) {
+          const s = useFrameStore.getState()
+          if (s.selectedIds.size > 1) {
+            e.preventDefault()
+            s.removeSelected()
+          } else if (s.selectedId && !isRootId(s.selectedId)) {
+            e.preventDefault()
+            s.removeFrame(s.selectedId)
+          }
+        }
+      }
+      // Arrow keys — reorder selected frame (global)
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        const tag = (e.target as HTMLElement).tagName
+        const isEditable = (e.target as HTMLElement).isContentEditable
+        if (tag !== 'INPUT' && tag !== 'TEXTAREA' && !isEditable) {
+          const s = useFrameStore.getState()
+          if (s.selectedId && !isRootId(s.selectedId)) {
+            const display = s.getParentDisplay(s.selectedId)
+            const parentDir = display === 'grid' ? 'row' : s.getParentDirection(s.selectedId)
+            if (parentDir === 'column' && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) { /* skip */ }
+            else if (parentDir === 'row' && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) { /* skip */ }
+            else {
+              e.preventDefault()
+              const dir = (e.key === 'ArrowUp' || e.key === 'ArrowLeft') ? 'up' : 'down'
+              s.reorderFrame(s.selectedId, dir)
+            }
+          }
+        }
+      }
+      // Cmd+D — duplicate (global, works regardless of active tab)
+      if ((e.metaKey || e.ctrlKey) && key === 'd' && !e.shiftKey) {
+        const tag = (e.target as HTMLElement).tagName
+        const isEditable = (e.target as HTMLElement).isContentEditable
+        if (tag !== 'INPUT' && tag !== 'TEXTAREA' && !isEditable) {
+          e.preventDefault()
+          const s = useFrameStore.getState()
+          if (s.selectedId && !isRootId(s.selectedId)) s.duplicateFrame(s.selectedId)
+        }
+      }
+      // Cmd+C — copy (global)
+      if ((e.metaKey || e.ctrlKey) && key === 'c' && !e.shiftKey) {
+        const tag = (e.target as HTMLElement).tagName
+        const isEditable = (e.target as HTMLElement).isContentEditable
+        if (tag !== 'INPUT' && tag !== 'TEXTAREA' && !isEditable) {
+          e.preventDefault()
+          useFrameStore.getState().copySelected()
+        }
+      }
+      // Cmd+X — cut (global)
+      if ((e.metaKey || e.ctrlKey) && key === 'x' && !e.shiftKey) {
+        const tag = (e.target as HTMLElement).tagName
+        const isEditable = (e.target as HTMLElement).isContentEditable
+        if (tag !== 'INPUT' && tag !== 'TEXTAREA' && !isEditable) {
+          e.preventDefault()
+          useFrameStore.getState().cutSelected()
+        }
+      }
+      // Cmd+V — paste (global)
+      if ((e.metaKey || e.ctrlKey) && key === 'v' && !e.shiftKey) {
+        const tag = (e.target as HTMLElement).tagName
+        const isEditable = (e.target as HTMLElement).isContentEditable
+        if (tag !== 'INPUT' && tag !== 'TEXTAREA' && !isEditable) {
+          e.preventDefault()
+          useFrameStore.getState().pasteClipboard()
+        }
       }
       if ((e.metaKey || e.ctrlKey) && e.key === 's' && !e.shiftKey) {
         e.preventDefault()

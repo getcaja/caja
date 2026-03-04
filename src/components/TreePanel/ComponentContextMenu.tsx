@@ -1,3 +1,4 @@
+import { useRef, useLayoutEffect, useState } from 'react'
 import type { Component } from '../../types/component'
 
 interface ComponentContextMenuProps {
@@ -16,6 +17,23 @@ interface ComponentContextMenuProps {
   onClose: () => void
 }
 
+/** Clamp menu position so it stays within the viewport */
+function useClampedPosition(x: number, y: number) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState({ x, y })
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    const clampedX = Math.min(x, window.innerWidth - rect.width - 8)
+    const clampedY = y + rect.height > window.innerHeight - 8
+      ? y - rect.height
+      : y
+    setPos({ x: clampedX, y: clampedY })
+  }, [x, y])
+  return { ref, pos }
+}
+
 export function ComponentContextMenu({
   contextMenu, multiCount,
   onEdit, onInsert, onDuplicate,
@@ -23,11 +41,14 @@ export function ComponentContextMenu({
   onCategoryRename, onCategoryDelete,
   onClose,
 }: ComponentContextMenuProps) {
+  const { ref, pos } = useClampedPosition(contextMenu.x, contextMenu.y)
+
   if (contextMenu.type === 'component') {
     return (
       <div
+        ref={ref}
         className="fixed c-menu-popup min-w-[160px] z-50"
-        style={{ left: contextMenu.x, top: contextMenu.y }}
+        style={{ left: pos.x, top: pos.y }}
         onClick={(e) => e.stopPropagation()}
       >
         {onEdit && (
@@ -67,8 +88,9 @@ export function ComponentContextMenu({
 
   return (
     <div
+      ref={ref}
       className="fixed c-menu-popup min-w-[140px] z-50"
-      style={{ left: contextMenu.x, top: contextMenu.y }}
+      style={{ left: pos.x, top: pos.y }}
       onClick={(e) => e.stopPropagation()}
     >
       <button className="c-menu-item" onClick={() => { onCategoryRename(contextMenu.tag); onClose() }}>

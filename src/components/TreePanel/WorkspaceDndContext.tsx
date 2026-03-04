@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useRef, useMemo } from 'react'
+import { createContext, useContext, useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -104,6 +104,16 @@ export function WorkspaceDndProvider({ children }: { children: React.ReactNode }
   })
   const resolveRafRef = useRef(0)
   const multiDragIdsRef = useRef<Set<string>>(new Set())
+
+  // Track real pointer position — dnd-kit's delta includes scroll adjustments
+  // from ancestor scroll containers (e.g. Components panel), which makes
+  // ae.clientY + delta.y ≠ actual viewport position when panel has scrolled.
+  const pointerRef = useRef({ x: 0, y: 0 })
+  useEffect(() => {
+    const handler = (e: PointerEvent) => { pointerRef.current = { x: e.clientX, y: e.clientY } }
+    window.addEventListener('pointermove', handler)
+    return () => window.removeEventListener('pointermove', handler)
+  }, [])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -247,14 +257,14 @@ export function WorkspaceDndProvider({ children }: { children: React.ReactNode }
   }, [])
 
   const handleDragMove = useCallback(
-    ({ active, collisions, activatorEvent, delta }: DragMoveEvent) => {
+    ({ active, collisions }: DragMoveEvent) => {
       const data = active.data.current as Record<string, unknown> | undefined
       const aType = data?.type as string | undefined
 
-      // Compute current pointer position from activation point + delta
-      const ae = activatorEvent as PointerEvent
-      const px = ae.clientX + delta.x
-      const py = ae.clientY + delta.y
+      // Use tracked pointer position — dnd-kit's delta includes scroll
+      // adjustments that cause offset when dragging from scrolled panels
+      const px = pointerRef.current.x
+      const py = pointerRef.current.y
 
       if (aType === 'component' || aType === 'category') {
         // Check if pointer is over canvas
@@ -305,7 +315,7 @@ export function WorkspaceDndProvider({ children }: { children: React.ReactNode }
     [updateOver],
   )
 
-  const handleDragEnd = useCallback(({ active, activatorEvent, delta }: DragEndEvent) => {
+  const handleDragEnd = useCallback(({ active }: DragEndEvent) => {
     const lastZone = lastZoneRef.current
     const dragId = String(active.id)
     const dragIds = multiDragIdsRef.current
@@ -313,10 +323,9 @@ export function WorkspaceDndProvider({ children }: { children: React.ReactNode }
     const data = active.data.current as Record<string, unknown> | undefined
     const aType = data?.type as string | undefined
 
-    // Compute final pointer position
-    const ae = activatorEvent as PointerEvent
-    const px = ae.clientX + delta.x
-    const py = ae.clientY + delta.y
+    // Use tracked pointer position (same fix as handleDragMove)
+    const px = pointerRef.current.x
+    const py = pointerRef.current.y
 
     // Cancel any pending rAF
     cancelAnimationFrame(resolveRafRef.current)

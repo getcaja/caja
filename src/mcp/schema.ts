@@ -286,6 +286,27 @@ export const toolSchemas = {
     },
   },
 
+  edit_component: {
+    name: 'edit_component',
+    description: 'Enter component edit mode. Switches the canvas to show the component in isolation for editing. Use update_frame, add_frame, etc. to modify it, then call exit_component_edit when done.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        component_id: { type: 'string', description: 'ID of the component to edit' },
+      },
+      required: ['component_id'],
+    },
+  },
+
+  exit_component_edit: {
+    name: 'exit_component_edit',
+    description: 'Exit component edit mode. Returns to the previous page and auto-propagates changes to all instances of the component.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {},
+    },
+  },
+
   new_file: {
     name: 'new_file',
     description: 'Reset the project to a blank state (equivalent to File > New). Clears all pages, frames, and internal components.',

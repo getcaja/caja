@@ -6,7 +6,7 @@ import { useTreeDnd } from './TreeDndContext'
 import { useContextMenu } from './hooks/useContextMenu'
 import { useInlineEdit } from './hooks/useInlineEdit'
 import { TreeRow } from './TreeRow'
-import { Frame as FrameIcon, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse, Eye, EyeOff, Link, Diamond, FileText } from 'lucide-react'
+import { Frame as FrameIcon, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse, Eye, EyeOff, Link, Diamond, Square } from 'lucide-react'
 import { FrameContextMenu } from '../shared/FrameContextMenu'
 
 interface TreeNodeProps {
@@ -82,7 +82,7 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
   // Determine icon
   const iconEl = isMaster ? <Diamond size={12} fill="currentColor" />
     : isInstance ? <Diamond size={12} />
-    : isRoot && !editingComponentId ? <FileText size={12} />
+    : isRoot && !editingComponentId ? <Square size={12} />
     : frame.type === 'text' && 'tag' in frame && frame.tag === 'a' ? <Link size={12} />
     : frame.type === 'text' ? <Type size={12} />
     : frame.type === 'image' ? <ImageIcon size={12} />

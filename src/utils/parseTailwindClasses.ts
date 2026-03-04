@@ -5,7 +5,6 @@ import type { DesignValue, Spacing, BorderRadius, Border } from '../types/frame'
 import {
   SPACING_SCALE, FONT_SIZE_SCALE, FONT_WEIGHT_SCALE, LINE_HEIGHT_SCALE, LETTER_SPACING_SCALE,
   BORDER_WIDTH_SCALE, BORDER_RADIUS_SCALE, SIZE_CONSTRAINT_SCALE, OPACITY_SCALE,
-  FONT_SIZE_DEFAULT_LEADING,
   Z_INDEX_SCALE, GRID_COLS_SCALE, GRID_ROWS_SCALE, COL_SPAN_SCALE, ROW_SPAN_SCALE,
   ROTATE_SCALE, SCALE_SCALE, DURATION_SCALE, BLUR_SCALE,
 } from '../data/scales'
@@ -275,12 +274,9 @@ function matchText(cls: string, props: Props): boolean {
     if (FONT_SIZE_TOKEN_SET.has(rest)) {
       const value = FONT_SIZE_TOKENS.get(rest)!
       props.fontSize = { mode: 'token', token: rest, value }
-      // Set compound default lineHeight
-      const lhToken = FONT_SIZE_DEFAULT_LEADING[rest]
-      if (lhToken) {
-        const lhValue = LINE_HEIGHT_TOKENS.get(lhToken)
-        if (lhValue !== undefined) props.lineHeight = { mode: 'token', token: lhToken, value: lhValue }
-      }
+      // Don't auto-set lineHeight — Tailwind v4's `text-sm` already includes
+      // its compound line-height. Setting it explicitly would output `text-sm/normal`
+      // which overrides the native value (1.25rem) with `leading-normal` (1.5).
       return true
     }
 

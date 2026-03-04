@@ -580,6 +580,47 @@ const handlers: Record<string, ToolHandler> = {
     return { success: true, data: { id, name: page.name, route: page.route, tree: summaryTree(newRoot) } }
   },
 
+  edit_component(params) {
+    const { component_id } = params as { component_id: string }
+    const store = getStore()
+    if (store.editingComponentId) {
+      return { success: false, error: `Already editing component "${store.editingComponentId}". Call exit_component_edit first.` }
+    }
+    const comp = useCatalogStore.getState().getComponent(component_id)
+    if (!comp) return { success: false, error: `Component "${component_id}" not found` }
+    store.enterComponentEditMode(component_id)
+    const updated = getStore()
+    const master = updated.root.children?.find((c: Frame) => c.id === component_id)
+    return {
+      success: true,
+      data: {
+        component_id,
+        name: comp.name,
+        tree: master ? summaryTree(master) : summaryTree(updated.root),
+      },
+    }
+  },
+
+  exit_component_edit() {
+    const store = getStore()
+    if (!store.editingComponentId) {
+      return { success: false, error: 'Not currently in component edit mode' }
+    }
+    const exitedId = store.editingComponentId
+    const comp = useCatalogStore.getState().getComponent(exitedId)
+    store.exitComponentEditMode()
+    const updated = getStore()
+    const page = updated.pages.find((p) => p.id === updated.activePageId)
+    return {
+      success: true,
+      data: {
+        exited_component: exitedId,
+        name: comp?.name,
+        page: page ? { id: page.id, name: page.name, route: page.route } : null,
+      },
+    }
+  },
+
   add_page(params) {
     const { name, route } = params as { name?: string; route?: string }
     const store = getStore()

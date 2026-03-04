@@ -7,7 +7,7 @@ import { TokenInput } from '../ui/TokenInput'
 import { ColorInput } from '../ui/ColorInput'
 import { ToggleGroup } from '../ui/ToggleGroup'
 import { Popover } from '../ui/Popover'
-import { FONT_SIZE_SCALE, FONT_WEIGHT_SCALE, LINE_HEIGHT_SCALE, LETTER_SPACING_SCALE, getCompoundLineHeight } from '../../data/scales'
+import { FONT_SIZE_SCALE, FONT_WEIGHT_SCALE, LINE_HEIGHT_SCALE, LETTER_SPACING_SCALE } from '../../data/scales'
 import { TEXT_TRANSFORM_OPTIONS, WHITE_SPACE_OPTIONS } from './constants'
 
 const lbl = (text: string) => <span className="text-[12px]">{text}</span>
@@ -78,12 +78,7 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides }: { f
             scale={FONT_SIZE_SCALE}
             value={frame.fontSize}
             onChange={(v) => {
-              const updates: Record<string, unknown> = { fontSize: v }
-              if (v.mode === 'token') {
-                const defaultLH = getCompoundLineHeight(v.token)
-                if (defaultLH) updates.lineHeight = defaultLH
-              }
-              updateFrame(frame.id, updates)
+              updateFrame(frame.id, { fontSize: v })
             }}
             min={1}
             defaultValue={0}
