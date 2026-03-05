@@ -565,25 +565,27 @@ const handlers: Record<string, ToolHandler> = {
     // Guard: if there are unsaved changes, show a native dialog in Caja's UI.
     // The user must respond in the app — not in the agent's terminal.
     if (store.dirty) {
-      const { ask } = await import('@tauri-apps/plugin-dialog')
-      const save = await ask('You have unsaved changes. Save before creating a new file?', {
-        title: 'Unsaved Changes',
-        kind: 'warning',
-        okLabel: 'Save',
-        cancelLabel: "Don't Save",
-      })
-      if (save) {
-        const componentData = useCatalogStore.getState().getComponentData()
-        const path = await saveFile(store.pages, store.activePageId, componentData, store.filePath)
-        if (!path) {
-          return { success: false, error: 'Save cancelled by user — new file aborted' }
+      const { askUnsavedChanges } = await import('../lib/unsavedDialog')
+      const choice = await askUnsavedChanges(store.projectName || 'Untitled')
+      if (choice === 'cancel') {
+        return { success: false, error: 'New file cancelled by user' }
+      }
+      if (choice === 'save') {
+        try {
+          const componentData = useCatalogStore.getState().getComponentData()
+          const path = await saveFile(store.pages, store.activePageId, componentData, store.filePath)
+          if (!path) {
+            return { success: false, error: 'Save cancelled by user — new file aborted' }
+          }
+          store.setFilePath(path)
+          store.markClean()
+          // Update recent files (fire-and-forget)
+          import('@tauri-apps/api/core').then(({ invoke }) =>
+            invoke('add_recent_file', { path }).catch(() => {})
+          )
+        } catch (err) {
+          return { success: false, error: `Save failed: ${err instanceof Error ? err.message : err}` }
         }
-        store.setFilePath(path)
-        store.markClean()
-        // Update recent files (fire-and-forget)
-        import('@tauri-apps/api/core').then(({ invoke }) =>
-          invoke('add_recent_file', { path }).catch(() => {})
-        )
       }
     }
 

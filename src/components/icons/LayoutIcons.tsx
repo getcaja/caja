@@ -3,22 +3,30 @@ interface IconProps {
   className?: string
 }
 
-/** Two horizontal rects stacked vertically — flex column */
+/** Down arrow (left col) + right column rects from LayoutGrid — flex column */
 export function FlexColumnIcon({ size = 24, className }: IconProps) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <rect width="16" height="6" x="4" y="4" rx="2" />
-      <rect width="9" height="6" x="4" y="14" rx="2" />
+      {/* Down arrow — occupies left column position (centered at x=6.5) */}
+      <line x1="6.5" y1="3" x2="6.5" y2="21" />
+      <polyline points="4.5,19 6.5,21 8.5,19" />
+      {/* Right column rects — same positions as LayoutGrid */}
+      <rect width="7" height="7" x="14" y="3" rx="1" />
+      <rect width="7" height="7" x="14" y="14" rx="1" />
     </svg>
   )
 }
 
-/** Two vertical rects side by side — flex row */
+/** Right arrow (top row) + bottom row rects from LayoutGrid — flex row */
 export function FlexRowIcon({ size = 24, className }: IconProps) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <rect width="6" height="16" x="4" y="4" rx="2" />
-      <rect width="6" height="9" x="14" y="4" rx="2" />
+      {/* Right arrow — occupies top row position (centered at y=6.5) */}
+      <line x1="3" y1="6.5" x2="21" y2="6.5" />
+      <polyline points="19,4.5 21,6.5 19,8.5" />
+      {/* Bottom row rects — same positions as LayoutGrid */}
+      <rect width="7" height="7" x="3" y="14" rx="1" />
+      <rect width="7" height="7" x="14" y="14" rx="1" />
     </svg>
   )
 }

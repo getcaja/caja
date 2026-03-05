@@ -11,6 +11,7 @@ import {
   ROTATE_SCALE, SCALE_SCALE, SKEW_SCALE, DURATION_SCALE, BLUR_SCALE,
 } from '../data/scales'
 import { COLOR_GRID, SPECIAL_COLORS } from '../data/colors'
+import { parseTailwindClasses } from '../utils/parseTailwindClasses'
 
 // --- Token lookup maps (value → token) for auto-matching raw MCP inputs ---
 
@@ -132,6 +133,17 @@ export function sanitizeBorder(raw: unknown, existing: Border): Border | undefin
 
 export function sanitizeFrameProperties(props: Record<string, unknown>, existingFrame?: Frame): Record<string, unknown> {
   const sanitized = { ...props }
+
+  // tailwindClasses: parse recognized classes into structured properties
+  if ('tailwindClasses' in sanitized && typeof sanitized.tailwindClasses === 'string') {
+    const parsed = parseTailwindClasses(sanitized.tailwindClasses as string)
+    // Merge parsed properties (explicit props in sanitized win over parsed ones)
+    for (const [key, value] of Object.entries(parsed.properties)) {
+      if (!(key in sanitized)) sanitized[key] = value
+    }
+    // Keep only unrecognized classes in tailwindClasses
+    sanitized.tailwindClasses = parsed.tailwindClasses
+  }
 
   // label → content alias for backwards MCP compat
   if ('label' in sanitized && !('content' in sanitized)) {

@@ -17,6 +17,7 @@ import { isRootId } from './store/treeHelpers'
 import { canvasZoomTo } from './components/Canvas/CanvasInline'
 import { switchTheme, getThemePreference } from './lib/theme'
 import { checkForUpdates, checkForUpdatesOnStartup } from './lib/updater'
+import { askUnsavedChanges } from './lib/unsavedDialog'
 
 const LEFT_MIN = 320
 const LEFT_MAX = 400
@@ -138,27 +139,40 @@ function App() {
 
   const handleSave = useCallback(async (): Promise<boolean> => {
     if (!isTauri) return false
-    const store = useFrameStore.getState()
-    const componentData = useCatalogStore.getState().getComponentData()
-    const path = await saveFile(store.pages, store.activePageId, componentData, store.filePath)
-    if (path) {
-      store.setFilePath(path)
-      store.markClean()
-      addToRecent(path)
-      return true
+    try {
+      const store = useFrameStore.getState()
+      const componentData = useCatalogStore.getState().getComponentData()
+      const path = await saveFile(store.pages, store.activePageId, componentData, store.filePath)
+      if (path) {
+        store.setFilePath(path)
+        store.markClean()
+        addToRecent(path)
+        return true
+      }
+      return false
+    } catch (err) {
+      console.error('Save failed:', err)
+      const { message } = await import('@tauri-apps/plugin-dialog')
+      message(err instanceof Error ? err.message : 'Unknown error saving file', { title: 'Save Failed', kind: 'error' })
+      return false
     }
-    return false
   }, [addToRecent])
 
   const handleSaveAs = useCallback(async () => {
     if (!isTauri) return
-    const store = useFrameStore.getState()
-    const componentData = useCatalogStore.getState().getComponentData()
-    const path = await saveFileAs(store.pages, store.activePageId, componentData)
-    if (path) {
-      store.setFilePath(path)
-      store.markClean()
-      addToRecent(path)
+    try {
+      const store = useFrameStore.getState()
+      const componentData = useCatalogStore.getState().getComponentData()
+      const path = await saveFileAs(store.pages, store.activePageId, componentData)
+      if (path) {
+        store.setFilePath(path)
+        store.markClean()
+        addToRecent(path)
+      }
+    } catch (err) {
+      console.error('Save As failed:', err)
+      const { message } = await import('@tauri-apps/plugin-dialog')
+      message(err instanceof Error ? err.message : 'Unknown error saving file', { title: 'Save Failed', kind: 'error' })
     }
   }, [addToRecent])
 
@@ -244,14 +258,9 @@ function App() {
         const { dirty, filePath, projectName, root } = useFrameStore.getState()
         const hasUnsavedContent = !filePath && !projectName && root.children.length > 0
         if (dirty || hasUnsavedContent) {
-          const { ask } = await import('@tauri-apps/plugin-dialog')
-          const save = await ask('You have unsaved changes. Save before closing?', {
-            title: 'Unsaved Changes',
-            kind: 'warning',
-            okLabel: 'Save',
-            cancelLabel: "Don't Save",
-          })
-          if (save) {
+          const choice = await askUnsavedChanges(projectName || 'Untitled')
+          if (choice === 'cancel') return
+          if (choice === 'save') {
             const saved = await handleSaveRef.current()
             if (!saved) return // User cancelled save dialog — abort close
           }
@@ -280,12 +289,9 @@ function App() {
         switch (e.payload) {
           case 'new': {
             if (useFrameStore.getState().dirty) {
-              const { ask } = await import('@tauri-apps/plugin-dialog')
-              const save = await ask('Save changes before creating a new file?', {
-                title: 'Unsaved Changes', kind: 'warning',
-                okLabel: 'Save', cancelLabel: "Don't Save",
-              })
-              if (save) {
+              const choice = await askUnsavedChanges(useFrameStore.getState().projectName || 'Untitled')
+              if (choice === 'cancel') break
+              if (choice === 'save') {
                 const saved = await handleSave()
                 if (!saved) break // User cancelled save dialog — abort new
               }
@@ -296,12 +302,9 @@ function App() {
           }
           case 'open': {
             if (useFrameStore.getState().dirty) {
-              const { ask } = await import('@tauri-apps/plugin-dialog')
-              const save = await ask('Save changes before opening another file?', {
-                title: 'Unsaved Changes', kind: 'warning',
-                okLabel: 'Save', cancelLabel: "Don't Save",
-              })
-              if (save) {
+              const choice = await askUnsavedChanges(useFrameStore.getState().projectName || 'Untitled')
+              if (choice === 'cancel') break
+              if (choice === 'save') {
                 const saved = await handleSave()
                 if (!saved) break // User cancelled save dialog — abort open
               }
@@ -313,12 +316,9 @@ function App() {
             const qs = useFrameStore.getState()
             const qHasUnsaved = !qs.filePath && !qs.projectName && qs.root.children.length > 0
             if (qs.dirty || qHasUnsaved) {
-              const { ask } = await import('@tauri-apps/plugin-dialog')
-              const save = await ask('You have unsaved changes. Save before quitting?', {
-                title: 'Unsaved Changes', kind: 'warning',
-                okLabel: 'Save', cancelLabel: "Don't Save",
-              })
-              if (save) {
+              const choice = await askUnsavedChanges(qs.projectName || 'Untitled')
+              if (choice === 'cancel') break
+              if (choice === 'save') {
                 const saved = await handleSave()
                 if (!saved) break // User cancelled save dialog — abort quit
               }

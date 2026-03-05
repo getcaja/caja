@@ -76,7 +76,12 @@ export const createFileSlice: StateCreator<FrameStore, [], [], FileSlice> = (set
           const maxPid = Math.max(...pages.map((p) => parseInt(p.id.replace('page-', '')) || 0))
           resetIdCounters(maxId + 1, maxPid + 1)
           const projectName = (parsed.projectName as string) || null
-          set({ pages, activePageId: activePage.id, root: activePage.root, projectName, selectedId: activePage.root.id, selectedIds: new Set([activePage.root.id]), past: {}, future: {} })
+          const filePath = (parsed.filePath as string) || null
+          // If restoring with a filePath, mark dirty — localStorage data may differ from disk
+          // (user may have had unsaved changes before the app closed/crashed).
+          // Without filePath, this is a scratchpad session, so dirty=false is fine.
+          const dirty = filePath !== null
+          set({ pages, activePageId: activePage.id, root: activePage.root, projectName, filePath, dirty, selectedId: activePage.root.id, selectedIds: new Set([activePage.root.id]), past: {}, future: {} })
           syncCatalogFromComponentsPage(pages)
         } else if (parsed.root) {
           // Legacy single-root format → wrap in one page

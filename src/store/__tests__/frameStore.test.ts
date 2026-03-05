@@ -842,6 +842,54 @@ describe('frameStore', () => {
       expect(storage.has('caja-state')).toBe(false)
     })
 
+    it('restores filePath from localStorage', () => {
+      const savedRoot = {
+        id: '__root__page-1', type: 'box', name: 'Root', tag: 'body',
+        display: 'flex', direction: 'column', justify: 'start', align: 'stretch',
+        gap: 0, wrap: false, children: [],
+      }
+      const page = { id: 'page-1', name: 'Home', route: '/', root: savedRoot }
+      storage.set('caja-state', JSON.stringify({ pages: [page], activePageId: 'page-1', filePath: '/Users/test/xarchivo.caja' }))
+      store().loadFromStorage()
+      expect(store().filePath).toBe('/Users/test/xarchivo.caja')
+    })
+
+    it('filePath defaults to null when not in localStorage', () => {
+      const savedRoot = {
+        id: '__root__page-1', type: 'box', name: 'Root', tag: 'body',
+        display: 'flex', direction: 'column', justify: 'start', align: 'stretch',
+        gap: 0, wrap: false, children: [],
+      }
+      const page = { id: 'page-1', name: 'Home', route: '/', root: savedRoot }
+      storage.set('caja-state', JSON.stringify({ pages: [page], activePageId: 'page-1' }))
+      store().loadFromStorage()
+      expect(store().filePath).toBeNull()
+    })
+
+    it('marks dirty when restoring with filePath (crash recovery)', () => {
+      const savedRoot = {
+        id: '__root__page-1', type: 'box', name: 'Root', tag: 'body',
+        display: 'flex', direction: 'column', justify: 'start', align: 'stretch',
+        gap: 0, wrap: false, children: [],
+      }
+      const page = { id: 'page-1', name: 'Home', route: '/', root: savedRoot }
+      storage.set('caja-state', JSON.stringify({ pages: [page], activePageId: 'page-1', filePath: '/test.caja' }))
+      store().loadFromStorage()
+      expect(store().dirty).toBe(true)
+    })
+
+    it('stays clean when restoring without filePath (scratchpad)', () => {
+      const savedRoot = {
+        id: '__root__page-1', type: 'box', name: 'Root', tag: 'body',
+        display: 'flex', direction: 'column', justify: 'start', align: 'stretch',
+        gap: 0, wrap: false, children: [],
+      }
+      const page = { id: 'page-1', name: 'Home', route: '/', root: savedRoot }
+      storage.set('caja-state', JSON.stringify({ pages: [page], activePageId: 'page-1' }))
+      store().loadFromStorage()
+      expect(store().dirty).toBe(false)
+    })
+
     it('handles legacy single-root format', () => {
       const legacyRoot = { type: 'box', id: 'frame-1', name: 'Root', tag: 'div', display: 'flex', direction: 'column', justify: 'start', align: 'stretch', gap: 0, wrap: false, children: [] }
       storage.set('caja-state', JSON.stringify({ root: legacyRoot }))

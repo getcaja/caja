@@ -9,7 +9,7 @@ export const toolSchemas = {
       type: 'object' as const,
       properties: {
         parent_id: { type: 'string', description: 'ID of the parent box to add into' },
-        element_type: { type: 'string', enum: ['box', 'text', 'image', 'button', 'input', 'textarea', 'select', 'link'], description: 'Type of element to add. For images, set src in properties. Use placeholder services like https://placehold.co/600x400 for mockups.' },
+        element_type: { type: 'string', enum: ['box', 'text', 'image', 'button', 'input', 'textarea', 'select', 'link'], description: 'Type of element to add. For images, set src in properties — supports PNG, JPG, SVG, WebP, GIF, and any external URL (auto-downloaded to local assets). Use real images/SVG icons instead of emoji characters. Use placeholder services like https://placehold.co/600x400 for mockups.' },
         properties: {
           type: 'object',
           description: 'Optional initial properties to set on the new element. Can include "id" to assign a custom ID (useful in batch_update to reference the frame in subsequent operations).',
@@ -378,7 +378,7 @@ export const toolSchemas = {
   },
   upload_asset: {
     name: 'upload_asset',
-    description: 'Download an external image URL to local storage and return a local asset URL. Use this to ensure images are available offline and avoid CORS issues in the canvas. The returned URL can be used as the `src` property for image frames.',
+    description: 'Download an external image URL (PNG, JPG, SVG, WebP, GIF) to local storage and return a local asset path. Supports SVG icons and illustrations. The returned localPath can be used as the `src` property for image frames or bgImage for backgrounds. Note: add_frame with element_type "image" auto-downloads external URLs, so this tool is only needed when you want to pre-download assets or use them as backgrounds.',
     inputSchema: {
       type: 'object' as const,
       properties: {

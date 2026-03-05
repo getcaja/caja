@@ -390,6 +390,37 @@ describe('sanitizeFrameProperties', () => {
     const result = sanitizeFrameProperties({})
     expect(result).toEqual({})
   })
+
+  it('tailwindClasses with recognized classes → parsed into structured properties', () => {
+    const result = sanitizeFrameProperties({ tailwindClasses: 'border-t mt-20' })
+    // border-t → structured border with top=1px solid
+    expect(result.border).toBeDefined()
+    const border = result.border as import('../../types/frame').Border
+    expect(border.top).toEqual({ mode: 'token', token: '', value: 1 })
+    expect(border.style).toBe('solid')
+    // mt-20 → structured margin with top=80px
+    expect(result.margin).toBeDefined()
+    const margin = result.margin as import('../../types/frame').Spacing
+    expect(margin.top).toEqual({ mode: 'token', token: '20', value: 80 })
+    // No unrecognized classes left
+    expect(result.tailwindClasses).toBe('')
+  })
+
+  it('tailwindClasses with mixed recognized/unrecognized → only unrecognized remain', () => {
+    const result = sanitizeFrameProperties({ tailwindClasses: 'border-t my-custom-class' })
+    expect(result.border).toBeDefined()
+    expect(result.tailwindClasses).toBe('my-custom-class')
+  })
+
+  it('tailwindClasses does not override explicit properties', () => {
+    const result = sanitizeFrameProperties({
+      tailwindClasses: 'gap-4',
+      gap: 32,
+    })
+    // Explicit gap=32 wins over parsed gap-4 (16px)
+    const gap = result.gap as import('../../types/frame').DesignValue<number>
+    expect(gap.value).toBe(32)
+  })
 })
 
 // ---------------------------------------------------------------------------

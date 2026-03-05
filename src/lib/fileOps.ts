@@ -1,5 +1,5 @@
 import { save, open } from '@tauri-apps/plugin-dialog'
-import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs'
+import { readTextFile, writeTextFile, exists } from '@tauri-apps/plugin-fs'
 import type { Page } from '../types/frame'
 import type { ComponentData } from '../store/catalogStore'
 import { relativizeAssetPaths, absolutizeAssetPaths, migrateAssetsOnSave } from './assetOps'
@@ -17,6 +17,12 @@ interface CajaFileData {
 
 export async function saveFile(pages: Page[], activePageId: string, components: ComponentData, currentPath: string | null): Promise<string | null> {
   if (currentPath) {
+    // Validate the target path still exists on disk (user may have moved/deleted it)
+    const fileExists = await exists(currentPath).catch(() => false)
+    if (!fileExists) {
+      // Fall through to Save As so user picks a new location
+      return saveFileAs(pages, activePageId, components)
+    }
     await migrateAssetsOnSave(pages, currentPath)
     const portablePages = relativizeAssetPaths(pages)
     const data: CajaFileData = { pages: portablePages as Page[], activePageId, components }

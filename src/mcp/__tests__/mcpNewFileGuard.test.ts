@@ -31,10 +31,8 @@ describe('MCP new_file unsaved changes guard', () => {
     expect(handler).toContain('store.dirty')
   })
 
-  it('shows native Caja dialog (not just returns error)', () => {
-    expect(handler).toContain("@tauri-apps/plugin-dialog")
-    expect(handler).toContain('ask(')
-    expect(handler).toContain("'Unsaved Changes'")
+  it('shows unsaved changes dialog (not just returns error)', () => {
+    expect(handler).toContain('askUnsavedChanges(')
   })
 
   it('calls saveFile when user chooses Save', () => {
