@@ -136,8 +136,8 @@ function App() {
     })
   }, [addToRecent])
 
-  const handleSave = useCallback(async () => {
-    if (!isTauri) return
+  const handleSave = useCallback(async (): Promise<boolean> => {
+    if (!isTauri) return false
     const store = useFrameStore.getState()
     const componentData = useCatalogStore.getState().getComponentData()
     const path = await saveFile(store.pages, store.activePageId, componentData, store.filePath)
@@ -145,7 +145,9 @@ function App() {
       store.setFilePath(path)
       store.markClean()
       addToRecent(path)
+      return true
     }
+    return false
   }, [addToRecent])
 
   const handleSaveAs = useCallback(async () => {
@@ -250,7 +252,8 @@ function App() {
             cancelLabel: "Don't Save",
           })
           if (save) {
-            await handleSaveRef.current()
+            const saved = await handleSaveRef.current()
+            if (!saved) return // User cancelled save dialog — abort close
           }
         }
         closingRef.current = true
@@ -282,7 +285,10 @@ function App() {
                 title: 'Unsaved Changes', kind: 'warning',
                 okLabel: 'Save', cancelLabel: "Don't Save",
               })
-              if (save) await handleSave()
+              if (save) {
+                const saved = await handleSave()
+                if (!saved) break // User cancelled save dialog — abort new
+              }
             }
             useFrameStore.getState().newFile()
             import('./lib/assetOps').then(({ revokeAllBlobUrls }) => revokeAllBlobUrls())
@@ -295,7 +301,10 @@ function App() {
                 title: 'Unsaved Changes', kind: 'warning',
                 okLabel: 'Save', cancelLabel: "Don't Save",
               })
-              if (save) await handleSave()
+              if (save) {
+                const saved = await handleSave()
+                if (!saved) break // User cancelled save dialog — abort open
+              }
             }
             handleOpen()
             break
@@ -309,7 +318,10 @@ function App() {
                 title: 'Unsaved Changes', kind: 'warning',
                 okLabel: 'Save', cancelLabel: "Don't Save",
               })
-              if (save) await handleSave()
+              if (save) {
+                const saved = await handleSave()
+                if (!saved) break // User cancelled save dialog — abort quit
+              }
             }
             const { exit } = await import('@tauri-apps/plugin-process')
             await exit(0)
