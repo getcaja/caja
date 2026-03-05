@@ -1,8 +1,9 @@
-import { RotateCw, Scaling, MoveHorizontal, MoveVertical, Italic, Crosshair } from 'lucide-react'
+import { RotateCw, Scaling, MoveHorizontal, MoveVertical, Italic, Locate } from 'lucide-react'
 import type { Frame } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { Section } from '../ui/Section'
 import { TokenInput } from '../ui/TokenInput'
+import { Select } from '../ui/Select'
 import { SPACING_SCALE, ROTATE_SCALE, SCALE_SCALE, SKEW_SCALE } from '../../data/scales'
 import { TRANSFORM_ORIGIN_OPTIONS } from './constants'
 
@@ -20,7 +21,7 @@ export function TransformSection({ frame }: { frame: Frame }) {
             inlineLabel={<RotateCw size={12} />}
             classPrefix="rotate"
             defaultValue={0}
-            placeholder="0°"
+            placeholder="0"
             unit="°"
             tooltip="Rotate"
           />
@@ -32,7 +33,7 @@ export function TransformSection({ frame }: { frame: Frame }) {
             inlineLabel={<Scaling size={12} />}
             classPrefix="scale"
             defaultValue={100}
-            placeholder="100%"
+            placeholder="100"
             unit="%"
             tooltip="Scale"
           />
@@ -69,7 +70,7 @@ export function TransformSection({ frame }: { frame: Frame }) {
             inlineLabel={<Italic size={12} />}
             classPrefix="skew-x"
             defaultValue={0}
-            placeholder="0°"
+            placeholder="0"
             unit="°"
             tooltip="Skew X"
           />
@@ -80,19 +81,19 @@ export function TransformSection({ frame }: { frame: Frame }) {
             inlineLabel={<Italic size={12} />}
             classPrefix="skew-y"
             defaultValue={0}
-            placeholder="0°"
+            placeholder="0"
             unit="°"
             tooltip="Skew Y"
           />
           <div className="w-5 shrink-0" />
         </div>
         <div className="flex items-center gap-2">
-          <TokenInput
+          <Select
             value={frame.transformOrigin}
             options={TRANSFORM_ORIGIN_OPTIONS}
             onChange={(v) => updateFrame(frame.id, { transformOrigin: v })}
-            inlineLabel={<Crosshair size={12} />}
-            classPrefix="origin"
+            className="flex-1"
+            inlineLabel={<Locate size={12} />}
             initialValue="center"
             tooltip="Transform Origin"
           />

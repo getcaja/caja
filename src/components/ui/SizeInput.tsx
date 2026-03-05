@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Diamond, Check } from 'lucide-react'
+import { Diamond, Check, Unlink } from 'lucide-react'
 import type { SizeValue } from '../../types/frame'
 import { SIZE_CONSTRAINT_SCALE, type ScaleOption } from '../../data/scales'
 import { useFrameStore } from '../../store/frameStore'
@@ -46,12 +46,12 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
   const fixedToken = isFixed && value.value.mode === 'token' ? value.value.token : null
   const fixedNumeric = isFixed ? value.value.value : 0
 
-  // Pill: keywords always show as friendly labels
+  // Pill: only non-default keywords (Hug/Fill) — Auto is the default, shown as placeholder
   let pillText: string | null = null
-  if (value.mode === 'default') pillText = 'Auto'
-  else if (value.mode === 'hug') pillText = 'Hug'
+  if (value.mode === 'hug') pillText = 'Hug'
   else if (value.mode === 'fill') pillText = 'Fill'
   const hasPill = pillText !== null
+  const isDefault = value.mode === 'default'
 
   // Build dropdown items
   const items: DropdownItem[] = buildItems(parentIsFlex, SIZE_CONSTRAINT_SCALE)
@@ -143,7 +143,6 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
     }
     setShowDropdown(false)
     setSelectedIdx(-1)
-    requestAnimationFrame(() => inputRef.current?.focus())
   }, [items, onChange, applyItem, endPreview])
 
   const revertPreview = useCallback(() => {
@@ -307,59 +306,132 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
   // Separator index: first scale item
   const separatorIdx = items.findIndex((it) => it.kind === 'scale')
 
+  const hasFixedToken = isFixed && fixedToken !== null
+
   return (
     <div ref={containerRef} className="relative flex-1 min-w-0">
-      <div
-        className="group c-scale-input flex items-center gap-0.5 pr-6 overflow-hidden cursor-text relative"
-        onClick={() => inputRef.current?.focus()}
-      >
-        {/* Inline label */}
-        <span title={tooltip} className={`w-4 shrink-0 flex items-center justify-center ${value.mode !== 'default' ? 'fg-muted' : 'fg-subtle'}`}>{label}</span>
+      {hasFixedToken ? (
+        // Fixed + token: pill (non-editable) + Unlink
+        <div
+          className="group c-scale-input flex items-center gap-0.5 pr-6 overflow-hidden cursor-pointer relative"
+          tabIndex={0}
+          onClick={toggleDropdown}
+          onKeyDown={(e) => {
+            if (showDropdown) {
+              handleKeyDown(e)
+              return
+            }
+            if (e.key === 'Backspace' || e.key === 'Delete') {
+              e.preventDefault()
+              // Detach: keep value, remove token
+              onChange({ mode: 'fixed', value: { mode: 'custom', value: fixedNumeric } })
+              setDraft(String(fixedNumeric))
+              requestAnimationFrame(() => inputRef.current?.focus())
+            } else if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              toggleDropdown()
+            }
+          }}
+        >
+          <span title={tooltip} className="w-4 shrink-0 flex items-center justify-center fg-muted">{label}</span>
+          <span className="flex items-center bg-emphasis fg-default rounded px-1 text-[11px] leading-[18px] font-medium min-w-0 truncate">
+            {SIZE_CONSTRAINT_SCALE.find(s => s.token === fixedToken)?.label ?? `${fixedNumeric}px`}
+          </span>
+          <span className="flex-1" />
+          {/* Hidden input for focus management */}
+          <input ref={inputRef} type="text" className="sr-only" tabIndex={-1} />
+          <button
+            type="button"
+            tabIndex={-1}
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              onChange({ mode: 'fixed', value: { mode: 'custom', value: fixedNumeric } })
+              setDraft(String(fixedNumeric))
+              requestAnimationFrame(() => inputRef.current?.focus())
+            }}
+            className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted hover:bg-inset ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+          >
+            <Unlink size={12} />
+          </button>
+        </div>
+      ) : hasPill ? (
+        // Keyword pill (Hug/Fill) — non-editable, click opens dropdown, right button detaches
+        <div
+          className="group c-scale-input flex items-center gap-0.5 pr-6 overflow-hidden cursor-pointer relative"
+          tabIndex={0}
+          onClick={toggleDropdown}
+          onKeyDown={(e) => {
+            if (showDropdown) {
+              handleKeyDown(e)
+              return
+            }
+            if (e.key === 'Backspace' || e.key === 'Delete') {
+              e.preventDefault()
+              removePill()
+            } else if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              toggleDropdown()
+            }
+          }}
+        >
+          <span title={tooltip} className="w-4 shrink-0 flex items-center justify-center fg-muted">{label}</span>
+          <span className="flex items-center bg-emphasis fg-default rounded px-1 text-[11px] leading-[18px] font-medium min-w-0 truncate">
+            {pillText}
+          </span>
+          <span className="flex-1" />
+          {/* Hidden input for focus management */}
+          <input ref={inputRef} type="text" className="sr-only" tabIndex={-1} />
+          <button
+            type="button"
+            tabIndex={-1}
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              removePill()
+            }}
+            className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted hover:bg-inset ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+          >
+            <Unlink size={12} />
+          </button>
+        </div>
+      ) : (
+        // Editable input (default/fixed custom)
+        <div
+          className="group c-scale-input flex items-center gap-0.5 pr-6 overflow-hidden cursor-text relative"
+          onClick={() => inputRef.current?.focus()}
+        >
+          <span title={tooltip} className={`w-4 shrink-0 flex items-center justify-center ${isDefault ? 'fg-subtle' : 'fg-muted'}`}>{label}</span>
 
-        {/* Pill for keyword or token */}
-        {hasPill && (
+          <input
+            ref={inputRef}
+            type="text"
+            inputMode="numeric"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            placeholder="Auto"
+            className="flex-1 min-w-[20px] text-[12px] fg-default"
+          />
+
           <button
             type="button"
             tabIndex={-1}
             onMouseDown={(e) => {
               e.preventDefault()
-              e.stopPropagation()
               toggleDropdown()
+              inputRef.current?.focus()
             }}
-            className="flex items-center bg-emphasis fg-default rounded px-1 text-[11px] leading-[18px] font-medium min-w-0 truncate cursor-pointer hover:bg-emphasis"
+            className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted hover:bg-inset ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}
           >
-            {pillText}
+            <Diamond size={12} />
           </button>
-        )}
-
-        {/* Text input */}
-        <input
-          ref={inputRef}
-          type="text"
-          inputMode={hasPill ? undefined : 'numeric'}
-          value={hasPill ? '' : draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          placeholder=""
-          className={`flex-1 ${hasPill ? 'min-w-0' : 'min-w-[20px]'} text-[12px] fg-default`}
-        />
-
-        {/* Diamond button */}
-        <button
-          type="button"
-          tabIndex={-1}
-          onMouseDown={(e) => {
-            e.preventDefault()
-            toggleDropdown()
-            inputRef.current?.focus()
-          }}
-          className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted hover:bg-inset ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}
-        >
-          <Diamond size={12} />
-        </button>
-      </div>
+        </div>
+      )}
 
       {/* Dropdown */}
       {showDropdown && (
@@ -412,10 +484,11 @@ function buildItems(
   const items: DropdownItem[] = []
 
   // Keywords
-  items.push({ key: 'auto', label: 'Auto', description: '', kind: 'keyword' })
   if (parentIsFlex) {
     items.push({ key: 'fit', label: 'Hug', description: 'Hug content', kind: 'keyword' })
     items.push({ key: 'full', label: 'Fill', description: '100%', kind: 'keyword' })
+  } else {
+    items.push({ key: 'auto', label: 'Auto', description: '', kind: 'keyword' })
   }
 
   // Scale tokens

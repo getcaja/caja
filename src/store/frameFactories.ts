@@ -212,7 +212,7 @@ export function createBox(overrides?: Partial<BoxElement>): BoxElement {
   return {
     id,
     type: 'box',
-    name: overrides?.name || `frame-${id.split('-')[1]}`,
+    name: overrides?.name || `Frame-${id.split('-')[1]}`,
     hidden: false,
     className: '',
     htmlId: '',
@@ -257,7 +257,7 @@ export function createText(overrides?: Partial<TextElement>): TextElement {
   return {
     id,
     type: 'text',
-    name: overrides?.name || `text-${id.split('-')[1]}`,
+    name: overrides?.name || `Text-${id.split('-')[1]}`,
     hidden: false,
     className: '',
     htmlId: '',
@@ -295,7 +295,7 @@ export function createImage(overrides?: Partial<ImageElement>): ImageElement {
   return {
     id,
     type: 'image',
-    name: overrides?.name || `image-${id.split('-')[1]}`,
+    name: overrides?.name || `Image-${id.split('-')[1]}`,
     hidden: false,
     className: '',
     htmlId: '',
@@ -332,7 +332,7 @@ export function createButton(overrides?: Partial<ButtonElement>): ButtonElement 
   return {
     id,
     type: 'button',
-    name: overrides?.name || `button-${id.split('-')[1]}`,
+    name: overrides?.name || `Button-${id.split('-')[1]}`,
     hidden: false,
     className: '',
     htmlId: '',
@@ -369,7 +369,7 @@ export function createInput(overrides?: Partial<InputElement>): InputElement {
   return {
     id,
     type: 'input',
-    name: overrides?.name || `input-${id.split('-')[1]}`,
+    name: overrides?.name || `Input-${id.split('-')[1]}`,
     hidden: false,
     className: '',
     htmlId: '',
@@ -414,7 +414,7 @@ export function createTextarea(overrides?: Partial<TextareaElement>): TextareaEl
   return {
     id,
     type: 'textarea',
-    name: overrides?.name || `textarea-${id.split('-')[1]}`,
+    name: overrides?.name || `Textarea-${id.split('-')[1]}`,
     hidden: false,
     className: '',
     htmlId: '',
@@ -450,10 +450,10 @@ export function createTextarea(overrides?: Partial<TextareaElement>): TextareaEl
 export function createLink(overrides?: Partial<TextElement>): TextElement {
   const id = generateId()
   return {
-    ...createText({ name: `link-${id.split('-')[1]}`, ...overrides }),
+    ...createText({ name: `Link-${id.split('-')[1]}`, ...overrides }),
     id,
     tag: 'a',
-    href: overrides?.href || '#',
+    href: overrides?.href || '',
     content: overrides?.content || 'Link',
     color: dvStr('#2563eb'),
     ...overrides,
@@ -465,7 +465,7 @@ export function createSelect(overrides?: Partial<SelectElement>): SelectElement 
   return {
     id,
     type: 'select',
-    name: overrides?.name || `select-${id.split('-')[1]}`,
+    name: overrides?.name || `Select-${id.split('-')[1]}`,
     hidden: false,
     className: '',
     htmlId: '',

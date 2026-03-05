@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Ellipsis, Square, ArrowDown, ArrowRight, LayoutGrid, AlignHorizontalSpaceAround, AlignVerticalSpaceAround, Check } from 'lucide-react'
+import { Ellipsis, Square, LayoutGrid, Columns3, Rows3, AlignHorizontalSpaceAround, AlignVerticalSpaceAround, Check } from 'lucide-react'
+import { FlexColumnIcon, FlexRowIcon } from '../icons/LayoutIcons'
 import type { Frame, BoxElement } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { Section } from '../ui/Section'
@@ -8,7 +9,8 @@ import { SizeInput } from '../ui/SizeInput'
 import { Popover } from '../ui/Popover'
 import { ToggleGroup } from '../ui/ToggleGroup'
 import { SpacingControl } from '../ui/SpacingControl'
-import { SPACING_SCALE, SIZE_CONSTRAINT_SCALE, GRID_COLS_SCALE, GRID_ROWS_SCALE, GROW_SCALE, SHRINK_SCALE, COL_SPAN_SCALE, ROW_SPAN_SCALE, MARGIN_SCALE } from '../../data/scales'
+import { SPACING_SCALE, SIZE_CONSTRAINT_SCALE, GRID_COLS_SCALE, GRID_ROWS_SCALE, GROW_SCALE, SHRINK_SCALE, COL_SPAN_SCALE, ROW_SPAN_SCALE, MARGIN_SCALE, GAP_SCALE } from '../../data/scales'
+import { Select } from '../ui/Select'
 import { ALIGN_SELF_OPTIONS } from './constants'
 
 export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOverrides }: { frame: Frame; isRoot?: boolean; hasOverrides?: boolean; onResetOverrides?: () => void }) {
@@ -63,8 +65,8 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                 value={displayMode}
                 options={[
                   { value: 'block', label: <Square size={14} />, tooltip: 'Block' },
-                  { value: 'flex-col', label: <ArrowDown size={14} />, tooltip: 'Vertical' },
-                  { value: 'flex-row', label: <ArrowRight size={14} />, tooltip: 'Horizontal' },
+                  { value: 'flex-col', label: <FlexColumnIcon size={14} />, tooltip: 'Vertical' },
+                  { value: 'flex-row', label: <FlexRowIcon size={14} />, tooltip: 'Horizontal' },
                   { value: 'grid', label: <LayoutGrid size={14} />, tooltip: 'Grid' },
                 ]}
                 onChange={(v) => {
@@ -248,6 +250,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                           label="Grow"
                           classPrefix="grow"
                           defaultValue={0}
+                          unit=""
                         />
                         <TokenInput
                           scale={SHRINK_SCALE}
@@ -257,16 +260,17 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                           label="Shrink"
                           classPrefix="shrink"
                           defaultValue={1}
+                          unit=""
                         />
                       </>
                     )}
-                    <TokenInput
+                    <Select
                       value={frame.alignSelf}
                       options={ALIGN_SELF_OPTIONS}
                       onChange={(v) => updateFrame(frame.id, { alignSelf: v as Frame['alignSelf'] })}
-                      label="Align Self"
-                      classPrefix="self"
+                      className="flex-1"
                       initialValue="auto"
+                      tooltip="Align Self"
                     />
                     {parentIsGrid && (
                       <>
@@ -279,6 +283,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                           classPrefix="col-span"
                           defaultValue={0}
                           placeholder="Auto"
+                          unit=""
                         />
                         <TokenInput
                           scale={ROW_SPAN_SCALE}
@@ -289,6 +294,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                           classPrefix="row-span"
                           defaultValue={0}
                           placeholder="Auto"
+                          unit=""
                         />
                       </>
                     )}
@@ -340,22 +346,20 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                 </div>
                 <div className="flex flex-col gap-2 flex-1 min-w-0">
                   <TokenInput
-                    scale={SPACING_SCALE}
-                    value={boxFrame!.gap}
-                    onChange={(v) => updateFrame(frame.id, { gap: v })}
+                    scale={GAP_SCALE}
+                    value={isSpaceBetween ? { mode: 'token' as const, token: 'auto', value: 0 } : boxFrame!.gap}
+                    onChange={(v) => {
+                      if (v.mode === 'token' && v.token === 'auto') {
+                        updateFrame(frame.id, { justify: 'between' })
+                      } else {
+                        if (isSpaceBetween) updateFrame(frame.id, { justify: currentJ, gap: v })
+                        else updateFrame(frame.id, { gap: v })
+                      }
+                    }}
                     min={0}
                     classPrefix="gap"
                     inlineLabel={isRow ? <AlignHorizontalSpaceAround size={12} /> : <AlignVerticalSpaceAround size={12} />}
                     tooltip="Gap"
-                    autoOption={{
-                      label: 'Auto',
-                      pill: true,
-                      active: isSpaceBetween,
-                      onToggle: () => {
-                        if (isSpaceBetween) updateFrame(frame.id, { justify: currentJ })
-                        else updateFrame(frame.id, { justify: 'between' })
-                      },
-                    }}
                   />
                 </div>
                 {hasChildBehavior ? (
@@ -389,6 +393,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                             label="Grow"
                             classPrefix="grow"
                             defaultValue={0}
+                            unit=""
                           />
                           <TokenInput
                             scale={SHRINK_SCALE}
@@ -398,16 +403,17 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                             label="Shrink"
                             classPrefix="shrink"
                             defaultValue={1}
+                            unit=""
                           />
                         </>
                       )}
-                      <TokenInput
+                      <Select
                         value={frame.alignSelf}
                         options={ALIGN_SELF_OPTIONS}
                         onChange={(v) => updateFrame(frame.id, { alignSelf: v as Frame['alignSelf'] })}
-                        label="Align Self"
-                        classPrefix="self"
+                        className="flex-1"
                         initialValue="auto"
+                        tooltip="Align Self"
                       />
                       {parentIsGrid && (
                         <>
@@ -420,6 +426,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                             classPrefix="col-span"
                             defaultValue={0}
                             placeholder="Auto"
+                            unit=""
                           />
                           <TokenInput
                             scale={ROW_SPAN_SCALE}
@@ -430,6 +437,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                             classPrefix="row-span"
                             defaultValue={0}
                             placeholder="Auto"
+                            unit=""
                           />
                         </>
                       )}
@@ -450,10 +458,11 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                     value={boxFrame!.gridCols}
                     onChange={(v) => updateFrame(frame.id, { gridCols: v })}
                     min={0}
-                    inlineLabel={<span className="text-[12px]">C</span>}
+                    inlineLabel={<Columns3 size={12} />}
                     classPrefix="grid-cols"
                     defaultValue={0}
                     placeholder="Auto"
+                    unit=""
                     tooltip="Columns"
                   />
                   <TokenInput
@@ -461,10 +470,11 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                     value={boxFrame!.gridRows}
                     onChange={(v) => updateFrame(frame.id, { gridRows: v })}
                     min={0}
-                    inlineLabel={<span className="text-[12px]">R</span>}
+                    inlineLabel={<Rows3 size={12} />}
                     classPrefix="grid-rows"
                     defaultValue={0}
                     placeholder="Auto"
+                    unit=""
                     tooltip="Rows"
                   />
                   <div className="w-5 shrink-0" />

@@ -204,7 +204,7 @@ describe('sanitizeBorderRadius', () => {
     expect(result).toEqual({
       topLeft: { mode: 'token', token: 'DEFAULT', value: 4 },
       topRight: { mode: 'token', token: 'lg', value: 8 },
-      bottomRight: { mode: 'token', token: 'none', value: 0 },
+      bottomRight: { mode: 'custom', value: 0 },
       bottomLeft: { mode: 'token', token: 'md', value: 6 },
     })
   })
@@ -217,14 +217,13 @@ describe('sanitizeBorderRadius', () => {
     expect(sanitizeBorderRadius(undefined)).toBeUndefined()
   })
 
-  it('0 → uniform with value 0, token "none"', () => {
-    // BORDER_RADIUS_SCALE has { token: 'none', value: 0 }
+  it('0 → uniform with value 0, custom mode (no token for 0)', () => {
     const result = sanitizeBorderRadius(0)
     expect(result).toEqual({
-      topLeft: { mode: 'token', token: 'none', value: 0 },
-      topRight: { mode: 'token', token: 'none', value: 0 },
-      bottomRight: { mode: 'token', token: 'none', value: 0 },
-      bottomLeft: { mode: 'token', token: 'none', value: 0 },
+      topLeft: { mode: 'custom', value: 0 },
+      topRight: { mode: 'custom', value: 0 },
+      bottomRight: { mode: 'custom', value: 0 },
+      bottomLeft: { mode: 'custom', value: 0 },
     })
   })
 

@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { Plus, X, Check, Code, Link, ImageIcon, Upload, MessageSquareQuote, Scaling, Component, Pencil, RotateCcw, Unlink, Hash, Tag } from 'lucide-react'
+import { Plus, X, Check, Link, ImageIcon, Upload, MessageSquareQuote, Scaling, Component, Pencil, RotateCcw, Unlink, Hash, Braces, Code, CircleDot, TextCursorInput, Rows3 } from 'lucide-react'
 import type { Frame, TextElement, ImageElement, ButtonElement, InputElement, TextareaElement, SelectElement, SelectOption } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
-import { TokenInput } from '../ui/TokenInput'
 import { Select } from '../ui/Select'
 import { Popover } from '../ui/Popover'
+import { Section } from '../ui/Section'
 import { TYPE_BADGE_STYLES, TYPE_BADGE_LABELS, getBadgeKey, BOX_TAG_OPTIONS, TEXT_TAG_OPTIONS, INPUT_TYPE_OPTIONS } from './constants'
 
 function getTagOptions(type: Frame['type'], tag?: string) {
@@ -21,6 +21,25 @@ function getTagDefault(type: Frame['type']) {
 import { isExternalUrl, isLocalAssetPath, downloadAsset, importLocalAsset, getAssetDisplayName } from '../../lib/assetOps'
 
 const TEXT_LIKE = new Set(['text', 'email', 'password', 'number', 'search', 'tel', 'url'])
+
+function LabelInput({ value, onChange, label, icon, type = 'text', className }: { value: string | number; onChange: (v: string) => void; label?: string; icon?: React.ReactNode; type?: string; className?: string }) {
+  const active = value !== '' && value !== 0
+  return (
+    <div className={`min-w-0 c-scale-input flex items-center gap-0.5 overflow-hidden cursor-text ${className ?? 'flex-1'}`} onClick={(e) => { if (e.target === e.currentTarget) (e.currentTarget.querySelector('input') as HTMLInputElement)?.focus() }}>
+      {icon ? (
+        <span className={`w-4 shrink-0 flex items-center justify-center ${active ? 'fg-icon-muted' : 'fg-icon-subtle'}`}>{icon}</span>
+      ) : label ? (
+        <span className={`shrink-0 text-[12px] pl-0.5 ${active ? 'fg-muted' : 'fg-subtle'}`}>{label}</span>
+      ) : null}
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="flex-1 min-w-[20px] text-[12px] fg-default"
+      />
+    </div>
+  )
+}
 
 function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
@@ -48,23 +67,25 @@ function HrefPicker({ value, onChange }: { value: string; onChange: (v: string) 
 
   const options = [
     { value: '__none__', label: 'None' },
-    ...pages.map(p => ({ value: p.route, label: `${p.name} (${p.route})` })),
+    ...pages.map(p => ({ value: p.route, label: p.name, hint: p.route })),
     { value: '__custom__', label: 'URL' },
   ]
 
   return (
     <>
       <div className="flex items-center gap-2">
-        <span className="fg-disabled shrink-0"><Link size={12} /></span>
         <Select
           value={selectValue}
           options={options}
           onChange={(v) => {
             if (v === '__none__') onChange('')
-            else if (v === '__custom__') onChange(value || 'https://')
+            else if (v === '__custom__') onChange('https://')
             else onChange(v)
           }}
           className="flex-1"
+          inlineLabel={<Link size={12} />}
+          initialValue="__none__"
+          tooltip="Link"
         />
         <div className="w-5 shrink-0" />
       </div>
@@ -204,34 +225,33 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
   }
 
   return (
-    <div className="px-4 py-3 border-b border-border flex flex-col gap-2">
-      {/* Header: badge + name + component action */}
+    <Section title="Properties">
+      <div className="flex flex-col gap-2">
+      {/* Badge + name + component action */}
       <div className="flex items-center gap-2">
         <span className={`text-[12px] px-1.5 py-0.5 rounded-md font-medium ${TYPE_BADGE_STYLES[key]}`}>
           {TYPE_BADGE_LABELS[key]}
         </span>
-        {!isRoot ? (
-          <input
-            type="text"
-            value={frame.name}
-            onChange={(e) => renameFrame(frame.id, e.target.value)}
-            className="flex-1 c-input min-w-0"
-          />
-        ) : (
-          <div className="flex-1" />
-        )}
+        <input
+          type="text"
+          value={isRoot ? 'Body' : frame.name}
+          onChange={isRoot ? undefined : (e) => renameFrame(frame.id, e.target.value)}
+          disabled={isRoot}
+          className={`flex-1 c-input min-w-0${isRoot ? ' fg-muted' : ''}`}
+        />
         <ComponentButton frame={frame} isRoot={isRoot} isMaster={isMaster} />
       </div>
 
       {/* Tag selector */}
       {!isRoot && tagOptions && (
         <div className="flex items-center gap-2">
-          <TokenInput
+          <Select
             value={currentTag}
             options={tagOptions}
             onChange={(v) => updateFrame(frame.id, { tag: v } as Partial<Frame>)}
+            className="flex-1"
             inlineLabel={<Code size={12} />}
-            classPrefix="tag"
+            initialValue={getTagDefault(frame.type)}
             tooltip="HTML Tag"
           />
           <div className="w-5 shrink-0" />
@@ -250,8 +270,9 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
               <textarea
                 value={t.content}
                 onChange={(e) => updateFrame(frame.id, { content: e.target.value })}
-                className="flex-1 h-14 c-textarea"
-                placeholder="Text content..."
+                placeholder="Content"
+                rows={Math.min(6, Math.max(3, (t.content.match(/\n/g) || []).length + 1))}
+                className="flex-1 min-w-0 c-textarea resize-none"
               />
               <div className="w-5 shrink-0" />
             </div>
@@ -341,7 +362,7 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
             {/* Alt + Object fit — only when image is set */}
             {img.src && (
               <div className="flex items-center gap-2">
-                <TokenInput
+                <Select
                   value={img.objectFit}
                   options={[
                     { value: 'cover', label: 'Cover' },
@@ -350,8 +371,9 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
                     { value: 'none', label: 'None' },
                   ]}
                   onChange={(v) => updateFrame(frame.id, { objectFit: v as ImageElement['objectFit'] })}
-                  classPrefix="object"
+                  className="flex-1"
                   inlineLabel={<Scaling size={12} />}
+                  initialValue="cover"
                   tooltip="Object Fit"
                 />
                 <div className="flex-1 min-w-0">
@@ -381,13 +403,13 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
         const btn = frame as ButtonElement
         return (
           <>
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
+            <div className="flex items-start gap-2">
+              <textarea
                 value={btn.content}
                 onChange={(e) => updateFrame(frame.id, { content: e.target.value })}
-                placeholder="Button text..."
-                className="flex-1 c-input"
+                placeholder="Content"
+                rows={Math.min(6, Math.max(3, (btn.content.match(/\n/g) || []).length + 1))}
+                className="flex-1 min-w-0 c-textarea resize-none"
               />
               <div className="w-5 shrink-0" />
             </div>
@@ -403,58 +425,41 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
         return (
           <>
             <div className="flex items-center gap-2">
-              <TokenInput
+              <Select
                 value={it}
                 options={INPUT_TYPE_OPTIONS}
                 onChange={(v) => updateFrame(frame.id, { inputType: v as InputElement['inputType'] })}
-                inlineLabel="Ty"
-                classPrefix="type"
+                className="flex-1"
+                inlineLabel={<Code size={12} />}
+                initialValue="text"
                 tooltip="Input Type"
               />
               <div className="w-5 shrink-0" />
             </div>
             {TEXT_LIKE.has(it) && (
               <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={inp.placeholder}
-                  onChange={(e) => updateFrame(frame.id, { placeholder: e.target.value })}
-                  placeholder="Placeholder..."
-                  className="flex-1 c-input"
-                />
+                <LabelInput icon={<TextCursorInput size={12} />} value={inp.placeholder} onChange={(v) => updateFrame(frame.id, { placeholder: v })} />
                 <div className="w-5 shrink-0" />
               </div>
             )}
             {it === 'radio' && (
               <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={inp.inputName}
-                  onChange={(e) => updateFrame(frame.id, { inputName: e.target.value })}
-                  placeholder="Name"
-                  className="flex-1 c-input"
-                />
-                <input
-                  type="text"
-                  value={inp.inputValue}
-                  onChange={(e) => updateFrame(frame.id, { inputValue: e.target.value })}
-                  placeholder="Value"
-                  className="flex-1 c-input"
-                />
+                <LabelInput label="Name" value={inp.inputName} onChange={(v) => updateFrame(frame.id, { inputName: v })} />
+                <LabelInput label="Value" value={inp.inputValue} onChange={(v) => updateFrame(frame.id, { inputValue: v })} />
                 <div className="w-5 shrink-0" />
               </div>
             )}
             {(it === 'range' || it === 'number') && (
               <div className="flex items-center gap-2">
-                <input type="number" value={inp.min} onChange={(e) => updateFrame(frame.id, { min: Number(e.target.value) })} placeholder="Min" className="flex-1 c-input" />
-                <input type="number" value={inp.max} onChange={(e) => updateFrame(frame.id, { max: Number(e.target.value) })} placeholder="Max" className="flex-1 c-input" />
-                <input type="number" value={inp.step} onChange={(e) => updateFrame(frame.id, { step: Number(e.target.value) })} placeholder="Step" className="flex-1 c-input" />
+                <LabelInput label="Min" type="number" value={inp.min} onChange={(v) => updateFrame(frame.id, { min: Number(v) })} />
+                <LabelInput label="Max" type="number" value={inp.max} onChange={(v) => updateFrame(frame.id, { max: Number(v) })} />
+                <LabelInput label="Step" type="number" value={inp.step} onChange={(v) => updateFrame(frame.id, { step: Number(v) })} />
                 <div className="w-5 shrink-0" />
               </div>
             )}
             {it === 'range' && (
               <div className="flex items-center gap-2">
-                <input type="number" value={inp.defaultValue} onChange={(e) => updateFrame(frame.id, { defaultValue: Number(e.target.value) })} placeholder="Default" className="flex-1 c-input" />
+                <LabelInput label="Default" type="number" value={inp.defaultValue} onChange={(v) => updateFrame(frame.id, { defaultValue: Number(v) })} />
                 <div className="w-5 shrink-0" />
               </div>
             )}
@@ -476,21 +481,8 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
         return (
           <>
             <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={ta.placeholder}
-                onChange={(e) => updateFrame(frame.id, { placeholder: e.target.value })}
-                placeholder="Placeholder..."
-                className="flex-1 c-input"
-              />
-              <input
-                type="number"
-                value={ta.rows}
-                onChange={(e) => updateFrame(frame.id, { rows: Math.max(1, Number(e.target.value)) })}
-                placeholder="Rows"
-                min={1}
-                className="w-16 shrink-0 c-input"
-              />
+              <LabelInput icon={<TextCursorInput size={12} />} value={ta.placeholder} onChange={(v) => updateFrame(frame.id, { placeholder: v })} />
+              <LabelInput icon={<Rows3 size={12} />} type="number" value={ta.rows} onChange={(v) => updateFrame(frame.id, { rows: Math.max(1, Number(v)) })} className="w-20 shrink-0" />
               <div className="w-5 shrink-0" />
             </div>
             <div className="flex items-center gap-2">
@@ -509,20 +501,8 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
           <>
             {sel.options.map((opt, i) => (
               <div key={i} className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={opt.value}
-                  onChange={(e) => updateOption(i, 'value', e.target.value)}
-                  placeholder="value"
-                  className="flex-1 c-input min-w-0"
-                />
-                <input
-                  type="text"
-                  value={opt.label}
-                  onChange={(e) => updateOption(i, 'label', e.target.value)}
-                  placeholder="label"
-                  className="flex-1 c-input min-w-0"
-                />
+                <LabelInput icon={<CircleDot size={12} />} value={opt.value} onChange={(v) => updateOption(i, 'value', v)} />
+                <LabelInput icon={<Pencil size={12} />} value={opt.label} onChange={(v) => updateOption(i, 'label', v)} />
                 <button
                   className="c-icon-btn w-5 h-5 shrink-0 hover:text-destructive hover:bg-destructive/10"
                   onClick={() => removeOption(i)}
@@ -544,32 +524,31 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
       })()}
 
       {/* Attributes */}
-      {!isRoot && (
-        <div className="flex items-center gap-2">
-          <div className="flex-1 min-w-0 c-scale-input flex items-center gap-0.5 overflow-hidden cursor-text" onClick={(e) => { if (e.target === e.currentTarget) (e.currentTarget.querySelector('input') as HTMLInputElement)?.focus() }}>
-            <span className={`w-4 shrink-0 flex items-center justify-center ${frame.className ? 'fg-icon-muted' : 'fg-icon-subtle'}`}><Tag size={12} /></span>
-            <input
-              type="text"
-              value={frame.className}
-              onChange={(e) => updateFrame(frame.id, { className: e.target.value })}
-              placeholder="Class"
-              className="flex-1 min-w-[20px] text-[12px] fg-default"
-            />
-          </div>
-          <div className="flex-1 min-w-0 c-scale-input flex items-center gap-0.5 overflow-hidden cursor-text" onClick={(e) => { if (e.target === e.currentTarget) (e.currentTarget.querySelector('input') as HTMLInputElement)?.focus() }}>
-            <span className={`w-4 shrink-0 flex items-center justify-center ${frame.htmlId ? 'fg-icon-muted' : 'fg-icon-subtle'}`}><Hash size={12} /></span>
-            <input
-              type="text"
-              value={frame.htmlId}
-              onChange={(e) => updateFrame(frame.id, { htmlId: e.target.value })}
-              placeholder="ID"
-              className="flex-1 min-w-[20px] text-[12px] fg-default"
-            />
-          </div>
-          <div className="w-5 shrink-0" />
+      {/* Attributes */}
+      <div className="flex items-center gap-2">
+        <div className="flex-1 min-w-0 c-scale-input flex items-center gap-0.5 overflow-hidden cursor-text" onClick={(e) => { if (e.target === e.currentTarget) (e.currentTarget.querySelector('input') as HTMLInputElement)?.focus() }}>
+          <span className={`w-4 shrink-0 flex items-center justify-center ${frame.className ? 'fg-icon-muted' : 'fg-icon-subtle'}`}><Braces size={12} /></span>
+          <input
+            type="text"
+            value={frame.className}
+            onChange={(e) => updateFrame(frame.id, { className: e.target.value })}
+            placeholder="Class"
+            className="flex-1 min-w-[20px] text-[12px] fg-default"
+          />
         </div>
-      )}
-
-    </div>
+        <div className="flex-1 min-w-0 c-scale-input flex items-center gap-0.5 overflow-hidden cursor-text" onClick={(e) => { if (e.target === e.currentTarget) (e.currentTarget.querySelector('input') as HTMLInputElement)?.focus() }}>
+          <span className={`w-4 shrink-0 flex items-center justify-center ${frame.htmlId ? 'fg-icon-muted' : 'fg-icon-subtle'}`}><Hash size={12} /></span>
+          <input
+            type="text"
+            value={frame.htmlId}
+            onChange={(e) => updateFrame(frame.id, { htmlId: e.target.value })}
+            placeholder="ID"
+            className="flex-1 min-w-[20px] text-[12px] fg-default"
+          />
+        </div>
+        <div className="w-5 shrink-0" />
+      </div>
+      </div>
+    </Section>
   )
 }

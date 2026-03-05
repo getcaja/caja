@@ -1,0 +1,1097 @@
+{
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "Welcome",
+      "route": "/welcome",
+      "root": {
+        "id": "__root__page-1",
+        "type": "box",
+        "name": "__root__",
+        "tag": "body",
+        "display": "block",
+        "bg": {
+          "mode": "token",
+          "token": "white",
+          "value": "#ffffff"
+        },
+        "children": [
+          {
+            "type": "box",
+            "name": "Header",
+            "tag": "header",
+            "display": "flex",
+            "direction": "row",
+            "justify": "between",
+            "align": "center",
+            "padding": {
+              "top": {
+                "mode": "token",
+                "token": "4",
+                "value": 16
+              },
+              "right": {
+                "mode": "token",
+                "token": "8",
+                "value": 32
+              },
+              "bottom": {
+                "mode": "token",
+                "token": "4",
+                "value": 16
+              },
+              "left": {
+                "mode": "token",
+                "token": "8",
+                "value": 32
+              }
+            },
+            "children": [
+              {
+                "type": "text",
+                "name": "Logo",
+                "content": "acme",
+                "tag": "span",
+                "fontSize": {
+                  "mode": "token",
+                  "token": "lg",
+                  "value": 18
+                },
+                "fontWeight": {
+                  "mode": "token",
+                  "token": "semibold",
+                  "value": 600
+                },
+                "letterSpacing": {
+                  "mode": "token",
+                  "token": "wide",
+                  "value": 0.4
+                },
+                "textTransform": "uppercase",
+                "color": {
+                  "mode": "token",
+                  "token": "zinc-900",
+                  "value": "#18181b"
+                }
+              },
+              {
+                "type": "box",
+                "name": "Nav",
+                "display": "flex",
+                "direction": "row",
+                "align": "center",
+                "gap": {
+                  "mode": "token",
+                  "token": "6",
+                  "value": 24
+                },
+                "children": [
+                  {
+                    "type": "text",
+                    "name": "Nav Link 1",
+                    "content": "Features",
+                    "tag": "span",
+                    "fontSize": {
+                      "mode": "token",
+                      "token": "sm",
+                      "value": 14
+                    },
+                    "color": {
+                      "mode": "token",
+                      "token": "zinc-500",
+                      "value": "#71717a"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "name": "Nav Link 2",
+                    "content": "Pricing",
+                    "tag": "span",
+                    "fontSize": {
+                      "mode": "token",
+                      "token": "sm",
+                      "value": 14
+                    },
+                    "color": {
+                      "mode": "token",
+                      "token": "zinc-500",
+                      "value": "#71717a"
+                    }
+                  },
+                  {
+                    "type": "button",
+                    "name": "Nav CTA",
+                    "content": "Get Started",
+                    "fontSize": {
+                      "mode": "token",
+                      "token": "sm",
+                      "value": 14
+                    },
+                    "fontWeight": {
+                      "mode": "token",
+                      "token": "medium",
+                      "value": 500
+                    },
+                    "color": {
+                      "mode": "token",
+                      "token": "white",
+                      "value": "#ffffff"
+                    },
+                    "bg": {
+                      "mode": "token",
+                      "token": "zinc-900",
+                      "value": "#18181b"
+                    },
+                    "padding": {
+                      "top": {
+                        "mode": "token",
+                        "token": "2",
+                        "value": 8
+                      },
+                      "right": {
+                        "mode": "token",
+                        "token": "4",
+                        "value": 16
+                      },
+                      "bottom": {
+                        "mode": "token",
+                        "token": "2",
+                        "value": 8
+                      },
+                      "left": {
+                        "mode": "token",
+                        "token": "4",
+                        "value": 16
+                      }
+                    },
+                    "borderRadius": {
+                      "topLeft": {
+                        "mode": "token",
+                        "token": "lg",
+                        "value": 8
+                      },
+                      "topRight": {
+                        "mode": "token",
+                        "token": "lg",
+                        "value": 8
+                      },
+                      "bottomRight": {
+                        "mode": "token",
+                        "token": "lg",
+                        "value": 8
+                      },
+                      "bottomLeft": {
+                        "mode": "token",
+                        "token": "lg",
+                        "value": 8
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "box",
+            "name": "Hero",
+            "tag": "section",
+            "display": "flex",
+            "direction": "column",
+            "align": "center",
+            "padding": {
+              "top": {
+                "mode": "token",
+                "token": "20",
+                "value": 80
+              },
+              "right": {
+                "mode": "token",
+                "token": "8",
+                "value": 32
+              },
+              "bottom": {
+                "mode": "token",
+                "token": "20",
+                "value": 80
+              },
+              "left": {
+                "mode": "token",
+                "token": "8",
+                "value": 32
+              }
+            },
+            "gap": {
+              "mode": "token",
+              "token": "5",
+              "value": 20
+            },
+            "children": [
+              {
+                "type": "box",
+                "name": "Badge",
+                "display": "flex",
+                "direction": "row",
+                "align": "center",
+                "padding": {
+                  "top": {
+                    "mode": "token",
+                    "token": "1",
+                    "value": 4
+                  },
+                  "right": {
+                    "mode": "token",
+                    "token": "3",
+                    "value": 12
+                  },
+                  "bottom": {
+                    "mode": "token",
+                    "token": "1",
+                    "value": 4
+                  },
+                  "left": {
+                    "mode": "token",
+                    "token": "3",
+                    "value": 12
+                  }
+                },
+                "borderRadius": {
+                  "topLeft": {
+                    "mode": "token",
+                    "token": "full",
+                    "value": 9999
+                  },
+                  "topRight": {
+                    "mode": "token",
+                    "token": "full",
+                    "value": 9999
+                  },
+                  "bottomRight": {
+                    "mode": "token",
+                    "token": "full",
+                    "value": 9999
+                  },
+                  "bottomLeft": {
+                    "mode": "token",
+                    "token": "full",
+                    "value": 9999
+                  }
+                },
+                "bg": {
+                  "mode": "token",
+                  "token": "blue-50",
+                  "value": "#eff6ff"
+                },
+                "children": [
+                  {
+                    "type": "text",
+                    "name": "Badge Text",
+                    "content": "New in v2.0",
+                    "tag": "span",
+                    "fontSize": {
+                      "mode": "token",
+                      "token": "xs",
+                      "value": 12
+                    },
+                    "fontWeight": {
+                      "mode": "token",
+                      "token": "medium",
+                      "value": 500
+                    },
+                    "color": {
+                      "mode": "token",
+                      "token": "blue-600",
+                      "value": "#2563eb"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "name": "Headline",
+                "content": "Build beautiful interfaces faster",
+                "tag": "h1",
+                "fontSize": {
+                  "mode": "token",
+                  "token": "5xl",
+                  "value": 48
+                },
+                "fontWeight": {
+                  "mode": "token",
+                  "token": "bold",
+                  "value": 700
+                },
+                "lineHeight": {
+                  "mode": "token",
+                  "token": "tight",
+                  "value": 1.25
+                },
+                "textAlign": "center",
+                "color": {
+                  "mode": "token",
+                  "token": "zinc-900",
+                  "value": "#18181b"
+                }
+              },
+              {
+                "type": "text",
+                "name": "Subheading",
+                "tag": "p",
+                "content": "A modern toolkit for designing and shipping production-ready layouts with the speed of visual editing and the power of code.",
+                "fontSize": {
+                  "mode": "token",
+                  "token": "lg",
+                  "value": 18
+                },
+                "lineHeight": {
+                  "mode": "token",
+                  "token": "relaxed",
+                  "value": 1.625
+                },
+                "textAlign": "center",
+                "color": {
+                  "mode": "token",
+                  "token": "zinc-500",
+                  "value": "#71717a"
+                },
+                "maxWidth": {
+                  "mode": "token",
+                  "token": "xl",
+                  "value": 576
+                }
+              },
+              {
+                "type": "box",
+                "name": "CTA Group",
+                "display": "flex",
+                "direction": "row",
+                "gap": {
+                  "mode": "token",
+                  "token": "3",
+                  "value": 12
+                },
+                "children": [
+                  {
+                    "type": "button",
+                    "name": "Primary CTA",
+                    "content": "Start Building",
+                    "fontSize": {
+                      "mode": "token",
+                      "token": "base",
+                      "value": 16
+                    },
+                    "fontWeight": {
+                      "mode": "token",
+                      "token": "medium",
+                      "value": 500
+                    },
+                    "color": {
+                      "mode": "token",
+                      "token": "white",
+                      "value": "#ffffff"
+                    },
+                    "bg": {
+                      "mode": "token",
+                      "token": "zinc-900",
+                      "value": "#18181b"
+                    },
+                    "padding": {
+                      "top": {
+                        "mode": "token",
+                        "token": "3",
+                        "value": 12
+                      },
+                      "right": {
+                        "mode": "token",
+                        "token": "6",
+                        "value": 24
+                      },
+                      "bottom": {
+                        "mode": "token",
+                        "token": "3",
+                        "value": 12
+                      },
+                      "left": {
+                        "mode": "token",
+                        "token": "6",
+                        "value": 24
+                      }
+                    },
+                    "borderRadius": {
+                      "topLeft": {
+                        "mode": "token",
+                        "token": "lg",
+                        "value": 8
+                      },
+                      "topRight": {
+                        "mode": "token",
+                        "token": "lg",
+                        "value": 8
+                      },
+                      "bottomRight": {
+                        "mode": "token",
+                        "token": "lg",
+                        "value": 8
+                      },
+                      "bottomLeft": {
+                        "mode": "token",
+                        "token": "lg",
+                        "value": 8
+                      }
+                    }
+                  },
+                  {
+                    "type": "button",
+                    "name": "Secondary CTA",
+                    "content": "View Examples",
+                    "fontSize": {
+                      "mode": "token",
+                      "token": "base",
+                      "value": 16
+                    },
+                    "fontWeight": {
+                      "mode": "token",
+                      "token": "medium",
+                      "value": 500
+                    },
+                    "color": {
+                      "mode": "token",
+                      "token": "zinc-700",
+                      "value": "#3f3f46"
+                    },
+                    "padding": {
+                      "top": {
+                        "mode": "token",
+                        "token": "3",
+                        "value": 12
+                      },
+                      "right": {
+                        "mode": "token",
+                        "token": "6",
+                        "value": 24
+                      },
+                      "bottom": {
+                        "mode": "token",
+                        "token": "3",
+                        "value": 12
+                      },
+                      "left": {
+                        "mode": "token",
+                        "token": "6",
+                        "value": 24
+                      }
+                    },
+                    "borderRadius": {
+                      "topLeft": {
+                        "mode": "token",
+                        "token": "lg",
+                        "value": 8
+                      },
+                      "topRight": {
+                        "mode": "token",
+                        "token": "lg",
+                        "value": 8
+                      },
+                      "bottomRight": {
+                        "mode": "token",
+                        "token": "lg",
+                        "value": 8
+                      },
+                      "bottomLeft": {
+                        "mode": "token",
+                        "token": "lg",
+                        "value": 8
+                      }
+                    },
+                    "border": {
+                      "top": {
+                        "mode": "token",
+                        "token": "",
+                        "value": 1
+                      },
+                      "right": {
+                        "mode": "token",
+                        "token": "",
+                        "value": 1
+                      },
+                      "bottom": {
+                        "mode": "token",
+                        "token": "",
+                        "value": 1
+                      },
+                      "left": {
+                        "mode": "token",
+                        "token": "",
+                        "value": 1
+                      },
+                      "color": {
+                        "mode": "token",
+                        "token": "zinc-300",
+                        "value": "#d4d4d8"
+                      },
+                      "style": "solid"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "box",
+            "name": "Features",
+            "tag": "section",
+            "display": "flex",
+            "direction": "row",
+            "wrap": true,
+            "padding": {
+              "top": {
+                "mode": "token",
+                "token": "12",
+                "value": 48
+              },
+              "right": {
+                "mode": "token",
+                "token": "8",
+                "value": 32
+              },
+              "bottom": {
+                "mode": "token",
+                "token": "12",
+                "value": 48
+              },
+              "left": {
+                "mode": "token",
+                "token": "8",
+                "value": 32
+              }
+            },
+            "gap": {
+              "mode": "token",
+              "token": "6",
+              "value": 24
+            },
+            "children": [
+              {
+                "type": "box",
+                "name": "Card 1",
+                "display": "flex",
+                "direction": "column",
+                "gap": {
+                  "mode": "token",
+                  "token": "3",
+                  "value": 12
+                },
+                "padding": {
+                  "top": {
+                    "mode": "token",
+                    "token": "6",
+                    "value": 24
+                  },
+                  "right": {
+                    "mode": "token",
+                    "token": "6",
+                    "value": 24
+                  },
+                  "bottom": {
+                    "mode": "token",
+                    "token": "6",
+                    "value": 24
+                  },
+                  "left": {
+                    "mode": "token",
+                    "token": "6",
+                    "value": 24
+                  }
+                },
+                "borderRadius": {
+                  "topLeft": {
+                    "mode": "token",
+                    "token": "xl",
+                    "value": 12
+                  },
+                  "topRight": {
+                    "mode": "token",
+                    "token": "xl",
+                    "value": 12
+                  },
+                  "bottomRight": {
+                    "mode": "token",
+                    "token": "xl",
+                    "value": 12
+                  },
+                  "bottomLeft": {
+                    "mode": "token",
+                    "token": "xl",
+                    "value": 12
+                  }
+                },
+                "bg": {
+                  "mode": "token",
+                  "token": "zinc-50",
+                  "value": "#fafafa"
+                },
+                "grow": {
+                  "mode": "token",
+                  "token": "DEFAULT",
+                  "value": 1
+                },
+                "children": [
+                  {
+                    "type": "box",
+                    "name": "Card 1 Icon",
+                    "width": {
+                      "mode": "fixed",
+                      "value": {
+                        "mode": "token",
+                        "token": "10",
+                        "value": 40
+                      }
+                    },
+                    "height": {
+                      "mode": "fixed",
+                      "value": {
+                        "mode": "token",
+                        "token": "10",
+                        "value": 40
+                      }
+                    },
+                    "borderRadius": {
+                      "topLeft": {
+                        "mode": "token",
+                        "token": "lg",
+                        "value": 8
+                      },
+                      "topRight": {
+                        "mode": "token",
+                        "token": "lg",
+                        "value": 8
+                      },
+                      "bottomRight": {
+                        "mode": "token",
+                        "token": "lg",
+                        "value": 8
+                      },
+                      "bottomLeft": {
+                        "mode": "token",
+                        "token": "lg",
+                        "value": 8
+                      }
+                    },
+                    "bg": {
+                      "mode": "token",
+                      "token": "blue-100",
+                      "value": "#dbeafe"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "name": "Card 1 Title",
+                    "content": "Visual Layouts",
+                    "tag": "h3",
+                    "fontSize": {
+                      "mode": "token",
+                      "token": "base",
+                      "value": 16
+                    },
+                    "fontWeight": {
+                      "mode": "token",
+                      "token": "semibold",
+                      "value": 600
+                    },
+                    "color": {
+                      "mode": "token",
+                      "token": "zinc-900",
+                      "value": "#18181b"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "name": "Card 1 Desc",
+                    "content": "Design flex and grid layouts visually with real-time preview and Tailwind design tokens.",
+                    "tag": "p",
+                    "fontSize": {
+                      "mode": "token",
+                      "token": "sm",
+                      "value": 14
+                    },
+                    "lineHeight": {
+                      "mode": "token",
+                      "token": "relaxed",
+                      "value": 1.625
+                    },
+                    "color": {
+                      "mode": "token",
+                      "token": "zinc-500",
+                      "value": "#71717a"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "box",
+                "name": "Card 2",
+                "display": "flex",
+                "direction": "column",
+                "gap": {
+                  "mode": "token",
+                  "token": "3",
+                  "value": 12
+                },
+                "padding": {
+                  "top": {
+                    "mode": "token",
+                    "token": "6",
+                    "value": 24
+                  },
+                  "right": {
+                    "mode": "token",
+                    "token": "6",
+                    "value": 24
+                  },
+                  "bottom": {
+                    "mode": "token",
+                    "token": "6",
+                    "value": 24
+                  },
+                  "left": {
+                    "mode": "token",
+                    "token": "6",
+                    "value": 24
+                  }
+                },
+                "borderRadius": {
+                  "topLeft": {
+                    "mode": "token",
+                    "token": "xl",
+                    "value": 12
+                  },
+                  "topRight": {
+                    "mode": "token",
+                    "token": "xl",
+                    "value": 12
+                  },
+                  "bottomRight": {
+                    "mode": "token",
+                    "token": "xl",
+                    "value": 12
+                  },
+                  "bottomLeft": {
+                    "mode": "token",
+                    "token": "xl",
+                    "value": 12
+                  }
+                },
+                "bg": {
+                  "mode": "token",
+                  "token": "zinc-50",
+                  "value": "#fafafa"
+                },
+                "grow": {
+                  "mode": "token",
+                  "token": "DEFAULT",
+                  "value": 1
+                },
+                "children": [
+                  {
+                    "type": "box",
+                    "name": "Card 2 Icon",
+                    "width": {
+                      "mode": "fixed",
+                      "value": {
+                        "mode": "token",
+                        "token": "10",
+                        "value": 40
+                      }
+                    },
+                    "height": {
+                      "mode": "fixed",
+                      "value": {
+                        "mode": "token",
+                        "token": "10",
+                        "value": 40
+                      }
+                    },
+                    "borderRadius": {
+                      "topLeft": {
+                        "mode": "token",
+                        "token": "lg",
+                        "value": 8
+                      },
+                      "topRight": {
+                        "mode": "token",
+                        "token": "lg",
+                        "value": 8
+                      },
+                      "bottomRight": {
+                        "mode": "token",
+                        "token": "lg",
+                        "value": 8
+                      },
+                      "bottomLeft": {
+                        "mode": "token",
+                        "token": "lg",
+                        "value": 8
+                      }
+                    },
+                    "bg": {
+                      "mode": "token",
+                      "token": "emerald-100",
+                      "value": "#d1fae5"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "name": "Card 2 Title",
+                    "content": "Design Tokens",
+                    "tag": "h3",
+                    "fontSize": {
+                      "mode": "token",
+                      "token": "base",
+                      "value": 16
+                    },
+                    "fontWeight": {
+                      "mode": "token",
+                      "token": "semibold",
+                      "value": 600
+                    },
+                    "color": {
+                      "mode": "token",
+                      "token": "zinc-900",
+                      "value": "#18181b"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "name": "Card 2 Desc",
+                    "content": "Bind spacing, color, and typography to Tailwind’s token system for consistent, semantic output.",
+                    "tag": "p",
+                    "fontSize": {
+                      "mode": "token",
+                      "token": "sm",
+                      "value": 14
+                    },
+                    "lineHeight": {
+                      "mode": "token",
+                      "token": "relaxed",
+                      "value": 1.625
+                    },
+                    "color": {
+                      "mode": "token",
+                      "token": "zinc-500",
+                      "value": "#71717a"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "box",
+                "name": "Card 3",
+                "display": "flex",
+                "direction": "column",
+                "gap": {
+                  "mode": "token",
+                  "token": "3",
+                  "value": 12
+                },
+                "padding": {
+                  "top": {
+                    "mode": "token",
+                    "token": "6",
+                    "value": 24
+                  },
+                  "right": {
+                    "mode": "token",
+                    "token": "6",
+                    "value": 24
+                  },
+                  "bottom": {
+                    "mode": "token",
+                    "token": "6",
+                    "value": 24
+                  },
+                  "left": {
+                    "mode": "token",
+                    "token": "6",
+                    "value": 24
+                  }
+                },
+                "borderRadius": {
+                  "topLeft": {
+                    "mode": "token",
+                    "token": "xl",
+                    "value": 12
+                  },
+                  "topRight": {
+                    "mode": "token",
+                    "token": "xl",
+                    "value": 12
+                  },
+                  "bottomRight": {
+                    "mode": "token",
+                    "token": "xl",
+                    "value": 12
+                  },
+                  "bottomLeft": {
+                    "mode": "token",
+                    "token": "xl",
+                    "value": 12
+                  }
+                },
+                "bg": {
+                  "mode": "token",
+                  "token": "zinc-50",
+                  "value": "#fafafa"
+                },
+                "grow": {
+                  "mode": "token",
+                  "token": "DEFAULT",
+                  "value": 1
+                },
+                "children": [
+                  {
+                    "type": "box",
+                    "name": "Card 3 Icon",
+                    "width": {
+                      "mode": "fixed",
+                      "value": {
+                        "mode": "token",
+                        "token": "10",
+                        "value": 40
+                      }
+                    },
+                    "height": {
+                      "mode": "fixed",
+                      "value": {
+                        "mode": "token",
+                        "token": "10",
+                        "value": 40
+                      }
+                    },
+                    "borderRadius": {
+                      "topLeft": {
+                        "mode": "token",
+                        "token": "lg",
+                        "value": 8
+                      },
+                      "topRight": {
+                        "mode": "token",
+                        "token": "lg",
+                        "value": 8
+                      },
+                      "bottomRight": {
+                        "mode": "token",
+                        "token": "lg",
+                        "value": 8
+                      },
+                      "bottomLeft": {
+                        "mode": "token",
+                        "token": "lg",
+                        "value": 8
+                      }
+                    },
+                    "bg": {
+                      "mode": "token",
+                      "token": "violet-100",
+                      "value": "#ede9fe"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "name": "Card 3 Title",
+                    "content": "Clean Export",
+                    "tag": "h3",
+                    "fontSize": {
+                      "mode": "token",
+                      "token": "base",
+                      "value": 16
+                    },
+                    "fontWeight": {
+                      "mode": "token",
+                      "token": "semibold",
+                      "value": 600
+                    },
+                    "color": {
+                      "mode": "token",
+                      "token": "zinc-900",
+                      "value": "#18181b"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "name": "Card 3 Desc",
+                    "content": "Export semantic HTML with Tailwind classes, ready to drop into any project or framework.",
+                    "tag": "p",
+                    "fontSize": {
+                      "mode": "token",
+                      "token": "sm",
+                      "value": 14
+                    },
+                    "lineHeight": {
+                      "mode": "token",
+                      "token": "relaxed",
+                      "value": 1.625
+                    },
+                    "color": {
+                      "mode": "token",
+                      "token": "zinc-500",
+                      "value": "#71717a"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "box",
+            "name": "Footer",
+            "tag": "footer",
+            "display": "flex",
+            "direction": "row",
+            "justify": "center",
+            "align": "center",
+            "padding": {
+              "top": {
+                "mode": "token",
+                "token": "8",
+                "value": 32
+              },
+              "right": {
+                "mode": "token",
+                "token": "8",
+                "value": 32
+              },
+              "bottom": {
+                "mode": "token",
+                "token": "8",
+                "value": 32
+              },
+              "left": {
+                "mode": "token",
+                "token": "8",
+                "value": 32
+              }
+            },
+            "children": [
+              {
+                "type": "text",
+                "name": "Footer Text",
+                "content": "Made with Caja",
+                "tag": "span",
+                "fontSize": {
+                  "mode": "token",
+                  "token": "sm",
+                  "value": 14
+                },
+                "color": {
+                  "mode": "token",
+                  "token": "zinc-400",
+                  "value": "#a1a1aa"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "activePageId": "page-1"
+}

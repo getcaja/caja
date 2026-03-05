@@ -3,11 +3,12 @@ import type { Frame } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { Section } from '../ui/Section'
 import { TokenInput } from '../ui/TokenInput'
+import { Select } from '../ui/Select'
 import { DURATION_SCALE } from '../../data/scales'
 
 const TRANSITION_OPTIONS = [
   { value: 'none', label: 'None' },
-  { value: 'all', label: 'All', group: 'Properties' },
+  { value: 'all', label: 'All' },
   { value: 'colors', label: 'Colors' },
   { value: 'opacity', label: 'Opacity' },
   { value: 'shadow', label: 'Shadow' },
@@ -28,12 +29,12 @@ export function TransitionSection({ frame }: { frame: Frame }) {
     <Section title="Transition" defaultCollapsed>
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          <TokenInput
+          <Select
             value={frame.transition}
             options={TRANSITION_OPTIONS}
             onChange={(v) => updateFrame(frame.id, { transition: v as Frame['transition'] })}
+            className="flex-1"
             inlineLabel={<Zap size={12} />}
-            classPrefix="transition"
             initialValue="none"
             tooltip="Transition"
           />
@@ -53,12 +54,12 @@ export function TransitionSection({ frame }: { frame: Frame }) {
               unit="ms"
               tooltip="Duration"
             />
-            <TokenInput
+            <Select
               value={frame.ease}
               options={EASE_OPTIONS}
               onChange={(v) => updateFrame(frame.id, { ease: v as Frame['ease'] })}
+              className="flex-1"
               inlineLabel={<Spline size={12} />}
-              classPrefix="ease"
               initialValue="linear"
               tooltip="Easing"
             />

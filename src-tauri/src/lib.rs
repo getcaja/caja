@@ -382,6 +382,75 @@ fn set_window_title(app: AppHandle, title: String) {
     }
 }
 
+// ── First Launch Flag ──
+
+fn has_launched_path() -> std::path::PathBuf {
+    let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".into());
+    std::path::Path::new(&home).join(".caja").join("has-launched")
+}
+
+#[tauri::command]
+fn check_has_launched() -> bool {
+    has_launched_path().exists()
+}
+
+#[tauri::command]
+fn mark_has_launched() {
+    let path = has_launched_path();
+    let _ = std::fs::create_dir_all(path.parent().unwrap());
+    let _ = std::fs::write(&path, "1");
+}
+
+// ── Recent Files ──
+
+fn recent_files_path() -> std::path::PathBuf {
+    let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".into());
+    std::path::Path::new(&home).join(".caja").join("recent-files.json")
+}
+
+fn load_recent_files() -> Vec<String> {
+    let path = recent_files_path();
+    let content = match std::fs::read_to_string(&path) {
+        Ok(c) => c,
+        Err(_) => return vec![],
+    };
+    let files: Vec<String> = serde_json::from_str(&content).unwrap_or_default();
+    files.into_iter().filter(|f| std::path::Path::new(f).exists()).collect()
+}
+
+fn save_recent_files(files: &[String]) {
+    let path = recent_files_path();
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    if let Ok(json) = serde_json::to_string_pretty(&files) {
+        let _ = std::fs::write(&path, json);
+    }
+}
+
+fn add_to_recent(file_path: &str) {
+    let mut files = load_recent_files();
+    files.retain(|f| f != file_path);
+    files.insert(0, file_path.to_string());
+    files.truncate(10);
+    save_recent_files(&files);
+}
+
+#[tauri::command]
+fn get_recent_files() -> Vec<String> {
+    load_recent_files()
+}
+
+#[tauri::command]
+fn add_recent_file(path: String) {
+    add_to_recent(&path);
+}
+
+#[tauri::command]
+fn clear_recent_files() {
+    save_recent_files(&[]);
+}
+
 // ── App Setup ──
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -394,7 +463,7 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
-        .invoke_handler(tauri::generate_handler![mcp_respond, set_menu_check, set_window_title, install_mcp, resolve_mcp_server_path])
+        .invoke_handler(tauri::generate_handler![mcp_respond, set_menu_check, set_window_title, install_mcp, resolve_mcp_server_path, get_recent_files, add_recent_file, clear_recent_files, check_has_launched, mark_has_launched])
         .setup(|app| {
             // ── Native Menu ──
             let icon = Image::from_bytes(include_bytes!("../icons/128x128@2x.png"))
@@ -407,6 +476,10 @@ pub fn run() {
             let check_updates_item = MenuItemBuilder::with_id("check-for-updates", "Check for Updates…")
                 .build(app)?;
 
+            let quit_item = MenuItemBuilder::with_id("quit", "Quit Caja")
+                .accelerator("CmdOrCtrl+Q")
+                .build(app)?;
+
             let app_menu = SubmenuBuilder::new(app, "Caja")
                 .about(Some(about))
                 .item(&check_updates_item)
@@ -417,7 +490,7 @@ pub fn run() {
                 .hide_others()
                 .show_all()
                 .separator()
-                .quit()
+                .item(&quit_item)
                 .build()?;
 
             let new_item = MenuItemBuilder::with_id("new", "New")
@@ -435,9 +508,39 @@ pub fn run() {
             let export_item = MenuItemBuilder::with_id("export", "Export…")
                 .accelerator("CmdOrCtrl+E")
                 .build(app)?;
+            // Build "Open Recent" submenu
+            let recent_files = load_recent_files();
+            let mut recent_menu = SubmenuBuilder::new(app, "Open Recent");
+            if recent_files.is_empty() {
+                let no_recent = MenuItemBuilder::with_id("no-recent", "No Recent Files")
+                    .enabled(false)
+                    .build(app)?;
+                recent_menu = recent_menu.item(&no_recent);
+            } else {
+                // Store items in a Vec to keep them alive for the builder
+                let mut recent_items = Vec::new();
+                for (i, path) in recent_files.iter().enumerate() {
+                    let label = std::path::Path::new(path)
+                        .file_name()
+                        .map(|f| f.to_string_lossy().to_string())
+                        .unwrap_or_else(|| path.clone());
+                    let item = MenuItemBuilder::with_id(format!("recent-{}", i), &label)
+                        .build(app)?;
+                    recent_items.push(item);
+                }
+                for item in &recent_items {
+                    recent_menu = recent_menu.item(item);
+                }
+                let clear_item = MenuItemBuilder::with_id("clear-recent", "Clear Recent")
+                    .build(app)?;
+                recent_menu = recent_menu.separator().item(&clear_item);
+            }
+            let recent_submenu = recent_menu.build()?;
+
             let file_menu = SubmenuBuilder::new(app, "File")
                 .item(&new_item)
                 .item(&open_item)
+                .item(&recent_submenu)
                 .separator()
                 .item(&save_item)
                 .item(&save_as_item)
@@ -487,7 +590,7 @@ pub fn run() {
                 .build(app)?;
             let expand_all = MenuItemBuilder::with_id("expand-all", "Expand All Layers")
                 .build(app)?;
-            let reset_layout = MenuItemBuilder::with_id("reset-layout", "Reset Layout")
+            let reset_layout = MenuItemBuilder::with_id("reset-layout", "Reset to Default")
                 .build(app)?;
 
             let view_menu = SubmenuBuilder::new(app, "View")
@@ -544,14 +647,22 @@ pub fn run() {
             }
 
             // ── MCP HTTP Bridge ──
-            let auth_token = uuid::Uuid::new_v4().to_string();
-
-            // Write token to ~/.caja/mcp-token for server.mjs to read
-            if let Some(home) = std::env::var_os("HOME") {
+            // Reuse existing token so server.mjs stays connected across app restarts
+            let auth_token = if let Some(home) = std::env::var_os("HOME") {
                 let caja_dir = std::path::Path::new(&home).join(".caja");
+                let token_path = caja_dir.join("mcp-token");
                 let _ = std::fs::create_dir_all(&caja_dir);
-                let _ = std::fs::write(caja_dir.join("mcp-token"), &auth_token);
-            }
+                match std::fs::read_to_string(&token_path) {
+                    Ok(t) if !t.trim().is_empty() => t.trim().to_string(),
+                    _ => {
+                        let t = uuid::Uuid::new_v4().to_string();
+                        let _ = std::fs::write(&token_path, &t);
+                        t
+                    }
+                }
+            } else {
+                uuid::Uuid::new_v4().to_string()
+            };
 
             let bridge_state = BridgeState {
                 app: app.handle().clone(),
@@ -648,6 +759,14 @@ pub fn run() {
                     }
                 }
                 _ => {}
+            }
+            // Recent file items and clear-recent
+            if id.starts_with("recent-") || id == "clear-recent" {
+                if id == "clear-recent" {
+                    save_recent_files(&[]);
+                }
+                let _ = app.emit("menu-event", id);
+                return;
             }
             let _ = app.emit("menu-event", id);
         })

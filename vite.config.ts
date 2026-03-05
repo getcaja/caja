@@ -6,7 +6,12 @@ import tailwindcss from '@tailwindcss/vite'
 const host = process.env.TAURI_DEV_HOST
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), {
+    name: 'caja-json',
+    transform(code, id) {
+      if (id.endsWith('.caja')) return { code: `export default ${code}`, map: null }
+    },
+  }],
   test: { exclude: ['e2e/**', 'node_modules/**'] },
   clearScreen: false,
   server: {

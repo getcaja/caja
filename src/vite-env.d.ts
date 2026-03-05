@@ -5,3 +5,9 @@ declare module '*.css?raw' {
   const content: string
   export default content
 }
+
+// Allow importing .caja files as JSON
+declare module '*.caja' {
+  const value: Record<string, unknown>
+  export default value
+}

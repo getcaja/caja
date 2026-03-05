@@ -58,13 +58,7 @@ function validateCajaData(data: unknown): data is Record<string, unknown> {
   return true
 }
 
-export async function openFile(): Promise<{ path: string; data: Record<string, unknown> } | null> {
-  const path = await open({
-    filters: [FILE_FILTER],
-    multiple: false,
-    directory: false,
-  })
-  if (!path) return null
+async function parseAndValidate(path: string): Promise<{ path: string; data: Record<string, unknown> }> {
   const content = await readTextFile(path)
   let data: unknown
   try {
@@ -75,10 +69,24 @@ export async function openFile(): Promise<{ path: string; data: Record<string, u
   if (!validateCajaData(data)) {
     throw new Error('File is not a valid .caja file (missing pages or root)')
   }
-  // Convert relative asset paths back to absolute based on .caja location
   const d = data as Record<string, unknown>
   if (Array.isArray(d.pages)) {
     d.pages = await absolutizeAssetPaths(d.pages, path)
   }
   return { path, data: d }
+}
+
+export async function openFile(): Promise<{ path: string; data: Record<string, unknown> } | null> {
+  const path = await open({
+    filters: [FILE_FILTER],
+    multiple: false,
+    directory: false,
+  })
+  if (!path) return null
+  return parseAndValidate(path)
+}
+
+/** Open a .caja file by known path (no dialog) */
+export async function openFilePath(path: string): Promise<{ path: string; data: Record<string, unknown> }> {
+  return parseAndValidate(path)
 }

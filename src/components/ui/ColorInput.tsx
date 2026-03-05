@@ -70,6 +70,7 @@ export function ColorInput({
   const stableToken = showGrid ? committedTokenRef.current : token
   const displayValue = focused ? draft : (stableToken ? '' : colorValue)
   const isEmpty = !stableToken && colorValue === ''
+  const emptyPlaceholder = 'None'
 
   return (
     <div className="relative flex-1 min-w-0">
@@ -78,10 +79,21 @@ export function ColorInput({
         onClick={(e) => { if (e.target === e.currentTarget) inputRef.current?.focus() }}
       >
         <span title={tooltip} className="w-4 shrink-0 flex items-center justify-center">
-          <span
-            className="w-3 h-3 rounded-full border"
-            style={{ borderColor: 'var(--fg-subtle)', backgroundColor: colorValue || 'transparent' }}
-          />
+          {isEmpty ? (
+            <span
+              className="w-3 h-3 rounded-full border overflow-hidden"
+              style={{
+                borderColor: 'var(--fg-subtle)',
+                backgroundImage: 'repeating-conic-gradient(var(--surface-3) 0% 25%, transparent 0% 50%)',
+                backgroundSize: '6px 6px',
+              }}
+            />
+          ) : (
+            <span
+              className="w-3 h-3 rounded-full border"
+              style={{ borderColor: 'var(--fg-subtle)', backgroundColor: colorValue || 'transparent' }}
+            />
+          )}
         </span>
 
         {stableToken && (
@@ -107,7 +119,7 @@ export function ColorInput({
           onBlur={() => commitDraft()}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={stableToken ? '' : (isEmpty ? 'Default' : '#000000')}
+          placeholder={stableToken ? '' : emptyPlaceholder}
           className={`flex-1 ${stableToken ? 'min-w-0' : 'min-w-[20px]'} text-[12px]`}
         />
 

@@ -27,7 +27,7 @@ export function AppearanceSection({ frame, hasOverrides, onResetOverrides }: { f
             unit="%"
             classPrefix="opacity"
             defaultValue={100}
-            placeholder="100%"
+            placeholder="100"
             inlineLabel={<Blend size={12} />}
             tooltip="Opacity"
           />

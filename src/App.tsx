@@ -4,8 +4,9 @@ import { TreePanel } from './components/TreePanel/TreePanel'
 import { Canvas } from './components/Canvas/Canvas'
 import { RightPanel } from './components/RightPanel/RightPanel'
 import { ExportModal } from './components/Export/ExportModal'
+import { WelcomeModal } from './components/WelcomeModal'
 import { TooltipProvider } from './components/ui/Tooltip'
-import { saveFile, saveFileAs, openFile } from './lib/fileOps'
+import { saveFile, saveFileAs, openFile, openFilePath } from './lib/fileOps'
 import { useCatalogStore, loadComponentsFromStorage } from './store/catalogStore'
 import { WorkspaceDndProvider } from './components/TreePanel/WorkspaceDndContext'
 
@@ -55,6 +56,7 @@ function safeMenuSync(invoke: (cmd: string, args?: Record<string, unknown>) => P
 
 function App() {
   const [showExport, setShowExport] = useState(false)
+  const [showWelcome, setShowWelcome] = useState(false)
   const initial = useRef(loadPanelState())
   const [leftWidth, setLeftWidth] = useState(initial.current.leftWidth)
   const [rightWidth, setRightWidth] = useState(initial.current.rightWidth)
@@ -74,6 +76,7 @@ function App() {
   const undo = useFrameStore((s) => s.undo)
   const redo = useFrameStore((s) => s.redo)
   const filePath = useFrameStore((s) => s.filePath)
+  const projectName = useFrameStore((s) => s.projectName)
   const previewMode = useFrameStore((s) => s.previewMode)
   const activePageId = useFrameStore((s) => s.activePageId)
   const pages = useFrameStore((s) => s.pages)
@@ -85,18 +88,53 @@ function App() {
   const lastTitleRef = useRef('')
   useEffect(() => {
     if (!isTauri) return
-    const fileName = filePath ? filePath.split('/').pop() : 'Untitled'
+    const fileName = filePath ? filePath.split('/').pop() : (projectName ?? 'Untitled')
     const activePage = pages.find((p) => p.id === activePageId)
     const pageName = activePage?.name || ''
     const regularPages = pages.filter((p) => !p.isComponentPage)
     const pageLabel = regularPages.length > 1 && pageName ? ` — ${pageName}` : ''
-    const title = `${fileName}${pageLabel} · Caja`
+    const title = `${fileName}${pageLabel}`
     if (title === lastTitleRef.current) return
     lastTitleRef.current = title
     import('@tauri-apps/api/core').then(({ invoke }) => {
       invoke('set_window_title', { title })
     }).catch((err) => console.warn('Failed to set window title:', err))
-  }, [filePath, activePageId, pages])
+  }, [filePath, projectName, activePageId, pages])
+
+  const recentFilesRef = useRef<string[]>([])
+
+  /** Add path to recent files (fire-and-forget) */
+  const addToRecent = useCallback((path: string) => {
+    if (!isTauri) return
+    import('@tauri-apps/api/core').then(({ invoke }) => {
+      invoke('add_recent_file', { path }).catch((err: unknown) => console.warn('Failed to add recent file:', err))
+    })
+  }, [])
+
+  /** Load a .caja file by known path (shared logic for handleOpen and recent files) */
+  const loadFileFromPath = useCallback(async (result: { path: string; data: Record<string, unknown> }) => {
+    const { migrateToInternalRoot } = await import('./store/frameStore')
+    const data = result.data
+    if (data.pages && Array.isArray(data.pages)) {
+      const pages = (data.pages as Array<Record<string, unknown>>).map((p) => ({
+        id: p.id as string,
+        name: p.name as string,
+        route: p.route as string,
+        root: migrateToInternalRoot(p.root as Record<string, unknown>, p.id as string),
+        ...(p.isComponentPage ? { isComponentPage: true as const } : {}),
+      }))
+      const activePageId = (data.activePageId as string) || pages[0].id
+      useFrameStore.getState().loadFromFileMulti(pages, activePageId, result.path)
+    } else if (data.root) {
+      const root = migrateToInternalRoot(data.root as Record<string, unknown>, 'page-1')
+      useFrameStore.getState().loadFromFile(root, result.path)
+    }
+    useCatalogStore.getState().loadComponents(data.components as import('./store/catalogStore').ComponentData | undefined)
+    addToRecent(result.path)
+    import('./lib/assetOps').then(({ restoreAllAssets }) => {
+      restoreAllAssets(useFrameStore.getState().pages).catch((err) => console.warn('Asset restore failed:', err))
+    })
+  }, [addToRecent])
 
   const handleSave = useCallback(async () => {
     if (!isTauri) return
@@ -106,8 +144,9 @@ function App() {
     if (path) {
       store.setFilePath(path)
       store.markClean()
+      addToRecent(path)
     }
-  }, [])
+  }, [addToRecent])
 
   const handleSaveAs = useCallback(async () => {
     if (!isTauri) return
@@ -117,48 +156,37 @@ function App() {
     if (path) {
       store.setFilePath(path)
       store.markClean()
+      addToRecent(path)
     }
-  }, [])
+  }, [addToRecent])
 
   const handleOpen = useCallback(async () => {
     if (!isTauri) return
     try {
       const result = await openFile()
-      if (result) {
-        const { migrateToInternalRoot } = await import('./store/frameStore')
-        const data = result.data
-        if (data.pages && Array.isArray(data.pages)) {
-          // New multi-page format
-          const pages = (data.pages as Array<Record<string, unknown>>).map((p) => ({
-            id: p.id as string,
-            name: p.name as string,
-            route: p.route as string,
-            root: migrateToInternalRoot(p.root as Record<string, unknown>, p.id as string),
-            ...(p.isComponentPage ? { isComponentPage: true as const } : {}),
-          }))
-          const activePageId = (data.activePageId as string) || pages[0].id
-          useFrameStore.getState().loadFromFileMulti(pages, activePageId, result.path)
-        } else if (data.root) {
-          // Legacy single-root format
-          const root = migrateToInternalRoot(data.root as Record<string, unknown>, 'page-1')
-          useFrameStore.getState().loadFromFile(root, result.path)
-        }
-        useCatalogStore.getState().loadComponents(data.components as import('./store/catalogStore').ComponentData | undefined)
-        // Restore blob URLs from local asset files after file load
-        import('./lib/assetOps').then(({ restoreAllAssets }) => {
-          restoreAllAssets(useFrameStore.getState().pages).catch((err) => console.warn('Asset restore failed:', err))
-        })
-      }
+      if (result) await loadFileFromPath(result)
     } catch (err) {
       console.error('Failed to open file:', err)
       const msg = err instanceof Error ? err.message : 'Unknown error opening file'
       const { message } = await import('@tauri-apps/plugin-dialog')
       message(msg, { title: 'Open Failed', kind: 'error' })
     }
-  }, [])
+  }, [loadFileFromPath])
 
   useEffect(() => {
-    loadFromStorage()
+    const didRestore = loadFromStorage()
+    // First-launch: if no localStorage data, check filesystem flag (Tauri only)
+    if (!didRestore && isTauri) {
+      import('@tauri-apps/api/core').then(({ invoke }) => {
+        invoke<boolean>('check_has_launched').then(async (launched) => {
+          if (!launched) {
+            useFrameStore.getState().loadSampleProject()
+            await invoke('mark_has_launched')
+            setShowWelcome(true)
+          }
+        }).catch((err) => console.warn('First-launch check failed:', err))
+      })
+    }
     // Restore blob URLs from local asset files (async, non-blocking)
     import('./lib/assetOps').then(({ restoreAllAssets }) => {
       restoreAllAssets(useFrameStore.getState().pages).catch((err) => console.warn('Asset restore failed:', err))
@@ -166,7 +194,7 @@ function App() {
     loadComponentsFromStorage()
     startMcpBridge()
 
-    // Sync initial view prefs to native menu check states
+    // Sync initial view prefs to native menu check states + load recent files
     if (isTauri) {
       import('@tauri-apps/api/core').then(({ invoke }) => {
         safeMenuSync(invoke, 'toggle-left-panel', true)
@@ -176,6 +204,10 @@ function App() {
         for (const tid of ['system', 'default-dark', 'default-light']) {
           safeMenuSync(invoke, `theme-${tid}`, tid === pref)
         }
+        // Load recent files list for menu event index lookups
+        invoke<string[]>('get_recent_files').then((files) => {
+          recentFilesRef.current = files
+        }).catch((err: unknown) => console.warn('Failed to load recent files:', err))
       }).catch((err) => console.warn('Failed to load Tauri core for menu sync:', err))
     }
 
@@ -183,6 +215,48 @@ function App() {
 
     return () => stopMcpBridge()
   }, [loadFromStorage])
+
+  // Unsaved changes protection on window close (Tauri)
+  const handleSaveRef = useRef(handleSave)
+  handleSaveRef.current = handleSave
+  const closingRef = useRef(false)
+  useEffect(() => {
+    if (!isTauri) return
+    let cancelled = false
+    let unlisten: (() => void) | undefined
+    import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
+      if (cancelled) return
+      const win = getCurrentWindow()
+      win.onCloseRequested(async (event) => {
+        // Guard: prevent double-fire (plugin or destroy re-triggers)
+        if (closingRef.current) { event.preventDefault(); return }
+        // Always prevent default — relying on native close is unreliable
+        // when tauri_plugin_window_state intercepts the event.
+        event.preventDefault()
+        const { dirty, filePath, projectName, root } = useFrameStore.getState()
+        const hasUnsavedContent = !filePath && !projectName && root.children.length > 0
+        if (dirty || hasUnsavedContent) {
+          const { ask } = await import('@tauri-apps/plugin-dialog')
+          const save = await ask('You have unsaved changes. Save before closing?', {
+            title: 'Unsaved Changes',
+            kind: 'warning',
+            okLabel: 'Save',
+            cancelLabel: "Don't Save",
+          })
+          if (save) {
+            await handleSaveRef.current()
+          }
+        }
+        closingRef.current = true
+        const { exit } = await import('@tauri-apps/plugin-process')
+        await exit(0)
+      }).then((fn) => {
+        if (cancelled) { fn(); return } // effect disposed before import resolved
+        unlisten = fn
+      })
+    })
+    return () => { cancelled = true; unlisten?.() }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Listen for native menu events (Tauri)
   useEffect(() => {
@@ -193,15 +267,48 @@ function App() {
       if (!active) return
 
       // Regular menu events
-      listen<string>('menu-event', (e) => {
+      listen<string>('menu-event', async (e) => {
         switch (e.payload) {
-          case 'new':
+          case 'new': {
+            if (useFrameStore.getState().dirty) {
+              const { ask } = await import('@tauri-apps/plugin-dialog')
+              const save = await ask('Save changes before creating a new file?', {
+                title: 'Unsaved Changes', kind: 'warning',
+                okLabel: 'Save', cancelLabel: "Don't Save",
+              })
+              if (save) await handleSave()
+            }
             useFrameStore.getState().newFile()
             import('./lib/assetOps').then(({ revokeAllBlobUrls }) => revokeAllBlobUrls())
             break
-          case 'open':
+          }
+          case 'open': {
+            if (useFrameStore.getState().dirty) {
+              const { ask } = await import('@tauri-apps/plugin-dialog')
+              const save = await ask('Save changes before opening another file?', {
+                title: 'Unsaved Changes', kind: 'warning',
+                okLabel: 'Save', cancelLabel: "Don't Save",
+              })
+              if (save) await handleSave()
+            }
             handleOpen()
             break
+          }
+          case 'quit': {
+            const qs = useFrameStore.getState()
+            const qHasUnsaved = !qs.filePath && !qs.projectName && qs.root.children.length > 0
+            if (qs.dirty || qHasUnsaved) {
+              const { ask } = await import('@tauri-apps/plugin-dialog')
+              const save = await ask('You have unsaved changes. Save before quitting?', {
+                title: 'Unsaved Changes', kind: 'warning',
+                okLabel: 'Save', cancelLabel: "Don't Save",
+              })
+              if (save) await handleSave()
+            }
+            const { exit } = await import('@tauri-apps/plugin-process')
+            await exit(0)
+            break
+          }
           case 'save':
             handleSave()
             break
@@ -241,6 +348,24 @@ function App() {
             })
             break
           default:
+            // Recent file items: "recent-N" → open file at index N
+            if (e.payload.startsWith('recent-')) {
+              const index = parseInt(e.payload.slice(7), 10)
+              const path = recentFilesRef.current[index]
+              if (path) {
+                openFilePath(path).then(loadFileFromPath).catch((err) => {
+                  console.error('Failed to open recent file:', err)
+                  import('@tauri-apps/plugin-dialog').then(({ message }) => {
+                    message(err instanceof Error ? err.message : 'Failed to open file', { title: 'Open Failed', kind: 'error' })
+                  })
+                })
+              }
+              break
+            }
+            if (e.payload === 'clear-recent') {
+              recentFilesRef.current = []
+              break
+            }
             // Theme menu items: "theme-<id>" → strip prefix
             if (e.payload.startsWith('theme-')) {
               const themeId = e.payload.slice(6) // "theme-default-dark" → "default-dark"
@@ -264,7 +389,7 @@ function App() {
       })
     })
     return () => { active = false; unlisteners.forEach((fn) => fn()) }
-  }, [handleOpen, handleSave, handleSaveAs])
+  }, [handleOpen, handleSave, handleSaveAs, loadFileFromPath])
 
   // Re-apply theme when system color scheme changes (only matters when preference is 'system')
   useEffect(() => {
@@ -316,7 +441,7 @@ function App() {
         if (s.selectedId) s.ungroupFrame(s.selectedId)
       }
       // Delete / Backspace — delete selected frame (global)
-      if ((e.key === 'Delete' || e.key === 'Backspace') && !e.metaKey && !e.ctrlKey) {
+      if ((e.key === 'Delete' || e.key === 'Backspace') && !e.metaKey && !e.ctrlKey && !e.defaultPrevented) {
         const tag = (e.target as HTMLElement).tagName
         const isEditable = (e.target as HTMLElement).isContentEditable
         if (tag !== 'INPUT' && tag !== 'TEXTAREA' && !isEditable) {
@@ -331,7 +456,7 @@ function App() {
         }
       }
       // Arrow keys — reorder selected frame (global)
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey && !e.defaultPrevented) {
         const tag = (e.target as HTMLElement).tagName
         const isEditable = (e.target as HTMLElement).isContentEditable
         if (tag !== 'INPUT' && tag !== 'TEXTAREA' && !isEditable) {
@@ -350,7 +475,7 @@ function App() {
         }
       }
       // Cmd+D — duplicate (global, works regardless of active tab)
-      if ((e.metaKey || e.ctrlKey) && key === 'd' && !e.shiftKey) {
+      if ((e.metaKey || e.ctrlKey) && key === 'd' && !e.shiftKey && !e.defaultPrevented) {
         const tag = (e.target as HTMLElement).tagName
         const isEditable = (e.target as HTMLElement).isContentEditable
         if (tag !== 'INPUT' && tag !== 'TEXTAREA' && !isEditable) {
@@ -360,7 +485,7 @@ function App() {
         }
       }
       // Cmd+C — copy (global)
-      if ((e.metaKey || e.ctrlKey) && key === 'c' && !e.shiftKey) {
+      if ((e.metaKey || e.ctrlKey) && key === 'c' && !e.shiftKey && !e.defaultPrevented) {
         const tag = (e.target as HTMLElement).tagName
         const isEditable = (e.target as HTMLElement).isContentEditable
         if (tag !== 'INPUT' && tag !== 'TEXTAREA' && !isEditable) {
@@ -369,7 +494,7 @@ function App() {
         }
       }
       // Cmd+X — cut (global)
-      if ((e.metaKey || e.ctrlKey) && key === 'x' && !e.shiftKey) {
+      if ((e.metaKey || e.ctrlKey) && key === 'x' && !e.shiftKey && !e.defaultPrevented) {
         const tag = (e.target as HTMLElement).tagName
         const isEditable = (e.target as HTMLElement).isContentEditable
         if (tag !== 'INPUT' && tag !== 'TEXTAREA' && !isEditable) {
@@ -378,7 +503,7 @@ function App() {
         }
       }
       // Cmd+V — paste (global)
-      if ((e.metaKey || e.ctrlKey) && key === 'v' && !e.shiftKey) {
+      if ((e.metaKey || e.ctrlKey) && key === 'v' && !e.shiftKey && !e.defaultPrevented) {
         const tag = (e.target as HTMLElement).tagName
         const isEditable = (e.target as HTMLElement).isContentEditable
         if (tag !== 'INPUT' && tag !== 'TEXTAREA' && !isEditable) {
@@ -549,6 +674,7 @@ function App() {
 
         {/* Export modal */}
         <ExportModal open={showExport} onOpenChange={setShowExport} />
+        <WelcomeModal open={showWelcome} onOpenChange={setShowWelcome} />
 
       </div>
     </TooltipProvider>

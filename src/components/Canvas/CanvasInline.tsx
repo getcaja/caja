@@ -27,6 +27,11 @@ let _cursorX: number | null = null
 let _cursorY: number | null = null
 
 export function canvasZoomTo(nextZoom: number) {
+  // Fallback: if _scrollEl was lost (e.g. after HMR), re-acquire from DOM
+  if (!_scrollEl) {
+    const wrapper = document.querySelector<HTMLElement>('[data-canvas-wrapper]')
+    _scrollEl = wrapper?.parentElement ?? null
+  }
   const scrollEl = _scrollEl
   if (!scrollEl) return
   const { canvasZoom, setCanvasZoom } = useFrameStore.getState()
@@ -249,7 +254,7 @@ export function CanvasInline() {
   }
 
   return (
-    <div ref={wrapperRef} style={{ ...wrapperStyle, position: 'relative' }}>
+    <div ref={wrapperRef} data-canvas-wrapper style={{ ...wrapperStyle, position: 'relative' }}>
       <div
         ref={canvasRef}
         id="caja-canvas"

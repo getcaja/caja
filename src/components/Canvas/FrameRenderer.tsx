@@ -87,6 +87,8 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
     || frame.width.mode === 'fill' || frame.height.mode === 'fill'
     || frame.bg.value || frame.bgImage
     || frame.minHeight.value > 0 || frame.minWidth.value > 0
+    || (frame.padding && (frame.padding.top.value > 0 || frame.padding.bottom.value > 0 || frame.padding.left.value > 0 || frame.padding.right.value > 0))
+    || frame.tailwindClasses
   )
   const isEmpty = isBox && frame.children.length === 0 && !hasVisualPresence
   const isDragged = canvasDragId === frame.id

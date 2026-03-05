@@ -4,6 +4,7 @@ import type { TextStyles, DesignValue } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { Section } from '../ui/Section'
 import { TokenInput } from '../ui/TokenInput'
+import { Select } from '../ui/Select'
 import { ColorInput } from '../ui/ColorInput'
 import { ToggleGroup } from '../ui/ToggleGroup'
 import { Popover } from '../ui/Popover'
@@ -13,10 +14,10 @@ import { TEXT_TRANSFORM_OPTIONS, WHITE_SPACE_OPTIONS } from './constants'
 const lbl = (text: string) => <span className="text-[12px]">{text}</span>
 
 const FONT_FAMILY_OPTIONS = [
-  { value: '', label: 'Default', token: '' },
-  { value: 'sans', label: 'Sans Serif', token: 'sans', group: 'Fonts' },
-  { value: 'serif', label: 'Serif', token: 'serif' },
-  { value: 'mono', label: 'Monospace', token: 'mono' },
+  { value: '__default__', label: 'Default' },
+  { value: 'sans', label: 'Sans Serif' },
+  { value: 'serif', label: 'Serif' },
+  { value: 'mono', label: 'Monospace' },
 ]
 
 export function TypographySection({ frame, hasOverrides, onResetOverrides }: { frame: TextStyles & { id: string; color: DesignValue<string> }; hasOverrides?: boolean; onResetOverrides?: () => void }) {
@@ -33,13 +34,13 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides }: { f
       <div className="flex flex-col gap-2">
         {/* Font family */}
         <div className="flex items-center gap-2">
-          <TokenInput
+          <Select
             options={FONT_FAMILY_OPTIONS}
-            value={frame.fontFamily}
-            onChange={(v) => updateFrame(frame.id, { fontFamily: v })}
-            classPrefix="font"
-            initialValue=""
+            value={frame.fontFamily || '__default__'}
+            onChange={(v) => updateFrame(frame.id, { fontFamily: v === '__default__' ? '' : v })}
+            className="flex-1"
             inlineLabel={<Type size={12} />}
+            initialValue="__default__"
             tooltip="Font Family"
           />
           <div className="w-5 shrink-0" />
@@ -65,14 +66,10 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides }: { f
             onChange={(v) => updateFrame(frame.id, { fontWeight: v })}
             classPrefix="font"
             defaultValue={0}
-            placeholder="Regular"
+            placeholder="400"
+            unit=""
             inlineLabel={lbl('W')}
             tooltip="Font Weight"
-            autoOption={{
-              label: 'Default',
-              active: frame.fontWeight.mode === 'custom' && frame.fontWeight.value === 0,
-              onToggle: () => updateFrame(frame.id, { fontWeight: { mode: 'custom', value: 0 } }),
-            }}
           />
           <TokenInput
             scale={FONT_SIZE_SCALE}
@@ -86,11 +83,6 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides }: { f
             classPrefix="text"
             inlineLabel={lbl('S')}
             tooltip="Font Size"
-            autoOption={{
-              label: 'Default',
-              active: frame.fontSize.mode === 'custom' && frame.fontSize.value === 0,
-              onToggle: () => updateFrame(frame.id, { fontSize: { mode: 'custom', value: 0 } }),
-            }}
           />
           <div className="w-5 shrink-0" />
         </div>
@@ -108,11 +100,6 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides }: { f
             classPrefix="leading"
             inlineLabel={<MoveVertical size={12} />}
             tooltip="Line Height"
-            autoOption={{
-              label: 'Default',
-              active: frame.lineHeight.mode === 'custom' && frame.lineHeight.value === 0,
-              onToggle: () => updateFrame(frame.id, { lineHeight: { mode: 'custom', value: 0 } }),
-            }}
           />
           <TokenInput
             scale={LETTER_SPACING_SCALE}
@@ -120,16 +107,11 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides }: { f
             onChange={(v) => updateFrame(frame.id, { letterSpacing: v })}
             min={-10}
             defaultValue={0}
-            unit="px"
+            unit="em"
             placeholder="Auto"
             classPrefix="tracking"
             inlineLabel={<MoveHorizontal size={12} />}
             tooltip="Letter Spacing"
-            autoOption={{
-              label: 'Default',
-              active: frame.letterSpacing.mode === 'custom' && frame.letterSpacing.value === 0,
-              onToggle: () => updateFrame(frame.id, { letterSpacing: { mode: 'custom', value: 0 } }),
-            }}
           />
           <div className="w-5 shrink-0" />
         </div>

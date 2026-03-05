@@ -427,14 +427,16 @@ export const createComponentSlice: StateCreator<FrameStore, [], [], ComponentSli
 
 // pushHistory is defined inline to avoid circular deps with coreTreeSlice — same logic
 const MAX_HISTORY = 50
+type HistoryEntry = { root: BoxElement; selectedId: string | null; selectedIds: string[] }
 
-function pushHistory(state: { root: BoxElement; past: Record<string, BoxElement[]>; future: Record<string, BoxElement[]>; activePageId: string; _previewSnapshot: BoxElement | null }): { past: Record<string, BoxElement[]>; future: Record<string, BoxElement[]>; dirty: boolean } {
+function pushHistory(state: { root: BoxElement; selectedId: string | null; selectedIds: Set<string>; past: Record<string, HistoryEntry[]>; future: Record<string, HistoryEntry[]>; activePageId: string; _previewSnapshot: BoxElement | null }): { past: Record<string, HistoryEntry[]>; future: Record<string, HistoryEntry[]>; dirty: boolean } {
   if (state._previewSnapshot) return { past: state.past, future: state.future, dirty: true }
   const pageId = state.activePageId
   const pagePast = state.past[pageId] || []
+  const entry: HistoryEntry = { root: cloneTree(state.root) as BoxElement, selectedId: state.selectedId, selectedIds: [...state.selectedIds] }
   return {
-    past: { ...state.past, [pageId]: [...pagePast.slice(-(MAX_HISTORY - 1)), cloneTree(state.root) as BoxElement] },
-    future: { ...state.future, [pageId]: [] as BoxElement[] },
+    past: { ...state.past, [pageId]: [...pagePast.slice(-(MAX_HISTORY - 1)), entry] },
+    future: { ...state.future, [pageId]: [] as HistoryEntry[] },
     dirty: true,
   }
 }

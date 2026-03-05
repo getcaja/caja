@@ -1,4 +1,4 @@
-import { Frame, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ChevronDown, Link } from 'lucide-react'
+import { Frame, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse, Link } from 'lucide-react'
 
 interface AddMenuProps {
   x: number
@@ -63,7 +63,7 @@ export function AddMenu({ x, y, onAdd, onClose }: AddMenuProps) {
         className="c-menu-item"
         onClick={() => onAdd('select')}
       >
-        <ChevronDown size={12} /> Add Select
+        <ListCollapse size={12} /> Add Select
       </button>
     </div>
     </>

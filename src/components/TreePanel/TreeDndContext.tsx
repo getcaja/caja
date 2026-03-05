@@ -14,11 +14,12 @@ import {
   type DroppableContainer,
 } from '@dnd-kit/core'
 import { useFrameStore, findInTree, findParent } from '../../store/frameStore'
-import type { Frame } from '../../types/frame'
+import type { Frame, BoxElement } from '../../types/frame'
 import {
-  Square, Type, ImageIcon, RectangleHorizontal,
-  TextCursorInput, AlignLeft, ListCollapse, Link,
+  Frame as FrameIcon, Type, ImageIcon, RectangleHorizontal,
+  TextCursorInput, AlignLeft, ListCollapse, Link, LayoutGrid,
 } from 'lucide-react'
+import { FlexColumnIcon, FlexRowIcon } from '../icons/LayoutIcons'
 import { computeZone, closestByY, type DropPosition } from './dndUtils'
 
 export type { DropPosition } from './dndUtils'
@@ -56,6 +57,13 @@ function DragGhost({ id, count }: { id: string; count: number }) {
   const frame = findInTree(root, id)
   if (!frame) return null
 
+  const boxIcon = frame.type === 'box'
+    ? (frame as BoxElement).display === 'grid' ? <LayoutGrid size={12} />
+    : (frame as BoxElement).display === 'flex' || (frame as BoxElement).display === 'inline-flex'
+      ? (frame as BoxElement).direction === 'row' ? <FlexRowIcon size={12} /> : <FlexColumnIcon size={12} />
+    : <FrameIcon size={12} />
+    : null
+
   const icon =
     frame.type === 'text' && 'tag' in frame && frame.tag === 'a' ? <Link size={12} />
     : frame.type === 'text' ? <Type size={12} />
@@ -64,7 +72,7 @@ function DragGhost({ id, count }: { id: string; count: number }) {
     : frame.type === 'input' ? <TextCursorInput size={12} />
     : frame.type === 'textarea' ? <AlignLeft size={12} />
     : frame.type === 'select' ? <ListCollapse size={12} />
-    : <Square size={12} />
+    : boxIcon ?? <FrameIcon size={12} />
 
   return (
     <div className="flex items-center gap-1.5 py-1 px-2 bg-inset rounded-md fg-default text-[12px] shadow-lg border border-border pointer-events-none" style={{ opacity: 0.6 }}>

@@ -2,7 +2,7 @@ import { useState, useRef, useMemo, useEffect, useCallback } from 'react'
 import {
   Monitor, Tablet, Smartphone,
   Plus, MousePointer2, Type, Eye,
-  Frame as FrameIcon, Link, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ChevronDown,
+  Frame as FrameIcon, Link, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse, ChevronDown,
 } from 'lucide-react'
 import { useFrameStore, isRootId } from '../../store/frameStore'
 import { importLocalAsset } from '../../lib/assetOps'
@@ -26,7 +26,7 @@ const PRIMITIVES: { type: ElementType; icon: React.ReactNode; label: string }[] 
   { type: 'button', icon: <RectangleHorizontal size={12} />, label: 'Add Button' },
   { type: 'input', icon: <TextCursorInput size={12} />, label: 'Add Input' },
   { type: 'textarea', icon: <AlignLeft size={12} />, label: 'Add Textarea' },
-  { type: 'select', icon: <ChevronDown size={12} />, label: 'Add Select' },
+  { type: 'select', icon: <ListCollapse size={12} />, label: 'Add Select' },
 ]
 
 function findParentBox(root: Frame, id: string): Frame | null {

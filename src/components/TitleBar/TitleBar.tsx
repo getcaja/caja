@@ -1,19 +1,20 @@
 import { useState } from 'react'
 import { useFrameStore } from '../../store/frameStore'
 import { McpModal } from '../McpModal/McpModal'
-import { Plug, Loader2 } from 'lucide-react'
+import { Cable, Loader2 } from 'lucide-react'
 
 const TRAFFIC_LIGHT_WIDTH = 70
 const TITLE_BAR_HEIGHT = 38
 
 export function TitleBar() {
   const filePath = useFrameStore((s) => s.filePath)
+  const projectName = useFrameStore((s) => s.projectName)
   const dirty = useFrameStore((s) => s.dirty)
   const mcpConnected = useFrameStore((s) => s.mcpConnected)
   const mcpBusy = useFrameStore((s) => s.mcpBusy)
   const [showMcp, setShowMcp] = useState(false)
 
-  const fileName = filePath ? filePath.split('/').pop()?.replace('.caja', '') : 'Untitled — Caja'
+  const fileName = filePath ? filePath.split('/').pop()?.replace('.caja', '') : projectName ?? 'Untitled'
 
   return (
     <div
@@ -44,7 +45,7 @@ export function TitleBar() {
           {mcpBusy ? (
             <Loader2 size={12} className="animate-spin" />
           ) : (
-            <Plug size={12} />
+            <Cable size={12} />
           )}
         </button>
       </div>

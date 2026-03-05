@@ -9,6 +9,7 @@ vi.stubGlobal('localStorage', {
 })
 
 import { useFrameStore, findInTree, isRootId, normalizeFrame, COMPONENT_PAGE_ID } from '../frameStore'
+import { _resetLoadGuard } from '../slices/fileSlice'
 import type { BoxElement, Frame, InputElement, TextElement } from '../../types/frame'
 
 // --- Helpers ---
@@ -31,6 +32,7 @@ function resetStore() {
   // newFile doesn't clear clipboard — do it explicitly
   useFrameStore.setState({ clipboard: [] })
   storage.clear()
+  _resetLoadGuard()
 }
 
 /** Add a child and return its id */
@@ -96,8 +98,8 @@ describe('frameStore', () => {
     it('auto-names children sequentially', () => {
       addChild('box')
       addChild('box')
-      expect(rootChildren()[0].name).toBe('frame-1')
-      expect(rootChildren()[1].name).toBe('frame-2')
+      expect(rootChildren()[0].name).toBe('Frame-1')
+      expect(rootChildren()[1].name).toBe('Frame-2')
     })
 
     it('selects the newly added child', () => {
@@ -146,12 +148,26 @@ describe('frameStore', () => {
       expect(store().selectedId).toBe(root().id)
     })
 
-    it('removes nested children', () => {
+    it('selects parent when removing nested child', () => {
       const parentId = addChild('box')
       addChild('text', parentId)
       const childId = (findInTree(root(), parentId) as BoxElement).children[0].id
+      store().select(childId)
       store().removeFrame(childId)
+      expect(store().selectedId).toBe(parentId)
       expect((findInTree(root(), parentId) as BoxElement).children).toHaveLength(0)
+    })
+
+    it('selects parent when removing deeply nested child', () => {
+      const grandparentId = addChild('box')
+      store().addChild(grandparentId, 'box')
+      const parentId = (findInTree(root(), grandparentId) as BoxElement).children[0].id
+      store().addChild(parentId, 'text')
+      const childId = (findInTree(root(), parentId) as BoxElement).children[0].id
+      store().select(childId)
+      store().removeFrame(childId)
+      // Should select direct parent, NOT grandparent
+      expect(store().selectedId).toBe(parentId)
     })
   })
 
@@ -798,8 +814,7 @@ describe('frameStore', () => {
   })
 
   describe('loadFromStorage', () => {
-    it('loads saved state from localStorage', () => {
-      // Manually construct saved state (simulating what auto-save would write)
+    it('returns true when data is found in localStorage', () => {
       const savedRoot = {
         id: '__root__page-1', type: 'box', name: 'Root', tag: 'body',
         display: 'flex', direction: 'column', justify: 'start', align: 'stretch',
@@ -809,9 +824,15 @@ describe('frameStore', () => {
       }
       const page = { id: 'page-1', name: 'Home', route: '/', root: savedRoot }
       storage.set('caja-state', JSON.stringify({ pages: [page], activePageId: 'page-1' }))
-      store().loadFromStorage()
+      const result = store().loadFromStorage()
+      expect(result).toBe(true)
       expect(rootChildren()).toHaveLength(1)
       expect(rootChildren()[0].type).toBe('text')
+    })
+
+    it('returns false when no data in localStorage', () => {
+      const result = store().loadFromStorage()
+      expect(result).toBe(false)
     })
 
     it('handles corrupted localStorage gracefully', () => {
@@ -828,6 +849,19 @@ describe('frameStore', () => {
       // Should wrap in internal root
       expect(isRootId(root().id)).toBe(true)
       expect(rootChildren()).toHaveLength(1)
+    })
+  })
+
+  describe('loadSampleProject', () => {
+    it('loads the sample project with Welcome page', () => {
+      store().loadSampleProject()
+      const s = store()
+      expect(s.pages).toHaveLength(1)
+      expect(s.pages[0].name).toBe('Welcome')
+      expect(s.pages[0].route).toBe('/welcome')
+      expect(isRootId(s.root.id)).toBe(true)
+      // Sample project has children
+      expect(s.root.children.length).toBeGreaterThan(0)
     })
   })
 

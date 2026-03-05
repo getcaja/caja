@@ -126,15 +126,20 @@ export const BORDER_WIDTH_SCALE: ScaleOption[] = [
 ]
 
 export const BORDER_RADIUS_SCALE: ScaleOption[] = [
-  { token: 'none', value: 0, label: 'None' },
-  { token: 'sm', value: 2, label: 'Small', group: 'Sizes' },
-  { token: 'DEFAULT', value: 4, label: 'Default' },
+  { token: 'sm', value: 2, label: 'Small' },
+  { token: 'DEFAULT', value: 4, label: 'Base' },
   { token: 'md', value: 6, label: 'Medium' },
   { token: 'lg', value: 8, label: 'Large' },
   { token: 'xl', value: 12, label: 'XL' },
   { token: '2xl', value: 16, label: '2XL' },
   { token: '3xl', value: 24, label: '3XL' },
   { token: 'full', value: 9999, label: 'Full' },
+]
+
+export const GAP_SCALE: ScaleOption[] = [
+  { token: 'auto', value: 0, label: 'Space' },
+  { ...SPACING_SCALE[0], group: 'Fixed' },
+  ...SPACING_SCALE.slice(1),
 ]
 
 export const MARGIN_SCALE: ScaleOption[] = [
@@ -265,9 +270,8 @@ export const DURATION_SCALE: ScaleOption[] = [
 ]
 
 export const BLUR_SCALE: ScaleOption[] = [
-  { token: '0', value: 0, label: 'None' },
-  { token: 'sm', value: 4, label: 'Small', group: 'Presets' },
-  { token: 'DEFAULT', value: 8, label: 'Default' },
+  { token: 'sm', value: 4, label: 'Small' },
+  { token: 'DEFAULT', value: 8, label: 'Base' },
   { token: 'md', value: 12, label: 'Medium' },
   { token: 'lg', value: 16, label: 'Large' },
   { token: 'xl', value: 24, label: 'XL' },

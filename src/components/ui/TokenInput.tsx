@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useId } from 'react'
-import { Diamond, Check } from 'lucide-react'
+import { Diamond, Check, Unlink } from 'lucide-react'
 import type { ScaleOption } from '../../data/scales'
 import type { DesignValue } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
@@ -16,52 +16,20 @@ function notifyDropdownOpen(id: string) {
   closeListeners.forEach(cb => cb(id))
 }
 
-export interface EnumOption {
-  value: string
-  label: string
-  token?: string
-  group?: string
-  description?: string
-}
-
-interface TokenInputBase {
-  label?: string
-  classPrefix?: string
-  inlineLabel?: React.ReactNode
-  tooltip?: string
-}
-
-interface AutoOption {
-  label: string
-  hint?: string
-  pill?: boolean
-  active: boolean
-  onToggle: () => void
-}
-
-interface TokenInputScale extends TokenInputBase {
+interface TokenInputProps {
   scale: ScaleOption[]
   value: DesignValue<number>
   onChange: (v: DesignValue<number>) => void
-  options?: never
   min?: number
   max?: number
   unit?: string
   defaultValue?: number
   placeholder?: string
-  autoOption?: AutoOption
+  label?: string
+  classPrefix?: string
+  inlineLabel?: React.ReactNode
+  tooltip?: string
 }
-
-interface TokenInputEnum extends TokenInputBase {
-  options: EnumOption[]
-  value: string
-  onChange: (v: string) => void
-  scale?: never
-  initialValue?: string
-  autoOption?: AutoOption
-}
-
-export type TokenInputProps = TokenInputScale | TokenInputEnum
 
 // Normalized item for the shared dropdown
 interface NormalizedItem {
@@ -69,13 +37,11 @@ interface NormalizedItem {
   token: string
   label: string | null
   displayRight: string
-  hint: string | null
   group: string | null
 }
 
 export function TokenInput(props: TokenInputProps) {
-  const { label, classPrefix: _classPrefix, inlineLabel, tooltip } = props
-  const isScale = 'scale' in props && props.scale !== undefined
+  const { scale, value, onChange, label, inlineLabel, tooltip } = props
   const startPreview = useFrameStore((s) => s.startPreview)
   const endPreview = useFrameStore((s) => s.endPreview)
   // --- Shared state ---
@@ -84,44 +50,28 @@ export function TokenInput(props: TokenInputProps) {
   const [selectedIdx, setSelectedIdx] = useState(-1)
   const containerRef = useRef<HTMLDivElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const originalRef = useRef<DesignValue<number> | string | null>(null)
+  const originalRef = useRef<DesignValue<number> | null>(null)
   const originalDraftRef = useRef('')
   const dropdownOpenRef = useRef(false)
-  const autoOptActiveAtOpenRef = useRef(false)
-
   // --- Singleton: close this dropdown when another opens ---
   const closeFromOutsideRef = useRef<() => void>(() => {})
 
-  // --- Scale-only state ---
-  const scaleProps = isScale ? (props as TokenInputScale) : null
-  const scaleToken = scaleProps ? (scaleProps.value.mode === 'token' ? scaleProps.value.token : null) : null
+  // --- Derived state ---
+  const scaleToken = value.mode === 'token' ? value.token : null
   const hasToken = scaleToken !== null
-  const scaleNumeric = scaleProps ? scaleProps.value.value : 0
-  const scaleMin = scaleProps?.min ?? 0
-  const scaleMax = scaleProps?.max ?? Infinity
-  const scaleUnit = scaleProps?.unit ?? 'px'
-  const scaleResetValue = scaleProps ? (scaleProps.defaultValue ?? scaleMin) : 0
-  const scaleIsUnset = scaleProps ? (scaleProps.value.mode === 'custom' && scaleProps.value.value === scaleResetValue) : false
+  const scaleNumeric = value.value
+  const scaleMin = props.min ?? 0
+  const scaleMax = props.max ?? Infinity
+  const scaleUnit = props.unit ?? 'px'
+  const scaleResetValue = props.defaultValue ?? scaleMin
+  const scaleIsUnset = value.mode === 'custom' && value.value === scaleResetValue
+  const isActive = !scaleIsUnset || hasToken
 
-  const [draft, setDraft] = useState(scaleProps ? (scaleIsUnset ? '' : String(scaleNumeric)) : '')
+  const [draft, setDraft] = useState(scaleIsUnset ? '' : String(scaleNumeric))
   const draftRef = useRef(draft)
   draftRef.current = draft
   const [focused, setFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
-
-  // --- Enum-only derived ---
-  const enumProps = !isScale ? (props as TokenInputEnum) : null
-  const enumCurrentOpt = enumProps ? enumProps.options.find((o) => o.value === enumProps.value) : null
-  const enumCurrentLabel = enumProps ? (enumCurrentOpt?.label ?? enumProps.value) : ''
-  const enumIsInitial = enumProps ? (enumProps.initialValue !== undefined && enumProps.value === enumProps.initialValue) : false
-
-  // --- AutoOption (must be before callbacks that reference it) ---
-  const autoOpt = scaleProps?.autoOption ?? enumProps?.autoOption
-
-  // Is the field in an "active" (non-default) state?
-  const isActive = isScale
-    ? (!scaleIsUnset || scaleToken !== null)
-    : !enumIsInitial
 
   // --- Inline label (with optional title tooltip) ---
   const inlineLabelEl = inlineLabel ? (
@@ -129,36 +79,34 @@ export function TokenInput(props: TokenInputProps) {
   ) : null
 
   // --- Normalize items for dropdown ---
-  const items: NormalizedItem[] = isScale
-    ? scaleProps!.scale.map((s) => ({
-        key: s.token,
-        token: s.token,
-        label: s.label ?? null,
-        displayRight: s.token === 'auto' ? 'auto' : `${s.value}${scaleUnit}`,
-        hint: null,
-        group: s.group ?? null,
-      }))
-    : enumProps!.options.map((o) => ({
-        key: o.value,
-        token: o.token ?? o.value,
-        label: null,
-        displayRight: o.label,
-        hint: o.description ?? null,
-        group: o.group ?? null,
-      }))
+  const items: NormalizedItem[] = scale.map((s) => ({
+    key: s.token,
+    token: s.token,
+    label: s.label ?? null,
+    displayRight: s.token === 'auto' ? '' : `${s.value}${scaleUnit}`,
+    group: s.group ?? null,
+  }))
 
-  // --- Sync draft when scale value changes externally ---
+  // --- Sync draft when value changes externally ---
   useEffect(() => {
-    if (!scaleProps || focused) return
-    const unset = scaleProps.value.mode === 'custom' && scaleProps.value.value === scaleResetValue
+    if (focused) return
+    const unset = value.mode === 'custom' && value.value === scaleResetValue
     setDraft(unset ? '' : String(scaleNumeric))
-  }, [scaleNumeric, scaleToken, focused, scaleProps?.value.mode, scaleResetValue])
+  }, [scaleNumeric, scaleToken, focused, value.mode, scaleResetValue])
 
-  // --- Scroll selected item into view ---
+  // --- Scroll selected item into view (within dropdown only, not parent panels) ---
   useEffect(() => {
     if (!showDropdown || !dropdownRef.current || selectedIdx < 0) return
-    const item = dropdownRef.current.children[selectedIdx] as HTMLElement | undefined
-    item?.scrollIntoView({ block: 'nearest' })
+    const container = dropdownRef.current
+    const item = container.children[selectedIdx] as HTMLElement | undefined
+    if (!item) return
+    const top = item.offsetTop
+    const bottom = top + item.offsetHeight
+    if (top < container.scrollTop) {
+      container.scrollTop = top
+    } else if (bottom > container.scrollTop + container.clientHeight) {
+      container.scrollTop = bottom - container.clientHeight
+    }
   }, [selectedIdx, showDropdown])
 
   // --- Dropdown flip: open above when not enough space below ---
@@ -169,7 +117,6 @@ export function TokenInput(props: TokenInputProps) {
     notifyDropdownOpen(instanceId)
     originalDraftRef.current = draft
     dropdownOpenRef.current = true
-    autoOptActiveAtOpenRef.current = !!autoOpt?.active
     // Measure available space below vs above
     if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect()
@@ -178,25 +125,16 @@ export function TokenInput(props: TokenInputProps) {
       setDropAbove(spaceBelow < 220 && spaceAbove > spaceBelow)
     }
     setShowDropdown(true)
-    if (isScale) {
-      const idx = hasToken && !autoOpt?.active ? scaleProps!.scale.findIndex((s) => s.token === scaleToken) : -1
-      setSelectedIdx(idx)
-    } else {
-      const idx = !autoOpt?.active ? enumProps!.options.findIndex((o) => o.value === enumProps!.value) : -1
-      setSelectedIdx(idx)
-    }
+    const idx = hasToken ? scale.findIndex((s) => s.token === scaleToken) : -1
+    setSelectedIdx(idx)
     startPreview()
-  }, [isScale, scaleToken, scaleProps?.scale, enumProps?.value, enumProps?.options, startPreview, autoOpt?.active])
+  }, [scaleToken, scale, startPreview])
 
   const closeDropdown = useCallback(() => {
     if (originalRef.current !== null) {
-      if (isScale) {
-        scaleProps!.onChange(originalRef.current as DesignValue<number>)
-        draftRef.current = originalDraftRef.current
-        setDraft(originalDraftRef.current)
-      } else {
-        enumProps!.onChange(originalRef.current as string)
-      }
+      onChange(originalRef.current)
+      draftRef.current = originalDraftRef.current
+      setDraft(originalDraftRef.current)
       originalRef.current = null
     }
     // NOTE: Don't clear dropdownOpenRef here — handleBlur needs to see it's still true
@@ -204,7 +142,7 @@ export function TokenInput(props: TokenInputProps) {
     setShowDropdown(false)
     setSelectedIdx(-1)
     endPreview(false)
-  }, [isScale, scaleProps?.onChange, enumProps?.onChange, endPreview])
+  }, [onChange, endPreview])
 
   const toggleDropdown = useCallback(() => {
     if (showDropdown) closeDropdown()
@@ -224,58 +162,41 @@ export function TokenInput(props: TokenInputProps) {
   // --- Preview/commit/revert ---
   const previewAtIndex = useCallback((idx: number) => {
     if (idx < 0 || idx >= items.length) return
-    if (isScale) {
-      const opt = scaleProps!.scale[idx]
-      if (originalRef.current === null) originalRef.current = scaleProps!.value
-      scaleProps!.onChange({ mode: 'token', token: opt.token, value: opt.value })
-      setDraft(String(opt.value))
-    } else {
-      if (originalRef.current === null) originalRef.current = enumProps!.value
-      enumProps!.onChange(enumProps!.options[idx].value)
-    }
-  }, [isScale, items.length, scaleProps?.scale, scaleProps?.value, scaleProps?.onChange, enumProps?.options, enumProps?.value, enumProps?.onChange])
+    const opt = scale[idx]
+    if (originalRef.current === null) originalRef.current = value
+    onChange({ mode: 'token', token: opt.token, value: opt.value })
+    setDraft(String(opt.value))
+  }, [items.length, scale, value, onChange])
 
   const commitAtIndex = useCallback((idx: number) => {
     endPreview(true)
     originalRef.current = null
     dropdownOpenRef.current = false
-    if (isScale) {
-      const opt = scaleProps!.scale[idx]
-      if (scaleProps!.autoOption?.active) scaleProps!.autoOption.onToggle()
-      scaleProps!.onChange({ mode: 'token', token: opt.token, value: opt.value })
-      setDraft(String(opt.value))
-      setShowDropdown(false)
-      setSelectedIdx(-1)
-      requestAnimationFrame(() => inputRef.current?.focus())
-    } else {
-      enumProps!.onChange(enumProps!.options[idx].value)
-      setShowDropdown(false)
-      setSelectedIdx(-1)
-    }
-  }, [isScale, scaleProps?.scale, scaleProps?.onChange, enumProps?.options, enumProps?.onChange, endPreview])
+    const opt = scale[idx]
+    onChange({ mode: 'token', token: opt.token, value: opt.value })
+    setDraft(String(opt.value))
+    setShowDropdown(false)
+    setSelectedIdx(-1)
+    requestAnimationFrame(() => inputRef.current?.focus())
+  }, [scale, onChange, endPreview])
 
   const revertPreview = useCallback(() => {
     if (originalRef.current === null) return
-    if (isScale) {
-      scaleProps!.onChange(originalRef.current as DesignValue<number>)
-      // Restore draft synchronously so commitDraft reads the correct value
-      draftRef.current = originalDraftRef.current
-      setDraft(originalDraftRef.current)
-    } else {
-      enumProps!.onChange(originalRef.current as string)
-    }
+    onChange(originalRef.current)
+    // Restore draft synchronously so commitDraft reads the correct value
+    draftRef.current = originalDraftRef.current
+    setDraft(originalDraftRef.current)
     originalRef.current = null
     setSelectedIdx(-1)
-  }, [isScale, scaleProps?.onChange, enumProps?.onChange])
+  }, [onChange])
 
-  // --- Scale-only: commit draft ---
+  // --- Commit draft ---
   // Reads from draftRef (synchronous) instead of draft (closure) to avoid
   // stale values when revertPreview/closeDropdown restore the draft.
   const commitDraft = useCallback(() => {
-    if (!scaleProps) return
     const d = draftRef.current
     if (d === '') {
-      scaleProps.onChange({ mode: 'custom', value: scaleResetValue })
+      onChange({ mode: 'custom', value: scaleResetValue })
       setDraft('')
       return
     }
@@ -286,19 +207,19 @@ export function TokenInput(props: TokenInputProps) {
     }
     const clamped = Math.min(scaleMax, Math.max(scaleMin, n))
     if (clamped === scaleResetValue) {
-      scaleProps.onChange({ mode: 'custom', value: scaleResetValue })
+      onChange({ mode: 'custom', value: scaleResetValue })
       setDraft('')
     } else {
-      const match = scaleProps.scale.find(s => s.value === clamped)
+      const match = scale.find(s => s.value === clamped)
       if (match) {
-        scaleProps.onChange({ mode: 'token', token: match.token, value: clamped })
+        onChange({ mode: 'token', token: match.token, value: clamped })
         setDraft(String(clamped))
       } else {
-        scaleProps.onChange({ mode: 'custom', value: clamped })
+        onChange({ mode: 'custom', value: clamped })
         setDraft(String(clamped))
       }
     }
-  }, [scaleProps?.onChange, scaleProps?.scale, scaleNumeric, scaleMin, scaleToken, scaleResetValue])
+  }, [onChange, scale, scaleNumeric, scaleMin, scaleToken, scaleResetValue])
 
   // --- Close on outside click ---
   useEffect(() => {
@@ -312,7 +233,7 @@ export function TokenInput(props: TokenInputProps) {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [showDropdown, closeDropdown])
 
-  // --- Shared dropdown keyboard nav ---
+  // --- Dropdown keyboard nav ---
   const handleDropdownKeyDown = useCallback((e: React.KeyboardEvent): boolean => {
     const maxIdx = items.length - 1
     if (e.key === 'ArrowDown') {
@@ -348,8 +269,8 @@ export function TokenInput(props: TokenInputProps) {
     return false
   }, [items.length, selectedIdx, previewAtIndex, commitAtIndex, closeDropdown])
 
-  // --- Scale keydown handler ---
-  const handleScaleKeyDown = (e: React.KeyboardEvent) => {
+  // --- Keydown handler ---
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (showDropdown && handleDropdownKeyDown(e)) return
 
     if (e.key === 'Enter') {
@@ -358,22 +279,22 @@ export function TokenInput(props: TokenInputProps) {
       inputRef.current?.blur()
     } else if (e.key === 'Escape') {
       e.preventDefault()
-      setDraft(scaleProps!.value.mode === 'custom' && scaleProps!.value.value === scaleResetValue ? '' : String(scaleNumeric))
+      setDraft(value.mode === 'custom' && value.value === scaleResetValue ? '' : String(scaleNumeric))
       inputRef.current?.blur()
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
       const n = Math.min(scaleMax, Math.max(scaleMin, scaleNumeric + 1))
       if (n === scaleNumeric && scaleIsUnset) return
       if (n === scaleResetValue) {
-        scaleProps!.onChange({ mode: 'custom', value: scaleResetValue })
+        onChange({ mode: 'custom', value: scaleResetValue })
         setDraft('')
       } else {
-        const match = scaleProps!.scale.find(s => s.value === n)
+        const match = scale.find(s => s.value === n)
         if (match) {
-          scaleProps!.onChange({ mode: 'token', token: match.token, value: n })
+          onChange({ mode: 'token', token: match.token, value: n })
           setDraft(String(n))
         } else {
-          scaleProps!.onChange({ mode: 'custom', value: n })
+          onChange({ mode: 'custom', value: n })
           setDraft(String(n))
         }
       }
@@ -382,38 +303,26 @@ export function TokenInput(props: TokenInputProps) {
       const n = Math.min(scaleMax, Math.max(scaleMin, scaleNumeric - 1))
       if (n === scaleNumeric && scaleIsUnset) return
       if (n === scaleResetValue) {
-        scaleProps!.onChange({ mode: 'custom', value: scaleResetValue })
+        onChange({ mode: 'custom', value: scaleResetValue })
         setDraft('')
       } else {
-        const match = scaleProps!.scale.find(s => s.value === n)
+        const match = scale.find(s => s.value === n)
         if (match) {
-          scaleProps!.onChange({ mode: 'token', token: match.token, value: n })
+          onChange({ mode: 'token', token: match.token, value: n })
           setDraft(String(n))
         } else {
-          scaleProps!.onChange({ mode: 'custom', value: n })
+          onChange({ mode: 'custom', value: n })
           setDraft(String(n))
         }
       }
     }
   }
 
-  // --- Enum keydown handler ---
-  const handleEnumKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (!showDropdown) {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault()
-        openDropdown()
-      }
-      return
-    }
-    handleDropdownKeyDown(e)
-  }, [showDropdown, openDropdown, handleDropdownKeyDown])
-
-  // --- Scale focus/blur ---
+  // --- Focus/blur ---
   const handleFocus = () => {
     dropdownOpenRef.current = false
     setFocused(true)
-    setDraft(scaleProps!.value.mode === 'custom' && scaleProps!.value.value === scaleResetValue ? '' : String(scaleNumeric))
+    setDraft(value.mode === 'custom' && value.value === scaleResetValue ? '' : String(scaleNumeric))
   }
 
   const handleBlur = () => {
@@ -431,42 +340,17 @@ export function TokenInput(props: TokenInputProps) {
   }
 
   // --- Committed value for check mark (stays on original during preview) ---
-  const scaleCommittedToken = isScale
-    ? (originalRef.current !== null
-        ? (() => { const dv = originalRef.current as DesignValue<number>; return dv.mode === 'token' ? dv.token : null })()
-        : scaleToken)
-    : null
-  const enumCommittedValue = enumProps ? (originalRef.current as string | null) ?? enumProps.value : ''
+  const committedToken = originalRef.current !== null
+    ? (() => { const dv = originalRef.current as DesignValue<number>; return dv.mode === 'token' ? dv.token : null })()
+    : scaleToken
 
-  // --- Dropdown JSX (shared) ---
+  // --- Dropdown JSX ---
   const dropdownJSX = showDropdown && (
     <div
       ref={dropdownRef}
       className={`absolute left-0 min-w-full z-50 bg-surface-2 border border-border-accent rounded-lg shadow-2xl overflow-y-auto max-h-[200px] py-1 w-max ${dropAbove ? 'bottom-full mb-1' : 'top-full mt-1'}`}
       onMouseLeave={revertPreview}
     >
-      {autoOpt && (
-        <button
-          onMouseDown={(e) => {
-            e.preventDefault()
-            autoOpt.onToggle()
-            setShowDropdown(false)
-            endPreview(true)
-            originalRef.current = null
-          }}
-          className={`w-full text-left px-3 py-1.5 text-[12px] flex items-center justify-between cursor-pointer border-b border-border mb-1 ${
-            autoOptActiveAtOpenRef.current
-              ? 'c-menu-item-active'
-              : 'fg-muted hover:bg-inset hover:fg-default'
-          }`}
-        >
-          <span className="flex items-center gap-1.5">
-            <span className="font-medium">{autoOpt.label}</span>
-            {autoOptActiveAtOpenRef.current && <Check size={10} />}
-          </span>
-          {autoOpt.hint && <span className="fg-subtle">{autoOpt.hint}</span>}
-        </button>
-      )}
       {items.map((item, i) => (
         <div key={item.key}>
           {item.group && i > 0 && <div className="border-t border-border my-1" />}
@@ -487,13 +371,9 @@ export function TokenInput(props: TokenInputProps) {
           >
             <span className="flex items-center gap-1.5">
               <span className="font-medium">{item.label ?? item.displayRight}</span>
-              {isScale
-                ? !autoOptActiveAtOpenRef.current && item.token === scaleCommittedToken && <Check size={10} />
-                : !autoOptActiveAtOpenRef.current && item.key === enumCommittedValue && <Check size={10} />
-              }
+              {item.token === committedToken && <Check size={10} />}
             </span>
             {item.label && <span className="fg-subtle">{item.displayRight}</span>}
-            {item.hint && <span className="fg-subtle">{item.hint}</span>}
           </button>
         </div>
       ))}
@@ -505,49 +385,49 @@ export function TokenInput(props: TokenInputProps) {
     <div className="flex items-center gap-1.5 min-w-0 flex-1">
       {label && !inlineLabel && <span title={tooltip || label} className="c-label">{label}</span>}
       <div ref={containerRef} className="relative flex-1 min-w-0">
-        {isScale ? (
-          // Scale mode trigger
-          autoOpt?.active ? (
-            <div
-              className="group c-scale-input flex items-center gap-0.5 pr-6 overflow-hidden cursor-pointer relative"
-              tabIndex={0}
-              onClick={toggleDropdown}
-              onKeyDown={(e) => {
-                if (showDropdown && handleDropdownKeyDown(e)) return
-                if (e.key === 'Backspace' || e.key === 'Delete') {
-                  e.preventDefault()
-                  autoOpt.onToggle()
-                } else if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault()
-                  toggleDropdown()
-                }
+        {hasToken ? (
+          // Tokenized state — pill, click opens dropdown, button detaches
+          <div
+            className="group c-scale-input flex items-center gap-0.5 pr-6 overflow-hidden cursor-pointer relative"
+            tabIndex={0}
+            onClick={toggleDropdown}
+            onKeyDown={(e) => {
+              if (showDropdown && handleDropdownKeyDown(e)) return
+              if (e.key === 'Backspace' || e.key === 'Delete') {
+                e.preventDefault()
+                // Detach: keep value, remove token
+                onChange({ mode: 'custom', value: scaleNumeric })
+                setDraft(scaleNumeric === scaleResetValue ? '' : String(scaleNumeric))
+              } else if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                toggleDropdown()
+              }
+            }}
+          >
+            {inlineLabelEl}
+            <span className="flex items-center bg-emphasis fg-default rounded px-1 text-[11px] leading-[18px] font-medium min-w-0 truncate">
+              {scaleToken === 'auto' ? scale.find(s => s.token === 'auto')?.label ?? 'Auto' : `${scaleNumeric}${scaleUnit}`}
+            </span>
+            <span className="flex-1" />
+            <button
+              type="button"
+              tabIndex={-1}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                // Detach: keep value, remove token
+                onChange({ mode: 'custom', value: scaleNumeric })
+                setDraft(scaleNumeric === scaleResetValue ? '' : String(scaleNumeric))
+                requestAnimationFrame(() => inputRef.current?.focus())
               }}
+              className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted hover:bg-inset ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
             >
-              {inlineLabelEl}
-              {autoOpt.pill ? (
-                <>
-                  <span className="flex items-center bg-emphasis fg-default rounded px-1 text-[11px] leading-[18px] font-medium min-w-0 truncate">{autoOpt.label}</span>
-                  <span className="flex-1" />
-                </>
-              ) : (
-                <span className="flex-1 min-w-0 text-[12px] fg-subtle pl-0.5 truncate">{autoOpt.label}</span>
-              )}
-              <button
-                type="button"
-                tabIndex={-1}
-                onClick={(e) => e.stopPropagation()}
-                onMouseDown={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  toggleDropdown()
-                  ;(e.currentTarget.parentElement as HTMLElement)?.focus()
-                }}
-                className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted hover:bg-inset ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-              >
-                <Diamond size={12} />
-              </button>
-            </div>
-          ) : (
+              <Unlink size={12} />
+            </button>
+          </div>
+        ) : (
+          // Editable state — input + diamond to open token picker
           <div
             className="group c-scale-input flex items-center gap-0.5 pr-6 overflow-hidden cursor-text relative"
             onClick={() => inputRef.current?.focus()}
@@ -560,10 +440,10 @@ export function TokenInput(props: TokenInputProps) {
               inputMode="numeric"
               value={draft}
               onChange={(e) => { dropdownOpenRef.current = false; setDraft(e.target.value) }}
-              onKeyDown={handleScaleKeyDown}
+              onKeyDown={handleKeyDown}
               onFocus={handleFocus}
               onBlur={handleBlur}
-              placeholder={scaleIsUnset ? (scaleProps!.placeholder ?? String(scaleResetValue)) : undefined}
+              placeholder={scaleIsUnset ? (props.placeholder ?? String(scaleResetValue)) : undefined}
               className={`flex-1 min-w-[20px] text-[12px] fg-default${showDropdown ? ' caret-transparent' : ''}`}
             />
 
@@ -580,69 +460,6 @@ export function TokenInput(props: TokenInputProps) {
               <Diamond size={12} />
             </button>
           </div>
-          )
-        ) : (
-          // Enum mode trigger
-          autoOpt?.active ? (
-            <div
-              className="group c-scale-input flex items-center gap-0.5 pr-6 overflow-hidden cursor-pointer relative"
-              tabIndex={0}
-              onClick={toggleDropdown}
-              onKeyDown={(e) => {
-                if (showDropdown && handleDropdownKeyDown(e)) return
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault()
-                  toggleDropdown()
-                }
-              }}
-            >
-              {inlineLabelEl}
-              <span className="flex-1 min-w-0 text-[12px] fg-subtle pl-0.5 truncate">{autoOpt.label}</span>
-              <button
-                type="button"
-                tabIndex={-1}
-                onClick={(e) => e.stopPropagation()}
-                onMouseDown={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  toggleDropdown()
-                  ;(e.currentTarget.parentElement as HTMLElement)?.focus()
-                }}
-                className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted hover:bg-inset ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-              >
-                <Diamond size={12} />
-              </button>
-            </div>
-          ) : (
-            <div
-              className="group c-scale-input flex items-center gap-0.5 pr-6 cursor-pointer relative"
-              tabIndex={0}
-              onClick={toggleDropdown}
-              onKeyDown={handleEnumKeyDown}
-            >
-              {inlineLabelEl}
-              <>
-                <span className="flex items-center bg-emphasis fg-default rounded px-1 text-[11px] leading-[18px] font-medium min-w-0 truncate">
-                  {enumCurrentLabel}
-                </span>
-                <span className="flex-1" />
-              </>
-              <button
-                type="button"
-                tabIndex={-1}
-                onClick={(e) => e.stopPropagation()}
-                onMouseDown={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  toggleDropdown()
-                  ;(e.currentTarget.parentElement as HTMLElement)?.focus()
-                }}
-                className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted hover:bg-inset ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-              >
-                <Diamond size={12} />
-              </button>
-            </div>
-          )
         )}
 
         {dropdownJSX}

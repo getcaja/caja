@@ -20,6 +20,7 @@ function allSidesZero(frame: Frame): boolean {
 }
 
 const ONE_PX: DesignValue<number> = { mode: 'token', token: '', value: 1 }
+const BLACK: DesignValue<string> = { mode: 'token', token: 'black', value: '#000000' }
 
 const STYLE_OPTIONS: { value: string; label: string; tooltip?: string }[] = [
   { value: 'none', label: 'None', tooltip: 'No Border' },
@@ -45,11 +46,13 @@ export function BorderSection({ frame }: { frame: Frame }) {
               const style = v as Frame['border']['style']
               const isEnabling = style !== 'none' && frame.border.style === 'none'
               const zeroBorder = allSidesZero(frame)
+              const noColor = frame.border.color.value === ''
               updateFrame(frame.id, {
                 border: {
                   ...frame.border,
                   style,
                   ...(isEnabling && zeroBorder ? { top: ONE_PX, right: { ...ONE_PX }, bottom: { ...ONE_PX }, left: { ...ONE_PX } } : {}),
+                  ...(isEnabling && noColor ? { color: BLACK } : {}),
                   ...(style === 'none' ? { top: { mode: 'custom' as const, value: 0 }, right: { mode: 'custom' as const, value: 0 }, bottom: { mode: 'custom' as const, value: 0 }, left: { mode: 'custom' as const, value: 0 } } : {}),
                 },
               })

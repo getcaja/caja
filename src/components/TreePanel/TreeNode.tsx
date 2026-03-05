@@ -6,7 +6,9 @@ import { useTreeDnd } from './TreeDndContext'
 import { useContextMenu } from './hooks/useContextMenu'
 import { useInlineEdit } from './hooks/useInlineEdit'
 import { TreeRow } from './TreeRow'
-import { Frame as FrameIcon, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse, Eye, EyeOff, Link, Diamond, Square } from 'lucide-react'
+import { Frame as FrameIcon, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse, Eye, EyeOff, Link, Diamond, LayoutGrid, FileCodeCorner } from 'lucide-react'
+import type { BoxElement } from '../../types/frame'
+import { FlexColumnIcon, FlexRowIcon } from '../icons/LayoutIcons'
 import { FrameContextMenu } from '../shared/FrameContextMenu'
 
 interface TreeNodeProps {
@@ -80,9 +82,16 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
   )
 
   // Determine icon
+  const boxIcon = frame.type === 'box'
+    ? (frame as BoxElement).display === 'grid' ? <LayoutGrid size={12} />
+    : (frame as BoxElement).display === 'flex' || (frame as BoxElement).display === 'inline-flex'
+      ? (frame as BoxElement).direction === 'row' ? <FlexRowIcon size={12} /> : <FlexColumnIcon size={12} />
+    : <FrameIcon size={12} />
+    : null
+
   const iconEl = isMaster ? <Diamond size={12} fill="currentColor" />
     : isInstance ? <Diamond size={12} />
-    : isRoot && !editingComponentId ? <Square size={12} />
+    : isRoot && !editingComponentId ? <FileCodeCorner size={12} />
     : frame.type === 'text' && 'tag' in frame && frame.tag === 'a' ? <Link size={12} />
     : frame.type === 'text' ? <Type size={12} />
     : frame.type === 'image' ? <ImageIcon size={12} />
@@ -90,7 +99,7 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
     : frame.type === 'input' ? <TextCursorInput size={12} />
     : frame.type === 'textarea' ? <AlignLeft size={12} />
     : frame.type === 'select' ? <ListCollapse size={12} />
-    : <FrameIcon size={12} />
+    : boxIcon!
 
   // Icon color class
   const iconColor = isMaster || isInstance ? 'text-purple-400' : ''

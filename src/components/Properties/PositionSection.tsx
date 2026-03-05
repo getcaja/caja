@@ -4,7 +4,7 @@ import { Section } from '../ui/Section'
 import { Select } from '../ui/Select'
 import { TokenInput } from '../ui/TokenInput'
 import { SPACING_SCALE, Z_INDEX_SCALE } from '../../data/scales'
-import { PanelTop, PanelRight, PanelBottom, PanelLeft, Layers } from 'lucide-react'
+import { PanelTop, PanelRight, PanelBottom, PanelLeft, Layers, BringToFront } from 'lucide-react'
 
 const POSITION_OPTIONS = [
   { value: 'static', label: 'Static' },
@@ -86,6 +86,8 @@ export function PositionSection({ frame }: { frame: Frame }) {
             options={POSITION_OPTIONS}
             onChange={(v) => updateFrame(frame.id, { position: v as Frame['position'] })}
             className="flex-1"
+            inlineLabel={<BringToFront size={12} />}
+            initialValue="static"
             tooltip="Position"
           />
           <div className="w-5 shrink-0" />
@@ -150,12 +152,8 @@ export function PositionSection({ frame }: { frame: Frame }) {
                 inlineLabel={<Layers size={12} />}
                 classPrefix="z"
                 defaultValue={0}
+                unit=""
                 tooltip="Z-Index"
-                autoOption={{
-                  label: 'Auto',
-                  active: frame.zIndex.mode === 'custom' && frame.zIndex.value === 0,
-                  onToggle: () => updateFrame(frame.id, { zIndex: { mode: 'custom', value: 0 } }),
-                }}
               />
               <div className="w-5 shrink-0" />
             </div>

@@ -3,6 +3,7 @@ import type { Frame } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { Section } from '../ui/Section'
 import { TokenInput } from '../ui/TokenInput'
+import { Select } from '../ui/Select'
 import { BLUR_SCALE } from '../../data/scales'
 import { BOX_SHADOW_OPTIONS, CURSOR_OPTIONS } from './constants'
 
@@ -13,21 +14,21 @@ export function EffectsSection({ frame }: { frame: Frame }) {
     <Section title="Effects" defaultCollapsed>
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          <TokenInput
+          <Select
             value={frame.boxShadow}
             options={BOX_SHADOW_OPTIONS}
             onChange={(v) => updateFrame(frame.id, { boxShadow: v as Frame['boxShadow'] })}
+            className="flex-1"
             inlineLabel={<Eclipse size={12} />}
-            classPrefix="shadow"
             initialValue="none"
             tooltip="Box Shadow"
           />
-          <TokenInput
+          <Select
             value={frame.cursor}
             options={CURSOR_OPTIONS}
             onChange={(v) => updateFrame(frame.id, { cursor: v as Frame['cursor'] })}
+            className="flex-1"
             inlineLabel={<MousePointer2 size={12} />}
-            classPrefix="cursor"
             initialValue="auto"
             tooltip="Cursor"
           />
@@ -42,7 +43,7 @@ export function EffectsSection({ frame }: { frame: Frame }) {
             inlineLabel={<Droplet size={12} />}
             classPrefix="blur"
             defaultValue={0}
-            placeholder="None"
+            placeholder="0"
             tooltip="Blur"
           />
           <TokenInput
@@ -53,7 +54,7 @@ export function EffectsSection({ frame }: { frame: Frame }) {
             inlineLabel={<Droplets size={12} />}
             classPrefix="backdrop-blur"
             defaultValue={0}
-            placeholder="None"
+            placeholder="0"
             tooltip="Backdrop Blur"
           />
           <div className="w-5 shrink-0" />

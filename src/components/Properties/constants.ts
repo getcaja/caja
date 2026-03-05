@@ -1,30 +1,30 @@
 import type { ElementType } from '../../types/frame'
 
 export const BOX_TAG_OPTIONS = [
-  { value: 'div', label: 'div' },
-  { value: 'section', label: 'section' },
-  { value: 'nav', label: 'nav' },
-  { value: 'header', label: 'header' },
-  { value: 'footer', label: 'footer' },
-  { value: 'main', label: 'main' },
-  { value: 'article', label: 'article' },
-  { value: 'aside', label: 'aside' },
-  { value: 'ul', label: 'ul' },
-  { value: 'ol', label: 'ol' },
-  { value: 'li', label: 'li' },
-  { value: 'form', label: 'form' },
+  { value: 'div', label: 'Div', hint: '<div>' },
+  { value: 'section', label: 'Section', hint: '<section>' },
+  { value: 'nav', label: 'Navigation', hint: '<nav>' },
+  { value: 'header', label: 'Header', hint: '<header>' },
+  { value: 'footer', label: 'Footer', hint: '<footer>' },
+  { value: 'main', label: 'Main', hint: '<main>' },
+  { value: 'article', label: 'Article', hint: '<article>' },
+  { value: 'aside', label: 'Sidebar', hint: '<aside>' },
+  { value: 'ul', label: 'Unordered List', hint: '<ul>' },
+  { value: 'ol', label: 'Ordered List', hint: '<ol>' },
+  { value: 'li', label: 'List Item', hint: '<li>' },
+  { value: 'form', label: 'Form', hint: '<form>' },
 ]
 
 export const TEXT_TAG_OPTIONS = [
-  { value: 'p', label: 'p — Paragraph' },
-  { value: 'h1', label: 'h1 — Heading 1' },
-  { value: 'h2', label: 'h2 — Heading 2' },
-  { value: 'h3', label: 'h3 — Heading 3' },
-  { value: 'h4', label: 'h4 — Heading 4' },
-  { value: 'h5', label: 'h5 — Heading 5' },
-  { value: 'h6', label: 'h6 — Heading 6' },
-  { value: 'span', label: 'span — Inline' },
-  { value: 'label', label: 'label — Label' },
+  { value: 'p', label: 'Paragraph', hint: '<p>' },
+  { value: 'h1', label: 'Heading 1', hint: '<h1>' },
+  { value: 'h2', label: 'Heading 2', hint: '<h2>' },
+  { value: 'h3', label: 'Heading 3', hint: '<h3>' },
+  { value: 'h4', label: 'Heading 4', hint: '<h4>' },
+  { value: 'h5', label: 'Heading 5', hint: '<h5>' },
+  { value: 'h6', label: 'Heading 6', hint: '<h6>' },
+  { value: 'span', label: 'Inline', hint: '<span>' },
+  { value: 'label', label: 'Label', hint: '<label>' },
 ]
 
 
@@ -51,8 +51,8 @@ export const OVERFLOW_OPTIONS = [
 
 export const BOX_SHADOW_OPTIONS = [
   { value: 'none', label: 'None' },
-  { value: 'sm', label: 'Small', group: 'Presets' },
-  { value: 'base', label: 'Default', token: '' },
+  { value: 'sm', label: 'Small' },
+  { value: 'base', label: 'Default' },
   { value: 'md', label: 'Medium' },
   { value: 'lg', label: 'Large' },
   { value: 'xl', label: 'XL' },
@@ -61,7 +61,7 @@ export const BOX_SHADOW_OPTIONS = [
 
 export const CURSOR_OPTIONS = [
   { value: 'auto', label: 'Auto' },
-  { value: 'default', label: 'Default', group: 'Cursors' },
+  { value: 'default', label: 'Default' },
   { value: 'pointer', label: 'Pointer' },
   { value: 'text', label: 'Text' },
   { value: 'not-allowed', label: 'Not Allowed' },
@@ -91,11 +91,11 @@ export const ALIGN_SELF_OPTIONS = [
 
 export const TRANSFORM_ORIGIN_OPTIONS = [
   { value: 'center', label: 'Center' },
-  { value: 'top', label: 'Top', group: 'Edges' },
+  { value: 'top', label: 'Top' },
   { value: 'right', label: 'Right' },
   { value: 'bottom', label: 'Bottom' },
   { value: 'left', label: 'Left' },
-  { value: 'top-left', label: 'Top Left', group: 'Corners' },
+  { value: 'top-left', label: 'Top Left' },
   { value: 'top-right', label: 'Top Right' },
   { value: 'bottom-right', label: 'Bottom Right' },
   { value: 'bottom-left', label: 'Bottom Left' },

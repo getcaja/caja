@@ -59,7 +59,7 @@ useFrameStore.subscribe((state) => {
   clearTimeout(saveTimeout)
   saveTimeout = setTimeout(() => {
     try {
-      localStorage.setItem('caja-state', JSON.stringify({ pages: state.pages, activePageId: state.activePageId }))
+      localStorage.setItem('caja-state', JSON.stringify({ pages: state.pages, activePageId: state.activePageId, projectName: state.projectName }))
     } catch (err) {
       console.warn('Failed to save state to localStorage:', err)
     }

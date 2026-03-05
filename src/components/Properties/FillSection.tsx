@@ -5,7 +5,7 @@ import { useFrameStore } from '../../store/frameStore'
 import { importLocalAsset, isLocalAssetPath, getAssetDisplayName } from '../../lib/assetOps'
 import { Section } from '../ui/Section'
 import { ColorInput } from '../ui/ColorInput'
-import { TokenInput } from '../ui/TokenInput'
+import { Select } from '../ui/Select'
 import { ToggleGroup } from '../ui/ToggleGroup'
 
 const lbl = (text: string) => <span className="text-[12px]">{text}</span>
@@ -146,31 +146,34 @@ export function FillSection({ frame, hasOverrides, onResetOverrides }: { frame: 
             {frame.bgImage && (
               <>
                 <div className="flex items-center gap-2">
-                  <TokenInput
+                  <Select
                     value={frame.bgSize}
                     options={BG_SIZE_OPTIONS}
                     onChange={(v) => updateFrame(frame.id, { bgSize: v as Frame['bgSize'] })}
-                    classPrefix="bg"
+                    className="flex-1"
                     inlineLabel={lbl('Sz')}
+                    initialValue="auto"
                     tooltip="Background Size"
                   />
-                  <TokenInput
+                  <Select
                     value={frame.bgPosition}
                     options={BG_POSITION_OPTIONS}
                     onChange={(v) => updateFrame(frame.id, { bgPosition: v as Frame['bgPosition'] })}
-                    classPrefix="bg"
+                    className="flex-1"
                     inlineLabel={lbl('Ps')}
+                    initialValue="center"
                     tooltip="Background Position"
                   />
                   <div className="w-5 shrink-0" />
                 </div>
                 <div className="flex items-center gap-2">
-                  <TokenInput
+                  <Select
                     value={frame.bgRepeat}
                     options={BG_REPEAT_OPTIONS}
                     onChange={(v) => updateFrame(frame.id, { bgRepeat: v as Frame['bgRepeat'] })}
-                    classPrefix="bg"
+                    className="flex-1"
                     inlineLabel={lbl('Rp')}
+                    initialValue="repeat"
                     tooltip="Background Repeat"
                   />
                   <div className="w-5 shrink-0" />

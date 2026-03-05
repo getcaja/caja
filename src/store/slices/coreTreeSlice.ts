@@ -17,13 +17,16 @@ import { useCatalogStore } from '../catalogStore'
 
 const MAX_HISTORY = 50
 
-export function pushHistory(state: { root: BoxElement; past: Record<string, BoxElement[]>; future: Record<string, BoxElement[]>; activePageId: string; _previewSnapshot: BoxElement | null }): { past: Record<string, BoxElement[]>; future: Record<string, BoxElement[]>; dirty: boolean } {
+export type HistoryEntry = { root: BoxElement; selectedId: string | null; selectedIds: string[] }
+
+export function pushHistory(state: { root: BoxElement; selectedId: string | null; selectedIds: Set<string>; past: Record<string, HistoryEntry[]>; future: Record<string, HistoryEntry[]>; activePageId: string; _previewSnapshot: BoxElement | null }): { past: Record<string, HistoryEntry[]>; future: Record<string, HistoryEntry[]>; dirty: boolean } {
   if (state._previewSnapshot) return { past: state.past, future: state.future, dirty: true }
   const pageId = state.activePageId
   const pagePast = state.past[pageId] || []
+  const entry: HistoryEntry = { root: cloneTree(state.root) as BoxElement, selectedId: state.selectedId, selectedIds: [...state.selectedIds] }
   return {
-    past: { ...state.past, [pageId]: [...pagePast.slice(-(MAX_HISTORY - 1)), cloneTree(state.root) as BoxElement] },
-    future: { ...state.future, [pageId]: [] as BoxElement[] },
+    past: { ...state.past, [pageId]: [...pagePast.slice(-(MAX_HISTORY - 1)), entry] },
+    future: { ...state.future, [pageId]: [] as HistoryEntry[] },
     dirty: true,
   }
 }
@@ -55,8 +58,8 @@ export interface CoreTreeSlice {
   pages: Page[]
   activePageId: string
   dirty: boolean
-  past: Record<string, BoxElement[]>
-  future: Record<string, BoxElement[]>
+  past: Record<string, HistoryEntry[]>
+  future: Record<string, HistoryEntry[]>
   _previewSnapshot: BoxElement | null
   _lastDuplicateMap: Record<string, string> | null
 
@@ -147,7 +150,7 @@ export const createCoreTreeSlice: StateCreator<FrameStore, [], [], CoreTreeSlice
         if (parent) parentId = parent.id
         else return {}
       }
-      const prefixMap = { text: 'text', image: 'image', button: 'button', input: 'input', textarea: 'textarea', select: 'select', link: 'link', box: 'frame' } as const
+      const prefixMap = { text: 'Text', image: 'Image', button: 'Button', input: 'Input', textarea: 'Textarea', select: 'Select', link: 'Link', box: 'Frame' } as const
       const prefix = prefixMap[type]
       const name = overrides?.name || nextName(prefix, state.root)
       const child =
@@ -169,6 +172,7 @@ export const createCoreTreeSlice: StateCreator<FrameStore, [], [], CoreTreeSlice
       if (isRootId(id)) return {} // never remove internal root
       if (isChildOfInstance(state.root, id)) return {} // instance children are immutable
       const history = pushHistory(state)
+      const parent = findParent(state.root, id)
       const nextIds = new Set(state.selectedIds)
       nextIds.delete(id)
       const newRoot = removeFromTree(state.root, id) as BoxElement
@@ -196,7 +200,9 @@ export const createCoreTreeSlice: StateCreator<FrameStore, [], [], CoreTreeSlice
         useCatalogStore.getState().deleteComponent(id)
       }
 
-      return { pages, root: newRoot, selectedId: state.selectedId === id ? null : state.selectedId, selectedIds: nextIds, ...history }
+      const nextSelectedId = state.selectedId === id ? (parent?.id ?? null) : state.selectedId
+      if (nextSelectedId && nextSelectedId !== state.selectedId) nextIds.add(nextSelectedId)
+      return { pages, root: newRoot, selectedId: nextSelectedId, selectedIds: nextIds, ...history }
     }),
 
   duplicateFrame: (id) =>
@@ -519,13 +525,20 @@ export const createCoreTreeSlice: StateCreator<FrameStore, [], [], CoreTreeSlice
     const ids = new Set(state.selectedIds)
     if (state.selectedId) ids.add(state.selectedId)
     if (ids.size === 0) return {}
+    // Find common parent before removing
+    let parentId: string | null = null
+    for (const id of ids) {
+      if (isRootId(id)) continue
+      const p = findParent(state.root, id)
+      if (p) { parentId = p.id; break }
+    }
     const history = pushHistory(state)
     let newRoot = state.root
     for (const id of ids) {
       if (isRootId(id)) continue
       newRoot = removeFromTree(newRoot, id) as BoxElement
     }
-    return { ...updateActiveRoot(state, newRoot), selectedId: null, selectedIds: new Set(), ...history }
+    return { ...updateActiveRoot(state, newRoot), selectedId: parentId, selectedIds: parentId ? new Set([parentId]) : new Set(), ...history }
   }),
 
   copySelected: () => {
@@ -609,8 +622,9 @@ export const createCoreTreeSlice: StateCreator<FrameStore, [], [], CoreTreeSlice
     if (commit) {
       const pageId = state.activePageId
       const pagePast = state.past[pageId] || []
+      const entry: HistoryEntry = { root: state._previewSnapshot, selectedId: state.selectedId, selectedIds: [...state.selectedIds] }
       return {
-        past: { ...state.past, [pageId]: [...pagePast.slice(-(MAX_HISTORY - 1)), state._previewSnapshot] },
+        past: { ...state.past, [pageId]: [...pagePast.slice(-(MAX_HISTORY - 1)), entry] },
         future: { ...state.future, [pageId]: [] },
         _previewSnapshot: null,
         dirty: true,
@@ -626,10 +640,13 @@ export const createCoreTreeSlice: StateCreator<FrameStore, [], [], CoreTreeSlice
       if (pagePast.length === 0) return {}
       const prev = pagePast[pagePast.length - 1]
       const pageFuture = state.future[pageId] || []
+      const current: HistoryEntry = { root: cloneTree(state.root) as BoxElement, selectedId: state.selectedId, selectedIds: [...state.selectedIds] }
       return {
-        ...updateActiveRoot(state, prev),
+        ...updateActiveRoot(state, prev.root),
+        selectedId: prev.selectedId,
+        selectedIds: new Set(prev.selectedIds),
         past: { ...state.past, [pageId]: pagePast.slice(0, -1) },
-        future: { ...state.future, [pageId]: [cloneTree(state.root) as BoxElement, ...pageFuture] },
+        future: { ...state.future, [pageId]: [current, ...pageFuture] },
       }
     }),
 
@@ -640,9 +657,12 @@ export const createCoreTreeSlice: StateCreator<FrameStore, [], [], CoreTreeSlice
       if (pageFuture.length === 0) return {}
       const next = pageFuture[0]
       const pagePast = state.past[pageId] || []
+      const current: HistoryEntry = { root: cloneTree(state.root) as BoxElement, selectedId: state.selectedId, selectedIds: [...state.selectedIds] }
       return {
-        ...updateActiveRoot(state, next),
-        past: { ...state.past, [pageId]: [...pagePast, cloneTree(state.root) as BoxElement] },
+        ...updateActiveRoot(state, next.root),
+        selectedId: next.selectedId,
+        selectedIds: new Set(next.selectedIds),
+        past: { ...state.past, [pageId]: [...pagePast, current] },
         future: { ...state.future, [pageId]: pageFuture.slice(1) },
       }
     }),
