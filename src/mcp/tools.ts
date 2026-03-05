@@ -7,6 +7,7 @@ import type { Frame, SizeValue, Breakpoint, ResponsiveOverrides } from '../types
 import type { ToolName } from './schema'
 import { parseTailwindClasses } from '../utils/parseTailwindClasses'
 import { exportLibrary } from '../lib/libraryOps'
+import { saveFile } from '../lib/fileOps'
 import { downloadAsset, isExternalUrl } from '../lib/assetOps'
 import {
   sanitizeDVNum, sanitizeSpacingValues,
@@ -558,8 +559,34 @@ const handlers: Record<string, ToolHandler> = {
 
   // --- File tools ---
 
-  new_file() {
+  async new_file() {
     const store = getStore()
+
+    // Guard: if there are unsaved changes, show a native dialog in Caja's UI.
+    // The user must respond in the app — not in the agent's terminal.
+    if (store.dirty) {
+      const { ask } = await import('@tauri-apps/plugin-dialog')
+      const save = await ask('You have unsaved changes. Save before creating a new file?', {
+        title: 'Unsaved Changes',
+        kind: 'warning',
+        okLabel: 'Save',
+        cancelLabel: "Don't Save",
+      })
+      if (save) {
+        const componentData = useCatalogStore.getState().getComponentData()
+        const path = await saveFile(store.pages, store.activePageId, componentData, store.filePath)
+        if (!path) {
+          return { success: false, error: 'Save cancelled by user — new file aborted' }
+        }
+        store.setFilePath(path)
+        store.markClean()
+        // Update recent files (fire-and-forget)
+        import('@tauri-apps/api/core').then(({ invoke }) =>
+          invoke('add_recent_file', { path }).catch(() => {})
+        )
+      }
+    }
+
     store.newFile()
     return { success: true, data: { message: 'Project reset to blank state' } }
   },
