@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Ellipsis, Square, LayoutGrid, Columns3, Rows3, AlignHorizontalSpaceAround, AlignVerticalSpaceAround, Check } from 'lucide-react'
 import { FlexColumnIcon, FlexRowIcon } from '../icons/LayoutIcons'
 import type { Frame, BoxElement } from '../../types/frame'
@@ -9,7 +9,7 @@ import { SizeInput } from '../ui/SizeInput'
 import { Popover } from '../ui/Popover'
 import { ToggleGroup } from '../ui/ToggleGroup'
 import { SpacingControl } from '../ui/SpacingControl'
-import { SPACING_SCALE, SIZE_CONSTRAINT_SCALE, GRID_COLS_SCALE, GRID_ROWS_SCALE, GROW_SCALE, SHRINK_SCALE, COL_SPAN_SCALE, ROW_SPAN_SCALE, MARGIN_SCALE, GAP_SCALE } from '../../data/scales'
+import { SPACING_SCALE, SIZE_CONSTRAINT_SCALE, GRID_COLS_SCALE, GRID_ROWS_SCALE, GROW_SCALE, SHRINK_SCALE, COL_SPAN_SCALE, ROW_SPAN_SCALE, MARGIN_SCALE, GAP_SCALE, filterSpacingScale } from '../../data/scales'
 import { Select } from '../ui/Select'
 import { ALIGN_SELF_OPTIONS } from './constants'
 
@@ -17,6 +17,11 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
   const updateFrame = useFrameStore((s) => s.updateFrame)
   const updateSize = useFrameStore((s) => s.updateSize)
   const updateSpacing = useFrameStore((s) => s.updateSpacing)
+  const spacingGrid = useFrameStore((s) => s.spacingGrid)
+  const filteredSpacing = useMemo(() => filterSpacingScale(SPACING_SCALE, spacingGrid), [spacingGrid])
+  const filteredGap = useMemo(() => filterSpacingScale(GAP_SCALE, spacingGrid), [spacingGrid])
+  const filteredSize = useMemo(() => filterSpacingScale(SIZE_CONSTRAINT_SCALE, spacingGrid), [spacingGrid])
+  const filteredMargin = useMemo(() => filterSpacingScale(MARGIN_SCALE, spacingGrid), [spacingGrid])
   const [constraintsOpen, setConstraintsOpen] = useState(false)
   const [childPropsOpen, setChildPropsOpen] = useState(false)
   const [displayOptsOpen, setDisplayOptsOpen] = useState(false)
@@ -207,7 +212,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
             >
               <div className="flex flex-col gap-2 p-2.5 w-[200px]">
                 <TokenInput
-                  scale={SIZE_CONSTRAINT_SCALE}
+                  scale={filteredSize}
                   value={frame.minWidth}
                   onChange={(v) => updateFrame(frame.id, { minWidth: v })}
                   min={0}
@@ -215,7 +220,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                   classPrefix="min-w"
                 />
                 <TokenInput
-                  scale={SIZE_CONSTRAINT_SCALE}
+                  scale={filteredSize}
                   value={frame.maxWidth}
                   onChange={(v) => updateFrame(frame.id, { maxWidth: v })}
                   min={0}
@@ -223,7 +228,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                   classPrefix="max-w"
                 />
                 <TokenInput
-                  scale={SIZE_CONSTRAINT_SCALE}
+                  scale={filteredSize}
                   value={frame.minHeight}
                   onChange={(v) => updateFrame(frame.id, { minHeight: v })}
                   min={0}
@@ -231,7 +236,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                   classPrefix="min-h"
                 />
                 <TokenInput
-                  scale={SIZE_CONSTRAINT_SCALE}
+                  scale={filteredSize}
                   value={frame.maxHeight}
                   onChange={(v) => updateFrame(frame.id, { maxHeight: v })}
                   min={0}
@@ -346,7 +351,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                 </div>
                 <div className="flex flex-col gap-2 flex-1 min-w-0">
                   <TokenInput
-                    scale={GAP_SCALE}
+                    scale={filteredGap}
                     value={isSpaceBetween ? { mode: 'token' as const, token: 'auto', value: 0 } : boxFrame!.gap}
                     onChange={(v) => {
                       if (v.mode === 'token' && v.token === 'auto') {
@@ -481,7 +486,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                 </div>
                 <div className="flex items-center gap-2">
                   <TokenInput
-                    scale={SPACING_SCALE}
+                    scale={filteredSpacing}
                     value={boxFrame!.gap}
                     onChange={(v) => updateFrame(frame.id, { gap: v })}
                     min={0}
@@ -504,13 +509,14 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
           onChange={(v) => updateSpacing(frame.id, 'padding', v)}
           label="Padding"
           classPrefix="p"
+          scale={filteredSpacing}
         />
         <SpacingControl
           value={frame.margin}
           onChange={(v) => updateSpacing(frame.id, 'margin', v)}
           label="Margin"
           classPrefix="m"
-          scale={MARGIN_SCALE}
+          scale={filteredMargin}
         />
 
         {/* Clip */}

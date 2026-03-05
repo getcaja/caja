@@ -163,9 +163,10 @@ async fn handle_resource(
         uri: query.uri,
     };
 
-    if let Err(_) = state.app.emit("mcp-resource-read", &event) {
+    if let Err(e) = state.app.emit("mcp-resource-read", &event) {
         state.pending.lock().await.remove(&id);
-        return Json(serde_json::json!({"error": "Failed to emit event"}));
+        eprintln!("MCP bridge: failed to emit resource event: {}", e);
+        return Json(serde_json::json!({"error": format!("Failed to emit event: {}", e)}));
     }
 
     match tokio::time::timeout(std::time::Duration::from_secs(10), rx).await {
@@ -274,7 +275,10 @@ fn install_json_config(config_path: &std::path::Path, servers_key: &str, server_
 
     let mut config: serde_json::Value = if config_path.exists() {
         let raw = std::fs::read_to_string(config_path).map_err(|e| e.to_string())?;
-        serde_json::from_str(&raw).unwrap_or(serde_json::json!({}))
+        serde_json::from_str(&raw).unwrap_or_else(|e| {
+            eprintln!("Warning: failed to parse config {}: {}", config_path.display(), e);
+            serde_json::json!({})
+        })
     } else {
         serde_json::json!({})
     };
@@ -586,25 +590,47 @@ pub fn run() {
                 .item(&theme_light)
                 .build()?;
 
+            let spacing_grid_off = CheckMenuItemBuilder::with_id("spacing-grid-off", "Off")
+                .build(app)?;
+            let spacing_grid_4px = CheckMenuItemBuilder::with_id("spacing-grid-4px", "4px")
+                .checked(true)
+                .build(app)?;
+            let spacing_grid_8px = CheckMenuItemBuilder::with_id("spacing-grid-8px", "8px")
+                .build(app)?;
+
+            let spacing_grid_submenu = SubmenuBuilder::new(app, "Spacing Grid")
+                .item(&spacing_grid_off)
+                .item(&spacing_grid_4px)
+                .item(&spacing_grid_8px)
+                .build()?;
+
+            let style_new_frames = CheckMenuItemBuilder::with_id("style-new-frames", "Auto-Style New Frames")
+                .checked(true)
+                .build(app)?;
+
             let collapse_all = MenuItemBuilder::with_id("collapse-all", "Collapse All Layers")
                 .build(app)?;
             let expand_all = MenuItemBuilder::with_id("expand-all", "Expand All Layers")
                 .build(app)?;
-            let reset_layout = MenuItemBuilder::with_id("reset-layout", "Reset to Default")
+            let reset_workspace = MenuItemBuilder::with_id("reset-workspace", "Reset Workspace")
+                .accelerator("CmdOrCtrl+Shift+R")
                 .build(app)?;
 
             let view_menu = SubmenuBuilder::new(app, "View")
                 .item(&toggle_left_panel)
                 .item(&toggle_right_panel)
                 .separator()
+                .item(&spacing_grid_submenu)
+                .item(&style_new_frames)
+                .separator()
                 .item(&collapse_all)
                 .item(&expand_all)
-                .separator()
-                .item(&reset_layout)
                 .build()?;
 
             let window_menu = SubmenuBuilder::new(app, "Window")
                 .minimize()
+                .separator()
+                .item(&reset_workspace)
                 .separator()
                 .close_window()
                 .build()?;
@@ -738,9 +764,32 @@ pub fn run() {
                 return;
             }
 
+            // Spacing grid radio items — uncheck siblings, emit event
+            let spacing_grid_ids = ["spacing-grid-off", "spacing-grid-4px", "spacing-grid-8px"];
+            if spacing_grid_ids.contains(&id) {
+                use tauri::menu::MenuItemKind;
+                if let Some(menu) = app.menu() {
+                    for top_item in menu.items().unwrap_or_default() {
+                        if let MenuItemKind::Submenu(view_sub) = top_item {
+                            for view_item in view_sub.items().unwrap_or_default() {
+                                if let MenuItemKind::Submenu(grid_sub) = view_item {
+                                    for grid_item in grid_sub.items().unwrap_or_default() {
+                                        if let MenuItemKind::Check(check) = grid_item {
+                                            let _ = check.set_checked(check.id().0 == id);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                let _ = app.emit("menu-event", id);
+                return;
+            }
+
             // For check menu items, emit their new checked state
             match id {
-                "toggle-left-panel" | "toggle-right-panel" => {
+                "toggle-left-panel" | "toggle-right-panel" | "style-new-frames" => {
                     use tauri::menu::MenuItemKind;
                     if let Some(menu) = app.menu() {
                         for item in menu.items().unwrap_or_default() {

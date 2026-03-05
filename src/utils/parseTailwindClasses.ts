@@ -46,6 +46,9 @@ for (const family of COLOR_GRID) {
 // Set of known fontSize token names (for text- disambiguation)
 const FONT_SIZE_TOKEN_SET = new Set(FONT_SIZE_SCALE.map((s) => s.token))
 
+/** Sentinel value for col-span-full / row-span-full tokens */
+const SPAN_FULL_VALUE = 9999
+
 // --- Helpers ---
 
 function parseNumericDV(token: string, tokenMap: Map<string, number>): DesignValue<number> | null {
@@ -120,12 +123,12 @@ function matchLayout(cls: string, props: Props): boolean {
   }
 
   // Col/row span
-  if (cls === 'col-span-full') { props.colSpan = dvNum('full', 9999); return true }
+  if (cls === 'col-span-full') { props.colSpan = dvNum('full', SPAN_FULL_VALUE); return true }
   if (cls.startsWith('col-span-')) {
     const dv = parseNumericDV(cls.slice(9), COL_SPAN_TOKENS)
     if (dv) { props.colSpan = dv; return true }
   }
-  if (cls === 'row-span-full') { props.rowSpan = dvNum('full', 9999); return true }
+  if (cls === 'row-span-full') { props.rowSpan = dvNum('full', SPAN_FULL_VALUE); return true }
   if (cls.startsWith('row-span-')) {
     const dv = parseNumericDV(cls.slice(9), ROW_SPAN_TOKENS)
     if (dv) { props.rowSpan = dv; return true }

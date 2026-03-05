@@ -121,6 +121,11 @@ const handlers: Record<string, ToolHandler> = {
       } catch { /* expected: keep original URL if download fails */ }
     }
 
+    // MCP frames are fully styled by the caller — never apply auto-style
+    const prevStyle = getStore().styleNewFrames
+    if (prevStyle) useFrameStore.setState({ styleNewFrames: false })
+    try {
+
     if (index !== undefined) {
       // Insert at specific position — use addChild then move to index
       store.addChild(parent_id, element_type, sanitized as Partial<Frame>)
@@ -131,7 +136,7 @@ const handlers: Record<string, ToolHandler> = {
         if (index < updatedParent.children.length - 1) {
           store.moveFrame(newChild.id, parent_id, index)
         }
-        const result = buildAddResult(newChild, findInTree(getStore().root, parent_id)! as Frame & { type: 'box' })
+        const result = buildAddResult(newChild, updatedParent as Frame & { type: 'box' })
         // Fire-and-forget: download image in background
         autoDownloadSrc(newChild.id)
         return result
@@ -149,6 +154,10 @@ const handlers: Record<string, ToolHandler> = {
     }
 
     return { success: true }
+
+    } finally {
+      if (prevStyle) useFrameStore.setState({ styleNewFrames: true })
+    }
   },
 
   update_frame(params) {

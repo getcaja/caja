@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useId } from 'react'
+import { createPortal } from 'react-dom'
 import { Diamond, Check, Unlink } from 'lucide-react'
 import type { ScaleOption } from '../../data/scales'
 import type { DesignValue } from '../../types/frame'
@@ -109,26 +110,34 @@ export function TokenInput(props: TokenInputProps) {
     }
   }, [selectedIdx, showDropdown])
 
-  // --- Dropdown flip: open above when not enough space below ---
-  const [dropAbove, setDropAbove] = useState(false)
+  // --- Dropdown position (fixed, via portal) ---
+  const [dropPos, setDropPos] = useState<{ top: number; left: number; width: number; above: boolean } | null>(null)
+
+  const measureDropPos = useCallback(() => {
+    if (!containerRef.current) return
+    const rect = containerRef.current.getBoundingClientRect()
+    const spaceBelow = window.innerHeight - rect.bottom
+    const spaceAbove = rect.top
+    const above = spaceBelow < 220 && spaceAbove > spaceBelow
+    setDropPos({
+      top: above ? rect.top : rect.bottom,
+      left: rect.left,
+      width: rect.width,
+      above,
+    })
+  }, [])
 
   // --- Open/close/toggle ---
   const openDropdown = useCallback(() => {
     notifyDropdownOpen(instanceId)
     originalDraftRef.current = draft
     dropdownOpenRef.current = true
-    // Measure available space below vs above
-    if (containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect()
-      const spaceBelow = window.innerHeight - rect.bottom
-      const spaceAbove = rect.top
-      setDropAbove(spaceBelow < 220 && spaceAbove > spaceBelow)
-    }
+    measureDropPos()
     setShowDropdown(true)
     const idx = hasToken ? scale.findIndex((s) => s.token === scaleToken) : -1
     setSelectedIdx(idx)
     startPreview()
-  }, [scaleToken, scale, startPreview])
+  }, [scaleToken, scale, startPreview, measureDropPos])
 
   const closeDropdown = useCallback(() => {
     if (originalRef.current !== null) {
@@ -225,9 +234,10 @@ export function TokenInput(props: TokenInputProps) {
   useEffect(() => {
     if (!showDropdown) return
     const handleClick = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        closeDropdown()
-      }
+      const target = e.target as Node
+      if (containerRef.current?.contains(target)) return
+      if (dropdownRef.current?.contains(target)) return
+      closeDropdown()
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
@@ -344,11 +354,20 @@ export function TokenInput(props: TokenInputProps) {
     ? (() => { const dv = originalRef.current as DesignValue<number>; return dv.mode === 'token' ? dv.token : null })()
     : scaleToken
 
-  // --- Dropdown JSX ---
-  const dropdownJSX = showDropdown && (
+  // --- Dropdown JSX (rendered via portal to avoid scroll-container issues) ---
+  const dropdownJSX = showDropdown && dropPos && createPortal(
     <div
       ref={dropdownRef}
-      className={`absolute left-0 min-w-full z-50 bg-surface-2 border border-border-accent rounded-lg shadow-2xl overflow-y-auto max-h-[200px] py-1 w-max ${dropAbove ? 'bottom-full mb-1' : 'top-full mt-1'}`}
+      style={{
+        position: 'fixed',
+        left: dropPos.left,
+        ...(dropPos.above
+          ? { bottom: window.innerHeight - dropPos.top + 4 }
+          : { top: dropPos.top + 4 }),
+        minWidth: dropPos.width,
+        zIndex: 9999,
+      }}
+      className="bg-surface-2 border border-border-accent rounded-lg shadow-2xl overflow-y-auto max-h-[200px] py-1 w-max"
       onMouseLeave={revertPreview}
     >
       {items.map((item, i) => (
@@ -377,7 +396,8 @@ export function TokenInput(props: TokenInputProps) {
           </button>
         </div>
       ))}
-    </div>
+    </div>,
+    document.body,
   )
 
   // --- Render ---
@@ -462,8 +482,8 @@ export function TokenInput(props: TokenInputProps) {
           </div>
         )}
 
-        {dropdownJSX}
       </div>
+      {dropdownJSX}
     </div>
   )
 }

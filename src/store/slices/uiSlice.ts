@@ -1,5 +1,6 @@
 import type { StateCreator } from 'zustand'
 import type { Frame, DesignValue, Spacing, Breakpoint } from '../../types/frame'
+import type { SpacingGrid } from '../../data/scales'
 import type { FrameStore } from '../frameStore'
 import { findParent } from '../treeHelpers'
 
@@ -12,6 +13,8 @@ interface ViewPrefs {
   canvasWidth: number | null
   activeBreakpoint: Breakpoint
   collapsedIds: string[]
+  spacingGrid: SpacingGrid
+  styleNewFrames: boolean
 }
 
 export function loadViewPrefs(): ViewPrefs {
@@ -24,10 +27,12 @@ export function loadViewPrefs(): ViewPrefs {
         canvasWidth: parsed.canvasWidth ?? null,
         activeBreakpoint: (['base', 'md', 'sm'].includes(parsed.activeBreakpoint) ? parsed.activeBreakpoint : 'base') as Breakpoint,
         collapsedIds: parsed.collapsedIds ?? [],
+        spacingGrid: (['off', '4px', '8px'].includes(parsed.spacingGrid) ? parsed.spacingGrid : '4px') as SpacingGrid,
+        styleNewFrames: parsed.styleNewFrames ?? true,
       }
     }
   } catch (err) { console.warn('Failed to load view preferences:', err) }
-  return { previewMode: false, canvasWidth: null, activeBreakpoint: 'base' as Breakpoint, collapsedIds: [] }
+  return { previewMode: false, canvasWidth: null, activeBreakpoint: 'base' as Breakpoint, collapsedIds: [], spacingGrid: '4px' as SpacingGrid, styleNewFrames: true }
 }
 
 export function saveViewPrefs(prefs: Partial<ViewPrefs>) {
@@ -84,6 +89,8 @@ export interface UiSlice {
   previewMode: boolean
   canvasWidth: number | null
   activeBreakpoint: Breakpoint
+  spacingGrid: SpacingGrid
+  styleNewFrames: boolean
   canvasZoom: number
   canvasTool: 'pointer' | 'frame' | 'text' | 'image'
   pendingTextEdit: string | null
@@ -91,6 +98,8 @@ export interface UiSlice {
   treePanelTab: 'layers' | 'components'
   _layersPageId: string | null
 
+  setSpacingGrid: (mode: SpacingGrid) => void
+  setStyleNewFrames: (value: boolean) => void
   toggleCollapse: (id: string) => void
   collapseAll: () => void
   expandAll: () => void
@@ -115,12 +124,24 @@ export const createUiSlice: StateCreator<FrameStore, [], [], UiSlice> = (set, ge
     previewMode: initialViewPrefs.previewMode,
     canvasWidth: initialViewPrefs.canvasWidth,
     activeBreakpoint: initialViewPrefs.activeBreakpoint,
+    spacingGrid: initialViewPrefs.spacingGrid,
+    styleNewFrames: initialViewPrefs.styleNewFrames,
     canvasZoom: 1,
     canvasTool: 'pointer',
     pendingTextEdit: null,
     pendingImageSrc: null,
     treePanelTab: 'layers' as const,
     _layersPageId: null as string | null,
+
+    setSpacingGrid: (mode) => {
+      saveViewPrefs({ spacingGrid: mode })
+      set({ spacingGrid: mode })
+    },
+
+    setStyleNewFrames: (value) => {
+      saveViewPrefs({ styleNewFrames: value })
+      set({ styleNewFrames: value })
+    },
 
     toggleCollapse: (id) =>
       set((state) => {

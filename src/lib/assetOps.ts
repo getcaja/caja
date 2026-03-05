@@ -183,7 +183,7 @@ export async function importLocalAsset(projectPath: string | null): Promise<Down
   })
   if (!selected) return null
 
-  const filePath = typeof selected === 'string' ? selected : (selected as any).path ?? String(selected)
+  const filePath = typeof selected === 'string' ? selected : String(selected)
   const data = await readFile(filePath)
   const hash = await hashArrayBuffer(data.slice().buffer)
   const ext = filePath.split('.').pop()?.toLowerCase() || 'png'
@@ -244,17 +244,26 @@ export async function migrateAssetsOnSave(pages: any[], projectPath: string): Pr
   await ensureAssetsDir(assetsDir)
 
   // Copy files and update blob cache keys
+  const errors: string[] = []
   await Promise.all([...migrations.entries()].map(async ([oldPath, newPath]) => {
-    if (!(await exists(newPath))) {
-      await copyFile(oldPath, newPath)
-    }
-    // Re-key blob cache: old temp path → new real path
-    const blobUrl = blobCache.get(oldPath)
-    if (blobUrl) {
-      blobCache.delete(oldPath)
-      blobCache.set(newPath, blobUrl)
+    try {
+      if (!(await exists(newPath))) {
+        await copyFile(oldPath, newPath)
+      }
+      // Re-key blob cache: old temp path → new real path
+      const blobUrl = blobCache.get(oldPath)
+      if (blobUrl) {
+        blobCache.delete(oldPath)
+        blobCache.set(newPath, blobUrl)
+      }
+    } catch (err) {
+      console.error(`[migrateAssetsOnSave] Failed to migrate ${oldPath} → ${newPath}:`, err)
+      errors.push(oldPath)
     }
   }))
+  if (errors.length > 0) {
+    console.warn(`[migrateAssetsOnSave] ${errors.length} file(s) failed to migrate`)
+  }
 
   // Update frame paths in-place
   function rewrite(frame: any) {

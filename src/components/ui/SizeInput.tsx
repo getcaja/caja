@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { Diamond, Check, Unlink } from 'lucide-react'
 import type { SizeValue } from '../../types/frame'
-import { SIZE_CONSTRAINT_SCALE, type ScaleOption } from '../../data/scales'
+import { SIZE_CONSTRAINT_SCALE, filterSpacingScale, type ScaleOption } from '../../data/scales'
 import { useFrameStore } from '../../store/frameStore'
 
 interface SizeInputProps {
@@ -31,6 +32,8 @@ function sizeToKeyword(value: SizeValue): string | null {
 export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, parentIsFlex, tooltip }: SizeInputProps) {
   const startPreview = useFrameStore((s) => s.startPreview)
   const endPreview = useFrameStore((s) => s.endPreview)
+  const spacingGrid = useFrameStore((s) => s.spacingGrid)
+  const filteredScale = useMemo(() => filterSpacingScale(SIZE_CONSTRAINT_SCALE, spacingGrid), [spacingGrid])
   const [showDropdown, setShowDropdown] = useState(false)
   const [selectedIdx, setSelectedIdx] = useState(-1)
   const [draft, setDraft] = useState('')
@@ -54,7 +57,7 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
   const isDefault = value.mode === 'default'
 
   // Build dropdown items
-  const items: DropdownItem[] = buildItems(parentIsFlex, SIZE_CONSTRAINT_SCALE)
+  const items: DropdownItem[] = buildItems(parentIsFlex, filteredScale)
 
   // Sync draft when value changes externally
   useEffect(() => {
@@ -66,11 +69,19 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
     }
   }, [isFixed, fixedToken, fixedNumeric, focused])
 
-  // Scroll selected item into view
+  // Scroll selected item into view (within dropdown only)
   useEffect(() => {
     if (!showDropdown || !dropdownRef.current || selectedIdx < 0) return
-    const item = dropdownRef.current.children[selectedIdx] as HTMLElement | undefined
-    item?.scrollIntoView({ block: 'nearest' })
+    const container = dropdownRef.current
+    const item = container.children[selectedIdx] as HTMLElement | undefined
+    if (!item) return
+    const top = item.offsetTop
+    const bottom = top + item.offsetHeight
+    if (top < container.scrollTop) {
+      container.scrollTop = top
+    } else if (bottom > container.scrollTop + container.clientHeight) {
+      container.scrollTop = bottom - container.clientHeight
+    }
   }, [selectedIdx, showDropdown])
 
   // Resolve current index in dropdown
@@ -81,20 +92,23 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
   }, [keyword, fixedToken, items])
 
   // --- Open/close ---
-  // --- Dropdown flip: open above when not enough space below ---
-  const [dropAbove, setDropAbove] = useState(false)
+  const [dropPos, setDropPos] = useState<{ top: number; left: number; width: number; above: boolean } | null>(null)
+
+  const measureDropPos = useCallback(() => {
+    if (!containerRef.current) return
+    const rect = containerRef.current.getBoundingClientRect()
+    const spaceBelow = window.innerHeight - rect.bottom
+    const spaceAbove = rect.top
+    const above = spaceBelow < 220 && spaceAbove > spaceBelow
+    setDropPos({ top: above ? rect.top : rect.bottom, left: rect.left, width: rect.width, above })
+  }, [])
 
   const openDropdown = useCallback(() => {
-    if (containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect()
-      const spaceBelow = window.innerHeight - rect.bottom
-      const spaceAbove = rect.top
-      setDropAbove(spaceBelow < 220 && spaceAbove > spaceBelow)
-    }
+    measureDropPos()
     setShowDropdown(true)
     setSelectedIdx(findCurrentIdx())
     startPreview()
-  }, [findCurrentIdx, startPreview])
+  }, [findCurrentIdx, startPreview, measureDropPos])
 
   const closeDropdown = useCallback(() => {
     if (originalRef.current !== null) {
@@ -119,9 +133,9 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
       if (item.key === 'full') return { mode: 'fill' }
     }
     // scale item
-    const opt = SIZE_CONSTRAINT_SCALE.find((s) => s.token === item.key)!
+    const opt = filteredScale.find((s) => s.token === item.key)!
     return { mode: 'fixed', value: { mode: 'token', token: opt.token, value: opt.value } }
-  }, [])
+  }, [filteredScale])
 
   const previewAtIndex = useCallback((idx: number) => {
     if (idx < 0 || idx >= items.length) return
@@ -136,7 +150,7 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
     const patch = applyItem(item)
     onChange(patch)
     if (item.kind === 'scale') {
-      const opt = SIZE_CONSTRAINT_SCALE.find((s) => s.token === item.key)!
+      const opt = filteredScale.find((s) => s.token === item.key)!
       setDraft(String(opt.value))
     } else {
       setDraft('')
@@ -193,7 +207,7 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
       onChange({ mode: 'fixed', value: { mode: 'custom', value: clamped } })
       setDraft(String(clamped))
     }
-  }, [draft, hasPill, isFixed, fixedToken, fixedNumeric, onChange])
+  }, [draft, hasPill, isFixed, fixedToken, fixedNumeric, onChange, filteredScale])
 
   // --- Keyboard ---
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -286,9 +300,10 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
   useEffect(() => {
     if (!showDropdown) return
     const handleClick = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        closeDropdown()
-      }
+      const target = e.target as Node
+      if (containerRef.current?.contains(target)) return
+      if (dropdownRef.current?.contains(target)) return
+      closeDropdown()
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
@@ -335,7 +350,7 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
         >
           <span title={tooltip} className="w-4 shrink-0 flex items-center justify-center fg-muted">{label}</span>
           <span className="flex items-center bg-emphasis fg-default rounded px-1 text-[11px] leading-[18px] font-medium min-w-0 truncate">
-            {SIZE_CONSTRAINT_SCALE.find(s => s.token === fixedToken)?.label ?? `${fixedNumeric}px`}
+            {filteredScale.find(s => s.token === fixedToken)?.label ?? `${fixedNumeric}px`}
           </span>
           <span className="flex-1" />
           {/* Hidden input for focus management */}
@@ -433,20 +448,26 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
         </div>
       )}
 
-      {/* Dropdown */}
-      {showDropdown && (
+      {/* Dropdown (portal to avoid scroll-container issues) */}
+      {showDropdown && dropPos && createPortal(
         <div
           ref={dropdownRef}
-          className={`absolute left-0 right-0 z-50 bg-surface-2 border border-border-accent rounded-lg shadow-2xl overflow-y-auto max-h-[200px] py-1 ${dropAbove ? 'bottom-full mb-1' : 'top-full mt-1'}`}
+          style={{
+            position: 'fixed',
+            left: dropPos.left,
+            ...(dropPos.above
+              ? { bottom: window.innerHeight - dropPos.top + 4 }
+              : { top: dropPos.top + 4 }),
+            minWidth: dropPos.width,
+            zIndex: 9999,
+          }}
+          className="bg-surface-2 border border-border-accent rounded-lg shadow-2xl overflow-y-auto max-h-[200px] py-1"
           onMouseLeave={revertPreview}
         >
           {items.map((item, i) => (
             <div key={`${item.kind}-${item.key}`}>
               {i === separatorIdx && separatorIdx > 0 && (
-                <>
-                  <div className="border-t border-border my-1" />
-                  <div className="px-3 py-1 text-[11px] fg-subtle font-medium">Fixed</div>
-                </>
+                <div className="border-t border-border my-1" />
               )}
               <button
                 onMouseDown={(e) => {
@@ -471,7 +492,8 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
               </button>
             </div>
           ))}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   )

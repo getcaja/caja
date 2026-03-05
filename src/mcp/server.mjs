@@ -370,6 +370,20 @@ server.tool(
   }
 )
 
+// ── Asset tools ──
+
+server.tool(
+  'upload_asset',
+  'Download an external image URL to local storage and return a local asset URL. Use this to ensure images are available offline and avoid CORS issues in the canvas.',
+  {
+    url: z.string().describe('The external image URL to download (must be http:// or https://)'),
+  },
+  async ({ url }) => {
+    const result = await callTool('upload_asset', { url })
+    return { content: [{ type: 'text', text: JSON.stringify(result) }] }
+  }
+)
+
 // ── Library tools ──
 
 server.tool(

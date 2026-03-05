@@ -110,9 +110,14 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
   }
 
   useEffect(() => {
-    if (!showSuggestions || !suggestionsRef.current) return
-    const item = suggestionsRef.current.children[selectedIdx] as HTMLElement | undefined
-    item?.scrollIntoView({ block: 'nearest' })
+    if (!showSuggestions || !suggestionsRef.current || selectedIdx < 0) return
+    const container = suggestionsRef.current
+    const item = container.children[selectedIdx] as HTMLElement | undefined
+    if (!item) return
+    const top = item.offsetTop
+    const bottom = top + item.offsetHeight
+    if (top < container.scrollTop) container.scrollTop = top
+    else if (bottom > container.scrollTop + container.clientHeight) container.scrollTop = bottom - container.clientHeight
   }, [selectedIdx, showSuggestions])
 
   return (

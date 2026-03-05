@@ -47,3 +47,12 @@ export const SPECIAL_COLORS: ColorSwatch[] = [
   { token: 'white', value: '#ffffff' },
   { token: 'black', value: '#000000' },
 ]
+
+// 17 chromatic families (skip slate/gray/zinc/neutral/stone), shade index 1 = "100"
+export const NEW_FRAME_COLORS: ColorSwatch[] = COLOR_GRID
+  .filter((f) => !['slate', 'gray', 'zinc', 'neutral', 'stone'].includes(f.name))
+  .map((f) => f.shades[1]) // shade index 1 = "100"
+
+export function randomNewFrameColor(): ColorSwatch {
+  return NEW_FRAME_COLORS[Math.floor(Math.random() * NEW_FRAME_COLORS.length)]
+}

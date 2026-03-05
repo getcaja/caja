@@ -47,7 +47,7 @@ export function useTreeKeyboard(config: TreeKeyboardConfig) {
       if (isEditable(e)) return
 
       // Delete / Backspace
-      if ((e.key === 'Delete' || e.key === 'Backspace') && config.deleteSelected) {
+      if ((e.key === 'Delete' || e.key === 'Backspace') && !e.defaultPrevented && config.deleteSelected) {
         const ids = config.getSelectedIds()
         const primary = config.getPrimaryId()
         if (ids.size === 0 && !primary) return
@@ -57,7 +57,7 @@ export function useTreeKeyboard(config: TreeKeyboardConfig) {
       }
 
       // Arrow keys — reorder (adapter receives raw key for direction filtering)
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && config.reorder) {
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && !e.defaultPrevented && config.reorder) {
         const primary = config.getPrimaryId()
         if (!primary) return
         e.preventDefault()
@@ -67,35 +67,35 @@ export function useTreeKeyboard(config: TreeKeyboardConfig) {
       }
 
       // Cmd+A — select all
-      if (mod && key === 'a' && !e.shiftKey && config.selectAll) {
+      if (mod && key === 'a' && !e.shiftKey && !e.defaultPrevented && config.selectAll) {
         e.preventDefault()
         config.selectAll()
         return
       }
 
       // Cmd+C — copy
-      if (mod && key === 'c' && !e.shiftKey && config.copySelected) {
+      if (mod && key === 'c' && !e.shiftKey && !e.defaultPrevented && config.copySelected) {
         e.preventDefault()
         config.copySelected()
         return
       }
 
       // Cmd+X — cut
-      if (mod && key === 'x' && !e.shiftKey && config.cutSelected) {
+      if (mod && key === 'x' && !e.shiftKey && !e.defaultPrevented && config.cutSelected) {
         e.preventDefault()
         config.cutSelected()
         return
       }
 
       // Cmd+V — paste
-      if (mod && key === 'v' && !e.shiftKey && config.pasteClipboard) {
+      if (mod && key === 'v' && !e.shiftKey && !e.defaultPrevented && config.pasteClipboard) {
         e.preventDefault()
         config.pasteClipboard()
         return
       }
 
       // Cmd+D — duplicate
-      if (mod && key === 'd' && config.duplicateSelected) {
+      if (mod && key === 'd' && !e.defaultPrevented && config.duplicateSelected) {
         e.preventDefault()
         config.duplicateSelected()
         return

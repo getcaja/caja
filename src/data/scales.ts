@@ -5,6 +5,18 @@ export interface ScaleOption {
   group?: string  // group header shown before this item in dropdown
 }
 
+export type SpacingGrid = 'off' | '4px' | '8px'
+
+export function filterSpacingScale(scale: ScaleOption[], grid: SpacingGrid): ScaleOption[] {
+  if (grid === 'off') return scale
+  const base = grid === '4px' ? 4 : 8
+  return scale.filter((s) => {
+    if (typeof s.value !== 'number') return true  // keep 'auto' etc
+    if (s.value === 0) return true
+    return s.value % base === 0
+  })
+}
+
 export const FONT_WEIGHT_SCALE: ScaleOption[] = [
   { token: 'thin', value: 100, label: 'Thin' },
   { token: 'extralight', value: 200, label: 'Extra Light' },

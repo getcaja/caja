@@ -200,24 +200,7 @@ test.describe('Canvas outline rendering', () => {
     expect(outlineColor).toBe('rgb(59, 130, 246)')
   })
 
-  test('empty box shows dashed outline', async ({ page }) => {
-    await seedAndLoad(page, [makeBox('empty-box', 'Empty', [])])
-    const frame = canvasFrame(page)
-    const box = frame.locator('[data-frame-id="empty-box"]')
-    await expect(box).toHaveClass(/is-empty/)
-
-    // Wait for Tailwind runtime to compile and CSS variable --color-surface-3 to resolve
-    await frame.locator('[data-frame-id="empty-box"]').evaluate(async (el) => {
-      // Poll until outline-style is dashed (Tailwind runtime needs to process @theme)
-      for (let i = 0; i < 20; i++) {
-        if (getComputedStyle(el).outlineStyle === 'dashed') return
-        await new Promise((r) => setTimeout(r, 100))
-      }
-    })
-
-    const outlineStyle = await box.evaluate((e) => getComputedStyle(e).outlineStyle)
-    expect(outlineStyle).toBe('dashed')
-  })
+  // is-empty outline removed — auto-style gives new frames real properties
 })
 
 test.describe('Canvas visual regression', () => {

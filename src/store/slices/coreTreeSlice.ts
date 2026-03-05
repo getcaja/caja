@@ -14,6 +14,7 @@ import {
   normalizeFrame, cloneTree,
 } from '../frameFactories'
 import { useCatalogStore } from '../catalogStore'
+import { randomNewFrameColor } from '../../data/colors'
 
 const MAX_HISTORY = 50
 
@@ -153,7 +154,7 @@ export const createCoreTreeSlice: StateCreator<FrameStore, [], [], CoreTreeSlice
       const prefixMap = { text: 'Text', image: 'Image', button: 'Button', input: 'Input', textarea: 'Textarea', select: 'Select', link: 'Link', box: 'Frame' } as const
       const prefix = prefixMap[type]
       const name = overrides?.name || nextName(prefix, state.root)
-      const child =
+      let child: Frame =
         type === 'text' ? createText({ name, ...overrides } as Partial<TextElement>)
         : type === 'image' ? createImage({ name, ...overrides } as Partial<ImageElement>)
         : type === 'button' ? createButton({ name, ...overrides } as Partial<ButtonElement>)
@@ -162,6 +163,17 @@ export const createCoreTreeSlice: StateCreator<FrameStore, [], [], CoreTreeSlice
         : type === 'select' ? createSelect({ name, ...overrides } as Partial<SelectElement>)
         : type === 'link' ? createLink({ name, ...overrides } as Partial<TextElement>)
         : createBox({ name, ...overrides } as Partial<BoxElement>)
+      // Style new box frames with height + random bg when enabled
+      if (type === 'box' && state.styleNewFrames) {
+        const box = child as BoxElement
+        if (!overrides?.height) {
+          box.height = { mode: 'fixed', value: { mode: 'token', token: '8', value: 32 } }
+        }
+        if (!overrides?.bg) {
+          const color = randomNewFrameColor()
+          box.bg = { mode: 'token', token: color.token, value: color.value }
+        }
+      }
       const history = pushHistory(state)
       const newRoot = addChildInTree(state.root, parentId, child) as BoxElement
       return { ...updateActiveRoot(state, newRoot), selectedId: child.id, selectedIds: new Set([child.id]), ...history }

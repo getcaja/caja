@@ -199,10 +199,16 @@ function App() {
       import('@tauri-apps/api/core').then(({ invoke }) => {
         safeMenuSync(invoke, 'toggle-left-panel', true)
         safeMenuSync(invoke, 'toggle-right-panel', true)
+        safeMenuSync(invoke, 'style-new-frames', useFrameStore.getState().styleNewFrames)
         // Sync theme radio checks
         const pref = getThemePreference()
         for (const tid of ['system', 'default-dark', 'default-light']) {
           safeMenuSync(invoke, `theme-${tid}`, tid === pref)
+        }
+        // Sync spacing grid radio checks
+        const gridPref = useFrameStore.getState().spacingGrid
+        for (const gid of ['off', '4px', '8px']) {
+          safeMenuSync(invoke, `spacing-grid-${gid}`, gid === gridPref)
         }
         // Load recent files list for menu event index lookups
         invoke<string[]>('get_recent_files').then((files) => {
@@ -330,12 +336,17 @@ function App() {
           case 'expand-all':
             useFrameStore.getState().expandAll()
             break
-          case 'reset-layout':
+          case 'reset-workspace':
             setLeftWidth(LEFT_DEFAULT)
             setRightWidth(RIGHT_DEFAULT)
             setLeftCollapsed(false)
             setRightCollapsed(false)
             useFrameStore.getState().expandAll()
+            useFrameStore.getState().setStyleNewFrames(true)
+            useFrameStore.getState().setSpacingGrid('4px')
+            useFrameStore.getState().setCanvasZoom(1)
+            useFrameStore.getState().setActiveBreakpoint('base')
+            useFrameStore.getState().setPreviewMode(false)
             // Reset section collapse states to defaults
             for (let i = localStorage.length - 1; i >= 0; i--) {
               const key = localStorage.key(i)
@@ -345,6 +356,10 @@ function App() {
             import('@tauri-apps/api/core').then(({ invoke }) => {
               safeMenuSync(invoke, 'toggle-left-panel', true)
               safeMenuSync(invoke, 'toggle-right-panel', true)
+              safeMenuSync(invoke, 'style-new-frames', true)
+              for (const gid of ['off', '4px', '8px']) {
+                safeMenuSync(invoke, `spacing-grid-${gid}`, gid === '4px')
+              }
             })
             break
           default:
@@ -371,6 +386,11 @@ function App() {
               const themeId = e.payload.slice(6) // "theme-default-dark" → "default-dark"
               switchTheme(themeId)
             }
+            // Spacing grid menu items: "spacing-grid-<mode>"
+            if (e.payload.startsWith('spacing-grid-')) {
+              const mode = e.payload.slice(13) as 'off' | '4px' | '8px' // "spacing-grid-4px" → "4px"
+              useFrameStore.getState().setSpacingGrid(mode)
+            }
         }
       }).then((fn) => {
         if (active) unlisteners.push(fn); else fn()
@@ -383,6 +403,8 @@ function App() {
           setLeftCollapsed(!checked)
         } else if (id === 'toggle-right-panel') {
           setRightCollapsed(!checked)
+        } else if (id === 'style-new-frames') {
+          useFrameStore.getState().setStyleNewFrames(checked)
         }
       }).then((fn) => {
         if (active) unlisteners.push(fn); else fn()

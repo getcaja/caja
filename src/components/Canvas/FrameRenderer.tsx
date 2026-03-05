@@ -82,15 +82,6 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
   const isTextarea = frame.type === 'textarea'
   const isSelect = frame.type === 'select'
   // A childless box that would collapse to 0×0 without min-size assist
-  const hasVisualPresence = isBox && (
-    frame.width.mode === 'fixed' || frame.height.mode === 'fixed'
-    || frame.width.mode === 'fill' || frame.height.mode === 'fill'
-    || frame.bg.value || frame.bgImage
-    || frame.minHeight.value > 0 || frame.minWidth.value > 0
-    || (frame.padding && (frame.padding.top.value > 0 || frame.padding.bottom.value > 0 || frame.padding.left.value > 0 || frame.padding.right.value > 0))
-    || frame.tailwindClasses
-  )
-  const isEmpty = isBox && frame.children.length === 0 && !hasVisualPresence
   const isDragged = canvasDragId === frame.id
 
   // Tailwind classes — effective frame already has overrides merged,
@@ -106,7 +97,6 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
   const stateClasses = [
     isSelected && 'is-selected',
     isHovered && 'is-hovered',
-    !previewMode && isEmpty && !isRoot && 'is-empty',
     isDragged && 'is-line-drop',
     isMcpHighlighted && 'mcp-highlight',
     !previewMode && (editingText ? 'cursor-text' : canvasTool === 'text' ? (isText ? 'cursor-text' : 'cursor-crosshair') : (canvasTool === 'frame' || canvasTool === 'image') ? 'cursor-crosshair' : 'cursor-default'),
@@ -186,31 +176,34 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
     const cleanup = (commit: boolean) => {
       cancelAnimationFrame(resolveRaf)
       try { captureTarget.releasePointerCapture(pointerId) } catch { /* expected: browser may have already released capture */ }
-      if (dragging) {
-        const s = useFrameStore.getState()
-        if (commit) {
-          // Synchronous resolve at final pointer position — avoids stale rAF state
-          const result = resolveCanvasDrop(doc, lastCx, lastCy, frame.id, s.root, cmdHeld ? null : maxDropDepth)
-          if (result) {
-            const { parentId, index: visualIdx } = result
-            // Visual → logical: moveFrame extracts first, then inserts at index
-            const parentFrame = findInTree(s.root, parentId)
-            let idx = visualIdx
-            if (parentFrame?.type === 'box') {
-              const dragPos = parentFrame.children.findIndex(c => c.id === frame.id)
-              if (dragPos >= 0 && visualIdx > dragPos) idx--
+      try {
+        if (dragging) {
+          const s = useFrameStore.getState()
+          if (commit) {
+            // Synchronous resolve at final pointer position — avoids stale rAF state
+            const result = resolveCanvasDrop(doc, lastCx, lastCy, frame.id, s.root, cmdHeld ? null : maxDropDepth)
+            if (result) {
+              const { parentId, index: visualIdx } = result
+              // Visual → logical: moveFrame extracts first, then inserts at index
+              const parentFrame = findInTree(s.root, parentId)
+              let idx = visualIdx
+              if (parentFrame?.type === 'box') {
+                const dragPos = parentFrame.children.findIndex(c => c.id === frame.id)
+                if (dragPos >= 0 && visualIdx > dragPos) idx--
+              }
+              s.moveFrame(frame.id, parentId, idx)
             }
-            s.moveFrame(frame.id, parentId, idx)
           }
+          s.setCanvasDragOver(null)
+          s.setCanvasDrag(null)
+          requestAnimationFrame(() => { _skipNextClick = false })
         }
-        s.setCanvasDragOver(null)
-        s.setCanvasDrag(null)
-        requestAnimationFrame(() => { _skipNextClick = false })
+      } finally {
+        doc.removeEventListener('pointermove', onMove)
+        doc.removeEventListener('pointerup', onUp)
+        doc.removeEventListener('keydown', onKeyDown)
+        doc.removeEventListener('keyup', onKeyUp)
       }
-      doc.removeEventListener('pointermove', onMove)
-      doc.removeEventListener('pointerup', onUp)
-      doc.removeEventListener('keydown', onKeyDown)
-      doc.removeEventListener('keyup', onKeyUp)
     }
 
     const resolveAndApply = (cx: number, cy: number) => {

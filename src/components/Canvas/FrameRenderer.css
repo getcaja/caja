@@ -2,18 +2,6 @@
 /* The overlay renders rectangular outlines above the canvas content,
    so they never inherit border-radius from user elements. */
 
-/* ── Empty box: minimum touch target (editor-only) ── */
-
-.is-empty {
-  min-height: 32px;
-  min-width: 32px;
-}
-
-.is-empty:not(.is-selected):not(.is-hovered) {
-  outline: 1px dotted var(--color-surface-3);
-  outline-offset: -1px;
-}
-
 /* ── Text selection highlight ── */
 
 [data-frame-id] ::selection {
