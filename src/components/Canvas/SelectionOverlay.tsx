@@ -323,11 +323,11 @@ export function SelectionOverlay() {
         if (info) infos.push(info)
       }
 
-      // Canvas hover → show margins for the hovered element (skip tree hovers)
-      if (showHov && effectiveHoveredId && !isTreeHover) {
-        const info = computeMarginInfo(doc, effectiveHoveredId, wrapper, zoom)
-        if (info) infos.push(info)
-      }
+      // Canvas hover margins temporarily disabled for testing
+      // if (showHov && effectiveHoveredId && !isTreeHover) {
+      //   const info = computeMarginInfo(doc, effectiveHoveredId, wrapper, zoom)
+      //   if (info) infos.push(info)
+      // }
 
       setMarginInfos(infos)
     })
