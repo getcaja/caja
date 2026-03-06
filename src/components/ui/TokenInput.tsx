@@ -30,6 +30,9 @@ interface TokenInputProps {
   classPrefix?: string
   inlineLabel?: React.ReactNode
   tooltip?: string
+  autoFocus?: boolean
+  /** Open the dropdown immediately on mount. */
+  initialOpen?: boolean
 }
 
 // Normalized item for the shared dropdown
@@ -167,6 +170,15 @@ export function TokenInput(props: TokenInputProps) {
     closeListeners.add(handler)
     return () => { closeListeners.delete(handler) }
   }, [instanceId])
+
+  // --- Initial open ---
+  const didInitialOpen = useRef(false)
+  useEffect(() => {
+    if (props.initialOpen && !didInitialOpen.current) {
+      didInitialOpen.current = true
+      requestAnimationFrame(() => openDropdown())
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- Preview/commit/revert ---
   const previewAtIndex = useCallback((idx: number) => {
@@ -463,6 +475,7 @@ export function TokenInput(props: TokenInputProps) {
               onKeyDown={handleKeyDown}
               onFocus={handleFocus}
               onBlur={handleBlur}
+              autoFocus={props.autoFocus}
               placeholder={scaleIsUnset ? (props.placeholder ?? String(scaleResetValue)) : undefined}
               className={`flex-1 min-w-[20px] text-[12px] fg-default${showDropdown ? ' caret-transparent' : ''}`}
             />
