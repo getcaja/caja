@@ -3,7 +3,6 @@ import { useState } from 'react'
 
 const MAC = navigator.platform.startsWith('Mac')
 const CMD = MAC ? '\u2318' : 'Ctrl'
-const OPT = MAC ? '\u2325' : 'Alt'
 const SHIFT = MAC ? '\u21E7' : 'Shift'
 const DEL = MAC ? '\u232B' : 'Del'
 
@@ -13,7 +12,7 @@ const sections: { title: string; shortcuts: [string, string][] }[] = [
     shortcuts: [
       ['Select parent', 'Esc'],
       ['Drill into frame', 'Double Click'],
-      [`Deep select`, `${OPT} Click`],
+      [`Deep select`, `${CMD} Click`],
     ],
   },
   {
@@ -70,7 +69,7 @@ export function ShortcutsPanel({ open, onClose }: { open: boolean; onClose: () =
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
       <div
         className="bg-surface-1 border border-border rounded-lg shadow-xl w-[360px] max-h-[480px] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}

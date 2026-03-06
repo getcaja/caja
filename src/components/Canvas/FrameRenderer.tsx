@@ -186,7 +186,6 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
     const pointerId = e.pointerId
     const captureTarget = e.target as HTMLElement
     const doc = captureTarget.ownerDocument
-    const altHeld = e.altKey
     let dragging = false
     let lastTarget: { parentId: string; index: number } | null = null
     let maxDropDepth: number | null = null
@@ -194,12 +193,9 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
     let lastCx = 0
     let lastCy = 0
     let resolveRaf = 0
-    // Resolve drag target: default = drill-down level, Alt = exact element (deep)
-    let dragId = frame.id
-    if (!altHeld) {
-      const s = useFrameStore.getState()
-      dragId = resolveDrillClick(s.root, s.selectedId, frame.id)
-    }
+    // Resolve drag target to drill-down level
+    const s0 = useFrameStore.getState()
+    const dragId = resolveDrillClick(s0.root, s0.selectedId, frame.id)
 
     const cleanup = (commit: boolean) => {
       cancelAnimationFrame(resolveRaf)
@@ -357,8 +353,8 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
         }
       }
       if (!editingText) {
-        // Alt+click: deep select (exact element, bypass drill-down)
-        if (e.altKey) {
+        // Cmd+click: deep select (exact element, bypass drill-down)
+        if (e.metaKey || e.ctrlKey) {
           expandToFrame(frame.id)
           select(frame.id)
           return
