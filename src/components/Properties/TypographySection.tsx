@@ -147,7 +147,7 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides }: { f
                 title="Text Style"
                 className={`w-5 h-5 shrink-0 flex items-center justify-center rounded ${
                   moreActive
-                    ? 'text-blue-400 bg-blue-400/10'
+                    ? 'text-accent bg-accent/10'
                     : 'fg-subtle hover:fg-muted hover:bg-inset'
                 }`}
               >

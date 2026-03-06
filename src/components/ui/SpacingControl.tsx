@@ -145,7 +145,7 @@ function MixedPill({ label, scale, onChange, onPreview, onRevert, onReset, onOpe
             minWidth: dropPos.width,
             zIndex: 9999,
           }}
-          className="bg-surface-2 border border-border-accent rounded-lg shadow-2xl overflow-y-auto max-h-[200px] py-1 w-max"
+          className="c-menu-popup overflow-y-auto max-h-[200px] w-max"
           onMouseLeave={() => { setSelectedIdx(-1); onRevert() }}
         >
           {items.map((item, i) => (
@@ -302,7 +302,7 @@ export function SpacingControl({
           title={modeTitle}
           className={`w-5 h-5 flex items-center justify-center rounded shrink-0 ${
             isActive
-              ? 'text-blue-400 bg-blue-400/10'
+              ? 'text-accent bg-accent/10'
               : 'fg-icon-subtle hover:fg-icon-muted hover:bg-inset'
           }`}
           onClick={toggle}

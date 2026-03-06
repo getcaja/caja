@@ -134,7 +134,7 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
             <button
               onClick={copyAll}
               className={`w-5 h-5 shrink-0 flex items-center justify-center rounded ${
-                copied ? 'text-blue-400 bg-blue-400/10' : 'fg-subtle hover:fg-muted hover:bg-inset'
+                copied ? 'text-accent bg-accent/10' : 'fg-subtle hover:fg-muted hover:bg-inset'
               }`}
               title="Copy all classes"
             >
@@ -194,7 +194,7 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
             {showSuggestions && suggestions.length > 0 && (
               <div
                 ref={suggestionsRef}
-                className={`absolute left-0 right-0 z-50 bg-surface-2 border border-border-accent rounded-lg shadow-2xl overflow-y-auto max-h-[200px] py-1 ${dropAbove ? 'bottom-full mb-1' : 'top-full mt-1'}`}
+                className={`absolute left-0 right-0 c-menu-popup overflow-y-auto max-h-[200px] ${dropAbove ? 'bottom-full mb-1' : 'top-full mt-1'}`}
               >
                 {suggestions.map((cls, i) => (
                   <button

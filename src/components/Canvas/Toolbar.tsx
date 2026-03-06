@@ -195,7 +195,7 @@ export function Toolbar({ hidden = false }: { hidden?: boolean }) {
     >
       <div className={`flex items-stretch bg-surface-1 border border-border rounded-lg shadow-[0_3px_8px_rgba(0,0,0,0.35),0_1px_3px_rgba(0,0,0,0.5)] ${shouldHide ? 'pointer-events-none' : 'pointer-events-auto'}`}>
         <div className="flex items-center gap-0.5 py-1 pl-1.5 pr-1">
-          <div className="flex items-center bg-overlay rounded-md">
+          <div className="flex items-center rounded-md">
             <button
               onClick={() => setCanvasTool('pointer')}
               className={`${btnIcon} text-white ${canvasTool === 'pointer' ? 'bg-accent' : 'opacity-60 hover:opacity-100'}`}

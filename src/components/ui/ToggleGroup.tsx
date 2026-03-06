@@ -20,8 +20,7 @@ export function ToggleGroup<T extends string>({
       type="single"
       value={value}
       onValueChange={(v) => { if (v) onChange(v as T) }}
-      className={`flex rounded ${className ?? ''}`}
-      style={{ backgroundColor: 'var(--bg-inset)' }}
+      className={`flex rounded bg-inset ${className ?? ''}`}
     >
       {options.map((opt) => (
         <RadixToggleGroup.Item
@@ -32,10 +31,9 @@ export function ToggleGroup<T extends string>({
             opt.disabled
               ? 'fg-disabled cursor-not-allowed'
               : value === opt.value
-                ? 'fg-default'
+                ? 'fg-default bg-emphasis'
                 : 'fg-subtle hover:fg-muted'
           }`}
-          style={!opt.disabled && value === opt.value ? { backgroundColor: 'var(--bg-emphasis)' } : undefined}
           disabled={opt.disabled}
         >
           {opt.label}

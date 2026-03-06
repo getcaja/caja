@@ -21,7 +21,7 @@ export function Popover({ open, onOpenChange, trigger, children, side = 'bottom'
           side={side}
           align={align}
           sideOffset={sideOffset}
-          className="bg-surface-2 border border-border-accent rounded-lg shadow-2xl z-50 outline-none"
+          className="c-menu-popup outline-none"
         >
           {children}
         </RadixPopover.Content>

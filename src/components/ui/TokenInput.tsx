@@ -379,7 +379,7 @@ export function TokenInput(props: TokenInputProps) {
         minWidth: dropPos.width,
         zIndex: 9999,
       }}
-      className="bg-surface-2 border border-border-accent rounded-lg shadow-2xl overflow-y-auto max-h-[200px] py-1 w-max"
+      className="c-menu-popup overflow-y-auto max-h-[200px] w-max"
       onMouseLeave={revertPreview}
     >
       {items.map((item, i) => (

@@ -69,7 +69,7 @@ export function ShortcutsPanel({ open, onClose }: { open: boolean; onClose: () =
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
       <div
         className="bg-surface-1 border border-border rounded-lg shadow-xl w-[360px] max-h-[480px] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
