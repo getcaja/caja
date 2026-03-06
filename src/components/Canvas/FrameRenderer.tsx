@@ -362,7 +362,30 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
           select(frame.id)
           return
         }
-        // Drill-down: resolve click to the current context level
+        // Rapid click (detail >= 2): drill into selected element
+        if (e.detail >= 2 && currentId) {
+          const s = useFrameStore.getState()
+          const selFrame = findInTree(s.root, currentId)
+          if (selFrame) {
+            // Text selected → enter edit mode
+            if (selFrame.type === 'text' && currentId === frame.id) {
+              clickPosRef.current = { x: e.clientX, y: e.clientY }
+              setEditingText(true)
+              return
+            }
+            // Box selected → drill into it
+            if (selFrame.type === 'box') {
+              const childId = resolveToDirectChild(s.root, currentId, frame.id)
+              if (childId && childId !== currentId) {
+                pushNav(currentId)
+                expandToFrame(childId)
+                select(childId)
+                return
+              }
+            }
+          }
+        }
+        // Single click: drill-down level select
         const s = useFrameStore.getState()
         const targetId = resolveDrillClick(s.root, s.selectedId, frame.id)
         if (targetId !== currentId) pushNav(currentId)
@@ -371,31 +394,9 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
       }
     },
     onMouseDown: !editingText ? (e: React.MouseEvent) => {
-      // Prevent browser's native text selection on double-click (visual flash)
+      // Prevent browser's native text selection on rapid clicks
       if (e.detail >= 2) e.preventDefault()
     } : undefined,
-    onDoubleClick: (e: React.MouseEvent) => {
-      e.stopPropagation()
-      const s = useFrameStore.getState()
-      if (!s.selectedId) return
-      const selFrame = findInTree(s.root, s.selectedId)
-      if (!selFrame) return
-      // Text: enter edit mode when text is selected
-      if (selFrame.type === 'text' && s.selectedId === frame.id) {
-        clickPosRef.current = { x: e.clientX, y: e.clientY }
-        setEditingText(true)
-        return
-      }
-      // Box: drill into selected — select the direct child under cursor
-      if (selFrame.type === 'box') {
-        const childId = resolveToDirectChild(s.root, s.selectedId, frame.id)
-        if (childId) {
-          pushNav(s.selectedId)
-          expandToFrame(childId)
-          select(childId)
-        }
-      }
-    },
     onPointerDown: !isRoot && !editingText ? onDragPointerDown : undefined,
     onMouseOver: (e: React.MouseEvent) => {
       e.stopPropagation()
