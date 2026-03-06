@@ -4,6 +4,7 @@ import {
   dvNum, dvStr, zeroSpacing, zeroBorderRadius, uniformBorderRadius,
   createInternalRoot, normalizeFrame,
 } from './frameFactories'
+import { parseTailwindClasses } from '../utils/parseTailwindClasses'
 
 // --- Migration helpers ---
 export function migrateDVNum(raw: unknown, fallback: number): DesignValue<number> {
@@ -109,7 +110,7 @@ export function migrateFrame(raw: Record<string, unknown>): Frame {
     bg: migrateDVStr(raw.bg, ''),
     border: migrateBorder(raw.border),
     borderRadius: migrateBorderRadius(raw.borderRadius),
-    tailwindClasses: (raw.tailwindClasses as string) || '',
+    tailwindClasses: '',
     boxShadow: (raw.boxShadow as Frame['boxShadow']) || 'none',
     cursor: (raw.cursor as Frame['cursor']) || 'auto',
     minWidth: migrateDVNum(raw.minWidth, 0),
@@ -140,6 +141,15 @@ export function migrateFrame(raw: Record<string, unknown>): Frame {
     ease: (raw.ease as Frame['ease']) || 'linear',
     colSpan: migrateDVNum(raw.colSpan, 0),
     rowSpan: migrateDVNum(raw.rowSpan, 0),
+  }
+
+  // Re-parse tailwindClasses to extract recognized classes that got stuck as foreign
+  // (e.g., files created before the sanitizer fix for border-t, mx-auto, mt-10, etc.)
+  const rawTw = (raw.tailwindClasses as string) || ''
+  if (rawTw) {
+    const parsed = parseTailwindClasses(rawTw)
+    base.tailwindClasses = parsed.tailwindClasses
+    Object.assign(base, parsed.properties)
   }
 
   let result: Frame

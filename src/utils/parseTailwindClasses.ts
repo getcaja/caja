@@ -197,7 +197,9 @@ function matchSizing(cls: string, props: Props): boolean {
     if (dv) { props.height = { mode: 'fixed', value: dv }; return true }
   }
 
-  // Constraints
+  // Constraints ("none" = no constraint = zero/default)
+  if (cls === 'max-w-none') { props.maxWidth = { mode: 'custom', value: 0 }; return true }
+  if (cls === 'max-h-none') { props.maxHeight = { mode: 'custom', value: 0 }; return true }
   if (cls.startsWith('min-w-')) { const dv = parseNumericDV(cls.slice(6), SIZE_TOKENS); if (dv) { props.minWidth = dv; return true } }
   if (cls.startsWith('max-w-')) { const dv = parseNumericDV(cls.slice(6), SIZE_TOKENS); if (dv) { props.maxWidth = dv; return true } }
   if (cls.startsWith('min-h-')) { const dv = parseNumericDV(cls.slice(6), SIZE_TOKENS); if (dv) { props.minHeight = dv; return true } }

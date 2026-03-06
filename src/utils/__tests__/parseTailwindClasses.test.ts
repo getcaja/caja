@@ -301,6 +301,29 @@ describe('parseTailwindClasses', () => {
       expect(props.maxHeight).toEqual(dvCustom(600))
     })
 
+    it('max-w-screen-lg → maxWidth token screen-lg (value 1024)', () => {
+      const { properties: props, tailwindClasses } = parseTailwindClasses('max-w-screen-lg')
+      expect(props.maxWidth).toEqual(dvToken('screen-lg', 1024))
+      expect(tailwindClasses).toBe('')
+    })
+
+    it('max-w-screen-2xl → maxWidth token screen-2xl (value 1536)', () => {
+      const { properties: props } = parseTailwindClasses('max-w-screen-2xl')
+      expect(props.maxWidth).toEqual(dvToken('screen-2xl', 1536))
+    })
+
+    it('max-w-none → maxWidth custom 0 (no constraint)', () => {
+      const { properties: props, tailwindClasses } = parseTailwindClasses('max-w-none')
+      expect(props.maxWidth).toEqual(dvCustom(0))
+      expect(tailwindClasses).toBe('')
+    })
+
+    it('max-h-none → maxHeight custom 0 (no constraint)', () => {
+      const { properties: props, tailwindClasses } = parseTailwindClasses('max-h-none')
+      expect(props.maxHeight).toEqual(dvCustom(0))
+      expect(tailwindClasses).toBe('')
+    })
+
     it('grow → grow token DEFAULT, value 1', () => {
       const { properties: props } = parseTailwindClasses('grow')
       expect(props.grow).toEqual(dvToken('DEFAULT', 1))

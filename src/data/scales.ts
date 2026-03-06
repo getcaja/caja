@@ -171,6 +171,12 @@ export const SIZE_CONSTRAINT_SCALE: ScaleOption[] = [
   { token: '5xl', value: 1024 },
   { token: '6xl', value: 1152 },
   { token: '7xl', value: 1280 },
+  // Tailwind screen breakpoint tokens (max-w-screen-*)
+  { token: 'screen-sm', value: 640 },
+  { token: 'screen-md', value: 768 },
+  { token: 'screen-lg', value: 1024 },
+  { token: 'screen-xl', value: 1280 },
+  { token: 'screen-2xl', value: 1536 },
 ]
 
 export const Z_INDEX_SCALE: ScaleOption[] = [

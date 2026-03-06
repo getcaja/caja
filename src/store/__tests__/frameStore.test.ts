@@ -1048,6 +1048,30 @@ describe('frameStore', () => {
       expect(box.display).toBe('flex') // migrateFrame defaults display to 'flex'
       expect(box.children[0].padding).toBeDefined()
     })
+
+    it('re-parses tailwindClasses during migration (extracts stuck foreign classes)', () => {
+      const box = {
+        id: 'frame-1', type: 'box', name: 'Card',
+        tailwindClasses: 'max-w-screen-lg mx-auto mt-10',
+        children: [],
+      }
+      const page = {
+        id: 'page-1', name: 'Home', route: '/',
+        root: { id: '__root__page-1', type: 'box', name: 'Root', tag: 'body', display: 'flex', direction: 'column', justify: 'start', align: 'stretch', gap: 0, wrap: false, children: [box] },
+      }
+      storage.set('caja-state', JSON.stringify({ pages: [page], activePageId: 'page-1' }))
+      store().loadFromStorage()
+      const card = rootChildren()[0] as BoxElement
+      // max-w-screen-lg → maxWidth token
+      expect(card.maxWidth).toEqual({ mode: 'token', token: 'screen-lg', value: 1024 })
+      // mx-auto → margin left/right auto
+      expect(card.margin.left).toEqual({ mode: 'token', token: 'auto', value: 0 })
+      expect(card.margin.right).toEqual({ mode: 'token', token: 'auto', value: 0 })
+      // mt-10 → margin top token 10 (value 40)
+      expect(card.margin.top).toEqual({ mode: 'token', token: '10', value: 40 })
+      // tailwindClasses should be empty (all classes recognized)
+      expect(card.tailwindClasses).toBe('')
+    })
   })
 
   // ===== Getter helpers =====
