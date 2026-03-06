@@ -4,33 +4,81 @@
   --font-mono: SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, monospace;
   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 
-  /* Surfaces */
+  /* ── Base Ramp ──
+     Inspired by Figma's grey ramp. Dark mode UI lives in 900→600.
+     Steps are intentionally compressed (~12-14 hex apart). */
+  --color-ramp-black: #000000;
+  --color-ramp-900: #1a1a1a;
+  --color-ramp-800: #262626;
+  --color-ramp-700: #333333;
+  --color-ramp-600: #404040;
+  --color-ramp-500: #6b6b6b;
+  --color-ramp-400: #8c8c8c;
+  --color-ramp-300: #b3b3b3;
+  --color-ramp-200: #d9d9d9;
+  --color-ramp-100: #f0f0f0;
+  --color-ramp-white: #ffffff;
+
+  /* ── Surfaces ──
+     Legacy tokens — consumed by theme engine + components.
+     Will be gradually replaced by semantic context tokens. */
   --color-surface-0: #0e0e0e;
   --color-surface-1: #161616;
   --color-surface-2: #27272a;
   --color-surface-3: #3f3f46;
 
-  /* Accent — single color for the entire UI */
+  /* ── Accent ── */
   --color-accent: #0c8ce9;
   --color-accent-hover: #47b5f5;
 
-  /* Text */
+  /* ── Text ── */
   --color-text-primary: #f0f0f0;
   --color-text-secondary: #a1a1a1;
   --color-text-muted: #717171;
 
-  /* Borders — white with low opacity for vibrancy compatibility */
+  /* ── Borders ── */
   --color-border: rgb(255 255 255 / 0.08);
   --color-border-accent: rgb(255 255 255 / 0.12);
 
-  /* Semantic */
+  /* ── Semantic ── */
   --color-destructive: #ef4444;
 
-  /* Canvas */
+  /* ── Canvas ── */
   --color-canvas-bg: #0e0e11;
 }
 
-/* ── Design tokens (Primer-inspired fg/bg/border) ──
+/* ── Semantic Context Tokens ──
+   Each UI context defines its own bg/text/border hierarchy.
+   Components consume these, never raw ramp values.
+   Phase 1: mapped to existing values for zero visual change. */
+:root {
+  /* Panel (left sidebar, right properties) */
+  --panel-bg:            var(--color-surface-0);
+  --panel-bg-hover:      var(--color-surface-1);
+  --panel-bg-secondary:  var(--color-surface-2);
+  --panel-border:        var(--color-border);
+
+  /* Menu (dropdowns, context menus, popovers) */
+  --menu-bg:             var(--color-surface-2);
+  --menu-bg-hover:       var(--bg-inset);
+  --menu-border:         var(--color-border-accent);
+  --menu-text:           var(--fg-muted);
+  --menu-text-hover:     var(--fg-default);
+
+  /* Toolbar (floating bottom bar) */
+  --toolbar-bg:          var(--color-surface-1);
+  --toolbar-border:      var(--color-border);
+
+  /* Titlebar */
+  --titlebar-border:     var(--color-border);
+
+  /* Input (all form controls) */
+  --input-bg:            var(--bg-inset);
+  --input-border:        transparent;
+  --input-border-focus:  var(--color-accent);
+}
+
+/* ── Primitive tokens (Primer-inspired fg/bg/border) ──
    Vibrancy-safe: white overlays that stack on translucent panels.
    More layers = brighter. Works on any background. */
 :root {
