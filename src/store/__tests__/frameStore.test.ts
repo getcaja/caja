@@ -8,7 +8,7 @@ vi.stubGlobal('localStorage', {
   removeItem: (key: string) => storage.delete(key),
 })
 
-import { useFrameStore, findInTree, isRootId, normalizeFrame, findTopLevelAncestor, COMPONENT_PAGE_ID } from '../frameStore'
+import { useFrameStore, findInTree, isRootId, normalizeFrame, findTopLevelAncestor, resolveToDirectChild, COMPONENT_PAGE_ID } from '../frameStore'
 import { _resetLoadGuard } from '../slices/fileSlice'
 import type { BoxElement, Frame, InputElement, TextElement } from '../../types/frame'
 
@@ -1394,5 +1394,46 @@ describe('findTopLevelAncestor', () => {
 
   it('returns null for non-existent id', () => {
     expect(findTopLevelAncestor(store().root, 'nonexistent')).toBeNull()
+  })
+})
+
+describe('resolveToDirectChild', () => {
+  beforeEach(() => {
+    resetStore()
+  })
+
+  it('returns direct child when given that child', () => {
+    const parentId = addChild('box')
+    const childId = addChild('box', parentId)
+    expect(resolveToDirectChild(store().root, parentId, childId)).toBe(childId)
+  })
+
+  it('returns direct child for deeply nested descendant', () => {
+    const parentId = addChild('box')
+    const midId = addChild('box', parentId)
+    const deepId = addChild('box', midId)
+    expect(resolveToDirectChild(store().root, parentId, deepId)).toBe(midId)
+  })
+
+  it('returns null when descendant is not inside ancestor', () => {
+    const a = addChild('box')
+    const b = addChild('box')
+    expect(resolveToDirectChild(store().root, a, b)).toBeNull()
+  })
+
+  it('returns null when ancestor equals descendant', () => {
+    const id = addChild('box')
+    expect(resolveToDirectChild(store().root, id, id)).toBeNull()
+  })
+
+  it('returns null for non-box ancestor', () => {
+    const textId = addChild('text')
+    expect(resolveToDirectChild(store().root, textId, 'any')).toBeNull()
+  })
+
+  it('works with root as ancestor', () => {
+    const topId = addChild('box')
+    const childId = addChild('box', topId)
+    expect(resolveToDirectChild(store().root, store().root.id, childId)).toBe(topId)
   })
 })

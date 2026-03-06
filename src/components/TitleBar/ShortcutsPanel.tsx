@@ -12,9 +12,8 @@ const sections: { title: string; shortcuts: [string, string][] }[] = [
     title: 'Selection',
     shortcuts: [
       ['Select parent', 'Esc'],
-      [`Select top-level`, `${OPT} Click`],
-      [`Drag top-level`, `${OPT} Drag`],
-      [`Highlight top-level`, `${OPT} Hover`],
+      ['Drill into frame', 'Double Click'],
+      [`Deep select`, `${OPT} Click`],
     ],
   },
   {

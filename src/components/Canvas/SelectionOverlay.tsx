@@ -14,8 +14,7 @@
  */
 
 import { useEffect, useLayoutEffect, useState, useRef } from 'react'
-import { useFrameStore, findInTree, findParent } from '../../store/frameStore'
-import type { BoxElement } from '../../types/frame'
+import { useFrameStore, findParent, isRootId, resolveToDirectChild, findTopLevelAncestor } from '../../store/frameStore'
 
 interface Rect { top: number; left: number; width: number; height: number }
 
@@ -248,22 +247,28 @@ export function SelectionOverlay() {
   const isDragging = !!canvasDragId && canvasDragId === selectedId
   const showSel = !previewMode && (!!selectedId || selectedIds.size > 0) && !isDragging
 
-  // When hovering a descendant of the selected element, resolve hover to the
-  // direct child of selectedId that contains the hovered element (Figma-style).
+  // Drill-down hover: resolve hover to the current context level.
+  // Context = parent of selected (or root if nothing selected).
+  // Hover highlights what a click would select at the current drill depth.
   const effectiveHoveredId = useFrameStore((s) => {
-    if (!s.hoveredId || !s.selectedId || s.hoveredId === s.selectedId) return s.hoveredId
-    const selFrame = findInTree(s.root, s.selectedId)
-    if (!selFrame || selFrame.type !== 'box') return s.hoveredId
-    // Check if hovered is a descendant of selected
-    if (!findInTree(selFrame as BoxElement, s.hoveredId)) return s.hoveredId
-    // Walk up from hovered to find the direct child of selected
-    let current = s.hoveredId
-    let parent = findParent(s.root, current)
-    while (parent && parent.id !== s.selectedId) {
-      current = parent.id
-      parent = findParent(s.root, current)
+    if (!s.hoveredId) return null
+
+    // Determine context: parent of selected, or root
+    let contextId = s.root.id
+    if (s.selectedId && !isRootId(s.selectedId)) {
+      const parent = findParent(s.root, s.selectedId)
+      if (parent) contextId = parent.id
     }
-    return parent ? current : s.hoveredId
+
+    // If hovering on the context itself, no hover (it's the background)
+    if (s.hoveredId === contextId) return null
+
+    // Resolve to direct child of context
+    const resolved = resolveToDirectChild(s.root, contextId, s.hoveredId)
+    if (resolved) return resolved
+
+    // Outside context — fall back to top-level ancestor
+    return findTopLevelAncestor(s.root, s.hoveredId) ?? s.hoveredId
   })
   const showHov = !previewMode && !!effectiveHoveredId && effectiveHoveredId !== selectedId && !canvasDragId
 

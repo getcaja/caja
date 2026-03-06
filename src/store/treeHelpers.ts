@@ -185,6 +185,27 @@ export function findTopLevelAncestor(root: Frame, id: string): string | null {
   return null
 }
 
+/** Given an ancestor frame, find its direct child that contains descendantId.
+ *  Returns descendantId itself if it IS a direct child of ancestor.
+ *  Returns null if descendantId is not inside ancestor. */
+export function resolveToDirectChild(root: Frame, ancestorId: string, descendantId: string): string | null {
+  if (ancestorId === descendantId) return null // can't be a child of itself
+  const ancestor = findInTree(root, ancestorId)
+  if (!ancestor || ancestor.type !== 'box') return null
+  // Direct child?
+  if (ancestor.children.some((c) => c.id === descendantId)) return descendantId
+  // Check if descendant is inside ancestor at all
+  if (!findInTree(ancestor, descendantId)) return null
+  // Walk up from descendant to find the direct child of ancestor
+  let current = descendantId
+  let parent = findParent(root, current)
+  while (parent && parent.id !== ancestorId) {
+    current = parent.id
+    parent = findParent(root, current)
+  }
+  return parent ? current : null
+}
+
 // Deep clone with new IDs (for duplication)
 // Optional idMap accumulator: records oldId → newId for every cloned frame.
 export function cloneWithNewIds(frame: Frame, idMap?: Record<string, string>): Frame {

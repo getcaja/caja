@@ -3,7 +3,8 @@ import { ImageIcon } from 'lucide-react'
 import type { Frame } from '../../types/frame'
 import { frameToClasses } from '../../utils/frameToClasses'
 import { toContainerQueries } from '../../utils/responsiveClasses'
-import { useFrameStore, isRootId, findInTree, findTopLevelAncestor } from '../../store/frameStore'
+import { useFrameStore, isRootId, findInTree, findTopLevelAncestor, resolveToDirectChild } from '../../store/frameStore'
+import { findParent } from '../../store/treeHelpers'
 import { resolveCanvasDrop, getFrameDepth } from '../../utils/canvasDrop'
 import { resolveRenderSrc, subscribeAssets, getAssetSnapshot } from '../../lib/assetOps'
 
@@ -11,6 +12,29 @@ import './FrameRenderer.css'
 
 // Module-level flag: skip the next click after a drag completes
 let _skipNextClick = false
+
+/** Resolve which frame a canvas click should select in drill-down mode.
+ *  Context = parent of selected (or root if nothing selected).
+ *  Returns the direct child of context that contains clickedId,
+ *  or top-level ancestor if clickedId is outside the context. */
+function resolveDrillClick(root: Frame, selectedId: string | null, clickedId: string): string {
+  // Root click → just select root
+  if (clickedId === root.id) return root.id
+
+  // Determine context: parent of selected, or root
+  let contextId = root.id
+  if (selectedId && !isRootId(selectedId)) {
+    const parent = findParent(root, selectedId)
+    if (parent) contextId = parent.id
+  }
+
+  // Try to resolve within context
+  const resolved = resolveToDirectChild(root, contextId, clickedId)
+  if (resolved) return resolved
+
+  // Outside context → fall back to top-level
+  return findTopLevelAncestor(root, clickedId) ?? clickedId
+}
 
 interface FrameRendererProps {
   frame: Frame
@@ -170,12 +194,11 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
     let lastCx = 0
     let lastCy = 0
     let resolveRaf = 0
-    // Resolve drag target: Alt → top-level ancestor, otherwise the frame itself
+    // Resolve drag target: default = drill-down level, Alt = exact element (deep)
     let dragId = frame.id
-    if (altHeld) {
+    if (!altHeld) {
       const s = useFrameStore.getState()
-      const topId = findTopLevelAncestor(s.root, frame.id)
-      if (topId) dragId = topId
+      dragId = resolveDrillClick(s.root, s.selectedId, frame.id)
     }
 
     const cleanup = (commit: boolean) => {
@@ -334,41 +357,49 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
         }
       }
       if (!editingText) {
-        // Alt+click: select top-level ancestor (direct child of root)
+        // Alt+click: deep select (exact element, bypass drill-down)
         if (e.altKey) {
-          const s = useFrameStore.getState()
-          const topId = findTopLevelAncestor(s.root, frame.id)
-          if (topId) {
-            expandToFrame(topId)
-            select(topId)
-          }
+          expandToFrame(frame.id)
+          select(frame.id)
           return
         }
-        expandToFrame(frame.id)
-        select(frame.id)
+        // Drill-down: resolve click to the current context level
+        const s = useFrameStore.getState()
+        const targetId = resolveDrillClick(s.root, s.selectedId, frame.id)
+        expandToFrame(targetId)
+        select(targetId)
       }
     },
-    onMouseDown: isText && !editingText ? (e: React.MouseEvent) => {
-      // Prevent browser's native word selection on double-click (visual flash)
+    onMouseDown: !editingText ? (e: React.MouseEvent) => {
+      // Prevent browser's native text selection on double-click (visual flash)
       if (e.detail >= 2) e.preventDefault()
     } : undefined,
-    onDoubleClick: isText ? (e: React.MouseEvent) => {
+    onDoubleClick: (e: React.MouseEvent) => {
       e.stopPropagation()
-      clickPosRef.current = { x: e.clientX, y: e.clientY }
-      setEditingText(true)
-    } : undefined,
+      const s = useFrameStore.getState()
+      if (!s.selectedId) return
+      const selFrame = findInTree(s.root, s.selectedId)
+      if (!selFrame) return
+      // Text: enter edit mode when text is selected
+      if (selFrame.type === 'text' && s.selectedId === frame.id) {
+        clickPosRef.current = { x: e.clientX, y: e.clientY }
+        setEditingText(true)
+        return
+      }
+      // Box: drill into selected — select the direct child under cursor
+      if (selFrame.type === 'box') {
+        const childId = resolveToDirectChild(s.root, s.selectedId, frame.id)
+        if (childId) {
+          expandToFrame(childId)
+          select(childId)
+        }
+      }
+    },
     onPointerDown: !isRoot && !editingText ? onDragPointerDown : undefined,
     onMouseOver: (e: React.MouseEvent) => {
       e.stopPropagation()
       if (useFrameStore.getState().canvasDragId) return
-      // Alt+hover: highlight top-level ancestor instead
-      if (e.altKey) {
-        const s = useFrameStore.getState()
-        const topId = findTopLevelAncestor(s.root, frame.id)
-        if (topId) hover(topId)
-      } else {
-        hover(frame.id)
-      }
+      hover(frame.id) // Raw hover — SelectionOverlay resolves to context level
     },
   } : {}
 
