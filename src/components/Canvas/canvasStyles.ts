@@ -36,16 +36,16 @@ export const TAILWIND_THEME = `@theme {
   --font-mono: SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, monospace;
   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --color-surface-0: #1e1e1e;
-  --color-surface-1: #272727;
-  --color-surface-2: #323232;
-  --color-surface-3: #444444;
+  --color-surface-1: #2c2c2c;
+  --color-surface-2: #3a3a3a;
+  --color-surface-3: #484848;
   --color-accent: #0c8ce9;
   --color-accent-hover: #47b5f5;
   --color-text-primary: #ffffff;
-  --color-text-secondary: #a3a3a3;
-  --color-text-muted: #6b6b6b;
-  --color-border: #2d2d2d;
-  --color-border-accent: #393939;
+  --color-text-secondary: #b3b3b3;
+  --color-text-muted: #787878;
+  --color-border: #252525;
+  --color-border-accent: #333333;
   --color-destructive: #ef4444;
   --color-canvas-bg: #161616;
 }`

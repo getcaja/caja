@@ -19,24 +19,24 @@
   --color-ramp-100: #f0f0f0;
   --color-ramp-white: #ffffff;
 
-  /* ── Surfaces ── */
+  /* ── Surfaces (Δ14 uniform steps) ── */
   --color-surface-0: #1e1e1e;
-  --color-surface-1: #272727;
-  --color-surface-2: #323232;
-  --color-surface-3: #444444;
+  --color-surface-1: #2c2c2c;
+  --color-surface-2: #3a3a3a;
+  --color-surface-3: #484848;
 
   /* ── Accent ── */
   --color-accent: #0c8ce9;
   --color-accent-hover: #47b5f5;
 
-  /* ── Text (solid — no opacity, works on any surface) ── */
+  /* ── Text (3-tier: 100% / 70% / 47%) ── */
   --color-text-primary: #ffffff;
-  --color-text-secondary: #a3a3a3;
-  --color-text-muted: #6b6b6b;
+  --color-text-secondary: #b3b3b3;
+  --color-text-muted: #787878;
 
-  /* ── Borders (solid — no multiplying transparencies) ── */
-  --color-border: #2d2d2d;
-  --color-border-accent: #393939;
+  /* ── Borders (solid, between surface steps) ── */
+  --color-border: #252525;
+  --color-border-accent: #333333;
 
   /* ── Semantic ── */
   --color-destructive: #ef4444;
@@ -71,7 +71,7 @@
   --titlebar-border:     var(--color-border);
 
   /* Input (all form controls) */
-  --input-bg:            var(--bg-inset);
+  --input-bg:            var(--color-surface-1);
   --input-border:        transparent;
   --input-border-focus:  var(--color-accent);
 }
@@ -80,17 +80,16 @@
    Solid colors — no opacity stacking issues.
    fg = text & icons, bg = surface modifiers. */
 :root {
-  /* Foreground — text & icons */
+  /* Foreground — 3-tier hierarchy: 100% / 70% / 47% (matches Figma) */
   --fg-default:  #ffffff;
-  --fg-muted:    #a3a3a3;
-  --fg-subtle:   #6b6b6b;
-  --fg-disabled: #404040;
+  --fg-muted:    #b3b3b3;
+  --fg-subtle:   #787878;
 
-  /* Background — solid surface modifiers */
+  /* Background — aliases to surface ramp (3 tiers above surface-0) */
   --bg-overlay:  #141414;
-  --bg-subtle:   #252525;
-  --bg-inset:    #2d2d2d;
-  --bg-emphasis: #383838;
+  --bg-subtle:   var(--color-surface-1);
+  --bg-inset:    var(--color-surface-2);
+  --bg-emphasis: var(--color-surface-3);
 }
 
 /* ── Utility classes ── */
@@ -99,7 +98,7 @@
 .fg-default  { color: var(--fg-default); }
 .fg-muted    { color: var(--fg-muted); }
 .fg-subtle   { color: var(--fg-subtle); }
-.fg-disabled { color: var(--fg-disabled); }
+.fg-disabled { color: var(--fg-subtle); }
 
 /* bg */
 .bg-overlay  { background-color: var(--bg-overlay); }

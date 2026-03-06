@@ -32,36 +32,36 @@ describe('deriveTokens', () => {
     expectColorMatch(tokens['surface-0'], '#1e1e1e')
   })
 
-  it('surface-1 ≈ #272727', () => {
-    expectColorMatch(tokens['surface-1'], '#272727')
+  it('surface-1 ≈ #2c2c2c', () => {
+    expectColorMatch(tokens['surface-1'], '#2c2c2c')
   })
 
-  it('surface-2 ≈ #323232', () => {
-    expectColorMatch(tokens['surface-2'], '#323232')
+  it('surface-2 ≈ #3a3a3a', () => {
+    expectColorMatch(tokens['surface-2'], '#3a3a3a')
   })
 
-  it('surface-3 ≈ #444444', () => {
-    expectColorMatch(tokens['surface-3'], '#444444')
+  it('surface-3 ≈ #484848', () => {
+    expectColorMatch(tokens['surface-3'], '#484848')
   })
 
   it('text-primary matches input', () => {
     expectColorMatch(tokens['text-primary'], '#ffffff')
   })
 
-  it('text-secondary ≈ #a3a3a3', () => {
-    expectColorMatch(tokens['text-secondary'], '#a3a3a3', 2)
+  it('text-secondary ≈ #b3b3b3', () => {
+    expectColorMatch(tokens['text-secondary'], '#b3b3b3', 2)
   })
 
-  it('text-muted ≈ #6b6b6b', () => {
-    expectColorMatch(tokens['text-muted'], '#6b6b6b', 2)
+  it('text-muted ≈ #787878', () => {
+    expectColorMatch(tokens['text-muted'], '#787878', 2)
   })
 
-  it('border ≈ #2d2d2d', () => {
-    expectColorMatch(tokens.border, '#2d2d2d', 2)
+  it('border ≈ #252525', () => {
+    expectColorMatch(tokens.border, '#252525', 2)
   })
 
-  it('border-accent ≈ #393939', () => {
-    expectColorMatch(tokens['border-accent'], '#393939', 2)
+  it('border-accent ≈ #333333', () => {
+    expectColorMatch(tokens['border-accent'], '#333333', 2)
   })
 
   it('accent matches input', () => {
