@@ -14,6 +14,7 @@ import { startMcpBridge, stopMcpBridge } from './mcp/bridge'
 import { TitleBar } from './components/TitleBar/TitleBar'
 import { ZOOM_LEVELS } from './components/Canvas/ZoomBar'
 import { isRootId, findParent } from './store/treeHelpers'
+import { pushNav, undoNav, redoNav } from './store/selectionHistory'
 import { canvasZoomTo } from './components/Canvas/CanvasInline'
 import { switchTheme, getThemePreference } from './lib/theme'
 import { checkForUpdates, checkForUpdatesOnStartup } from './lib/updater'
@@ -445,7 +446,15 @@ function App() {
         if (editingComponentId) {
           useCatalogStore.getState().undo()
         } else {
-          undo()
+          // Undo selection navigation first, then tree mutations
+          const nav = undoNav(useFrameStore.getState().selectedId)
+          if (nav) {
+            const s = useFrameStore.getState()
+            if (nav.id) s.expandToFrame(nav.id)
+            s.select(nav.id)
+          } else {
+            undo()
+          }
         }
       }
       if ((e.metaKey || e.ctrlKey) && key === 'z' && e.shiftKey) {
@@ -454,7 +463,15 @@ function App() {
         if (editingComponentId) {
           useCatalogStore.getState().redo()
         } else {
-          redo()
+          // Redo selection navigation first, then tree mutations
+          const nav = redoNav(useFrameStore.getState().selectedId)
+          if (nav) {
+            const s = useFrameStore.getState()
+            if (nav.id) s.expandToFrame(nav.id)
+            s.select(nav.id)
+          } else {
+            redo()
+          }
         }
       }
       // Group / Ungroup
@@ -482,6 +499,7 @@ function App() {
           const s = useFrameStore.getState()
           if (s.selectedId && !isRootId(s.selectedId)) {
             e.preventDefault()
+            pushNav(s.selectedId)
             const parent = findParent(s.root, s.selectedId)
             if (parent && !isRootId(parent.id)) {
               s.select(parent.id)

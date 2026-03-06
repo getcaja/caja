@@ -5,6 +5,7 @@ import { frameToClasses } from '../../utils/frameToClasses'
 import { toContainerQueries } from '../../utils/responsiveClasses'
 import { useFrameStore, isRootId, findInTree, findTopLevelAncestor, resolveToDirectChild } from '../../store/frameStore'
 import { findParent } from '../../store/treeHelpers'
+import { pushNav } from '../../store/selectionHistory'
 import { resolveCanvasDrop, getFrameDepth } from '../../utils/canvasDrop'
 import { resolveRenderSrc, subscribeAssets, getAssetSnapshot } from '../../lib/assetOps'
 
@@ -353,8 +354,10 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
         }
       }
       if (!editingText) {
+        const currentId = useFrameStore.getState().selectedId
         // Cmd+click: deep select (exact element, bypass drill-down)
         if (e.metaKey || e.ctrlKey) {
+          pushNav(currentId)
           expandToFrame(frame.id)
           select(frame.id)
           return
@@ -362,6 +365,7 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
         // Drill-down: resolve click to the current context level
         const s = useFrameStore.getState()
         const targetId = resolveDrillClick(s.root, s.selectedId, frame.id)
+        if (targetId !== currentId) pushNav(currentId)
         expandToFrame(targetId)
         select(targetId)
       }
@@ -386,6 +390,7 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
       if (selFrame.type === 'box') {
         const childId = resolveToDirectChild(s.root, s.selectedId, frame.id)
         if (childId) {
+          pushNav(s.selectedId)
           expandToFrame(childId)
           select(childId)
         }
