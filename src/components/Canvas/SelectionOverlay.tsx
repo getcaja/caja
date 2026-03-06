@@ -205,9 +205,123 @@ function computeMarginInfo(
   }
 }
 
+/** Padding for a single element (in px, already scaled by zoom). */
+interface PaddingInfo {
+  el: Rect
+  top: number
+  right: number
+  bottom: number
+  left: number
+}
+
+/** Gap indicators between children of a flex/grid container. */
+interface GapInfo {
+  rects: Rect[]
+}
+
+/** Read computed padding of a frame element relative to a wrapper element. */
+function computePaddingInfo(
+  doc: Document,
+  frameId: string,
+  wrapperEl: HTMLElement,
+  zoom: number,
+): PaddingInfo | null {
+  const el = doc.querySelector(`[data-frame-id="${frameId}"]`) as HTMLElement | null
+  if (!el) return null
+
+  const cs = doc.defaultView!.getComputedStyle(el)
+  const pt = parseFloat(cs.paddingTop) || 0
+  const pr = parseFloat(cs.paddingRight) || 0
+  const pb = parseFloat(cs.paddingBottom) || 0
+  const pl = parseFloat(cs.paddingLeft) || 0
+
+  if (pt === 0 && pr === 0 && pb === 0 && pl === 0) return null
+
+  const elRect = el.getBoundingClientRect()
+  const wrapperRect = wrapperEl.getBoundingClientRect()
+
+  return {
+    el: {
+      top: elRect.top - wrapperRect.top,
+      left: elRect.left - wrapperRect.left,
+      width: elRect.width,
+      height: elRect.height,
+    },
+    top: pt * zoom,
+    right: pr * zoom,
+    bottom: pb * zoom,
+    left: pl * zoom,
+  }
+}
+
+/** Compute gap rects between children of a flex/grid container. */
+function computeGapInfo(
+  doc: Document,
+  frameId: string,
+  wrapperEl: HTMLElement,
+): GapInfo | null {
+  const el = doc.querySelector(`[data-frame-id="${frameId}"]`) as HTMLElement | null
+  if (!el) return null
+
+  const cs = doc.defaultView!.getComputedStyle(el)
+  const gap = parseFloat(cs.gap) || 0
+  if (gap === 0) return null
+
+  const children = Array.from(el.children).filter(
+    (c) => (c as HTMLElement).hasAttribute('data-frame-id')
+  ) as HTMLElement[]
+  if (children.length < 2) return null
+
+  const display = cs.display
+  let isRow: boolean
+  if (display === 'flex' || display === 'inline-flex') {
+    const dir = cs.flexDirection
+    isRow = dir === 'row' || dir === 'row-reverse'
+  } else if (display === 'grid' || display === 'inline-grid') {
+    const cols = cs.gridTemplateColumns
+    isRow = !!cols && cols.trim().split(/\s+/).length > 1
+  } else {
+    return null
+  }
+
+  const wrapperRect = wrapperEl.getBoundingClientRect()
+  const rects: Rect[] = []
+
+  for (let i = 0; i < children.length - 1; i++) {
+    const cur = children[i].getBoundingClientRect()
+    const next = children[i + 1].getBoundingClientRect()
+
+    if (isRow) {
+      const left = cur.right - wrapperRect.left
+      const gapWidth = next.left - cur.right
+      if (gapWidth > 0) {
+        rects.push({
+          top: cur.top - wrapperRect.top,
+          left,
+          width: gapWidth,
+          height: Math.max(cur.height, next.height),
+        })
+      }
+    } else {
+      const top = cur.bottom - wrapperRect.top
+      const gapHeight = next.top - cur.bottom
+      if (gapHeight > 0) {
+        rects.push({
+          top,
+          left: cur.left - wrapperRect.left,
+          width: Math.max(cur.width, next.width),
+          height: gapHeight,
+        })
+      }
+    }
+  }
+
+  return rects.length > 0 ? { rects } : null
+}
+
 /** Renders semi-transparent margin indicators around an element. */
 function MarginRects({ info }: { info: MarginInfo }) {
-  const fill = 'rgba(12, 140, 233, 0.10)'
+  const fill = 'rgba(246, 178, 51, 0.12)'
   const common = { position: 'absolute' as const, pointerEvents: 'none' as const, background: fill }
 
   const rects: React.CSSProperties[] = []
@@ -229,6 +343,49 @@ function MarginRects({ info }: { info: MarginInfo }) {
     <>
       {rects.map((style, i) => (
         <div key={i} style={style} />
+      ))}
+    </>
+  )
+}
+
+/** Renders semi-transparent padding indicators inside an element. */
+function PaddingRects({ info }: { info: PaddingInfo }) {
+  const fill = 'rgba(46, 196, 112, 0.10)'
+  const common = { position: 'absolute' as const, pointerEvents: 'none' as const, background: fill }
+
+  const rects: React.CSSProperties[] = []
+
+  if (info.top > 0) {
+    rects.push({ ...common, top: info.el.top, left: info.el.left, width: info.el.width, height: info.top })
+  }
+  if (info.bottom > 0) {
+    rects.push({ ...common, top: info.el.top + info.el.height - info.bottom, left: info.el.left, width: info.el.width, height: info.bottom })
+  }
+  if (info.left > 0) {
+    rects.push({ ...common, top: info.el.top + info.top, left: info.el.left, width: info.left, height: info.el.height - info.top - info.bottom })
+  }
+  if (info.right > 0) {
+    rects.push({ ...common, top: info.el.top + info.top, left: info.el.left + info.el.width - info.right, width: info.right, height: info.el.height - info.top - info.bottom })
+  }
+
+  return (
+    <>
+      {rects.map((style, i) => (
+        <div key={i} style={style} />
+      ))}
+    </>
+  )
+}
+
+/** Renders semi-transparent gap indicators between children. */
+function GapRects({ info }: { info: GapInfo }) {
+  const fill = 'rgba(12, 140, 233, 0.12)'
+  const common = { position: 'absolute' as const, pointerEvents: 'none' as const, background: fill }
+
+  return (
+    <>
+      {info.rects.map((rect, i) => (
+        <div key={i} style={{ ...common, top: rect.top, left: rect.left, width: rect.width, height: rect.height }} />
       ))}
     </>
   )
@@ -306,39 +463,52 @@ export function SelectionOverlay() {
   const zoom = useFrameStore((s) => s.canvasZoom)
   const root = useFrameStore((s) => s.root)
   const showMarginOverlay = useFrameStore((s) => s.showMarginOverlay)
+  const showPaddingOverlay = useFrameStore((s) => s.showPaddingOverlay)
+  const showGapOverlay = useFrameStore((s) => s.showGapOverlay)
   const isTreeHover = useFrameStore((s) => s.isTreeHover)
 
   const [marginInfos, setMarginInfos] = useState<MarginInfo[]>([])
+  const [paddingInfos, setPaddingInfos] = useState<PaddingInfo[]>([])
+  const [gapInfos, setGapInfos] = useState<GapInfo[]>([])
   useLayoutEffect(() => {
-    if (!doc) { setMarginInfos([]); return }
+    if (!doc) { setMarginInfos([]); setPaddingInfos([]); setGapInfos([]); return }
     const raf = requestAnimationFrame(() => {
       const wrapper = doc.querySelector('[data-canvas-wrapper]') as HTMLElement | null
-      if (!wrapper) { setMarginInfos([]); return }
+      if (!wrapper) { setMarginInfos([]); setPaddingInfos([]); setGapInfos([]); return }
 
-      const infos: MarginInfo[] = []
+      const margins: MarginInfo[] = []
+      const paddings: PaddingInfo[] = []
+      const gaps: GapInfo[] = []
 
-      // Panel margin inputs hovered → show margins for selected element
       if (showMarginOverlay && selectedId) {
         const info = computeMarginInfo(doc, selectedId, wrapper, zoom)
-        if (info) infos.push(info)
+        if (info) margins.push(info)
       }
 
-      // Canvas hover margins temporarily disabled for testing
-      // if (showHov && effectiveHoveredId && !isTreeHover) {
-      //   const info = computeMarginInfo(doc, effectiveHoveredId, wrapper, zoom)
-      //   if (info) infos.push(info)
-      // }
+      if (showPaddingOverlay && selectedId) {
+        const info = computePaddingInfo(doc, selectedId, wrapper, zoom)
+        if (info) paddings.push(info)
+      }
 
-      setMarginInfos(infos)
+      if (showGapOverlay && selectedId) {
+        const info = computeGapInfo(doc, selectedId, wrapper)
+        if (info) gaps.push(info)
+      }
+
+      setMarginInfos(margins)
+      setPaddingInfos(paddings)
+      setGapInfos(gaps)
     })
     return () => cancelAnimationFrame(raf)
-  }, [selectedId, effectiveHoveredId, showSel, showHov, showMarginOverlay, isTreeHover, doc, zoom, root])
+  }, [selectedId, effectiveHoveredId, showSel, showHov, showMarginOverlay, showPaddingOverlay, showGapOverlay, isTreeHover, doc, zoom, root])
 
   return (
     <>
       <span ref={anchorRef} style={{ display: 'none' }} />
       {rules.length > 0 && <style>{rules.join('\n')}</style>}
       {marginInfos.map((info, i) => <MarginRects key={i} info={info} />)}
+      {paddingInfos.map((info, i) => <PaddingRects key={i} info={info} />)}
+      {gapInfos.map((info, i) => <GapRects key={i} info={info} />)}
       {isLineMode && lineRect && (
         <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 9999 }}>
           <div style={{

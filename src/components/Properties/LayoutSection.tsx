@@ -19,6 +19,8 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
   const updateSpacing = useFrameStore((s) => s.updateSpacing)
   const spacingGrid = useFrameStore((s) => s.spacingGrid)
   const setShowMarginOverlay = useFrameStore((s) => s.setShowMarginOverlay)
+  const setShowPaddingOverlay = useFrameStore((s) => s.setShowPaddingOverlay)
+  const setShowGapOverlay = useFrameStore((s) => s.setShowGapOverlay)
   const filteredSpacing = useMemo(() => filterSpacingScale(SPACING_SCALE, spacingGrid), [spacingGrid])
   const filteredGap = useMemo(() => filterSpacingScale(GAP_SCALE, spacingGrid), [spacingGrid])
   const filteredSize = useMemo(() => filterSpacingScale(SIZE_CONSTRAINT_SCALE, spacingGrid), [spacingGrid])
@@ -350,7 +352,11 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                   )}
                   </div>
                 </div>
-                <div className="flex flex-col gap-2 flex-1 min-w-0">
+                <div
+                  className="flex flex-col gap-2 flex-1 min-w-0"
+                  onMouseEnter={() => setShowGapOverlay(true)}
+                  onMouseLeave={() => setShowGapOverlay(false)}
+                >
                   <TokenInput
                     scale={filteredGap}
                     value={isSpaceBetween ? { mode: 'token' as const, token: 'auto', value: 0 } : boxFrame!.gap}
@@ -485,7 +491,11 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                   />
                   <div className="w-5 shrink-0" />
                 </div>
-                <div className="flex items-center gap-2">
+                <div
+                  className="flex items-center gap-2"
+                  onMouseEnter={() => setShowGapOverlay(true)}
+                  onMouseLeave={() => setShowGapOverlay(false)}
+                >
                   <TokenInput
                     scale={filteredSpacing}
                     value={boxFrame!.gap}
@@ -505,13 +515,18 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
 
 
         {/* Padding + Margin */}
-        <SpacingControl
-          value={frame.padding}
-          onChange={(v) => updateSpacing(frame.id, 'padding', v)}
-          label="Padding"
-          classPrefix="p"
-          scale={filteredSpacing}
-        />
+        <div
+          onMouseEnter={() => setShowPaddingOverlay(true)}
+          onMouseLeave={() => setShowPaddingOverlay(false)}
+        >
+          <SpacingControl
+            value={frame.padding}
+            onChange={(v) => updateSpacing(frame.id, 'padding', v)}
+            label="Padding"
+            classPrefix="p"
+            scale={filteredSpacing}
+          />
+        </div>
         <div
           onMouseEnter={() => setShowMarginOverlay(true)}
           onMouseLeave={() => setShowMarginOverlay(false)}

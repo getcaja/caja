@@ -98,8 +98,12 @@ export interface UiSlice {
   treePanelTab: 'layers' | 'components'
   _layersPageId: string | null
   showMarginOverlay: boolean
+  showPaddingOverlay: boolean
+  showGapOverlay: boolean
 
   setShowMarginOverlay: (value: boolean) => void
+  setShowPaddingOverlay: (value: boolean) => void
+  setShowGapOverlay: (value: boolean) => void
   setSpacingGrid: (mode: SpacingGrid) => void
   setStyleNewFrames: (value: boolean) => void
   toggleCollapse: (id: string) => void
@@ -135,8 +139,12 @@ export const createUiSlice: StateCreator<FrameStore, [], [], UiSlice> = (set, ge
     treePanelTab: 'layers' as const,
     _layersPageId: null as string | null,
     showMarginOverlay: false,
+    showPaddingOverlay: false,
+    showGapOverlay: false,
 
     setShowMarginOverlay: (value) => set({ showMarginOverlay: value }),
+    setShowPaddingOverlay: (value) => set({ showPaddingOverlay: value }),
+    setShowGapOverlay: (value) => set({ showGapOverlay: value }),
     setSpacingGrid: (mode) => {
       saveViewPrefs({ spacingGrid: mode })
       set({ spacingGrid: mode })
