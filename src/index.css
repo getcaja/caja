@@ -188,34 +188,34 @@ input[type=number] {
   /* --- Inputs --- */
   .c-input {
     height: 1.5rem;
-    border: 1px solid transparent;
+    border: 1px solid var(--input-border);
     border-radius: 0.25rem;
     padding-left: 0.5rem;
     padding-right: 0.5rem;
     font-size: 12px;
     color: var(--fg-default);
     outline: none;
-    background-color: var(--bg-inset);
+    background-color: var(--input-bg);
   }
   .c-scale-input {
     height: 1.5rem;
-    border: 1px solid transparent;
+    border: 1px solid var(--input-border);
     border-radius: 0.25rem;
     padding-left: 0.25rem;
     padding-right: 0.25rem;
     font-size: 12px;
     color: var(--fg-default);
-    background-color: var(--bg-inset);
+    background-color: var(--input-bg);
   }
   .c-textarea {
-    border: 1px solid transparent;
+    border: 1px solid var(--input-border);
     border-radius: 0.25rem;
     padding: 0.25rem 0.5rem;
     font-size: 12px;
     color: var(--fg-default);
     outline: none;
     resize: none;
-    background-color: var(--bg-inset);
+    background-color: var(--input-bg);
   }
 
   /* --- Labels --- */
@@ -241,8 +241,8 @@ input[type=number] {
 
   /* --- Menus & popups --- */
   .c-menu-popup {
-    background-color: var(--color-surface-2);
-    border: 1px solid var(--color-border-accent);
+    background-color: var(--menu-bg);
+    border: 1px solid var(--menu-border);
     border-radius: 0.5rem;
     box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
     z-index: 9999;
@@ -256,16 +256,16 @@ input[type=number] {
     gap: 0.5rem;
     padding: 0.375rem 0.75rem;
     font-size: 12px;
-    color: var(--fg-muted);
+    color: var(--menu-text);
   }
   .c-menu-item:hover,
   .c-menu-item[data-highlighted] {
-    background-color: var(--bg-inset);
-    color: var(--fg-default);
+    background-color: var(--menu-bg-hover);
+    color: var(--menu-text-hover);
   }
   .c-menu-item-active {
-    background-color: var(--bg-inset);
-    color: var(--fg-default);
+    background-color: var(--menu-bg-hover);
+    color: var(--menu-text-hover);
   }
   .c-menu-item-destructive {
     width: 100%;
@@ -318,12 +318,12 @@ input[type=number] {
    !important needed to beat Tailwind v4's unlayered &:focus ring-shadow. */
 .c-input:focus,
 .c-textarea:focus {
-  border-color: var(--color-accent);
+  border-color: var(--input-border-focus);
   outline: none;
   box-shadow: none !important;
 }
 .c-scale-input:focus-within {
-  border-color: var(--color-accent);
+  border-color: var(--input-border-focus);
   box-shadow: none !important;
 }
 
