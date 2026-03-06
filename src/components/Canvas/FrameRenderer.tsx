@@ -55,7 +55,6 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
   useSyncExternalStore(subscribeAssets, getAssetSnapshot)
 
   const selectedId = useFrameStore((s) => s.selectedId)
-  const hoveredId = useFrameStore((s) => s.hoveredId)
   const select = useFrameStore((s) => s.select)
   const hover = useFrameStore((s) => s.hover)
   const updateFrame = useFrameStore((s) => s.updateFrame)
@@ -73,7 +72,6 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
   const Tag = resolveTag(frame)
 
   const isSelected = !previewMode && selectedId === frame.id
-  const isHovered = !previewMode && hoveredId === frame.id && selectedId !== frame.id
   const isRoot = isRootId(frame.id)
   const isBox = frame.type === 'box'
   const isText = frame.type === 'text'
@@ -95,8 +93,6 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
 
   // Editor state classes (selection/hover via CSS outline, no layout impact)
   const stateClasses = [
-    isSelected && 'is-selected',
-    isHovered && 'is-hovered',
     isDragged && 'is-line-drop',
     isMcpHighlighted && 'mcp-highlight',
     !previewMode && (editingText ? 'cursor-text' : canvasTool === 'text' ? (isText ? 'cursor-text' : 'cursor-crosshair') : (canvasTool === 'frame' || canvasTool === 'image') ? 'cursor-crosshair' : 'cursor-default'),
