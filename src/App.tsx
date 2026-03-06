@@ -13,7 +13,7 @@ import { WorkspaceDndProvider } from './components/TreePanel/WorkspaceDndContext
 import { startMcpBridge, stopMcpBridge } from './mcp/bridge'
 import { TitleBar } from './components/TitleBar/TitleBar'
 import { ZOOM_LEVELS } from './components/Canvas/ZoomBar'
-import { isRootId } from './store/treeHelpers'
+import { isRootId, findParent } from './store/treeHelpers'
 import { canvasZoomTo } from './components/Canvas/CanvasInline'
 import { switchTheme, getThemePreference } from './lib/theme'
 import { checkForUpdates, checkForUpdatesOnStartup } from './lib/updater'
@@ -473,6 +473,23 @@ function App() {
         e.preventDefault()
         const s = useFrameStore.getState()
         if (s.selectedId) s.ungroupFrame(s.selectedId)
+      }
+      // Escape — select parent frame (walk up hierarchy), deselect at root
+      if (e.key === 'Escape' && !e.defaultPrevented) {
+        const tag = (e.target as HTMLElement).tagName
+        const isEditable = (e.target as HTMLElement).isContentEditable
+        if (tag !== 'INPUT' && tag !== 'TEXTAREA' && !isEditable) {
+          const s = useFrameStore.getState()
+          if (s.selectedId && !isRootId(s.selectedId)) {
+            e.preventDefault()
+            const parent = findParent(s.root, s.selectedId)
+            if (parent && !isRootId(parent.id)) {
+              s.select(parent.id)
+            } else {
+              s.select(null)
+            }
+          }
+        }
       }
       // Delete / Backspace — delete selected frame (global)
       if ((e.key === 'Delete' || e.key === 'Backspace') && !e.metaKey && !e.ctrlKey && !e.defaultPrevented) {

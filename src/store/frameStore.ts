@@ -101,5 +101,5 @@ export {
   createTextarea, createSelect, createLink, normalizeFrame,
 } from './frameFactories'
 export { migrateToInternalRoot } from './frameMigration'
-export { generateId, isRootId, findInTree, findParent, cloneWithNewIds } from './treeHelpers'
+export { generateId, isRootId, findInTree, findParent, findTopLevelAncestor, cloneWithNewIds } from './treeHelpers'
 export { COMPONENT_PAGE_ID } from './slices/componentSlice'

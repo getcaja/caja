@@ -3,7 +3,7 @@ import { ImageIcon } from 'lucide-react'
 import type { Frame } from '../../types/frame'
 import { frameToClasses } from '../../utils/frameToClasses'
 import { toContainerQueries } from '../../utils/responsiveClasses'
-import { useFrameStore, isRootId, findInTree } from '../../store/frameStore'
+import { useFrameStore, isRootId, findInTree, findTopLevelAncestor } from '../../store/frameStore'
 import { resolveCanvasDrop, getFrameDepth } from '../../utils/canvasDrop'
 import { resolveRenderSrc, subscribeAssets, getAssetSnapshot } from '../../lib/assetOps'
 
@@ -157,6 +157,7 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
   }
 
   // Click+drag to move elements — pointer-capture system with line mode + Cmd nesting
+  // Alt+drag: resolve to top-level ancestor so you can drag parent frames from any child
   const onDragPointerDown = useCallback((e: React.PointerEvent) => {
     if (e.button !== 0) return
     e.stopPropagation()
@@ -165,6 +166,7 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
     const pointerId = e.pointerId
     const captureTarget = e.target as HTMLElement
     const doc = captureTarget.ownerDocument
+    const altHeld = e.altKey
     let dragging = false
     let lastTarget: { parentId: string; index: number } | null = null
     let maxDropDepth: number | null = null
@@ -172,6 +174,13 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
     let lastCx = 0
     let lastCy = 0
     let resolveRaf = 0
+    // Resolve drag target: Alt → top-level ancestor, otherwise the frame itself
+    let dragId = frame.id
+    if (altHeld) {
+      const s = useFrameStore.getState()
+      const topId = findTopLevelAncestor(s.root, frame.id)
+      if (topId) dragId = topId
+    }
 
     const cleanup = (commit: boolean) => {
       cancelAnimationFrame(resolveRaf)
@@ -181,17 +190,17 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
           const s = useFrameStore.getState()
           if (commit) {
             // Synchronous resolve at final pointer position — avoids stale rAF state
-            const result = resolveCanvasDrop(doc, lastCx, lastCy, frame.id, s.root, cmdHeld ? null : maxDropDepth)
+            const result = resolveCanvasDrop(doc, lastCx, lastCy, dragId, s.root, cmdHeld ? null : maxDropDepth)
             if (result) {
               const { parentId, index: visualIdx } = result
               // Visual → logical: moveFrame extracts first, then inserts at index
               const parentFrame = findInTree(s.root, parentId)
               let idx = visualIdx
               if (parentFrame?.type === 'box') {
-                const dragPos = parentFrame.children.findIndex(c => c.id === frame.id)
+                const dragPos = parentFrame.children.findIndex(c => c.id === dragId)
                 if (dragPos >= 0 && visualIdx > dragPos) idx--
               }
-              s.moveFrame(frame.id, parentId, idx)
+              s.moveFrame(dragId, parentId, idx)
             }
           }
           s.setCanvasDragOver(null)
@@ -208,7 +217,7 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
 
     const resolveAndApply = (cx: number, cy: number) => {
       const s = useFrameStore.getState()
-      const next = resolveCanvasDrop(doc, cx, cy, frame.id, s.root, cmdHeld ? null : maxDropDepth)
+      const next = resolveCanvasDrop(doc, cx, cy, dragId, s.root, cmdHeld ? null : maxDropDepth)
 
       if (lastTarget && next && lastTarget.parentId === next.parentId && lastTarget.index === next.index) return
       if (!lastTarget && !next) return
@@ -222,12 +231,12 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
         dragging = true
         _skipNextClick = true
         captureTarget.setPointerCapture(pointerId)
-        const srcEl = doc.querySelector(`[data-frame-id="${frame.id}"]`) as HTMLElement | null
+        const srcEl = doc.querySelector(`[data-frame-id="${dragId}"]`) as HTMLElement | null
         if (srcEl) maxDropDepth = getFrameDepth(srcEl) - 1
         const s = useFrameStore.getState()
-        s.expandToFrame(frame.id)
-        s.select(frame.id)
-        s.setCanvasDrag(frame.id)
+        s.expandToFrame(dragId)
+        s.select(dragId)
+        s.setCanvasDrag(dragId)
       }
       if (dragging) {
         lastCx = ev.clientX
@@ -329,14 +338,18 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
         }
       }
       if (!editingText) {
-        expandToFrame(frame.id)
-        if (e.shiftKey) {
-          useFrameStore.getState().selectRange(frame.id)
-        } else if (e.metaKey) {
-          useFrameStore.getState().selectMulti(frame.id)
-        } else {
-          select(frame.id)
+        // Alt+click: select top-level ancestor (direct child of root)
+        if (e.altKey) {
+          const s = useFrameStore.getState()
+          const topId = findTopLevelAncestor(s.root, frame.id)
+          if (topId) {
+            expandToFrame(topId)
+            select(topId)
+          }
+          return
         }
+        expandToFrame(frame.id)
+        select(frame.id)
       }
     },
     onMouseDown: isText && !editingText ? (e: React.MouseEvent) => {
@@ -351,7 +364,15 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
     onPointerDown: !isRoot && !editingText ? onDragPointerDown : undefined,
     onMouseOver: (e: React.MouseEvent) => {
       e.stopPropagation()
-      if (!useFrameStore.getState().canvasDragId) hover(frame.id)
+      if (useFrameStore.getState().canvasDragId) return
+      // Alt+hover: highlight top-level ancestor instead
+      if (e.altKey) {
+        const s = useFrameStore.getState()
+        const topId = findTopLevelAncestor(s.root, frame.id)
+        if (topId) hover(topId)
+      } else {
+        hover(frame.id)
+      }
     },
   } : {}
 

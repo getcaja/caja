@@ -168,6 +168,23 @@ export function findParent(root: Frame, id: string): BoxElement | null {
   return null
 }
 
+/** Walk up from `id` to find the direct child of root (top-level ancestor).
+ *  Returns the id itself if it's already a direct child of root, or null if not found. */
+export function findTopLevelAncestor(root: Frame, id: string): string | null {
+  if (root.type !== 'box') return null
+  // Direct child of root?
+  if (root.children.some((c) => c.id === id)) return id
+  // Walk up
+  let current = id
+  let parent = findParent(root, current)
+  while (parent) {
+    if (parent.id === root.id) return current
+    current = parent.id
+    parent = findParent(root, current)
+  }
+  return null
+}
+
 // Deep clone with new IDs (for duplication)
 // Optional idMap accumulator: records oldId → newId for every cloned frame.
 export function cloneWithNewIds(frame: Frame, idMap?: Record<string, string>): Frame {

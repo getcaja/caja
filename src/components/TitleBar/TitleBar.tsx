@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useFrameStore } from '../../store/frameStore'
 import { McpModal } from '../McpModal/McpModal'
+import { ShortcutsButton } from './ShortcutsPanel'
 import { Cable, Loader2 } from 'lucide-react'
 
 const TRAFFIC_LIGHT_WIDTH = 70
@@ -35,8 +36,9 @@ export function TitleBar() {
       {/* Spacer — drag region (explicit attribute for WKWebView reliability) */}
       <div className="flex-1 h-full" data-tauri-drag-region />
 
-      {/* MCP status button */}
-      <div className="flex items-center pr-4">
+      {/* Right-side buttons */}
+      <div className="flex items-center gap-1 pr-4">
+        <ShortcutsButton />
         <button
           onClick={() => setShowMcp(true)}
           className="w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted hover:bg-inset"

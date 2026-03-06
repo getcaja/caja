@@ -116,7 +116,7 @@ export function TreePanel() {
       if (parentDir === 'row' && (arrowKey === 'ArrowUp' || arrowKey === 'ArrowDown')) return
       s.reorderFrame(s.selectedId, dir)
     },
-    escape: () => useFrameStore.getState().select(null),
+    // Escape handled globally (App.tsx) — walks up parent hierarchy
   }), [tab, editingComponentId])
 
   useTreeKeyboard(layersKeyboardConfig)

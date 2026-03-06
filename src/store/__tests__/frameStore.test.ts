@@ -8,7 +8,7 @@ vi.stubGlobal('localStorage', {
   removeItem: (key: string) => storage.delete(key),
 })
 
-import { useFrameStore, findInTree, isRootId, normalizeFrame, COMPONENT_PAGE_ID } from '../frameStore'
+import { useFrameStore, findInTree, isRootId, normalizeFrame, findTopLevelAncestor, COMPONENT_PAGE_ID } from '../frameStore'
 import { _resetLoadGuard } from '../slices/fileSlice'
 import type { BoxElement, Frame, InputElement, TextElement } from '../../types/frame'
 
@@ -1366,5 +1366,33 @@ describe('frameStore', () => {
         expect(newPage).toBeDefined()
       })
     })
+  })
+})
+
+describe('findTopLevelAncestor', () => {
+  beforeEach(() => {
+    resetStore()
+  })
+
+  it('returns direct child of root when given that child', () => {
+    const childId = addChild('box')
+    expect(findTopLevelAncestor(store().root, childId)).toBe(childId)
+  })
+
+  it('returns top-level ancestor for deeply nested frame', () => {
+    const topId = addChild('box')
+    const midId = addChild('box', topId)
+    const deepId = addChild('box', midId)
+
+    expect(findTopLevelAncestor(store().root, deepId)).toBe(topId)
+    expect(findTopLevelAncestor(store().root, midId)).toBe(topId)
+  })
+
+  it('returns null for root id', () => {
+    expect(findTopLevelAncestor(store().root, store().root.id)).toBeNull()
+  })
+
+  it('returns null for non-existent id', () => {
+    expect(findTopLevelAncestor(store().root, 'nonexistent')).toBeNull()
   })
 })

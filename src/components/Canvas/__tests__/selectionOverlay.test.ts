@@ -27,8 +27,8 @@ describe('buildOverlayRules', () => {
     const rules = buildOverlayRules({ ...base, selectedId: 'frame-1', showSel: true })
     expect(rules).toHaveLength(2)
     expect(rules[0]).toContain('[data-frame-id="frame-1"]')
-    expect(rules[0]).toContain('outline: 2px solid')
-    expect(rules[0]).toContain('outline-offset: -2px')
+    expect(rules[0]).toContain('outline: 1px solid')
+    expect(rules[0]).toContain('outline-offset: -1px')
     expect(rules[1]).toContain('> [data-frame-id]')
     expect(rules[1]).toContain('dotted')
   })
@@ -37,8 +37,8 @@ describe('buildOverlayRules', () => {
     const rules = buildOverlayRules({ ...base, hoveredId: 'frame-2', showHov: true })
     expect(rules).toHaveLength(2)
     expect(rules[0]).toContain('[data-frame-id="frame-2"]')
-    expect(rules[0]).toContain('outline: 1px solid')
-    expect(rules[0]).toContain('outline-offset: -1px')
+    expect(rules[0]).toContain('outline: 2px solid')
+    expect(rules[0]).toContain('outline-offset: -2px')
     expect(rules[1]).toContain('> [data-frame-id]')
     expect(rules[1]).toContain('dotted')
   })
@@ -85,6 +85,43 @@ describe('buildOverlayRules', () => {
   it('does not generate rules when showHov is false', () => {
     const rules = buildOverlayRules({ ...base, hoveredId: 'frame-1', showHov: false })
     expect(rules).toEqual([])
+  })
+
+  it('hover child-hints exclude primary selected element', () => {
+    const rules = buildOverlayRules({
+      ...base,
+      selectedId: 'child-1', showSel: true,
+      hoveredId: 'parent-1', showHov: true,
+    })
+    // Hover child-hints rule starts with the hovered element's selector
+    const hoverChildRule = rules.find(r => r.startsWith('[data-frame-id="parent-1"] >'))
+    expect(hoverChildRule).toContain(':not([data-frame-id="child-1"])')
+  })
+
+  it('hover child-hints exclude all multi-selected elements', () => {
+    const rules = buildOverlayRules({
+      ...base,
+      selectedId: 'child-1',
+      selectedIds: new Set(['child-1', 'child-2']),
+      showSel: true,
+      hoveredId: 'parent-1', showHov: true,
+    })
+    const hoverChildRule = rules.find(r => r.startsWith('[data-frame-id="parent-1"] >'))
+    expect(hoverChildRule).toContain(':not([data-frame-id="child-1"])')
+    expect(hoverChildRule).toContain(':not([data-frame-id="child-2"])')
+  })
+
+  it('drag guides exclude selected elements', () => {
+    const rules = buildOverlayRules({
+      ...base,
+      selectedId: 'sel-1', showSel: true,
+      canvasDragId: 'drag-1',
+      showDragGuides: true,
+      dragTargetParentId: 'parent-1',
+    })
+    const dragRule = rules.find(r => r.includes('parent-1') && r.includes('> [data-frame-id]'))
+    expect(dragRule).toContain(':not([data-frame-id="drag-1"])')
+    expect(dragRule).toContain(':not([data-frame-id="sel-1"])')
   })
 
 })
