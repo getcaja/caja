@@ -114,6 +114,7 @@ function computeLineRect(
 export function buildOverlayRules(state: {
   selectedId: string | null
   selectedIds: Set<string>
+  selectedParentId: string | null
   hoveredId: string | null
   showSel: boolean
   showHov: boolean
@@ -121,12 +122,16 @@ export function buildOverlayRules(state: {
   showDragGuides: boolean
   dragTargetParentId: string | null
 }): string[] {
-  const { selectedId, selectedIds, hoveredId, showSel, showHov, canvasDragId, showDragGuides, dragTargetParentId } = state
+  const { selectedId, selectedIds, selectedParentId, hoveredId, showSel, showHov, canvasDragId, showDragGuides, dragTargetParentId } = state
   const rules: string[] = []
   const color = 'var(--color-accent)'
 
   if (showSel) {
-    // Primary selection — thin 1px (persistent, subtle)
+    // Parent hint — dotted outline on immediate parent (spatial context)
+    if (selectedParentId) {
+      rules.push(`[data-frame-id="${selectedParentId}"] { outline: 1px dotted ${color} !important; outline-offset: -1px; }`)
+    }
+    // Primary selection — thin 1px solid (persistent, subtle)
     if (selectedId) {
       rules.push(`[data-frame-id="${selectedId}"] { outline: 1px solid ${color} !important; outline-offset: -1px !important; }`)
       const excDrag = canvasDragId ? `:not([data-frame-id="${canvasDragId}"])` : ''
@@ -243,6 +248,14 @@ export function SelectionOverlay() {
   const canvasDragId = useFrameStore((s) => s.canvasDragId)
   const canvasDragOver = useFrameStore((s) => s.canvasDragOver)
 
+  // Parent hint: show dotted outline on the immediate parent of the selected element
+  const selectedParentId = useFrameStore((s) => {
+    if (!s.selectedId || isRootId(s.selectedId)) return null
+    const parent = findParent(s.root, s.selectedId)
+    if (!parent || isRootId(parent.id)) return null
+    return parent.id
+  })
+
   const isLineMode = !!canvasDragId && !!canvasDragOver
   const isDragging = !!canvasDragId && canvasDragId === selectedId
   const showSel = !previewMode && (!!selectedId || selectedIds.size > 0) && !isDragging
@@ -250,8 +263,12 @@ export function SelectionOverlay() {
   // Drill-down hover: resolve hover to the current context level.
   // Context = parent of selected (or root if nothing selected).
   // Hover highlights what a click would select at the current drill depth.
+  // Tree hovers bypass drill-down — the user explicitly targets the element.
   const effectiveHoveredId = useFrameStore((s) => {
     if (!s.hoveredId) return null
+
+    // Tree panel hover → show directly on the element, no drill-down
+    if (s.isTreeHover) return s.hoveredId
 
     // Determine context: parent of selected, or root
     let contextId = s.root.id
@@ -282,31 +299,46 @@ export function SelectionOverlay() {
     setLineRect(computeLineRect(doc, canvasDragOver))
   }, [isLineMode, canvasDragOver?.parentId, canvasDragOver?.index, canvasDragId, doc])
 
-  const rules = buildOverlayRules({ selectedId, selectedIds, hoveredId: effectiveHoveredId, showSel, showHov, canvasDragId, showDragGuides, dragTargetParentId })
+  const rules = buildOverlayRules({ selectedId, selectedIds, selectedParentId, hoveredId: effectiveHoveredId, showSel, showHov, canvasDragId, showDragGuides, dragTargetParentId })
 
-  // Margin overlay — shows margin areas for selected/hovered element
+  // Margin overlays — blue semi-transparent rects showing margin areas.
+  // Triggers: hover on canvas element, or hovering margin inputs in panel.
   const zoom = useFrameStore((s) => s.canvasZoom)
-  // root reference changes on every tree mutation (undo/redo, move, add, etc.)
   const root = useFrameStore((s) => s.root)
-  const targetId = showSel ? selectedId : showHov ? effectiveHoveredId : null
+  const showMarginOverlay = useFrameStore((s) => s.showMarginOverlay)
+  const isTreeHover = useFrameStore((s) => s.isTreeHover)
 
-  const [marginInfo, setMarginInfo] = useState<MarginInfo | null>(null)
+  const [marginInfos, setMarginInfos] = useState<MarginInfo[]>([])
   useLayoutEffect(() => {
-    if (!targetId || !doc) { setMarginInfo(null); return }
-    // Defer to next frame so DOM has updated after tree mutation
+    if (!doc) { setMarginInfos([]); return }
     const raf = requestAnimationFrame(() => {
       const wrapper = doc.querySelector('[data-canvas-wrapper]') as HTMLElement | null
-      if (!wrapper) { setMarginInfo(null); return }
-      setMarginInfo(computeMarginInfo(doc, targetId, wrapper, zoom))
+      if (!wrapper) { setMarginInfos([]); return }
+
+      const infos: MarginInfo[] = []
+
+      // Panel margin inputs hovered → show margins for selected element
+      if (showMarginOverlay && selectedId) {
+        const info = computeMarginInfo(doc, selectedId, wrapper, zoom)
+        if (info) infos.push(info)
+      }
+
+      // Canvas hover → show margins for the hovered element (skip tree hovers)
+      if (showHov && effectiveHoveredId && !isTreeHover) {
+        const info = computeMarginInfo(doc, effectiveHoveredId, wrapper, zoom)
+        if (info) infos.push(info)
+      }
+
+      setMarginInfos(infos)
     })
     return () => cancelAnimationFrame(raf)
-  }, [targetId, doc, zoom, root])
+  }, [selectedId, effectiveHoveredId, showSel, showHov, showMarginOverlay, isTreeHover, doc, zoom, root])
 
   return (
     <>
       <span ref={anchorRef} style={{ display: 'none' }} />
       {rules.length > 0 && <style>{rules.join('\n')}</style>}
-      {marginInfo && <MarginRects info={marginInfo} />}
+      {marginInfos.map((info, i) => <MarginRects key={i} info={info} />)}
       {isLineMode && lineRect && (
         <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 9999 }}>
           <div style={{

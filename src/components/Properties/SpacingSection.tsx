@@ -10,6 +10,7 @@ export function SpacingSection({ frame }: { frame: Frame }) {
   const spacingGrid = useFrameStore((s) => s.spacingGrid)
   const filteredSpacing = useMemo(() => filterSpacingScale(SPACING_SCALE, spacingGrid), [spacingGrid])
   const filteredMargin = useMemo(() => filterSpacingScale(MARGIN_SCALE, spacingGrid), [spacingGrid])
+  const setShowMarginOverlay = useFrameStore((s) => s.setShowMarginOverlay)
 
   return (
     <Section title="Spacing">
@@ -21,13 +22,18 @@ export function SpacingSection({ frame }: { frame: Frame }) {
           classPrefix="p"
           scale={filteredSpacing}
         />
-        <SpacingControl
-          value={frame.margin}
-          onChange={(v) => updateSpacing(frame.id, 'margin', v)}
-          label="Margin"
-          classPrefix="m"
-          scale={filteredMargin}
-        />
+        <div
+          onMouseEnter={() => setShowMarginOverlay(true)}
+          onMouseLeave={() => setShowMarginOverlay(false)}
+        >
+          <SpacingControl
+            value={frame.margin}
+            onChange={(v) => updateSpacing(frame.id, 'margin', v)}
+            label="Margin"
+            classPrefix="m"
+            scale={filteredMargin}
+          />
+        </div>
       </div>
     </Section>
   )

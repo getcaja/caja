@@ -1519,3 +1519,59 @@ describe('drill-down click resolution', () => {
     expect(fallback).toBe(branchB)
   })
 })
+
+// ── Hover source tracking ──
+
+describe('hover with isTreeHover', () => {
+  beforeEach(() => { storage.clear(); useFrameStore.setState(useFrameStore.getInitialState()) })
+
+  it('hover without source sets isTreeHover to false', () => {
+    store().hover('some-id')
+    expect(store().hoveredId).toBe('some-id')
+    expect(store().isTreeHover).toBe(false)
+  })
+
+  it('hover with tree source sets isTreeHover to true', () => {
+    store().hover('some-id', 'tree')
+    expect(store().hoveredId).toBe('some-id')
+    expect(store().isTreeHover).toBe(true)
+  })
+
+  it('canvas hover after tree hover resets isTreeHover', () => {
+    store().hover('tree-id', 'tree')
+    expect(store().isTreeHover).toBe(true)
+    store().hover('canvas-id')
+    expect(store().isTreeHover).toBe(false)
+    expect(store().hoveredId).toBe('canvas-id')
+  })
+
+  it('clearing hover with tree source preserves isTreeHover', () => {
+    store().hover(null, 'tree')
+    expect(store().hoveredId).toBeNull()
+    expect(store().isTreeHover).toBe(true)
+  })
+
+  it('clearing hover without source resets isTreeHover', () => {
+    store().hover('id', 'tree')
+    store().hover(null)
+    expect(store().hoveredId).toBeNull()
+    expect(store().isTreeHover).toBe(false)
+  })
+})
+
+// ── Margin overlay store state ──
+
+describe('showMarginOverlay', () => {
+  beforeEach(() => { storage.clear(); useFrameStore.setState(useFrameStore.getInitialState()) })
+
+  it('defaults to false', () => {
+    expect(store().showMarginOverlay).toBe(false)
+  })
+
+  it('setShowMarginOverlay toggles the value', () => {
+    store().setShowMarginOverlay(true)
+    expect(store().showMarginOverlay).toBe(true)
+    store().setShowMarginOverlay(false)
+    expect(store().showMarginOverlay).toBe(false)
+  })
+})

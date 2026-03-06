@@ -18,6 +18,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
   const updateSize = useFrameStore((s) => s.updateSize)
   const updateSpacing = useFrameStore((s) => s.updateSpacing)
   const spacingGrid = useFrameStore((s) => s.spacingGrid)
+  const setShowMarginOverlay = useFrameStore((s) => s.setShowMarginOverlay)
   const filteredSpacing = useMemo(() => filterSpacingScale(SPACING_SCALE, spacingGrid), [spacingGrid])
   const filteredGap = useMemo(() => filterSpacingScale(GAP_SCALE, spacingGrid), [spacingGrid])
   const filteredSize = useMemo(() => filterSpacingScale(SIZE_CONSTRAINT_SCALE, spacingGrid), [spacingGrid])
@@ -511,13 +512,18 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
           classPrefix="p"
           scale={filteredSpacing}
         />
-        <SpacingControl
-          value={frame.margin}
-          onChange={(v) => updateSpacing(frame.id, 'margin', v)}
-          label="Margin"
-          classPrefix="m"
-          scale={filteredMargin}
-        />
+        <div
+          onMouseEnter={() => setShowMarginOverlay(true)}
+          onMouseLeave={() => setShowMarginOverlay(false)}
+        >
+          <SpacingControl
+            value={frame.margin}
+            onChange={(v) => updateSpacing(frame.id, 'margin', v)}
+            label="Margin"
+            classPrefix="m"
+            scale={filteredMargin}
+          />
+        </div>
 
         {/* Clip */}
         <div className="flex items-center gap-2">

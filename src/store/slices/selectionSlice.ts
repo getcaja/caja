@@ -8,13 +8,14 @@ export interface SelectionSlice {
   selectedIds: Set<string>
   pageSelected: boolean
   hoveredId: string | null
+  isTreeHover: boolean
   clipboard: Frame[]
 
   select: (id: string | null) => void
   selectMulti: (id: string) => void
   selectRange: (targetId: string) => void
   selectAllSiblings: () => void
-  hover: (id: string | null) => void
+  hover: (id: string | null, source?: 'tree') => void
   getSelected: () => Frame | null
   getParentDirection: (id: string) => BoxElement['direction']
   getParentDisplay: (id: string) => BoxElement['display'] | null
@@ -26,6 +27,7 @@ export const createSelectionSlice: StateCreator<FrameStore, [], [], SelectionSli
   selectedIds: new Set<string>(),
   pageSelected: false,
   hoveredId: null,
+  isTreeHover: false,
   clipboard: [] as Frame[],
 
   select: (id) => set({ selectedId: id, selectedIds: new Set(id ? [id] : []), pageSelected: false }),
@@ -79,7 +81,7 @@ export const createSelectionSlice: StateCreator<FrameStore, [], [], SelectionSli
     return { selectedIds: ids, selectedId: id }
   }),
 
-  hover: (id) => set({ hoveredId: id }),
+  hover: (id, source) => set({ hoveredId: id, isTreeHover: source === 'tree' }),
 
   getSelected: () => {
     const { root, selectedId } = get()

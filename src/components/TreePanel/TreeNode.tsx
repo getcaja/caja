@@ -184,8 +184,8 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
           if (!selectedIds.has(frame.id)) select(frame.id)
           ctxMenu.open(e)
         }}
-        onMouseEnter={() => hover(frame.id)}
-        onMouseLeave={() => hover(null)}
+        onMouseEnter={() => hover(frame.id, 'tree')}
+        onMouseLeave={() => hover(null, 'tree')}
         chevron={chevron}
         onChevronClick={() => toggleCollapse(frame.id)}
         badges={responsiveBadges}
