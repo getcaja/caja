@@ -163,7 +163,7 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
 
   const commitText = () => {
     if (textRef.current && isText) {
-      const newContent = textRef.current.textContent || ''
+      const newContent = textRef.current.innerText || ''
       // If this was a pending insert and the user left it empty, remove the frame
       if (pendingInsertRef.current && !newContent.trim()) {
         pendingInsertRef.current = false
@@ -496,7 +496,7 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
               }
             }}
           >
-            {frame.content}
+            {renderMultiline(frame.content)}
           </span>
         ) : (
           renderMultiline(frame.content)
