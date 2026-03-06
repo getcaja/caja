@@ -349,6 +349,9 @@ function App() {
           case 'expand-all':
             useFrameStore.getState().expandAll()
             break
+          case 'keyboard-shortcuts':
+            window.dispatchEvent(new Event('show-keyboard-shortcuts'))
+            break
           case 'reset-workspace':
             setLeftWidth(LEFT_DEFAULT)
             setRightWidth(RIGHT_DEFAULT)

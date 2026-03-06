@@ -1,5 +1,5 @@
-import { Keyboard, X } from 'lucide-react'
-import { useState } from 'react'
+import { X } from 'lucide-react'
+import { useState, useEffect } from 'react'
 
 const MAC = navigator.platform.startsWith('Mac')
 const CMD = MAC ? '\u2318' : 'Ctrl'
@@ -98,18 +98,15 @@ export function ShortcutsPanel({ open, onClose }: { open: boolean; onClose: () =
   )
 }
 
-export function ShortcutsButton() {
+/** Listens for Help > Keyboard Shortcuts menu event and shows the panel. */
+export function ShortcutsListener() {
   const [open, setOpen] = useState(false)
-  return (
-    <>
-      <button
-        onClick={() => setOpen(true)}
-        className="w-6 h-6 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted hover:bg-inset"
-        title="Keyboard Shortcuts"
-      >
-        <Keyboard size={12} />
-      </button>
-      <ShortcutsPanel open={open} onClose={() => setOpen(false)} />
-    </>
-  )
+
+  useEffect(() => {
+    const show = () => setOpen(true)
+    window.addEventListener('show-keyboard-shortcuts', show)
+    return () => window.removeEventListener('show-keyboard-shortcuts', show)
+  }, [])
+
+  return <ShortcutsPanel open={open} onClose={() => setOpen(false)} />
 }

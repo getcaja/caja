@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo, useEffect } from 'react'
 import { useFrameStore } from '../../store/frameStore'
 import { McpModal } from '../McpModal/McpModal'
-import { ShortcutsButton } from './ShortcutsPanel'
+import { ShortcutsListener } from './ShortcutsPanel'
 import { Cable, Loader2, Eye, ChevronDown, Monitor, Tablet, Smartphone } from 'lucide-react'
 import { ZOOM_LEVELS } from '../Canvas/ZoomBar'
 import { canvasZoomTo } from '../Canvas/CanvasInline'
@@ -111,10 +111,76 @@ export function TitleBar() {
     return counts
   }, [root])
 
+  const activeBpHasOverrides = activeBreakpoint !== 'base' && overrideCounts[activeBreakpoint] > 0
   const currentBp = BREAKPOINTS.find((bp) => bp.width === canvasWidth) ?? BREAKPOINTS[0]
   const CurrentIcon = currentBp.icon
 
   const btn = 'w-6 h-6 flex items-center justify-center rounded'
+
+  const breakpointMenu = BREAKPOINTS.map((bpItem) => {
+    const Icon = bpItem.icon
+    const active = bpItem.width === canvasWidth
+    const hasOverrides = bpItem.bp !== 'base' && overrideCounts[bpItem.bp] > 0
+    return (
+      <button
+        key={bpItem.label}
+        className={`c-menu-item ${active ? 'c-menu-item-active' : ''}`}
+        onClick={() => { setCanvasWidth(bpItem.width); setActiveBreakpoint(bpItem.bp) }}
+      >
+        <span className="relative">
+          <Icon size={12} />
+          {hasOverrides && <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-accent" />}
+        </span>
+        {bpItem.label}
+        {bpItem.bp !== 'base' && <span className="px-1 py-px text-[9px] leading-none font-medium rounded bg-subtle fg-subtle">{bpItem.bp}</span>}
+        <span className="flex-1" />
+        {bpItem.width && <span className="fg-subtle text-[10px]">{bpItem.width}px</span>}
+      </button>
+    )
+  })
+
+  const zoomIn = () => {
+    const next = ZOOM_LEVELS.find((z) => z > canvasZoom + 0.001)
+    if (next != null) canvasZoomTo(next)
+  }
+  const zoomOut = () => {
+    const prev = [...ZOOM_LEVELS].reverse().find((z) => z < canvasZoom - 0.001)
+    if (prev != null) canvasZoomTo(prev)
+  }
+
+  const zoomMenu = <>
+    <button className="c-menu-item" onClick={zoomIn}>
+      Zoom in<span className="flex-1" /><kbd className="text-[10px] fg-subtle font-mono">⌘+</kbd>
+    </button>
+    <button className="c-menu-item" onClick={zoomOut}>
+      Zoom out<span className="flex-1" /><kbd className="text-[10px] fg-subtle font-mono">⌘−</kbd>
+    </button>
+    <div className="h-px bg-border my-1" />
+    {ZOOM_LEVELS.map((z) => (
+      <button
+        key={z}
+        className={`c-menu-item ${Math.abs(canvasZoom - z) < 0.001 ? 'c-menu-item-active' : ''}`}
+        onClick={() => canvasZoomTo(z)}
+      >
+        {Math.round(z * 100)}%
+        {z === 1 && <><span className="flex-1" /><kbd className="text-[10px] fg-subtle font-mono">⌘0</kbd></>}
+      </button>
+    ))}
+  </>
+
+  const mcpButton = (
+    <button
+      onClick={() => setShowMcp(true)}
+      className={`${btn} fg-icon-subtle hover:fg-icon-muted hover:bg-inset`}
+      title={mcpConnected ? 'MCP Connected' : 'MCP Offline'}
+    >
+      {mcpBusy ? (
+        <Loader2 size={12} className="animate-spin" />
+      ) : (
+        <Cable size={12} />
+      )}
+    </button>
+  )
 
   return (
     <div
@@ -140,63 +206,33 @@ export function TitleBar() {
         {/* Breakpoint */}
         <TitleDropdown
           trigger={
-            <button
-              className={`${btn} fg-icon-subtle hover:fg-icon-muted hover:bg-inset`}
-              title={currentBp.label}
-            >
+            <button className="h-6 px-1.5 flex items-center gap-1 rounded fg-icon-subtle hover:fg-icon-muted hover:bg-inset" title={currentBp.label}>
               <span className="relative">
                 <CurrentIcon size={12} />
-                {activeBreakpoint !== 'base' && overrideCounts[activeBreakpoint] > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-accent" />
+                {activeBpHasOverrides && (
+                  <span className="absolute -top-0.5 -right-1 w-1.5 h-1.5 rounded-full bg-accent" />
                 )}
               </span>
+              <span className="text-[11px]">{currentBp.label}</span>
+              <ChevronDown size={8} />
             </button>
           }
           menuClassName="min-w-[180px]"
-          menu={BREAKPOINTS.map((bpItem) => {
-            const Icon = bpItem.icon
-            const active = bpItem.width === canvasWidth
-            const hasOverrides = bpItem.bp !== 'base' && overrideCounts[bpItem.bp] > 0
-            return (
-              <button
-                key={bpItem.label}
-                className={`c-menu-item ${active ? 'c-menu-item-active' : ''}`}
-                onClick={() => { setCanvasWidth(bpItem.width); setActiveBreakpoint(bpItem.bp) }}
-              >
-                <span className="relative">
-                  <Icon size={12} />
-                  {hasOverrides && <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-accent" />}
-                </span>
-                {bpItem.label}
-                {bpItem.bp !== 'base' && <span className="px-1 py-px text-[9px] leading-none font-medium rounded bg-subtle fg-subtle">{bpItem.bp}</span>}
-                <span className="flex-1" />
-                {bpItem.width && <span className="fg-subtle text-[10px]">{bpItem.width}px</span>}
-              </button>
-            )
-          })}
+          menu={breakpointMenu}
         />
 
-        {/* Zoom dropdown */}
+        {/* Zoom */}
         <TitleDropdown
           trigger={
-            <button
-              className={`h-6 px-1.5 flex items-center gap-0.5 rounded fg-icon-subtle hover:fg-icon-muted hover:bg-inset`}
-              title="Zoom"
-            >
+            <button className="h-6 px-1.5 flex items-center gap-0.5 rounded fg-icon-subtle hover:fg-icon-muted hover:bg-inset" title="Zoom">
               <span className="text-[11px] tabular-nums">{Math.round(canvasZoom * 100)}%</span>
               <ChevronDown size={8} />
             </button>
           }
-          menu={ZOOM_LEVELS.map((z) => (
-            <button
-              key={z}
-              className={`c-menu-item ${Math.abs(canvasZoom - z) < 0.001 ? 'c-menu-item-active' : ''}`}
-              onClick={() => canvasZoomTo(z)}
-            >
-              {Math.round(z * 100)}%
-            </button>
-          ))}
+          menu={zoomMenu}
         />
+
+        <div className="w-px bg-border shrink-0 -my-[38px] h-[38px]" />
 
         {/* Preview */}
         <button
@@ -206,24 +242,11 @@ export function TitleBar() {
         >
           <Eye size={12} />
         </button>
-
-        <div className="w-px bg-border shrink-0 -my-[38px] h-[38px]" />
-
-        <ShortcutsButton />
-        <button
-          onClick={() => setShowMcp(true)}
-          className={`${btn} fg-icon-subtle hover:fg-icon-muted hover:bg-inset`}
-          title={mcpConnected ? 'MCP Connected' : 'MCP Offline'}
-        >
-          {mcpBusy ? (
-            <Loader2 size={12} className="animate-spin" />
-          ) : (
-            <Cable size={12} />
-          )}
-        </button>
+        {mcpButton}
       </div>
 
       <McpModal open={showMcp} onOpenChange={setShowMcp} />
+      <ShortcutsListener />
     </div>
   )
 }
