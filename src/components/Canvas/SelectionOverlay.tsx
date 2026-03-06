@@ -270,7 +270,7 @@ export function SelectionOverlay() {
     // Outside context — fall back to top-level ancestor
     return findTopLevelAncestor(s.root, s.hoveredId) ?? s.hoveredId
   })
-  const showHov = !previewMode && !!effectiveHoveredId && effectiveHoveredId !== selectedId && !canvasDragId
+  const showHov = !previewMode && !!effectiveHoveredId && !canvasDragId
 
   const dragTargetParentId = canvasDragOver?.parentId ?? null
   const showDragGuides = !previewMode && !!canvasDragId && !!dragTargetParentId
