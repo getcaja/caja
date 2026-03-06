@@ -1,32 +1,21 @@
-import { useState, useRef, useMemo, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import {
-  Monitor, Tablet, Smartphone,
-  Plus, MousePointer2, Type, Eye,
-  Frame as FrameIcon, Link, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse, ChevronDown,
+  Ellipsis, MousePointer2, Type,
+  Frame as FrameIcon, Link, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse,
 } from 'lucide-react'
 import { useFrameStore, isRootId } from '../../store/frameStore'
 import { importLocalAsset } from '../../lib/assetOps'
-import type { Frame, Breakpoint } from '../../types/frame'
-import { ZOOM_LEVELS } from './ZoomBar'
-import { canvasZoomTo } from './CanvasInline'
+import type { Frame } from '../../types/frame'
 
 type ElementType = 'box' | 'text' | 'image' | 'button' | 'input' | 'textarea' | 'select' | 'link'
 
-const BREAKPOINTS: { label: string; width: number | null; icon: typeof Monitor; bp: Breakpoint }[] = [
-  { label: 'Desktop', width: null, icon: Monitor, bp: 'base' },
-  { label: 'Tablet', width: 767, icon: Tablet, bp: 'md' },
-  { label: 'Mobile', width: 375, icon: Smartphone, bp: 'sm' },
-]
-
-const PRIMITIVES: { type: ElementType; icon: React.ReactNode; label: string }[] = [
-  { type: 'box', icon: <FrameIcon size={12} />, label: 'Add Frame' },
-  { type: 'text', icon: <Type size={12} />, label: 'Add Text' },
-  { type: 'link', icon: <Link size={12} />, label: 'Add Link' },
-  { type: 'image', icon: <ImageIcon size={12} />, label: 'Add Image' },
-  { type: 'button', icon: <RectangleHorizontal size={12} />, label: 'Add Button' },
-  { type: 'input', icon: <TextCursorInput size={12} />, label: 'Add Input' },
-  { type: 'textarea', icon: <AlignLeft size={12} />, label: 'Add Textarea' },
-  { type: 'select', icon: <ListCollapse size={12} />, label: 'Add Select' },
+/** Extra primitives not shown as dedicated toolbar buttons. */
+const MORE_PRIMITIVES: { type: ElementType; icon: React.ReactNode; label: string }[] = [
+  { type: 'link', icon: <Link size={12} />, label: 'Link' },
+  { type: 'button', icon: <RectangleHorizontal size={12} />, label: 'Button' },
+  { type: 'input', icon: <TextCursorInput size={12} />, label: 'Input' },
+  { type: 'textarea', icon: <AlignLeft size={12} />, label: 'Textarea' },
+  { type: 'select', icon: <ListCollapse size={12} />, label: 'Select' },
 ]
 
 function findParentBox(root: Frame, id: string): Frame | null {
@@ -52,7 +41,9 @@ function DropdownButton({ icon, title, isActive, menu, menuClassName, children }
   const btnRef = useRef<HTMLButtonElement>(null)
   const [pos, setPos] = useState({ x: 0, y: 0 })
 
-  // Close when another menu opens or window resizes
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  // Close when another menu opens, window resizes, or click anywhere outside
   useEffect(() => {
     const close = () => setOpen(false)
     window.addEventListener('close-menus', close)
@@ -62,6 +53,17 @@ function DropdownButton({ icon, title, isActive, menu, menuClassName, children }
       window.removeEventListener('resize', close)
     }
   }, [])
+
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e: MouseEvent) => {
+      if (menuRef.current?.contains(e.target as Node)) return
+      if (btnRef.current?.contains(e.target as Node)) return
+      setOpen(false)
+    }
+    window.addEventListener('mousedown', onDown, true)
+    return () => window.removeEventListener('mousedown', onDown, true)
+  }, [open])
 
   const handleClick = () => {
     if (!open) {
@@ -91,6 +93,7 @@ function DropdownButton({ icon, title, isActive, menu, menuClassName, children }
           {/* Backdrop catches clicks outside menu (including on iframe) */}
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div
+            ref={menuRef}
             className={`fixed c-menu-popup min-w-[120px] z-50 ${menuClassName ?? ''}`}
             style={{ left: pos.x, bottom: window.innerHeight - pos.y, transform: 'translateX(-50%)' }}
             onClick={(e) => { e.stopPropagation(); setOpen(false) }}
@@ -103,94 +106,14 @@ function DropdownButton({ icon, title, isActive, menu, menuClassName, children }
   )
 }
 
-/* ---------- Section divider ---------- */
-function Divider() {
-  return <div className="w-px self-stretch bg-border shrink-0" />
-}
-
-/* ---------- Zoom ---------- */
-function ZoomSection() {
-  const canvasZoom = useFrameStore((s) => s.canvasZoom)
-  const [open, setOpen] = useState(false)
-  const btnRef = useRef<HTMLButtonElement>(null)
-  const [pos, setPos] = useState({ x: 0, y: 0 })
-
-  const handleClick = () => {
-    if (!open && btnRef.current) {
-      const rect = btnRef.current.getBoundingClientRect()
-      setPos({ x: rect.left + rect.width / 2, y: rect.top - 8 })
-    }
-    setOpen((p) => !p)
-  }
-
-  return (
-    <>
-      <div className="flex items-center py-1 pr-1">
-        <button
-          ref={btnRef}
-          onClick={handleClick}
-          className={`h-7 px-1.5 flex items-center gap-0.5 rounded-md text-white ${open ? 'bg-accent' : 'opacity-60 hover:opacity-100'}`}
-          title="Zoom"
-        >
-          <span className="text-[11px] tabular-nums">{Math.round(canvasZoom * 100)}%</span>
-          <ChevronDown size={10} />
-        </button>
-      </div>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div
-            className="fixed c-menu-popup min-w-[120px] z-50"
-            style={{ left: pos.x, bottom: window.innerHeight - pos.y, transform: 'translateX(-50%)' }}
-            onClick={(e) => { e.stopPropagation(); setOpen(false) }}
-          >
-            {ZOOM_LEVELS.map((z) => (
-              <button
-                key={z}
-                className={`c-menu-item ${Math.abs(canvasZoom - z) < 0.001 ? 'c-menu-item-active' : ''}`}
-                onClick={() => canvasZoomTo(z)}
-              >
-                {Math.round(z * 100)}%
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-    </>
-  )
-}
-
 /* ---------- Toolbar ---------- */
-export function Toolbar() {
+export function Toolbar({ hidden = false }: { hidden?: boolean }) {
   const previewMode = useFrameStore((s) => s.previewMode)
-  const setPreviewMode = useFrameStore((s) => s.setPreviewMode)
   const canvasTool = useFrameStore((s) => s.canvasTool)
   const setCanvasTool = useFrameStore((s) => s.setCanvasTool)
-  const canvasWidth = useFrameStore((s) => s.canvasWidth)
-  const setCanvasWidth = useFrameStore((s) => s.setCanvasWidth)
-  const activeBreakpoint = useFrameStore((s) => s.activeBreakpoint)
-  const setActiveBreakpoint = useFrameStore((s) => s.setActiveBreakpoint)
   const addChild = useFrameStore((s) => s.addChild)
   const getSelected = useFrameStore((s) => s.getSelected)
   const selectedId = useFrameStore((s) => s.selectedId)
-
-  const root = useFrameStore((s) => s.root)
-
-  // Count frames with overrides per breakpoint
-  const overrideCounts = useMemo(() => {
-    const counts: Record<string, number> = { md: 0, sm: 0 }
-    const walk = (f: Frame) => {
-      if (f.responsive?.md && Object.keys(f.responsive.md).length > 0) counts.md++
-      if (f.responsive?.sm && Object.keys(f.responsive.sm).length > 0) counts.sm++
-      if (f.type === 'box') f.children.forEach(walk)
-    }
-    walk(root)
-    return counts
-  }, [root])
-
-  // Current responsive icon
-  const currentBp = BREAKPOINTS.find((bp) => bp.width === canvasWidth) ?? BREAKPOINTS[0]
-  const CurrentIcon = currentBp.icon
 
   const handleInsert = (type: ElementType) => {
     let parentId = useFrameStore.getState().root.id
@@ -212,7 +135,7 @@ export function Toolbar() {
   const imgClickTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const onImageClick = useCallback(() => {
-    setPreviewMode(false)
+    useFrameStore.getState().setPreviewMode(false)
     setCanvasTool('image')
     imgClickTimer.current = setTimeout(async () => {
       imgClickTimer.current = null
@@ -223,11 +146,11 @@ export function Toolbar() {
         useFrameStore.getState().setCanvasTool('pointer')
       }
     }, 250)
-  }, [setPreviewMode, setCanvasTool])
+  }, [setCanvasTool])
 
   const onImageDoubleClick = useCallback(async () => {
     if (imgClickTimer.current) { clearTimeout(imgClickTimer.current); imgClickTimer.current = null }
-    setPreviewMode(false)
+    useFrameStore.getState().setPreviewMode(false)
     const result = await importLocalAsset(useFrameStore.getState().filePath)
     if (result) {
       handleInsert('image')
@@ -236,123 +159,91 @@ export function Toolbar() {
     }
     setCanvasTool('pointer')
     useFrameStore.getState().setPendingImageSrc(null)
-  }, [setPreviewMode, setCanvasTool, handleInsert])
+  }, [setCanvasTool, handleInsert])
 
   const btnIcon = 'w-7 h-7 flex items-center justify-center rounded-md'
 
+  // Animate in/out for preview mode transitions
+  const [mounted, setMounted] = useState(!previewMode)
+  const [animateIn, setAnimateIn] = useState(!previewMode)
+  useEffect(() => {
+    if (!previewMode) {
+      // Mount hidden, then animate in on next frame
+      setMounted(true)
+      const raf = requestAnimationFrame(() => setAnimateIn(true))
+      return () => cancelAnimationFrame(raf)
+    } else {
+      // Animate out, then unmount
+      setAnimateIn(false)
+      const t = setTimeout(() => setMounted(false), 200)
+      return () => clearTimeout(t)
+    }
+  }, [previewMode])
+
+  if (!mounted) return null
+
+  const shouldHide = hidden || !animateIn
+
   return (
-    // No transform on this wrapper — flexbox centering so fixed/absolute children work correctly
-    <div className="fixed bottom-3 inset-x-0 z-40 flex justify-center pointer-events-none">
-      <div className="flex items-stretch bg-surface-1 border border-border rounded-lg pointer-events-auto">
-
-        {/* Section 1: Tools + Add */}
-        <div style={{
-          display: 'flex', alignItems: 'center', overflow: 'hidden',
-          maxWidth: previewMode ? 0 : 340, opacity: previewMode ? 0 : 1,
-          transition: previewMode
-            ? 'max-width 200ms ease, opacity 150ms ease'
-            : 'max-width 300ms ease-out, opacity 250ms ease-out 50ms',
-        }}>
-          <div className="flex items-center gap-0.5 py-1 pl-1.5 pr-1">
-            <div className="flex items-center bg-overlay rounded-md">
-              <button
-                onClick={() => { setPreviewMode(false); setCanvasTool('pointer') }}
-                className={`${btnIcon} text-white ${!previewMode && canvasTool === 'pointer' ? 'bg-accent' : 'opacity-60 hover:opacity-100'}`}
-                title="Pointer (V)"
-              >
-                <MousePointer2 size={12} />
-              </button>
-              <button
-                onClick={() => { setPreviewMode(false); setCanvasTool('frame') }}
-                onDoubleClick={() => { setPreviewMode(false); handleInsert('box'); setCanvasTool('pointer') }}
-                className={`${btnIcon} text-white ${!previewMode && canvasTool === 'frame' ? 'bg-accent' : 'opacity-60 hover:opacity-100'}`}
-                title="Frame (F)"
-              >
-                <FrameIcon size={12} />
-              </button>
-              <button
-                onClick={() => { setPreviewMode(false); setCanvasTool('text') }}
-                onDoubleClick={() => { setPreviewMode(false); handleInsert('text'); setCanvasTool('pointer') }}
-                className={`${btnIcon} text-white ${!previewMode && canvasTool === 'text' ? 'bg-accent' : 'opacity-60 hover:opacity-100'}`}
-                title="Text (T)"
-              >
-                <Type size={12} />
-              </button>
-              <button
-                onClick={onImageClick}
-                onDoubleClick={onImageDoubleClick}
-                className={`${btnIcon} text-white ${!previewMode && canvasTool === 'image' ? 'bg-accent' : 'opacity-60 hover:opacity-100'}`}
-                title="Image (I)"
-              >
-                <ImageIcon size={12} />
-              </button>
-            </div>
-            <DropdownButton
-              icon={<Plus size={12} />}
-              title="Add Element"
-              menu={<>
-                {PRIMITIVES.map((item) => (
-                  <button
-                    key={item.type}
-                    className="c-menu-item"
-                    onClick={() => handleInsert(item.type)}
-                  >
-                    {item.icon}
-                    {item.label}
-                  </button>
-                ))}
-              </>}
-            />
+    <div
+      className="fixed bottom-3 inset-x-0 z-40 flex justify-center pointer-events-none"
+      style={{
+        opacity: shouldHide ? 0 : 1,
+        transform: shouldHide ? 'translateY(16px)' : 'translateY(0)',
+        transition: 'opacity 200ms ease, transform 200ms ease',
+      }}
+    >
+      <div className={`flex items-stretch bg-surface-1 border border-border rounded-lg shadow-[0_3px_8px_rgba(0,0,0,0.35),0_1px_3px_rgba(0,0,0,0.5)] ${shouldHide ? 'pointer-events-none' : 'pointer-events-auto'}`}>
+        <div className="flex items-center gap-0.5 py-1 pl-1.5 pr-1">
+          <div className="flex items-center bg-overlay rounded-md">
+            <button
+              onClick={() => setCanvasTool('pointer')}
+              className={`${btnIcon} text-white ${canvasTool === 'pointer' ? 'bg-accent' : 'opacity-60 hover:opacity-100'}`}
+              title="Pointer (V)"
+            >
+              <MousePointer2 size={12} />
+            </button>
+            <button
+              onClick={() => setCanvasTool('frame')}
+              onDoubleClick={() => { handleInsert('box'); setCanvasTool('pointer') }}
+              className={`${btnIcon} text-white ${canvasTool === 'frame' ? 'bg-accent' : 'opacity-60 hover:opacity-100'}`}
+              title="Frame (F)"
+            >
+              <FrameIcon size={12} />
+            </button>
+            <button
+              onClick={() => setCanvasTool('text')}
+              onDoubleClick={() => { handleInsert('text'); setCanvasTool('pointer') }}
+              className={`${btnIcon} text-white ${canvasTool === 'text' ? 'bg-accent' : 'opacity-60 hover:opacity-100'}`}
+              title="Text (T)"
+            >
+              <Type size={12} />
+            </button>
+            <button
+              onClick={onImageClick}
+              onDoubleClick={onImageDoubleClick}
+              className={`${btnIcon} text-white ${canvasTool === 'image' ? 'bg-accent' : 'opacity-60 hover:opacity-100'}`}
+              title="Image (I)"
+            >
+              <ImageIcon size={12} />
+            </button>
           </div>
-        </div>
-
-        {/* Section 3: Viewport + Zoom */}
-        {!previewMode && <Divider />}
-        <div className="flex items-center gap-0.5 py-1 px-1">
           <DropdownButton
-            icon={<span className="relative">
-              <CurrentIcon size={12} />
-              {activeBreakpoint !== 'base' && overrideCounts[activeBreakpoint] > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-accent" />
-              )}
-            </span>}
-            title={currentBp.label}
-            menuClassName="min-w-[180px]"
-            menu={BREAKPOINTS.map((bpItem) => {
-              const Icon = bpItem.icon
-              const active = bpItem.width === canvasWidth
-              const hasOverrides = bpItem.bp !== 'base' && overrideCounts[bpItem.bp] > 0
-              return (
+            icon={<Ellipsis size={12} />}
+            title="More Elements"
+            menu={<>
+              {MORE_PRIMITIVES.map((item) => (
                 <button
-                  key={bpItem.label}
-                  className={`c-menu-item ${active ? 'c-menu-item-active' : ''}`}
-                  onClick={() => { setCanvasWidth(bpItem.width); setActiveBreakpoint(bpItem.bp) }}
+                  key={item.type}
+                  className="c-menu-item"
+                  onClick={() => handleInsert(item.type)}
                 >
-                  <span className="relative">
-                    <Icon size={12} />
-                    {hasOverrides && <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-accent" />}
-                  </span>
-                  {bpItem.label}
-                  {bpItem.bp !== 'base' && <span className="px-1 py-px text-[9px] leading-none font-medium rounded bg-subtle fg-subtle">{bpItem.bp}</span>}
-                  <span className="flex-1" />
-                  {bpItem.width && <span className="fg-subtle text-[10px]">{bpItem.width}px</span>}
+                  {item.icon}
+                  {item.label}
                 </button>
-              )
-            })}
+              ))}
+            </>}
           />
-        </div>
-        <ZoomSection />
-
-        {/* Section 4: Preview */}
-        <Divider />
-        <div className="flex items-center gap-0.5 py-1 pr-1.5 pl-1">
-          <button
-            onClick={() => { setPreviewMode(!previewMode); if (!previewMode) setCanvasTool('pointer') }}
-            className={`${btnIcon} text-white ${previewMode ? 'bg-accent' : 'opacity-60 hover:opacity-100'}`}
-            title="Preview (⌘⇧P)"
-          >
-            <Eye size={12} />
-          </button>
         </div>
       </div>
     </div>

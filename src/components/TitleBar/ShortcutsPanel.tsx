@@ -104,7 +104,7 @@ export function ShortcutsButton() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted hover:bg-inset"
+        className="w-6 h-6 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted hover:bg-inset"
         title="Keyboard Shortcuts"
       >
         <Keyboard size={12} />
