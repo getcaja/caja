@@ -41,7 +41,7 @@ interface FrameRendererProps {
   frame: Frame
 }
 
-function renderMultiline(text: string) {
+export function renderMultiline(text: string) {
   if (!text.includes('\n')) return text
   const lines = text.split('\n')
   return lines.map((line, i) => (

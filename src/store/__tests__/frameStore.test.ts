@@ -1436,4 +1436,62 @@ describe('resolveToDirectChild', () => {
     const childId = addChild('box', topId)
     expect(resolveToDirectChild(store().root, store().root.id, childId)).toBe(topId)
   })
+
+  it('resolves deep descendant through multiple levels', () => {
+    const a = addChild('box')
+    const b = addChild('box', a)
+    const c = addChild('box', b)
+    const d = addChild('box', c)
+    expect(resolveToDirectChild(store().root, store().root.id, d)).toBe(a)
+  })
+
+  it('resolves to correct child when multiple children exist', () => {
+    const a = addChild('box')
+    const a1 = addChild('box', a)
+    const b = addChild('box')
+    const b1 = addChild('box', b)
+    const b2 = addChild('box', b1)
+    expect(resolveToDirectChild(store().root, store().root.id, b2)).toBe(b)
+    expect(resolveToDirectChild(store().root, store().root.id, a1)).toBe(a)
+  })
+})
+
+describe('drill-down click resolution', () => {
+  beforeEach(() => {
+    resetStore()
+  })
+
+  it('context is root when nothing selected — resolves to top-level', () => {
+    const top = addChild('box')
+    const mid = addChild('box', top)
+    const deep = addChild('box', mid)
+    // When nothing is selected, context = root. resolveToDirectChild from root returns the top-level child.
+    const resolved = resolveToDirectChild(store().root, store().root.id, deep)
+    expect(resolved).toBe(top)
+  })
+
+  it('context is parent of selected — resolves to sibling', () => {
+    const parent = addChild('box')
+    const childA = addChild('box', parent)
+    const childB = addChild('box', parent)
+    const deepB = addChild('box', childB)
+    // If childA is selected, context = parent. Clicking deep inside childB resolves to childB (sibling).
+    const resolved = resolveToDirectChild(store().root, parent, deepB)
+    expect(resolved).toBe(childB)
+    // And resolving childA itself from parent returns childA directly
+    expect(resolveToDirectChild(store().root, parent, childA)).toBe(childA)
+  })
+
+  it('clicking outside context falls back to top-level', () => {
+    const branchA = addChild('box')
+    addChild('box', branchA)
+    const branchB = addChild('box')
+    const b1 = addChild('box', branchB)
+    // Context is branchA (user drilled into it). Clicking b1 which is inside branchB — not a descendant of branchA.
+    const resolved = resolveToDirectChild(store().root, branchA, b1)
+    expect(resolved).toBeNull()
+    // Fallback: findTopLevelAncestor returns the top-level branch
+    const fallback = findTopLevelAncestor(store().root, b1)
+    expect(fallback).toBe(branchB)
+  })
 })

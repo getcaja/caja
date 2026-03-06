@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { resolveTag } from '../FrameRenderer'
+import { resolveTag, renderMultiline } from '../FrameRenderer'
 import { makeBox, makeText, makeImage, makeButton, makeInput, makeTextarea, makeSelect } from '../../../utils/__tests__/helpers'
+import { isValidElement } from 'react'
 
 describe('resolveTag', () => {
   describe('box', () => {
@@ -105,5 +106,49 @@ describe('resolveTag', () => {
       const frame = makeSelect()
       expect(resolveTag(frame)).toBe('select')
     })
+  })
+})
+
+describe('renderMultiline', () => {
+  it('returns plain string when no line breaks', () => {
+    const result = renderMultiline('hello world')
+    expect(result).toBe('hello world')
+  })
+
+  it('returns an array with <br> elements for line breaks', () => {
+    const result = renderMultiline('hello\nworld')
+    expect(Array.isArray(result)).toBe(true)
+    const arr = result as React.ReactElement[]
+    expect(arr).toHaveLength(2)
+  })
+
+  it('preserves multiple line breaks', () => {
+    const result = renderMultiline('line1\nline2\nline3')
+    expect(Array.isArray(result)).toBe(true)
+    const arr = result as React.ReactElement[]
+    expect(arr).toHaveLength(3)
+  })
+
+  it('handles empty lines (consecutive newlines)', () => {
+    const result = renderMultiline('hello\n\nworld')
+    expect(Array.isArray(result)).toBe(true)
+    const arr = result as React.ReactElement[]
+    expect(arr).toHaveLength(3)
+  })
+
+  it('Fragment children contain text and br elements', () => {
+    const result = renderMultiline('hello\nworld')
+    const arr = result as { props: { children: unknown[] } }[]
+    // Each Fragment has props.children — first has text + <br>, last has just text
+    const firstChildren = arr[0].props.children
+    expect(firstChildren[0]).toBe('hello')
+    // Second element in children is the <br>
+    expect(isValidElement(firstChildren[1])).toBe(true)
+    expect((firstChildren[1] as React.ReactElement).type).toBe('br')
+
+    const lastChildren = arr[1].props.children
+    expect(lastChildren[0]).toBe('world')
+    // Last line should not have a <br>
+    expect(lastChildren[1]).toBe(false)
   })
 })
