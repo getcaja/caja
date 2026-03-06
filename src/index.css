@@ -19,32 +19,30 @@
   --color-ramp-100: #f0f0f0;
   --color-ramp-white: #ffffff;
 
-  /* ── Surfaces ──
-     Legacy tokens — consumed by theme engine + components.
-     Will be gradually replaced by semantic context tokens. */
-  --color-surface-0: #0e0e0e;
-  --color-surface-1: #161616;
-  --color-surface-2: #27272a;
-  --color-surface-3: #3f3f46;
+  /* ── Surfaces ── */
+  --color-surface-0: #1e1e1e;
+  --color-surface-1: #272727;
+  --color-surface-2: #323232;
+  --color-surface-3: #444444;
 
   /* ── Accent ── */
   --color-accent: #0c8ce9;
   --color-accent-hover: #47b5f5;
 
-  /* ── Text ── */
-  --color-text-primary: #f0f0f0;
-  --color-text-secondary: #a1a1a1;
-  --color-text-muted: #717171;
+  /* ── Text (solid — no opacity, works on any surface) ── */
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #a3a3a3;
+  --color-text-muted: #6b6b6b;
 
-  /* ── Borders ── */
-  --color-border: rgb(255 255 255 / 0.08);
-  --color-border-accent: rgb(255 255 255 / 0.12);
+  /* ── Borders (solid — no multiplying transparencies) ── */
+  --color-border: #2d2d2d;
+  --color-border-accent: #393939;
 
   /* ── Semantic ── */
   --color-destructive: #ef4444;
 
   /* ── Canvas ── */
-  --color-canvas-bg: #0e0e11;
+  --color-canvas-bg: #161616;
 }
 
 /* ── Semantic Context Tokens ──
@@ -60,7 +58,7 @@
 
   /* Menu (dropdowns, context menus, popovers) */
   --menu-bg:             var(--color-surface-2);
-  --menu-bg-hover:       var(--bg-inset);
+  --menu-bg-hover:       var(--color-surface-3);
   --menu-border:         var(--color-border-accent);
   --menu-text:           var(--fg-muted);
   --menu-text-hover:     var(--fg-default);
@@ -78,21 +76,21 @@
   --input-border-focus:  var(--color-accent);
 }
 
-/* ── Primitive tokens (Primer-inspired fg/bg/border) ──
-   Vibrancy-safe: white overlays that stack on translucent panels.
-   More layers = brighter. Works on any background. */
+/* ── Primitive tokens ──
+   Solid colors — no opacity stacking issues.
+   fg = text & icons, bg = surface modifiers. */
 :root {
-  /* Foreground — text & icons (solid to avoid SVG stroke-overlap artifacts) */
-  --fg-default:  #fff;
-  --fg-muted:    #a1a1a1;
-  --fg-subtle:   #737373;
-  --fg-disabled: #333;
+  /* Foreground — text & icons */
+  --fg-default:  #ffffff;
+  --fg-muted:    #a3a3a3;
+  --fg-subtle:   #6b6b6b;
+  --fg-disabled: #404040;
 
-  /* Background — overlays on vibrancy panels */
-  --bg-overlay:  rgb(20 20 20 / 0.75);
-  --bg-subtle:   rgb(255 255 255 / 0.05);
-  --bg-inset:    rgb(255 255 255 / 0.10);
-  --bg-emphasis: rgb(255 255 255 / 0.15);
+  /* Background — solid surface modifiers */
+  --bg-overlay:  #141414;
+  --bg-subtle:   #252525;
+  --bg-inset:    #2d2d2d;
+  --bg-emphasis: #383838;
 }
 
 /* ── Utility classes ── */

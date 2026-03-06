@@ -35,17 +35,17 @@ input[type=number]::-webkit-outer-spin-button {
 export const TAILWIND_THEME = `@theme {
   --font-mono: SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, monospace;
   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  --color-surface-0: #111111;
-  --color-surface-1: #1b1b1b;
-  --color-surface-2: #262626;
-  --color-surface-3: #3f3f3f;
+  --color-surface-0: #1e1e1e;
+  --color-surface-1: #272727;
+  --color-surface-2: #323232;
+  --color-surface-3: #444444;
   --color-accent: #0c8ce9;
   --color-accent-hover: #47b5f5;
-  --color-text-primary: #f0f0f0;
-  --color-text-secondary: #a1a1a1;
-  --color-text-muted: #717171;
-  --color-border: #323232;
-  --color-border-accent: #3e3e3e;
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #a3a3a3;
+  --color-text-muted: #6b6b6b;
+  --color-border: #2d2d2d;
+  --color-border-accent: #393939;
   --color-destructive: #ef4444;
-  --color-canvas-bg: #0e0e11;
+  --color-canvas-bg: #161616;
 }`
