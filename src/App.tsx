@@ -105,11 +105,14 @@ function App() {
 
   const recentFilesRef = useRef<string[]>([])
 
-  /** Add path to recent files (fire-and-forget) */
+  /** Add path to recent files and re-sync the local ref */
   const addToRecent = useCallback((path: string) => {
     if (!isTauri) return
     import('@tauri-apps/api/core').then(({ invoke }) => {
-      invoke('add_recent_file', { path }).catch((err: unknown) => console.warn('Failed to add recent file:', err))
+      invoke('add_recent_file', { path })
+        .then(() => invoke<string[]>('get_recent_files'))
+        .then((files) => { recentFilesRef.current = files })
+        .catch((err: unknown) => console.warn('Failed to add recent file:', err))
     })
   }, [])
 

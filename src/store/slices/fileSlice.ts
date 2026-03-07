@@ -23,8 +23,13 @@ export interface FileSlice {
 }
 
 let _didLoadFromStorage = false
-/** @internal — for tests only */
+/** @internal — for tests and HMR */
 export function _resetLoadGuard() { _didLoadFromStorage = false }
+
+// Reset guard on HMR so loadFromStorage() works after code changes
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => { _didLoadFromStorage = false })
+}
 
 export const createFileSlice: StateCreator<FrameStore, [], [], FileSlice> = (set) => ({
   filePath: null,
