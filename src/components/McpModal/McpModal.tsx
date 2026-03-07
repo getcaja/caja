@@ -89,7 +89,7 @@ export function McpModal({ open, onOpenChange }: McpModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <div className="bg-surface-1 border border-border rounded-xl shadow-xl w-[480px] max-h-[80vh] overflow-hidden">
+      <div className="c-modal w-[480px] max-h-[80vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <h2 className="text-[13px] font-semibold fg-default">MCP Server</h2>
@@ -110,7 +110,7 @@ export function McpModal({ open, onOpenChange }: McpModalProps) {
             <button
               key={c.id}
               onClick={() => { setActiveClient(c.id); setInstallState('idle') }}
-              className={`px-2.5 py-1.5 rounded-md text-[12px] transition-colors ${
+              className={`px-2 py-1.5 rounded-md text-[12px] transition-colors ${
                 activeClient === c.id
                   ? 'bg-emphasis fg-default'
                   : 'fg-muted hover:fg-default hover:bg-inset'

@@ -106,4 +106,11 @@ describe('generateThemeCSS', () => {
     }
   })
 
+  it('excludes CSS-owned surface tokens (vibrancy support)', () => {
+    const excluded = ['surface-0', 'surface-1', 'surface-2', 'surface-3', 'canvas-bg']
+    for (const key of excluded) {
+      expect(css, `Should not contain --color-${key}`).not.toContain(`--color-${key}:`)
+    }
+  })
+
 })

@@ -9,7 +9,7 @@ interface WelcomeModalProps {
 export function WelcomeModal({ open, onOpenChange }: WelcomeModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <div className="bg-surface-1 border border-border rounded-xl w-[400px] shadow-xl flex flex-col">
+      <div className="c-modal w-[400px] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <h2 className="text-[13px] font-semibold fg-default">Welcome</h2>

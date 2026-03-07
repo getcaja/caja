@@ -70,6 +70,9 @@
   --toolbar-bg:          var(--color-surface-1);
   --toolbar-border:      var(--color-border);
 
+  /* Modal (dialogs, sheets) */
+  --modal-bg:            var(--color-surface-1);
+
   /* Titlebar */
   --titlebar-border:     var(--color-border);
 
@@ -145,7 +148,10 @@
 .c-slot.is-active       { color: var(--color-accent); }
 .c-slot-spacer          { width: 1.5rem; flex-shrink: 0; }
 
-/* Token pill inside inputs */
+/* Token pill inside inputs — canonical definition.
+   The @layer components block below defines c-pill for Advanced section pills
+   (inline-flex, gap, user-select). Both share the same selector; the unlayered
+   version here wins for token pills in scale-inputs. */
 .c-pill {
   display: flex;
   align-items: center;
@@ -278,7 +284,7 @@ input[type=number] {
   .c-label-sm {
     color: var(--fg-subtle);
     font-size: 12px;
-    width: 1.25rem;
+    width: 1rem;
     flex-shrink: 0;
   }
 
@@ -295,12 +301,74 @@ input[type=number] {
     font-weight: 500;
   }
 
+  /* --- Modals --- */
+  .c-modal {
+    background-color: var(--modal-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 0.75rem;
+    box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.5);
+  }
+
+  /* --- Popover content --- */
+  .c-popover {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    width: 16rem;
+  }
+  .c-popover-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .c-popover-label {
+    color: var(--fg-subtle);
+    font-size: 12px;
+    width: 3rem;
+    flex-shrink: 0;
+  }
+  .c-popover .c-label {
+    width: 4.5rem;
+  }
+  .c-popover-title {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--fg-default);
+  }
+  .c-popover-subtitle {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--fg-default);
+  }
+  .c-popover-divider {
+    border-top: 1px solid var(--color-border);
+    margin: 0.25rem 0;
+  }
+
+  /* --- Checkbox toggle --- */
+  .c-checkbox {
+    width: 0.875rem;
+    height: 0.875rem;
+    border-radius: 0.25rem;
+    border: 1px solid var(--color-border-accent);
+    background-color: var(--bg-inset);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .c-checkbox.is-checked {
+    background-color: var(--color-accent);
+    border-color: var(--color-accent);
+    color: #fff;
+  }
+
   /* --- Menus & popups --- */
   .c-menu-popup {
     background-color: var(--menu-bg);
     border: 1px solid var(--color-border);
     border-radius: 0.5rem;
-    box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+    box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.5);
     z-index: 9999;
     padding-top: 0.375rem;
     padding-bottom: 0.375rem;
@@ -377,7 +445,7 @@ input[type=number] {
   }
 
   /* --- Class pills (Advanced section) --- */
-  .c-pill {
+  .c-class-pill {
     display: inline-flex;
     align-items: center;
     gap: 0.125rem;

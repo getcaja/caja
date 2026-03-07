@@ -1,4 +1,4 @@
-import { Type, MoveVertical, MoveHorizontal, AlignLeft, AlignCenter, AlignRight, Italic, Underline, Strikethrough, Settings2, ArrowUpToLine, FoldVertical, ArrowDownToLine } from 'lucide-react'
+import { Type, MoveVertical, MoveHorizontal, AlignLeft, AlignCenter, AlignRight, Settings2, ArrowUpToLine, FoldVertical, ArrowDownToLine } from 'lucide-react'
 import { useState } from 'react'
 import type { TextStyles, DesignValue } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
@@ -12,6 +12,13 @@ import { FONT_SIZE_SCALE, FONT_WEIGHT_SCALE, LINE_HEIGHT_SCALE, LETTER_SPACING_S
 import { TEXT_TRANSFORM_OPTIONS, WHITE_SPACE_OPTIONS } from './constants'
 
 const lbl = (text: string) => <span className="text-[12px]">{text}</span>
+
+const DECORATION_OPTIONS = [
+  { value: '__none__', label: 'None', tooltip: 'No Style' },
+  { value: '__italic__', label: <span className="text-[12px] italic">I</span>, tooltip: 'Italic' },
+  { value: '__underline__', label: <span className="text-[12px] underline">U</span>, tooltip: 'Underline' },
+  { value: '__strike__', label: <span className="text-[12px] line-through">S</span>, tooltip: 'Strikethrough' },
+]
 
 const FONT_FAMILY_OPTIONS = [
   { value: '__default__', label: 'Default' },
@@ -152,57 +159,45 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides }: { f
             }
             align="end"
           >
-            <div className="flex flex-col gap-2 p-2 w-[200px]">
-              {/* Style: Italic / Underline / Strikethrough */}
-              <div className="flex bg-inset rounded">
-                <button
-                  type="button"
-                  onClick={() => updateFrame(frame.id, { fontStyle: frame.fontStyle === 'italic' ? 'normal' : 'italic' })}
-                  className={`flex-1 h-6 px-1.5 rounded flex items-center justify-center ${
-                    frame.fontStyle === 'italic'
-                      ? 'bg-emphasis fg-default shadow-sm'
-                      : 'c-action'
-                  }`}
-                >
-                  <Italic size={12} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => updateFrame(frame.id, { textDecoration: frame.textDecoration === 'underline' ? 'none' : 'underline' })}
-                  className={`flex-1 h-6 px-1.5 rounded flex items-center justify-center ${
-                    frame.textDecoration === 'underline'
-                      ? 'bg-emphasis fg-default shadow-sm'
-                      : 'c-action'
-                  }`}
-                >
-                  <Underline size={12} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => updateFrame(frame.id, { textDecoration: frame.textDecoration === 'line-through' ? 'none' : 'line-through' })}
-                  className={`flex-1 h-6 px-1.5 rounded flex items-center justify-center ${
-                    frame.textDecoration === 'line-through'
-                      ? 'bg-emphasis fg-default shadow-sm'
-                      : 'c-action'
-                  }`}
-                >
-                  <Strikethrough size={12} />
-                </button>
+            <div className="c-popover">
+              <span className="c-popover-title">Text Style Options</span>
+              <div className="c-popover-row">
+                <span className="c-popover-label">Style</span>
+                <ToggleGroup
+                  value={
+                    frame.fontStyle === 'italic' ? '__italic__'
+                      : frame.textDecoration === 'underline' ? '__underline__'
+                      : frame.textDecoration === 'line-through' ? '__strike__'
+                      : '__none__'
+                  }
+                  options={DECORATION_OPTIONS}
+                  onChange={(v) => {
+                    if (v === '__none__') updateFrame(frame.id, { fontStyle: 'normal', textDecoration: 'none' })
+                    else if (v === '__italic__') updateFrame(frame.id, { fontStyle: frame.fontStyle === 'italic' ? 'normal' : 'italic', textDecoration: 'none' })
+                    else if (v === '__underline__') updateFrame(frame.id, { fontStyle: 'normal', textDecoration: frame.textDecoration === 'underline' ? 'none' : 'underline' })
+                    else if (v === '__strike__') updateFrame(frame.id, { fontStyle: 'normal', textDecoration: frame.textDecoration === 'line-through' ? 'none' : 'line-through' })
+                  }}
+                  className="flex-1"
+                />
               </div>
-
-              {/* Case */}
-              <ToggleGroup
-                value={frame.textTransform}
-                options={TEXT_TRANSFORM_OPTIONS}
-                onChange={(v) => updateFrame(frame.id, { textTransform: v as TextStyles['textTransform'] })}
-              />
-
-              {/* Wrap */}
-              <ToggleGroup
-                value={frame.whiteSpace}
-                options={WHITE_SPACE_OPTIONS}
-                onChange={(v) => updateFrame(frame.id, { whiteSpace: v as TextStyles['whiteSpace'] })}
-              />
+              <div className="c-popover-row">
+                <span className="c-popover-label">Case</span>
+                <ToggleGroup
+                  value={frame.textTransform}
+                  options={TEXT_TRANSFORM_OPTIONS}
+                  onChange={(v) => updateFrame(frame.id, { textTransform: v as TextStyles['textTransform'] })}
+                  className="flex-1"
+                />
+              </div>
+              <div className="c-popover-row">
+                <span className="c-popover-label">Wrap</span>
+                <ToggleGroup
+                  value={frame.whiteSpace}
+                  options={WHITE_SPACE_OPTIONS}
+                  onChange={(v) => updateFrame(frame.id, { whiteSpace: v as TextStyles['whiteSpace'] })}
+                  className="flex-1"
+                />
+              </div>
             </div>
           </Popover>
         </div>

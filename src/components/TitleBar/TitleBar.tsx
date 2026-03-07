@@ -42,10 +42,10 @@ export function TitleBar() {
       <div className="flex-1 h-full" data-tauri-drag-region />
 
       {/* Right-side buttons */}
-      <div className="flex items-center gap-1.5 pr-2.5">
+      <div className="flex items-center gap-1.5 pr-3">
         <button
           onClick={() => { setPreviewMode(!previewMode); if (!previewMode) setCanvasTool('pointer') }}
-          className={`${btn} c-icon-btn ${previewMode ? 'is-active !bg-accent !text-white' : ''}`}
+          className={`${btn} c-icon-btn ${previewMode ? 'is-active !bg-accent !fg-default' : ''}`}
           title="Preview (⌘⇧P)"
         >
           <Eye size={12} />

@@ -128,7 +128,7 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
           <div className="flex items-start gap-2">
             <div className="flex-1 min-w-0 rounded px-1.5 py-1 flex flex-wrap gap-1 min-h-[24px]" style={{ backgroundColor: 'var(--input-bg)' }}>
               {computedClasses.map((cls, i) => (
-                <span key={i} className="c-pill border border-border fg-muted">{cls}</span>
+                <span key={i} className="c-class-pill border border-border fg-muted">{cls}</span>
               ))}
             </div>
             <button
@@ -146,7 +146,7 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
           <div className="flex items-start gap-2">
             <div className="flex-1 min-w-0 rounded px-1.5 py-1 flex flex-wrap gap-1" style={{ backgroundColor: 'var(--input-bg)' }}>
               {manualClasses.map((cls, i) => (
-                <span key={`${i}-${cls}`} className="c-pill border border-border fg-muted">
+                <span key={`${i}-${cls}`} className="c-class-pill border border-border fg-muted">
                   {cls}
                   <button
                     onClick={() => removeClass(cls)}

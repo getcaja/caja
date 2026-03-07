@@ -49,7 +49,7 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
       <RadixTabs.Root
         value={format}
         onValueChange={(v) => setFormat(v as ExportFormat)}
-        className="bg-surface-1 border border-border rounded-xl w-[640px] max-h-[80vh] flex flex-col shadow-xl"
+        className="c-modal w-[640px] max-h-[80vh] flex flex-col"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
@@ -66,7 +66,7 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
               <RadixTabs.Trigger
                 key={tab.value}
                 value={tab.value}
-                className={`px-2.5 py-1.5 text-[12px] rounded-md transition-all ${
+                className={`px-2 py-1.5 text-[12px] rounded-md transition-all ${
                   format === tab.value
                     ? 'bg-emphasis fg-default'
                     : 'fg-muted hover:fg-default'

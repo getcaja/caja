@@ -21,7 +21,7 @@ export function Tabs({ value, onValueChange, tabs, children }: TabsProps) {
           <RadixTabs.Trigger
             key={tab.value}
             value={tab.value}
-            className={`flex items-center gap-2 px-2.5 py-1 text-[12px] rounded-md transition-all ${
+            className={`flex items-center gap-2 px-2 py-1 text-[12px] rounded-md transition-all ${
               value === tab.value
                 ? 'bg-inset fg-default'
                 : 'c-dimmed-i'

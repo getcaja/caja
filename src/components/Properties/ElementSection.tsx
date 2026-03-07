@@ -48,9 +48,7 @@ function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: (v
       onClick={() => onChange(!checked)}
       className="flex items-center gap-2 cursor-pointer select-none"
     >
-      <span className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center ${
-        checked ? 'bg-accent border-accent text-white' : 'border-border-accent bg-inset'
-      }`}>
+      <span className={`c-checkbox ${checked ? 'is-checked' : ''}`}>
         {checked && <Check size={10} strokeWidth={3} />}
       </span>
       <span className={`text-[12px] c-dimmed ${checked ? 'is-active' : ''}`}>{label}</span>

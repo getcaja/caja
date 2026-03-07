@@ -76,9 +76,9 @@ export const TEXT_TRANSFORM_OPTIONS = [
 ]
 
 export const WHITE_SPACE_OPTIONS = [
+  { value: 'nowrap', label: 'None', tooltip: 'No Wrap' },
   { value: 'normal', label: 'Wrap', tooltip: 'Wrap Text' },
-  { value: 'nowrap', label: 'No Wrap', tooltip: 'No Wrap' },
-  { value: 'pre-wrap', label: 'Pre Wrap', tooltip: 'Preserve Whitespace' },
+  { value: 'pre-wrap', label: 'Pre', tooltip: 'Preserve Whitespace' },
 ]
 
 export const ALIGN_SELF_OPTIONS = [

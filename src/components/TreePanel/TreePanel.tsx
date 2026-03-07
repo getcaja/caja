@@ -268,7 +268,7 @@ export function TreePanel() {
   if (editingMaster) {
     return (
       <div className="h-full flex flex-col" style={{ backgroundColor: 'var(--panel-bg)' }}>
-        <div className="pl-2.5 pr-4 py-2.5 border-b border-border flex items-center justify-between">
+        <div className="pl-3 pr-4 py-3 border-b border-border flex items-center justify-between">
           <div className="flex items-center gap-2 min-w-0">
             <input
               className="text-[12px] font-semibold px-1.5 py-0.5 fg-default bg-transparent min-w-0 rounded focus:bg-inset outline-none"
@@ -323,7 +323,7 @@ export function TreePanel() {
 
   return (
     <div className="h-full flex flex-col" style={{ backgroundColor: 'var(--panel-bg)' }}>
-      <div className="pl-2.5 pr-4 py-2.5 border-b border-border flex items-center justify-between">
+      <div className="pl-3 pr-4 py-3 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
           <button
             className={`text-[12px] font-semibold px-1.5 py-0.5 rounded ${tab === 'layers' ? 'fg-default' : 'c-dimmed-i'}`}

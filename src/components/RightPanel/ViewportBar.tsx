@@ -47,7 +47,7 @@ function Dropdown({ trigger, menu, menuClassName }: {
       window.dispatchEvent(new Event('close-menus'))
       if (btnRef.current) {
         const rect = btnRef.current.getBoundingClientRect()
-        setPos({ x: rect.left + rect.width / 2, y: rect.bottom + 4 })
+        setPos({ x: rect.right, y: rect.bottom + 4 })
       }
     }
     setOpen((p) => !p)
@@ -64,7 +64,7 @@ function Dropdown({ trigger, menu, menuClassName }: {
           <div
             ref={menuRef}
             className={`fixed c-menu-popup min-w-[120px] z-50 ${menuClassName ?? ''}`}
-            style={{ left: pos.x, top: pos.y, transform: 'translateX(-50%)' }}
+            style={{ right: window.innerWidth - pos.x, top: pos.y }}
             onClick={(e) => { e.stopPropagation(); setOpen(false) }}
           >
             {menu}
