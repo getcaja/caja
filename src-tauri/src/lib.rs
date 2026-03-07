@@ -7,9 +7,12 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tauri::image::Image;
-use tauri::menu::{AboutMetadata, CheckMenuItemBuilder, MenuBuilder, MenuItemBuilder, SubmenuBuilder};
+use tauri::menu::{AboutMetadata, CheckMenuItemBuilder, MenuBuilder, MenuItemBuilder, Submenu, SubmenuBuilder};
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::{oneshot, Mutex};
+
+// Managed state to hold the "Open Recent" submenu handle for dynamic rebuilds
+struct RecentMenuState(std::sync::Mutex<Option<Submenu<tauri::Wry>>>);
 
 // ── MCP Bridge Types ──
 
@@ -457,13 +460,64 @@ fn get_recent_files() -> Vec<String> {
 }
 
 #[tauri::command]
-fn add_recent_file(path: String) {
+fn add_recent_file(app: AppHandle, path: String) {
     add_to_recent(&path);
+    rebuild_recent_menu_inner(&app);
 }
 
 #[tauri::command]
-fn clear_recent_files() {
+fn clear_recent_files(app: AppHandle) {
     save_recent_files(&[]);
+    rebuild_recent_menu_inner(&app);
+}
+
+fn rebuild_recent_menu_inner(app: &AppHandle) {
+    let state = match app.try_state::<RecentMenuState>() {
+        Some(s) => s,
+        None => return,
+    };
+    let guard = match state.0.lock() {
+        Ok(g) => g,
+        Err(_) => return,
+    };
+    let submenu = match guard.as_ref() {
+        Some(s) => s,
+        None => return,
+    };
+
+    // Remove all existing items
+    if let Ok(items) = submenu.items() {
+        for _ in 0..items.len() {
+            let _ = submenu.remove_at(0);
+        }
+    }
+
+    // Rebuild from disk
+    let files = load_recent_files();
+    if files.is_empty() {
+        if let Ok(item) = MenuItemBuilder::with_id("no-recent", "No Recent Files")
+            .enabled(false)
+            .build(app)
+        {
+            let _ = submenu.append(&item);
+        }
+    } else {
+        for (i, path) in files.iter().enumerate() {
+            let label = std::path::Path::new(path)
+                .file_name()
+                .map(|f| f.to_string_lossy().to_string())
+                .unwrap_or_else(|| path.clone());
+            if let Ok(item) = MenuItemBuilder::with_id(format!("recent-{}", i), &label).build(app) {
+                let _ = submenu.append(&item);
+            }
+        }
+        if let Ok(sep) = tauri::menu::PredefinedMenuItem::separator(app) {
+            let _ = submenu.append(&sep);
+        }
+        if let Ok(clear) = MenuItemBuilder::with_id("clear-recent", "Clear Recent").build(app) {
+            let _ = submenu.append(&clear);
+        }
+    }
 }
 
 // ── App Setup ──
@@ -478,6 +532,7 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
+        .manage(RecentMenuState(std::sync::Mutex::new(None)))
         .invoke_handler(tauri::generate_handler![mcp_respond, set_menu_check, set_window_title, fix_traffic_lights, install_mcp, resolve_mcp_server_path, get_recent_files, add_recent_file, clear_recent_files, check_has_launched, mark_has_launched])
         .setup(|app| {
             // ── Native Menu ──
@@ -551,6 +606,13 @@ pub fn run() {
                 recent_menu = recent_menu.separator().item(&clear_item);
             }
             let recent_submenu = recent_menu.build()?;
+
+            // Store handle for dynamic rebuilds
+            if let Some(state) = app.try_state::<RecentMenuState>() {
+                if let Ok(mut guard) = state.0.lock() {
+                    *guard = Some(recent_submenu.clone());
+                }
+            }
 
             let file_menu = SubmenuBuilder::new(app, "File")
                 .item(&new_item)
