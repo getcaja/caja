@@ -30,10 +30,10 @@ export function TitleBar() {
     >
       {/* Centered title — absolute so it's truly centered across full width */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <span className="text-[12px] fg-muted">
+        <span className="text-[12px] fg-default">
           {fileName}
           {dirty && (
-            <span className="fg-subtle text-[10px] ml-1" title="Unsaved changes">●</span>
+            <span className="fg-default text-[10px] ml-1" title="Unsaved changes">●</span>
           )}
         </span>
       </div>

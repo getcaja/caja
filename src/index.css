@@ -141,7 +141,7 @@
   color: var(--fg-muted);
 }
 .c-slot:hover           { color: var(--fg-default); background: var(--bg-inset); }
-.c-slot.is-active       { color: #fff; background: color-mix(in srgb, var(--color-accent) 15%, transparent); }
+.c-slot.is-active       { color: #fff; }
 .c-slot-spacer          { width: 1.5rem; flex-shrink: 0; }
 
 /* Token pill inside inputs */

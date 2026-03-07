@@ -101,8 +101,8 @@ export const TRANSFORM_ORIGIN_OPTIONS = [
   { value: 'bottom-left', label: 'Bottom Left' },
 ]
 
-const BADGE = 'bg-accent/15 fg-default'
-const COMPONENT_BADGE = 'bg-accent/15 text-accent'
+const BADGE = 'bg-accent fg-default'
+const COMPONENT_BADGE = BADGE
 
 export const TYPE_BADGE_STYLES: Record<string, string> = {
   root: BADGE,

@@ -91,7 +91,7 @@ export function ColorInput({
           ) : (
             <span
               className="w-3 h-3 rounded-full border"
-              style={{ borderColor: 'var(--fg-muted)', backgroundColor: colorValue || 'transparent' }}
+              style={{ borderColor: 'var(--fg-default)', backgroundColor: colorValue || 'transparent' }}
             />
           )}
         </span>
