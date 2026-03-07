@@ -736,8 +736,47 @@ pub fn run() {
                 use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial, NSVisualEffectState};
                 let _ = apply_vibrancy(&window, NSVisualEffectMaterial::UnderWindowBackground, Some(NSVisualEffectState::Active), None);
 
-                // window-state plugin restores geometry after setup, resetting traffic lights.
-                // Nudge the window size after a delay to trigger Tauri/TAO's native repositioning.
+                // Self-healing traffic light positioning via NSWindow notification observer.
+                // Covers ALL cases: resize, fullscreen, Stage Manager, display change, setTitle, HMR.
+                // Replaces the fragile ad-hoc frontend calls.
+                let ns_window = window.ns_window().unwrap() as cocoa::base::id;
+                unsafe {
+                    use cocoa::base::{id, nil};
+                    use cocoa::foundation::NSString;
+                    use std::sync::atomic::{AtomicBool, Ordering};
+
+                    let center: id = msg_send![class!(NSNotificationCenter), defaultCenter];
+
+                    // Re-entrancy guard: reposition_traffic_lights nudges size which fires
+                    // NSWindowDidResize again. The guard prevents infinite recursion.
+                    static REPOSITIONING: AtomicBool = AtomicBool::new(false);
+
+                    let block = block::ConcreteBlock::new(move |_notif: id| {
+                        if REPOSITIONING.compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst).is_ok() {
+                            reposition_traffic_lights(ns_window);
+                            REPOSITIONING.store(false, Ordering::SeqCst);
+                        }
+                    });
+                    let block = block.copy();
+
+                    let notifications = [
+                        "NSWindowDidResizeNotification",
+                        "NSWindowDidExitFullScreenNotification",
+                        "NSWindowDidChangeScreenNotification",
+                    ];
+
+                    for name in &notifications {
+                        let name_ns = NSString::alloc(nil).init_str(name);
+                        let _: id = msg_send![center,
+                            addObserverForName: name_ns
+                            object: ns_window
+                            queue: nil
+                            usingBlock: &*block
+                        ];
+                    }
+                }
+
+                // Initial nudge after window-state plugin restores geometry (async, needs short delay)
                 let app_handle = app.handle().clone();
                 std::thread::spawn(move || {
                     std::thread::sleep(std::time::Duration::from_millis(200));
@@ -745,13 +784,7 @@ pub fn run() {
                     let _ = app_handle.run_on_main_thread(move || {
                         if let Some(w) = h.get_webview_window("main") {
                             let ns = w.ns_window().unwrap() as cocoa::base::id;
-                            unsafe {
-                                let frame: cocoa::foundation::NSRect = msg_send![ns, frame];
-                                let mut nudged = frame;
-                                nudged.size.height += 1.0;
-                                let _: () = msg_send![ns, setFrame: nudged display: false];
-                                let _: () = msg_send![ns, setFrame: frame display: false];
-                            }
+                            reposition_traffic_lights(ns);
                         }
                     });
                 });
