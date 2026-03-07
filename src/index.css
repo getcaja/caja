@@ -35,8 +35,8 @@
   --color-text-muted: #787878;
 
   /* ── Borders (solid, between surface steps) ── */
-  --color-border: #252525;
-  --color-border-accent: #333333;
+  --color-border: #333333;
+  --color-border-accent: #3a3a3a;
 
   /* ── Semantic ── */
   --color-destructive: #ef4444;
@@ -57,8 +57,8 @@
   --panel-border:        var(--color-border);
 
   /* Menu (dropdowns, context menus, popovers) */
-  --menu-bg:             var(--color-surface-2);
-  --menu-bg-hover:       var(--color-surface-3);
+  --menu-bg:             var(--color-surface-0);
+  --menu-bg-hover:       var(--color-surface-1);
   --menu-border:         var(--color-border-accent);
   --menu-text:           var(--fg-muted);
   --menu-text-hover:     var(--fg-default);
@@ -144,7 +144,7 @@ html, body, #root {
   position: fixed;
   inset: 0;
   border-radius: 10px;
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.15);
+  box-shadow: inset 0 0 0 1px var(--color-border);
   pointer-events: none;
   z-index: 9999;
 }
@@ -239,6 +239,7 @@ input[type=number] {
   /* --- Menus & popups --- */
   .c-menu-popup {
     background-color: var(--menu-bg);
+    border: 1px solid var(--color-border);
     border-radius: 0.5rem;
     box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
     z-index: 9999;
@@ -326,12 +327,12 @@ input[type=number] {
 /* Tree node selected state */
 .tree-node-selected,
 .tree-node-multi-selected {
-  background: color-mix(in srgb, var(--color-accent) 15%, transparent);
+  background: var(--color-surface-2);
 }
 
 /* Tree node selected state — neutral (for pages) */
 .tree-node-selected-neutral {
-  background: var(--bg-inset);
+  background: var(--bg-subtle);
 }
 
 /* TokenInput — reset the inner input */

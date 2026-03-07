@@ -113,7 +113,7 @@ function MixedPill({ label, scale, onChange, onPreview, onRevert, onReset, onOpe
             onClick={() => open ? handleClose() : handleOpen()}
           >
             <span className="w-4 shrink-0 flex items-center justify-center fg-subtle">{label}</span>
-            <span className="flex items-center bg-emphasis fg-default rounded px-1 text-[11px] leading-[18px] font-medium truncate">
+            <span className="flex items-center bg-inset fg-muted rounded px-1 text-[11px] leading-[18px] font-medium truncate">
               Mixed
             </span>
             <button
@@ -126,7 +126,7 @@ function MixedPill({ label, scale, onChange, onPreview, onRevert, onReset, onOpe
                 e.stopPropagation()
                 onReset()
               }}
-              className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted hover:bg-inset ${open ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+              className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted ${open ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
             >
               <X size={12} />
             </button>

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Ellipsis, Square, LayoutGrid, Columns3, Rows3, AlignHorizontalSpaceAround, AlignVerticalSpaceAround, Check } from 'lucide-react'
+import { Settings2, Square, LayoutGrid, Columns3, Rows3, AlignHorizontalSpaceAround, AlignVerticalSpaceAround, Check } from 'lucide-react'
 import { FlexColumnIcon, FlexRowIcon } from '../icons/LayoutIcons'
 import type { Frame, BoxElement } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
@@ -108,7 +108,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                           : 'fg-subtle hover:fg-muted hover:bg-inset'
                       }`}
                     >
-                      <Ellipsis size={12} />
+                      <Settings2 size={12} />
                     </button>
                   }
                   side="bottom"
@@ -207,7 +207,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                       : 'fg-subtle hover:fg-muted hover:bg-inset'
                   }`}
                 >
-                  <Ellipsis size={12} />
+                  <Settings2 size={12} />
                 </button>
               }
               side="bottom"
@@ -388,7 +388,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                             : 'fg-subtle hover:fg-muted hover:bg-inset'
                         }`}
                       >
-                        <Ellipsis size={12} />
+                        <Settings2 size={12} />
                       </button>
                     }
                     side="bottom"
@@ -572,7 +572,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                         : 'fg-subtle hover:fg-muted hover:bg-inset'
                   }`}
                 >
-                  <Ellipsis size={12} />
+                  <Settings2 size={12} />
                 </button>
               }
               side="bottom"

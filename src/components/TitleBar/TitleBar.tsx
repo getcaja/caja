@@ -185,7 +185,7 @@ export function TitleBar() {
   return (
     <div
       className="relative flex items-center border-b border-border select-none"
-      style={{ height: TITLE_BAR_HEIGHT, paddingLeft: TRAFFIC_LIGHT_WIDTH, backgroundColor: 'rgb(20 20 20 / 0.33)' }}
+      style={{ height: TITLE_BAR_HEIGHT, paddingLeft: TRAFFIC_LIGHT_WIDTH, backgroundColor: 'var(--panel-bg)' }}
       data-tauri-drag-region
     >
       {/* Centered title — absolute so it's truly centered across full width */}

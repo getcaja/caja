@@ -437,7 +437,7 @@ export function TokenInput(props: TokenInputProps) {
             }}
           >
             {inlineLabelEl}
-            <span className="flex items-center bg-emphasis fg-default rounded px-1 text-[11px] leading-[18px] font-medium min-w-0 truncate">
+            <span className="flex items-center bg-inset fg-muted rounded px-1 text-[11px] leading-[18px] font-medium min-w-0 truncate">
               {scaleToken === 'auto' ? scale.find(s => s.token === 'auto')?.label ?? 'Auto' : `${scaleNumeric}${scaleUnit}`}
             </span>
             <span className="flex-1" />
@@ -453,7 +453,7 @@ export function TokenInput(props: TokenInputProps) {
                 setDraft(scaleNumeric === scaleResetValue ? '' : String(scaleNumeric))
                 requestAnimationFrame(() => inputRef.current?.focus())
               }}
-              className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted hover:bg-inset ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+              className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
             >
               <Unlink size={12} />
             </button>
@@ -488,7 +488,7 @@ export function TokenInput(props: TokenInputProps) {
                 toggleDropdown()
                 inputRef.current?.focus()
               }}
-              className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted hover:bg-inset ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}
+              className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}
             >
               <Diamond size={12} />
             </button>

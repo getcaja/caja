@@ -401,8 +401,11 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
     onMouseOver: (e: React.MouseEvent) => {
       e.stopPropagation()
       if (useFrameStore.getState().canvasDragId) return
-      // Clear panel-triggered margin overlay when hovering canvas
-      if (useFrameStore.getState().showMarginOverlay) useFrameStore.getState().setShowMarginOverlay(false)
+      // Clear panel-triggered overlays when hovering canvas
+      const s = useFrameStore.getState()
+      if (s.showMarginOverlay) s.setShowMarginOverlay(false)
+      if (s.showPaddingOverlay) s.setShowPaddingOverlay(false)
+      if (s.showGapOverlay) s.setShowGapOverlay(false)
       hover(frame.id) // Raw hover — SelectionOverlay resolves to context level
     },
   } : {}

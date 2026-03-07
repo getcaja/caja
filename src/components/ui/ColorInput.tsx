@@ -105,7 +105,7 @@ export function ColorInput({
               e.stopPropagation()
               setShowGrid(true)
             }}
-            className="flex items-center bg-emphasis fg-default rounded px-1 text-[11px] leading-[18px] font-medium min-w-0 truncate cursor-pointer hover:bg-emphasis"
+            className="flex items-center bg-inset fg-muted rounded px-1 text-[11px] leading-[18px] font-medium min-w-0 truncate cursor-pointer hover:bg-inset"
           >
             {formatToken(stableToken)}
           </button>
@@ -131,7 +131,7 @@ export function ColorInput({
               type="button"
               tabIndex={-1}
               onMouseDown={(e) => e.stopPropagation()}
-              className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted hover:bg-inset ${showGrid ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}
+              className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted ${showGrid ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}
             >
               <Diamond size={12} />
             </button>

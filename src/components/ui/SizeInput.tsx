@@ -349,7 +349,7 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
           }}
         >
           <span title={tooltip} className="w-4 shrink-0 flex items-center justify-center fg-muted">{label}</span>
-          <span className="flex items-center bg-emphasis fg-default rounded px-1 text-[11px] leading-[18px] font-medium min-w-0 truncate">
+          <span className="flex items-center bg-inset fg-muted rounded px-1 text-[11px] leading-[18px] font-medium min-w-0 truncate">
             {filteredScale.find(s => s.token === fixedToken)?.label ?? `${fixedNumeric}px`}
           </span>
           <span className="flex-1" />
@@ -366,7 +366,7 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
               setDraft(String(fixedNumeric))
               requestAnimationFrame(() => inputRef.current?.focus())
             }}
-            className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted hover:bg-inset ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+            className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
           >
             <Unlink size={12} />
           </button>
@@ -392,7 +392,7 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
           }}
         >
           <span title={tooltip} className="w-4 shrink-0 flex items-center justify-center fg-muted">{label}</span>
-          <span className="flex items-center bg-emphasis fg-default rounded px-1 text-[11px] leading-[18px] font-medium min-w-0 truncate">
+          <span className="flex items-center bg-inset fg-muted rounded px-1 text-[11px] leading-[18px] font-medium min-w-0 truncate">
             {pillText}
           </span>
           <span className="flex-1" />
@@ -407,7 +407,7 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
               e.stopPropagation()
               removePill()
             }}
-            className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted hover:bg-inset ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+            className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
           >
             <Unlink size={12} />
           </button>
@@ -441,7 +441,7 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
               toggleDropdown()
               inputRef.current?.focus()
             }}
-            className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted hover:bg-inset ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}
+            className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}
           >
             <Diamond size={12} />
           </button>

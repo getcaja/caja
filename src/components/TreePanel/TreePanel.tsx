@@ -267,7 +267,7 @@ export function TreePanel() {
 
   if (editingMaster) {
     return (
-      <div className="h-full bg-overlay flex flex-col">
+      <div className="h-full flex flex-col" style={{ backgroundColor: 'var(--panel-bg)' }}>
         <div className="pl-2.5 pr-4 py-2.5 border-b border-border flex items-center justify-between">
           <div className="flex items-center gap-1 min-w-0">
             <input
@@ -322,7 +322,7 @@ export function TreePanel() {
   }
 
   return (
-    <div className="h-full bg-overlay flex flex-col">
+    <div className="h-full flex flex-col" style={{ backgroundColor: 'var(--panel-bg)' }}>
       <div className="pl-2.5 pr-4 py-2.5 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-1">
           <button

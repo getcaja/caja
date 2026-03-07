@@ -56,12 +56,12 @@ describe('deriveTokens', () => {
     expectColorMatch(tokens['text-muted'], '#787878', 2)
   })
 
-  it('border ≈ #252525', () => {
-    expectColorMatch(tokens.border, '#252525', 2)
+  it('border ≈ #333333', () => {
+    expectColorMatch(tokens.border, '#333333', 2)
   })
 
-  it('border-accent ≈ #333333', () => {
-    expectColorMatch(tokens['border-accent'], '#333333', 2)
+  it('border-accent ≈ #3a3a3a', () => {
+    expectColorMatch(tokens['border-accent'], '#3a3a3a', 2)
   })
 
   it('accent matches input', () => {

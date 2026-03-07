@@ -126,9 +126,9 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
         {/* Computed classes — read-only */}
         {computedClasses.length > 0 && (
           <div className="flex items-start gap-2">
-            <div className="flex-1 min-w-0 bg-inset rounded px-1.5 py-1 flex flex-wrap gap-1 min-h-[24px]">
+            <div className="flex-1 min-w-0 rounded px-1.5 py-1 flex flex-wrap gap-1 min-h-[24px]" style={{ backgroundColor: 'var(--input-bg)' }}>
               {computedClasses.map((cls, i) => (
-                <span key={i} className="c-pill bg-inset fg-subtle">{cls}</span>
+                <span key={i} className="c-pill bg-inset fg-muted">{cls}</span>
               ))}
             </div>
             <button
@@ -146,9 +146,9 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
         {/* Manual classes — editable */}
         {manualClasses.length > 0 && (
           <div className="flex items-start gap-2">
-            <div className="flex-1 min-w-0 bg-inset rounded px-1.5 py-1 flex flex-wrap gap-1">
+            <div className="flex-1 min-w-0 rounded px-1.5 py-1 flex flex-wrap gap-1" style={{ backgroundColor: 'var(--input-bg)' }}>
               {manualClasses.map((cls, i) => (
-                <span key={`${i}-${cls}`} className="c-pill bg-inset fg-subtle">
+                <span key={`${i}-${cls}`} className="c-pill bg-inset fg-muted">
                   {cls}
                   <button
                     onClick={() => removeClass(cls)}

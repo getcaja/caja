@@ -1,4 +1,4 @@
-import { Type, MoveVertical, MoveHorizontal, AlignLeft, AlignCenter, AlignRight, Italic, Underline, Strikethrough, Ellipsis } from 'lucide-react'
+import { Type, MoveVertical, MoveHorizontal, AlignLeft, AlignCenter, AlignRight, Italic, Underline, Strikethrough, Settings2, ArrowUpToLine, FoldVertical, ArrowDownToLine } from 'lucide-react'
 import { useState } from 'react'
 import type { TextStyles, DesignValue } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
@@ -131,9 +131,9 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides }: { f
           <ToggleGroup
             value={frame.textAlignVertical}
             options={[
-              { value: 'start', label: 'Top', tooltip: 'Align Top' },
-              { value: 'center', label: 'Mid', tooltip: 'Align Middle' },
-              { value: 'end', label: 'Bot', tooltip: 'Align Bottom' },
+              { value: 'start', label: <ArrowUpToLine size={12} />, tooltip: 'Align Top' },
+              { value: 'center', label: <FoldVertical size={12} />, tooltip: 'Align Middle' },
+              { value: 'end', label: <ArrowDownToLine size={12} />, tooltip: 'Align Bottom' },
             ]}
             onChange={(v) => updateFrame(frame.id, { textAlignVertical: v as TextStyles['textAlignVertical'] })}
             className="flex-1"
@@ -151,7 +151,7 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides }: { f
                     : 'fg-subtle hover:fg-muted hover:bg-inset'
                 }`}
               >
-                <Ellipsis size={12} />
+                <Settings2 size={12} />
               </button>
             }
             align="end"

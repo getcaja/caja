@@ -125,7 +125,7 @@ export function TreeRow({
             ? `${selectionStyle === 'neutral' ? 'tree-node-selected-neutral' : isMulti ? 'tree-node-multi-selected' : 'tree-node-selected'} fg-default`
             : dropPosition === 'inside'
               ? 'bg-[var(--color-accent)]/10 outline outline-1 outline-[var(--color-accent)]/40'
-              : 'hover:bg-[var(--color-accent)]/8 fg-muted hover:fg-default'
+              : 'hover:bg-subtle fg-muted hover:fg-default'
         } ${className ?? ''}`}
         style={{ paddingLeft: indent ?? (depth * 16 + 16), paddingRight: 16 }}
         onClick={onClick}

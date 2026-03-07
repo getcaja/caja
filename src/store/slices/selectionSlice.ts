@@ -30,7 +30,7 @@ export const createSelectionSlice: StateCreator<FrameStore, [], [], SelectionSli
   isTreeHover: false,
   clipboard: [] as Frame[],
 
-  select: (id) => set({ selectedId: id, selectedIds: new Set(id ? [id] : []), pageSelected: false }),
+  select: (id) => set({ selectedId: id, selectedIds: new Set(id ? [id] : []), pageSelected: false, showMarginOverlay: false, showPaddingOverlay: false, showGapOverlay: false }),
 
   selectMulti: (id) => set((state) => {
     const next = new Set(state.selectedIds)
