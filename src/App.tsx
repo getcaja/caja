@@ -450,6 +450,9 @@ function App() {
     const handler = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase()
       if ((e.metaKey || e.ctrlKey) && key === 'z' && !e.shiftKey) {
+        const tag = (e.target as HTMLElement).tagName
+        const isEditable = (e.target as HTMLElement).isContentEditable
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || isEditable) return
         e.preventDefault()
         const { editingComponentId } = useFrameStore.getState()
         if (editingComponentId) {
@@ -467,6 +470,9 @@ function App() {
         }
       }
       if ((e.metaKey || e.ctrlKey) && key === 'z' && e.shiftKey) {
+        const tag = (e.target as HTMLElement).tagName
+        const isEditable = (e.target as HTMLElement).isContentEditable
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || isEditable) return
         e.preventDefault()
         const { editingComponentId } = useFrameStore.getState()
         if (editingComponentId) {
