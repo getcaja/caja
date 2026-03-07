@@ -65,7 +65,7 @@ describe('deriveTokens', () => {
   })
 
   it('accent matches input', () => {
-    expectColorMatch(tokens.accent, '#0c8ce9')
+    expectColorMatch(tokens.accent, '#3378F6')
   })
 
   it('accent-hover is lighter than accent', () => {

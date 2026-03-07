@@ -21,13 +21,15 @@
 
   /* ── Surfaces (Δ14 uniform steps) ── */
   --color-surface-0: #1e1e1e;
+  --color-surface-vibrancy: rgba(14, 14, 14, 0.50);
   --color-surface-1: #2c2c2c;
   --color-surface-2: #3a3a3a;
   --color-surface-3: #484848;
 
   /* ── Accent ── */
-  --color-accent: #0c8ce9;
-  --color-accent-hover: #47b5f5;
+  --color-accent: #3378F6;
+  --color-accent-hover: #5A95F8;
+  --color-accent-text: color-mix(in srgb, #3378F6 65%, white);
 
   /* ── Text (3-tier: 100% / 70% / 47%) ── */
   --color-text-primary: #ffffff;
@@ -51,7 +53,7 @@
    Phase 1: mapped to existing values for zero visual change. */
 :root {
   /* Panel (left sidebar, right properties) */
-  --panel-bg:            var(--color-surface-0);
+  --panel-bg:            var(--color-surface-vibrancy);
   --panel-bg-hover:      var(--color-surface-1);
   --panel-bg-secondary:  var(--color-surface-2);
   --panel-border:        var(--color-border);
@@ -82,7 +84,7 @@
 :root {
   /* Foreground — 3-tier hierarchy: 100% / 70% / 47% (matches Figma) */
   --fg-default:  #ffffff;
-  --fg-muted:    #b3b3b3;
+  --fg-muted:    #999999;
   --fg-subtle:   #787878;
 
   /* Background — aliases to surface ramp (3 tiers above surface-0) */
@@ -108,7 +110,56 @@
 
 /* fg-icon — aliases (all fg vars are now solid) */
 .fg-icon-muted  { color: var(--fg-muted); }
-.fg-icon-subtle { color: var(--fg-subtle); }
+.fg-icon-subtle { color: var(--fg-muted); }  /* unified — was fg-subtle */
+
+/* ── Semantic state classes ──
+   Two-state pattern: dimmed (default) → active (.is-active)
+   Change colors here, not in 50 component files. */
+/* Labels, icons, placeholders, segment items — two states only */
+.c-dimmed           { color: var(--fg-muted); }
+.c-dimmed.is-active { color: var(--fg-default); }
+
+/* Interactive dimmed (segments, tabs) — adds hover */
+.c-dimmed-i             { color: var(--fg-muted); }
+.c-dimmed-i:hover       { color: var(--fg-default); }
+.c-dimmed-i.is-active   { color: var(--fg-default); }
+
+/* Action icons (settings, expand, reset) — dimmed default, bright on hover, accent when open */
+.c-action           { color: var(--fg-muted); }
+.c-action:hover     { color: var(--fg-default); }
+.c-action.is-active { color: var(--color-accent); }
+
+/* Action slot — 20×24px button at the right edge of every property row */
+.c-slot {
+  width: 1.5rem;         /* 24px */
+  height: 1.5rem;        /* 24px */
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.25rem;
+  color: var(--fg-muted);
+}
+.c-slot:hover           { color: var(--fg-default); background: var(--bg-inset); }
+.c-slot.is-active       { color: #fff; background: color-mix(in srgb, var(--color-accent) 15%, transparent); }
+.c-slot-spacer          { width: 1.5rem; flex-shrink: 0; }
+
+/* Token pill inside inputs */
+.c-pill {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--color-border-accent);
+  border-radius: 0.25rem;
+  padding: 0 0.25rem;
+  font-size: 11px;
+  line-height: 18px;
+  font-weight: 500;
+  color: var(--fg-default);
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 /* hover:fg */
 .hover\:fg-default:hover { color: var(--fg-default); }
@@ -200,6 +251,7 @@ input[type=number] {
     border-radius: 0.25rem;
     padding-left: 0.25rem;
     padding-right: 0.25rem;
+    gap: 0.25rem;
     font-size: 12px;
     color: var(--fg-default);
     background-color: var(--input-bg);
@@ -229,11 +281,17 @@ input[type=number] {
     flex-shrink: 0;
   }
 
+  /* --- Section container --- */
+  .c-section {
+    padding: 1rem;           /* 16px all sides */
+    border-bottom: 1px solid var(--color-border);
+  }
+
   /* --- Section heading --- */
   .c-section-title {
     color: #fff;
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 500;
   }
 
   /* --- Menus & popups --- */
@@ -278,13 +336,32 @@ input[type=number] {
   }
 
   /* --- Icon buttons --- */
+  /* Icon button — universal for all icon-only buttons outside property slots */
   .c-icon-btn {
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 0.25rem;
-    color: var(--fg-subtle);
+    color: var(--fg-muted);
   }
+  .c-icon-btn:hover { color: var(--fg-default); background: var(--bg-inset); }
+  .c-icon-btn.is-active { color: var(--fg-default); background: var(--bg-inset); }
+
+  /* Internal input button — absolute positioned inside inputs (dropdown, clear, upload) */
+  .c-input-btn {
+    position: absolute;
+    right: 0.25rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1.25rem;
+    height: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.25rem;
+    color: var(--fg-muted);
+  }
+  .c-input-btn:hover { color: var(--fg-default); }
 
   /* --- Component preview insert button --- */
   .preview-insert-btn:hover {
@@ -295,7 +372,7 @@ input[type=number] {
   .c-input::placeholder,
   .c-scale-input input::placeholder,
   .c-textarea::placeholder {
-    color: var(--fg-subtle);
+    color: var(--fg-muted);
   }
 
   /* --- Class pills (Advanced section) --- */

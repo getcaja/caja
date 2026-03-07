@@ -59,7 +59,7 @@ export function BorderSection({ frame }: { frame: Frame }) {
             }}
             className="flex-1"
           />
-          <div className="w-5 shrink-0" />
+          <div className="c-slot-spacer" />
         </div>
 
         {/* Color */}
@@ -72,7 +72,7 @@ export function BorderSection({ frame }: { frame: Frame }) {
               classPrefix="border"
               tooltip="Border Color"
             />
-            <div className="w-5 shrink-0" />
+            <div className="c-slot-spacer" />
           </div>
         )}
 

@@ -75,12 +75,12 @@ export function ShortcutsPanel({ open, onClose }: { open: boolean; onClose: () =
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <span className="text-[13px] font-medium text-text-primary">Keyboard Shortcuts</span>
-          <button onClick={onClose} className="fg-icon-subtle hover:fg-icon-muted">
+          <span className="text-[13px] font-medium fg-default">Keyboard Shortcuts</span>
+          <button onClick={onClose} className="c-icon-btn">
             <X size={14} />
           </button>
         </div>
-        <div className="p-3 flex flex-col gap-3">
+        <div className="p-3 flex flex-col gap-2">
           {sections.map((section) => (
             <div key={section.title}>
               <div className="text-[11px] uppercase tracking-wider fg-subtle px-1 mb-1.5">{section.title}</div>

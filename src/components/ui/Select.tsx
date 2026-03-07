@@ -25,14 +25,14 @@ export function Select({ value, options, onChange, className, tooltip, inlineLab
       <RadixSelect.Root value={value} onValueChange={onChange}>
         <RadixSelect.Trigger
           title={tooltip}
-          className="c-scale-input w-full flex items-center gap-0.5 cursor-pointer"
+          className="c-scale-input w-full flex items-center cursor-pointer"
         >
           {inlineLabel && (
-            <span className={`w-4 shrink-0 flex items-center justify-center ${isInitial ? 'fg-subtle' : 'fg-muted'}`}>
+            <span className={`w-4 shrink-0 flex items-center justify-center c-dimmed ${isInitial ? '' : 'is-active'}`}>
               {inlineLabel}
             </span>
           )}
-          <span className={`flex-1 text-[12px] truncate text-left ${isInitial ? 'fg-subtle' : 'fg-default'}`}>
+          <span className={`flex-1 text-[12px] truncate text-left c-dimmed ${isInitial ? '' : 'is-active'}`}>
             <RadixSelect.Value />
           </span>
           <RadixSelect.Icon className="shrink-0">

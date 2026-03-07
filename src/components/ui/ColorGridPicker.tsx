@@ -80,7 +80,7 @@ export function ColorGridPicker({
   )
 
   return (
-    <div className="flex flex-col gap-1.5" onMouseLeave={handleLeave}>
+    <div className="flex flex-col gap-2" onMouseLeave={handleLeave}>
       {/* Special: white, black + unlink */}
       <div className="flex items-center gap-0.5">
         {SPECIAL_COLORS.map((c) => (
@@ -98,7 +98,7 @@ export function ColorGridPicker({
         ))}
         {currentToken && (
           <button
-            className="text-[10px] fg-subtle hover:fg-muted ml-auto"
+            className="text-[10px] fg-muted hover:fg-default ml-auto"
             onClick={handleUnlink}
           >
             Unlink

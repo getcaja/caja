@@ -79,7 +79,7 @@ export function TokenInput(props: TokenInputProps) {
 
   // --- Inline label (with optional title tooltip) ---
   const inlineLabelEl = inlineLabel ? (
-    <span title={tooltip} className={`w-4 shrink-0 flex items-center justify-center ${isActive ? 'fg-muted' : 'fg-subtle'}`}>{inlineLabel}</span>
+    <span title={tooltip} className={`w-4 shrink-0 flex items-center justify-center c-dimmed ${isActive ? 'is-active' : ''}`}>{inlineLabel}</span>
   ) : null
 
   // --- Normalize items for dropdown ---
@@ -400,7 +400,7 @@ export function TokenInput(props: TokenInputProps) {
                 : 'fg-muted hover:bg-inset hover:fg-default'
             }`}
           >
-            <span className="flex items-center gap-1.5">
+            <span className="flex items-center gap-2">
               <span className="font-medium">{item.label ?? item.displayRight}</span>
               {item.token === committedToken && <Check size={10} />}
             </span>
@@ -414,13 +414,13 @@ export function TokenInput(props: TokenInputProps) {
 
   // --- Render ---
   return (
-    <div className="flex items-center gap-1.5 min-w-0 flex-1">
+    <div className="flex items-center gap-2 min-w-0 flex-1">
       {label && !inlineLabel && <span title={tooltip || label} className="c-label">{label}</span>}
       <div ref={containerRef} className="relative flex-1 min-w-0">
         {hasToken ? (
           // Tokenized state — pill, click opens dropdown, button detaches
           <div
-            className="group c-scale-input flex items-center gap-0.5 pr-6 overflow-hidden cursor-pointer relative"
+            className="group c-scale-input flex items-center pr-6 overflow-hidden cursor-pointer relative"
             tabIndex={0}
             onClick={toggleDropdown}
             onKeyDown={(e) => {
@@ -437,7 +437,7 @@ export function TokenInput(props: TokenInputProps) {
             }}
           >
             {inlineLabelEl}
-            <span className="flex items-center bg-inset fg-muted rounded px-1 text-[11px] leading-[18px] font-medium min-w-0 truncate">
+            <span className="c-pill">
               {scaleToken === 'auto' ? scale.find(s => s.token === 'auto')?.label ?? 'Auto' : `${scaleNumeric}${scaleUnit}`}
             </span>
             <span className="flex-1" />
@@ -453,7 +453,7 @@ export function TokenInput(props: TokenInputProps) {
                 setDraft(scaleNumeric === scaleResetValue ? '' : String(scaleNumeric))
                 requestAnimationFrame(() => inputRef.current?.focus())
               }}
-              className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+              className={`c-input-btn ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
             >
               <Unlink size={12} />
             </button>
@@ -461,7 +461,7 @@ export function TokenInput(props: TokenInputProps) {
         ) : (
           // Editable state — input + diamond to open token picker
           <div
-            className="group c-scale-input flex items-center gap-0.5 pr-6 overflow-hidden cursor-text relative"
+            className="group c-scale-input flex items-center pr-6 overflow-hidden cursor-text relative"
             onClick={() => inputRef.current?.focus()}
           >
             {inlineLabelEl}
@@ -488,7 +488,7 @@ export function TokenInput(props: TokenInputProps) {
                 toggleDropdown()
                 inputRef.current?.focus()
               }}
-              className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}
+              className={`c-input-btn ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}
             >
               <Diamond size={12} />
             </button>

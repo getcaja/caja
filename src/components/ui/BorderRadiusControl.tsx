@@ -56,11 +56,7 @@ export function BorderRadiusControl({
         <button
           type="button"
           title={expanded ? 'Collapse Corners' : 'Expand Corners'}
-          className={`w-5 h-5 flex items-center justify-center rounded shrink-0 ${
-            expanded
-              ? 'text-accent bg-accent/10'
-              : 'fg-icon-subtle hover:fg-icon-muted hover:bg-inset'
-          }`}
+          className={`c-slot ${expanded ? 'is-active' : ''}`}
           onClick={toggle}
         >
           <Scan size={12} />
@@ -70,7 +66,7 @@ export function BorderRadiusControl({
         <div className="flex items-center gap-2">
           <TokenInput scale={BORDER_RADIUS_SCALE} value={value.bottomLeft} onChange={(v) => onChange({ bottomLeft: v })} min={0} classPrefix="rounded-bl" inlineLabel={txtLbl('BL')} tooltip="Bottom Left Radius" />
           <TokenInput scale={BORDER_RADIUS_SCALE} value={value.bottomRight} onChange={(v) => onChange({ bottomRight: v })} min={0} classPrefix="rounded-br" inlineLabel={txtLbl('BR')} tooltip="Bottom Right Radius" />
-          <div className="w-5 shrink-0" />
+          <div className="c-slot-spacer" />
         </div>
       )}
     </div>

@@ -82,7 +82,7 @@ export function ComponentIOModal({ open, mode, onOpenChange }: ComponentIOModalP
           <div className="bg-surface-1 border border-border rounded-xl shadow-xl w-[360px] flex flex-col">
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">
               <h2 className="text-[13px] font-semibold fg-default">Import Error</h2>
-              <button className="w-5 h-5 c-icon-btn hover:fg-icon-muted hover:bg-subtle" onClick={() => onOpenChange(false)}>
+              <button className="w-5 h-5 c-icon-btn" onClick={() => onOpenChange(false)}>
                 <X size={14} />
               </button>
             </div>
@@ -142,7 +142,7 @@ export function ComponentIOModal({ open, mode, onOpenChange }: ComponentIOModalP
               <h2 className="text-[13px] font-semibold fg-default">Import from {cjlData.name}</h2>
               {cjlData.author && <p className="text-[12px] fg-subtle">By {cjlData.author}</p>}
             </div>
-            <button className="w-5 h-5 c-icon-btn hover:fg-icon-muted hover:bg-subtle" onClick={() => onOpenChange(false)}>
+            <button className="w-5 h-5 c-icon-btn" onClick={() => onOpenChange(false)}>
               <X size={14} />
             </button>
           </div>
@@ -158,7 +158,7 @@ export function ComponentIOModal({ open, mode, onOpenChange }: ComponentIOModalP
                   onClick={toggleAll}
                 >
                   <div className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center shrink-0 ${allSelected ? 'bg-accent border-accent' : 'border-border'}`}>
-                    {allSelected && <Check size={10} className="text-white" />}
+                    {allSelected && <Check size={10} className="fg-default" />}
                   </div>
                   Select all ({items.length})
                 </button>
@@ -169,7 +169,7 @@ export function ComponentIOModal({ open, mode, onOpenChange }: ComponentIOModalP
                     onClick={() => toggleItem(item.id)}
                   >
                     <div className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center shrink-0 ${selected.has(item.id) ? 'bg-accent border-accent' : 'border-border'}`}>
-                      {selected.has(item.id) && <Check size={10} className="text-white" />}
+                      {selected.has(item.id) && <Check size={10} className="fg-default" />}
                     </div>
                     <span className="truncate">{item.name}</span>
                     {item.tags.length > 0 && (
@@ -186,7 +186,7 @@ export function ComponentIOModal({ open, mode, onOpenChange }: ComponentIOModalP
               Cancel
             </button>
             <button
-              className="px-3 py-1.5 rounded-md text-[12px] text-white font-medium bg-accent hover:bg-accent-hover transition-colors disabled:opacity-50"
+              className="px-3 py-1.5 rounded-md text-[12px] fg-default font-medium bg-accent hover:bg-accent-hover transition-colors disabled:opacity-50"
               onClick={handleImport}
               disabled={selected.size === 0}
             >
@@ -246,13 +246,13 @@ export function ComponentIOModal({ open, mode, onOpenChange }: ComponentIOModalP
       <div className="bg-surface-1 border border-border rounded-xl shadow-xl w-[360px] max-h-[600px] flex flex-col">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <h2 className="text-[13px] font-semibold fg-default">Export .cjl</h2>
-          <button className="w-5 h-5 c-icon-btn hover:fg-icon-muted hover:bg-subtle" onClick={() => onOpenChange(false)}>
+          <button className="w-5 h-5 c-icon-btn" onClick={() => onOpenChange(false)}>
             <X size={14} />
           </button>
         </div>
 
         {/* Metadata form */}
-        <div className="p-4 flex flex-col gap-3 border-b border-border">
+        <div className="p-4 flex flex-col gap-2 border-b border-border">
           <div>
             <label className="text-[11px] fg-subtle block mb-1">Library Name *</label>
             <input
@@ -304,7 +304,7 @@ export function ComponentIOModal({ open, mode, onOpenChange }: ComponentIOModalP
                 onClick={toggleAll}
               >
                 <div className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center shrink-0 ${allSelected ? 'bg-accent border-accent' : 'border-border'}`}>
-                  {allSelected && <Check size={10} className="text-white" />}
+                  {allSelected && <Check size={10} className="fg-default" />}
                 </div>
                 Select all ({components.length})
               </button>
@@ -315,7 +315,7 @@ export function ComponentIOModal({ open, mode, onOpenChange }: ComponentIOModalP
                   onClick={() => toggleItem(c.id)}
                 >
                   <div className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center shrink-0 ${selected.has(c.id) ? 'bg-accent border-accent' : 'border-border'}`}>
-                    {selected.has(c.id) && <Check size={10} className="text-white" />}
+                    {selected.has(c.id) && <Check size={10} className="fg-default" />}
                   </div>
                   <span className="truncate">{c.name}</span>
                   {c.tags.length > 0 && (
@@ -332,7 +332,7 @@ export function ComponentIOModal({ open, mode, onOpenChange }: ComponentIOModalP
             Cancel
           </button>
           <button
-            className="px-3 py-1.5 rounded-md text-[12px] text-white font-medium bg-accent hover:bg-accent-hover transition-colors disabled:opacity-50"
+            className="px-3 py-1.5 rounded-md text-[12px] fg-default font-medium bg-accent hover:bg-accent-hover transition-colors disabled:opacity-50"
             onClick={handleExport}
             disabled={!name.trim() || selected.size === 0 || exporting}
           >

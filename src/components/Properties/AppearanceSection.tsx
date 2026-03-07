@@ -31,7 +31,7 @@ export function AppearanceSection({ frame, hasOverrides, onResetOverrides }: { f
             inlineLabel={<Blend size={12} />}
             tooltip="Opacity"
           />
-          <div className="w-5 shrink-0" />
+          <div className="c-slot-spacer" />
         </div>
       </div>
     </Section>

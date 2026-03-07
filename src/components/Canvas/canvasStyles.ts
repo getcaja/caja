@@ -39,8 +39,8 @@ export const TAILWIND_THEME = `@theme {
   --color-surface-1: #2c2c2c;
   --color-surface-2: #3a3a3a;
   --color-surface-3: #484848;
-  --color-accent: #0c8ce9;
-  --color-accent-hover: #47b5f5;
+  --color-accent: #3378F6;
+  --color-accent-hover: #5A95F8;
   --color-text-primary: #ffffff;
   --color-text-secondary: #b3b3b3;
   --color-text-muted: #787878;

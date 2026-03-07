@@ -38,7 +38,7 @@ export function TransitionSection({ frame }: { frame: Frame }) {
             initialValue="none"
             tooltip="Transition"
           />
-          <div className="w-5 shrink-0" />
+          <div className="c-slot-spacer" />
         </div>
         {frame.transition !== 'none' && (
           <div className="flex items-center gap-2">
@@ -63,7 +63,7 @@ export function TransitionSection({ frame }: { frame: Frame }) {
               initialValue="linear"
               tooltip="Easing"
             />
-            <div className="w-5 shrink-0" />
+            <div className="c-slot-spacer" />
           </div>
         )}
       </div>

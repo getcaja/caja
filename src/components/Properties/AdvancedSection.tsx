@@ -133,9 +133,7 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
             </div>
             <button
               onClick={copyAll}
-              className={`w-5 h-5 shrink-0 flex items-center justify-center rounded ${
-                copied ? 'text-accent bg-accent/10' : 'fg-subtle hover:fg-muted hover:bg-inset'
-              }`}
+              className={`c-slot ${copied ? 'is-active' : ''}`}
               title="Copy all classes"
             >
               {copied ? <Check size={12} /> : <Copy size={12} />}
@@ -159,7 +157,7 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
                 </span>
               ))}
             </div>
-            <div className="w-5 shrink-0" />
+            <div className="c-slot-spacer" />
           </div>
         )}
 
@@ -170,7 +168,7 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
               className="c-scale-input flex items-center gap-1 cursor-text"
               onClick={() => inputRef.current?.focus()}
             >
-              <span className="w-4 shrink-0 flex items-center justify-center fg-subtle">
+              <span className="w-4 shrink-0 flex items-center justify-center c-dimmed">
                 <Plus size={12} />
               </span>
               <input
@@ -213,7 +211,7 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
               </div>
             )}
           </div>
-          <div className="w-5 shrink-0" />
+          <div className="c-slot-spacer" />
         </div>
       </div>
     </Section>

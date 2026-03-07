@@ -572,7 +572,7 @@ function ComponentRow({
         dropPosition={isOver ? overPosition : null}
         trailing={onEnterEditMode ? (
           <button
-            className="w-5 h-5 c-icon-btn shrink-0 hidden group-hover:flex fg-icon-subtle hover:fg-icon-muted"
+            className="w-5 h-5 c-icon-btn shrink-0 hidden group-hover:flex"
             onClick={(e) => { e.stopPropagation(); onEnterEditMode() }}
             title="Edit component"
           >

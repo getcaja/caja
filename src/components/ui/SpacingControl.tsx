@@ -104,16 +104,16 @@ function MixedPill({ label, scale, onChange, onPreview, onRevert, onReset, onOpe
 
   return (
     <>
-      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+      <div className="flex items-center gap-2 min-w-0 flex-1">
         <div className="relative flex-1 min-w-0">
           <div
             ref={pillRef}
-            className="group c-scale-input flex items-center gap-0.5 pr-6 overflow-hidden cursor-pointer relative"
+            className="group c-scale-input flex items-center pr-6 overflow-hidden cursor-pointer relative"
             title={`${tooltip} — values differ, click to edit`}
             onClick={() => open ? handleClose() : handleOpen()}
           >
-            <span className="w-4 shrink-0 flex items-center justify-center fg-subtle">{label}</span>
-            <span className="flex items-center bg-inset fg-muted rounded px-1 text-[11px] leading-[18px] font-medium truncate">
+            <span className="w-4 shrink-0 flex items-center justify-center c-dimmed">{label}</span>
+            <span className="c-pill">
               Mixed
             </span>
             <button
@@ -126,7 +126,7 @@ function MixedPill({ label, scale, onChange, onPreview, onRevert, onReset, onOpe
                 e.stopPropagation()
                 onReset()
               }}
-              className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted ${open ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+              className={`c-input-btn ${open ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
             >
               <X size={12} />
             </button>
@@ -169,7 +169,7 @@ function MixedPill({ label, scale, onChange, onPreview, onRevert, onReset, onOpe
                     : 'fg-muted hover:bg-inset hover:fg-default'
                 }`}
               >
-                <span className="flex items-center gap-1.5">
+                <span className="flex items-center gap-2">
                   <span className="font-medium">{item.label ?? item.displayRight}</span>
                 </span>
                 {item.label && <span className="fg-subtle">{item.displayRight}</span>}
@@ -300,11 +300,7 @@ export function SpacingControl({
         <button
           type="button"
           title={modeTitle}
-          className={`w-5 h-5 flex items-center justify-center rounded shrink-0 ${
-            isActive
-              ? 'text-accent bg-accent/10'
-              : 'fg-icon-subtle hover:fg-icon-muted hover:bg-inset'
-          }`}
+          className={`c-slot ${isActive ? 'is-active' : ''}`}
           onClick={toggle}
         >
           <Scan size={12} />

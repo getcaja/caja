@@ -31,40 +31,38 @@ function AnchorBox({ frame }: { frame: Frame }) {
   }
 
   const pinCls = (active: boolean) =>
-    active
-      ? 'bg-accent hover:bg-accent-hover cursor-pointer'
-      : 'bg-emphasis hover:bg-text-muted cursor-pointer'
+    active ? 'bg-accent hover:bg-accent-hover' : 'bg-surface-3 hover:bg-emphasis'
 
   return (
-    <div className="rounded-lg bg-inset relative w-full h-full">
+    <div className="rounded-lg relative w-full h-full" style={{ backgroundColor: 'var(--input-bg)' }}>
       {/* Inner rectangle */}
-      <div className="absolute inset-[30%] rounded border border-surface-3/50" />
+      <div className="absolute inset-[30%] rounded border border-surface-3" />
       {/* Crosshair */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[9px] h-px bg-subtle" />
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-px h-[9px] bg-subtle" />
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[9px] h-px bg-surface-3" />
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-px h-[9px] bg-surface-3" />
 
       {/* Top pin — vertical */}
       <button
         type="button"
-        className={`absolute top-[3px] left-1/2 -translate-x-1/2 w-[3px] h-[12px] rounded-full ${pinCls(topActive)}`}
+        className={`absolute top-[15%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[3px] h-[10px] rounded-full cursor-pointer ${pinCls(topActive)}`}
         onClick={() => toggleEdge('top', topActive)}
       />
       {/* Bottom pin — vertical */}
       <button
         type="button"
-        className={`absolute bottom-[3px] left-1/2 -translate-x-1/2 w-[3px] h-[12px] rounded-full ${pinCls(bottomActive)}`}
+        className={`absolute bottom-[15%] left-1/2 -translate-x-1/2 translate-y-1/2 w-[3px] h-[10px] rounded-full cursor-pointer ${pinCls(bottomActive)}`}
         onClick={() => toggleEdge('bottom', bottomActive)}
       />
       {/* Left pin — horizontal */}
       <button
         type="button"
-        className={`absolute left-[3px] top-1/2 -translate-y-1/2 h-[3px] w-[12px] rounded-full ${pinCls(leftActive)}`}
+        className={`absolute left-[15%] top-1/2 -translate-x-1/2 -translate-y-1/2 h-[3px] w-[10px] rounded-full cursor-pointer ${pinCls(leftActive)}`}
         onClick={() => toggleEdge('left', leftActive)}
       />
       {/* Right pin — horizontal */}
       <button
         type="button"
-        className={`absolute right-[3px] top-1/2 -translate-y-1/2 h-[3px] w-[12px] rounded-full ${pinCls(rightActive)}`}
+        className={`absolute right-[15%] top-1/2 translate-x-1/2 -translate-y-1/2 h-[3px] w-[10px] rounded-full cursor-pointer ${pinCls(rightActive)}`}
         onClick={() => toggleEdge('right', rightActive)}
       />
     </div>
@@ -90,7 +88,7 @@ export function PositionSection({ frame }: { frame: Frame }) {
             initialValue="static"
             tooltip="Position"
           />
-          <div className="w-5 shrink-0" />
+          <div className="c-slot-spacer" />
         </div>
 
         {isPositioned && (
@@ -140,7 +138,7 @@ export function PositionSection({ frame }: { frame: Frame }) {
                   tooltip="Left"
                 />
               </div>
-              <div className="w-5 shrink-0" />
+              <div className="c-slot-spacer" />
             </div>
 
             <div className="flex items-center gap-2">
@@ -155,7 +153,7 @@ export function PositionSection({ frame }: { frame: Frame }) {
                 unit=""
                 tooltip="Z-Index"
               />
-              <div className="w-5 shrink-0" />
+              <div className="c-slot-spacer" />
             </div>
           </>
         )}

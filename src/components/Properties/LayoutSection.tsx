@@ -102,11 +102,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                     <button
                       type="button"
                       title="Display Options"
-                      className={`w-5 h-5 flex items-center justify-center rounded shrink-0 ${
-                        displayOptsActive
-                          ? 'text-accent bg-accent/10'
-                          : 'fg-subtle hover:fg-muted hover:bg-inset'
-                      }`}
+                      className={`c-slot ${displayOptsActive ? 'is-active' : ''}`}
                     >
                       <Settings2 size={12} />
                     </button>
@@ -114,20 +110,20 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                   side="bottom"
                   align="end"
                 >
-                  <div className="flex flex-col gap-1.5 p-2.5 min-w-[120px]">
+                  <div className="flex flex-col gap-2 p-2.5 min-w-[120px]">
                     {isFlex && (
                       <>
                         <button
                           type="button"
                           onClick={() => updateFrame(frame.id, { wrap: !boxFrame!.wrap })}
-                          className="flex items-center gap-1.5 cursor-pointer select-none"
+                          className="flex items-center gap-2 cursor-pointer select-none"
                         >
                           <span className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center ${
                             boxFrame!.wrap ? 'bg-accent border-accent text-white' : 'border-border-accent bg-inset'
                           }`}>
                             {boxFrame!.wrap && <Check size={10} strokeWidth={3} />}
                           </span>
-                          <span className={`text-[12px] ${boxFrame!.wrap ? 'fg-default' : 'fg-subtle'}`}>Wrap</span>
+                          <span className={`text-[12px] c-dimmed ${boxFrame!.wrap ? 'is-active' : ''}`}>Wrap</span>
                         </button>
                         <button
                           type="button"
@@ -138,14 +134,14 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                               : `${dir}-reverse` as 'row-reverse' | 'column-reverse'
                             updateFrame(frame.id, { direction: newDir })
                           }}
-                          className="flex items-center gap-1.5 cursor-pointer select-none"
+                          className="flex items-center gap-2 cursor-pointer select-none"
                         >
                           <span className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center ${
                             isReverse ? 'bg-accent border-accent text-white' : 'border-border-accent bg-inset'
                           }`}>
                             {isReverse && <Check size={10} strokeWidth={3} />}
                           </span>
-                          <span className={`text-[12px] ${isReverse ? 'fg-default' : 'fg-subtle'}`}>Reverse</span>
+                          <span className={`text-[12px] c-dimmed ${isReverse ? 'is-active' : ''}`}>Reverse</span>
                         </button>
                       </>
                     )}
@@ -158,19 +154,19 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                             : (isInline ? 'block' : 'inline-block'),
                         })
                       }}
-                      className="flex items-center gap-1.5 cursor-pointer select-none"
+                      className="flex items-center gap-2 cursor-pointer select-none"
                     >
                       <span className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center ${
                         isInline ? 'bg-accent border-accent text-white' : 'border-border-accent bg-inset'
                       }`}>
                         {isInline && <Check size={10} strokeWidth={3} />}
                       </span>
-                      <span className={`text-[12px] ${isInline ? 'fg-default' : 'fg-subtle'}`}>Inline</span>
+                      <span className={`text-[12px] c-dimmed ${isInline ? 'is-active' : ''}`}>Inline</span>
                     </button>
                   </div>
                 </Popover>
               ) : (
-                <div className="w-5 shrink-0" />
+                <div className="c-slot-spacer" />
               )}
             </div>
           </>
@@ -201,11 +197,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                 <button
                   type="button"
                   title="Size Constraints"
-                  className={`w-5 h-5 flex items-center justify-center rounded shrink-0 ${
-                    constraintsActive || childPropsActive
-                      ? 'text-accent bg-accent/10'
-                      : 'fg-subtle hover:fg-muted hover:bg-inset'
-                  }`}
+                  className={`c-slot ${constraintsActive || childPropsActive ? 'is-active' : ''}`}
                 >
                   <Settings2 size={12} />
                 </button>
@@ -319,8 +311,9 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
               <div className="flex gap-2 items-start">
                 <div className="flex-1 min-w-0">
                   <div
-                    className="grid gap-[2px] bg-inset rounded p-1 w-full h-[56px]"
+                    className="grid gap-[2px] rounded p-1 w-full h-[56px]"
                     style={{
+                      backgroundColor: 'var(--input-bg)',
                       gridTemplateColumns: 'repeat(3, 1fr)',
                       gridTemplateRows: 'repeat(3, 1fr)',
                     }}
@@ -344,7 +337,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                           {active ? (
                             <div className={`${isRow ? 'w-[2px] h-[8px]' : 'w-[8px] h-[2px]'} bg-accent rounded-full`} />
                           ) : (
-                            <div className="w-[3px] h-[3px] rounded-full bg-text-muted/25 group-hover:bg-text-muted/50" />
+                            <div className="w-[3px] h-[3px] rounded-full bg-surface-3 group-hover:bg-emphasis" />
                           )}
                         </button>
                       )
@@ -382,11 +375,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                       <button
                         type="button"
                         title="Flex Child"
-                        className={`w-5 h-5 flex items-center justify-center rounded shrink-0 ${
-                          childPropsActive
-                            ? 'text-accent bg-accent/10'
-                            : 'fg-subtle hover:fg-muted hover:bg-inset'
-                        }`}
+                        className={`c-slot ${childPropsActive ? 'is-active' : ''}`}
                       >
                         <Settings2 size={12} />
                       </button>
@@ -456,7 +445,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                     </div>
                   </Popover>
                 ) : (
-                  <div className="w-5 shrink-0" />
+                  <div className="c-slot-spacer" />
                 )}
               </div>
             )}
@@ -489,7 +478,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                     unit=""
                     tooltip="Rows"
                   />
-                  <div className="w-5 shrink-0" />
+                  <div className="c-slot-spacer" />
                 </div>
                 <div
                   className="flex items-center gap-2"
@@ -505,7 +494,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                     classPrefix="gap"
                     tooltip="Gap"
                   />
-                  <div className="w-5 shrink-0" />
+                  <div className="c-slot-spacer" />
                 </div>
               </>
             )}
@@ -545,7 +534,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); updateFrame(frame.id, { overflow: frame.overflow !== 'visible' ? 'visible' : 'hidden' }) }}
-            className="flex items-center gap-1.5 cursor-pointer select-none"
+            className="flex items-center gap-2 cursor-pointer select-none"
           >
             <span className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center ${
               frame.overflow !== 'visible'
@@ -554,7 +543,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
             }`}>
               {frame.overflow !== 'visible' && <Check size={10} strokeWidth={3} />}
             </span>
-            <span className={`text-[12px] ${frame.overflow !== 'visible' ? 'fg-default' : 'fg-subtle'}`}>Clip Content</span>
+            <span className={`text-[12px] c-dimmed ${frame.overflow !== 'visible' ? 'is-active' : ''}`}>Clip Content</span>
           </button>
           <div className="flex-1" />
           <Popover
@@ -564,12 +553,12 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                 <button
                   type="button"
                   title="Overflow"
-                  className={`w-5 h-5 shrink-0 flex items-center justify-center rounded ${
+                  className={`c-slot ${
                     frame.overflow === 'visible'
                       ? 'invisible'
                       : frame.overflow === 'scroll'
-                        ? 'text-accent bg-accent/10'
-                        : 'fg-subtle hover:fg-muted hover:bg-inset'
+                        ? 'is-active'
+                        : ''
                   }`}
                 >
                   <Settings2 size={12} />
@@ -578,18 +567,18 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
               side="bottom"
               align="end"
             >
-              <div className="flex flex-col gap-1.5 p-2.5 min-w-[120px]">
+              <div className="flex flex-col gap-2 p-2.5 min-w-[120px]">
                 <button
                   type="button"
                   onClick={() => updateFrame(frame.id, { overflow: frame.overflow === 'scroll' ? 'hidden' : 'scroll' })}
-                  className="flex items-center gap-1.5 cursor-pointer select-none"
+                  className="flex items-center gap-2 cursor-pointer select-none"
                 >
                   <span className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center ${
                     frame.overflow === 'scroll' ? 'bg-accent border-accent text-white' : 'border-border-accent bg-inset'
                   }`}>
                     {frame.overflow === 'scroll' && <Check size={10} strokeWidth={3} />}
                   </span>
-                  <span className={`text-[12px] ${frame.overflow === 'scroll' ? 'fg-default' : 'fg-subtle'}`}>Scroll</span>
+                  <span className={`text-[12px] c-dimmed ${frame.overflow === 'scroll' ? 'is-active' : ''}`}>Scroll</span>
                 </button>
               </div>
             </Popover>

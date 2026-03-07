@@ -33,7 +33,7 @@ export function ToggleGroup<T extends string>({
               ? 'fg-disabled cursor-not-allowed'
               : value === opt.value
                 ? 'fg-default bg-inset'
-                : 'fg-subtle hover:fg-muted'
+                : 'c-dimmed-i'
           }`}
           disabled={opt.disabled}
         >

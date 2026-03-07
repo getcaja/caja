@@ -17,9 +17,7 @@ export function PageNode({ page }: PageNodeProps) {
   const duplicatePage = useFrameStore((s) => s.duplicatePage)
   const removePage = useFrameStore((s) => s.removePage)
 
-  const pageSelected = useFrameStore((s) => s.pageSelected)
   const isActive = page.id === activePageId
-  const isFocused = isActive && pageSelected
 
   const nameEdit = useInlineEdit((v) => renamePage(page.id, v))
   const ctxMenu = useContextMenu()

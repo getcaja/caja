@@ -43,7 +43,7 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides }: { f
             initialValue="__default__"
             tooltip="Font Family"
           />
-          <div className="w-5 shrink-0" />
+          <div className="c-slot-spacer" />
         </div>
 
         {/* Color */}
@@ -55,7 +55,7 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides }: { f
             classPrefix="text"
             tooltip="Text Color"
           />
-          <div className="w-5 shrink-0" />
+          <div className="c-slot-spacer" />
         </div>
 
         {/* Weight + Size */}
@@ -84,7 +84,7 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides }: { f
             inlineLabel={lbl('S')}
             tooltip="Font Size"
           />
-          <div className="w-5 shrink-0" />
+          <div className="c-slot-spacer" />
         </div>
 
         {/* Leading + Tracking */}
@@ -113,7 +113,7 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides }: { f
             inlineLabel={<MoveHorizontal size={12} />}
             tooltip="Letter Spacing"
           />
-          <div className="w-5 shrink-0" />
+          <div className="c-slot-spacer" />
         </div>
 
         {/* Align H + Align V + More */}
@@ -145,11 +145,7 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides }: { f
               <button
                 type="button"
                 title="Text Style"
-                className={`w-5 h-5 shrink-0 flex items-center justify-center rounded ${
-                  moreActive
-                    ? 'text-accent bg-accent/10'
-                    : 'fg-subtle hover:fg-muted hover:bg-inset'
-                }`}
+                className={`c-slot ${moreActive ? 'is-active' : ''}`}
               >
                 <Settings2 size={12} />
               </button>
@@ -165,7 +161,7 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides }: { f
                   className={`flex-1 h-6 px-1.5 rounded flex items-center justify-center ${
                     frame.fontStyle === 'italic'
                       ? 'bg-emphasis fg-default shadow-sm'
-                      : 'fg-subtle hover:fg-muted'
+                      : 'c-action'
                   }`}
                 >
                   <Italic size={12} />
@@ -176,7 +172,7 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides }: { f
                   className={`flex-1 h-6 px-1.5 rounded flex items-center justify-center ${
                     frame.textDecoration === 'underline'
                       ? 'bg-emphasis fg-default shadow-sm'
-                      : 'fg-subtle hover:fg-muted'
+                      : 'c-action'
                   }`}
                 >
                   <Underline size={12} />
@@ -187,7 +183,7 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides }: { f
                   className={`flex-1 h-6 px-1.5 rounded flex items-center justify-center ${
                     frame.textDecoration === 'line-through'
                       ? 'bg-emphasis fg-default shadow-sm'
-                      : 'fg-subtle hover:fg-muted'
+                      : 'c-action'
                   }`}
                 >
                   <Strikethrough size={12} />

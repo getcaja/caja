@@ -17,7 +17,7 @@ export const DEFAULT_DARK: CajaTheme = {
   base: {
     surface: '#1e1e1e',
     text: '#ffffff',
-    accent: '#0c8ce9',
+    accent: '#3378F6',
     destructive: '#ef4444',
   },
 }
@@ -29,7 +29,7 @@ export const DEFAULT_LIGHT: CajaTheme = {
   base: {
     surface: '#ffffff',
     text: '#1a1a1a',
-    accent: '#0c8ce9',
+    accent: '#3378F6',
     destructive: '#ef4444',
   },
 }

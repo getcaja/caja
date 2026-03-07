@@ -56,7 +56,7 @@ export function FillSection({ frame, hasOverrides, onResetOverrides }: { frame: 
             onChange={(v) => setMode(v as FillMode)}
             className="flex-1"
           />
-          <div className="w-5 shrink-0" />
+          <div className="c-slot-spacer" />
         </div>
 
         {/* Solid mode */}
@@ -69,7 +69,7 @@ export function FillSection({ frame, hasOverrides, onResetOverrides }: { frame: 
               classPrefix="bg"
               tooltip="Background Color"
             />
-            <div className="w-5 shrink-0" />
+            <div className="c-slot-spacer" />
           </div>
         )}
 
@@ -80,7 +80,7 @@ export function FillSection({ frame, hasOverrides, onResetOverrides }: { frame: 
               <div className="flex-1 min-w-0">
                 {frame.bgImage && isLocalAssetPath(frame.bgImage) ? (
                   /* Read-only display for local assets — show filename only */
-                  <div className="c-scale-input flex items-center gap-0.5 pr-6 overflow-hidden relative">
+                  <div className="c-scale-input flex items-center pr-6 overflow-hidden relative">
                     <span className="w-4 shrink-0 flex items-center justify-center fg-muted">
                       <ImageIcon size={12} />
                     </span>
@@ -91,7 +91,7 @@ export function FillSection({ frame, hasOverrides, onResetOverrides }: { frame: 
                       type="button"
                       tabIndex={-1}
                       onClick={() => updateFrame(frame.id, { bgImage: '' })}
-                      className="absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-subtle hover:text-destructive hover:bg-inset"
+                      className="c-input-btn hover:!text-destructive"
                     >
                       <X size={12} />
                     </button>
@@ -99,10 +99,10 @@ export function FillSection({ frame, hasOverrides, onResetOverrides }: { frame: 
                 ) : (
                   /* Editable input for URLs or empty state */
                   <div
-                    className="c-scale-input flex items-center gap-0.5 pr-6 overflow-hidden cursor-text relative"
+                    className="c-scale-input flex items-center pr-6 overflow-hidden cursor-text relative"
                     onClick={(e) => { if (e.target === e.currentTarget) (e.currentTarget.querySelector('input') as HTMLInputElement)?.focus() }}
                   >
-                    <span className={`w-4 shrink-0 flex items-center justify-center ${frame.bgImage ? 'fg-muted' : 'fg-subtle'}`}>
+                    <span className={`w-4 shrink-0 flex items-center justify-center c-dimmed ${frame.bgImage ? 'is-active' : ''}`}>
                       <ImageIcon size={12} />
                     </span>
                     <input
@@ -117,7 +117,7 @@ export function FillSection({ frame, hasOverrides, onResetOverrides }: { frame: 
                         type="button"
                         tabIndex={-1}
                         onClick={() => updateFrame(frame.id, { bgImage: '' })}
-                        className="absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-subtle hover:text-destructive hover:bg-inset"
+                        className="c-input-btn hover:!text-destructive"
                       >
                         <X size={12} />
                       </button>
@@ -133,7 +133,7 @@ export function FillSection({ frame, hasOverrides, onResetOverrides }: { frame: 
                             console.error('Import asset failed:', err)
                           }
                         }}
-                        className="absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-subtle hover:fg-muted hover:bg-inset"
+                        className="c-input-btn"
                       >
                         <Upload size={12} />
                       </button>
@@ -141,7 +141,7 @@ export function FillSection({ frame, hasOverrides, onResetOverrides }: { frame: 
                   </div>
                 )}
               </div>
-              <div className="w-5 shrink-0" />
+              <div className="c-slot-spacer" />
             </div>
             {frame.bgImage && (
               <>
@@ -164,7 +164,7 @@ export function FillSection({ frame, hasOverrides, onResetOverrides }: { frame: 
                     initialValue="center"
                     tooltip="Background Position"
                   />
-                  <div className="w-5 shrink-0" />
+                  <div className="c-slot-spacer" />
                 </div>
                 <div className="flex items-center gap-2">
                   <Select
@@ -176,7 +176,7 @@ export function FillSection({ frame, hasOverrides, onResetOverrides }: { frame: 
                     initialValue="repeat"
                     tooltip="Background Repeat"
                   />
-                  <div className="w-5 shrink-0" />
+                  <div className="c-slot-spacer" />
                 </div>
               </>
             )}
