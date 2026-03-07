@@ -24,12 +24,20 @@
         "titleBarStyle": "Overlay",
         "hiddenTitle": true,
         "trafficLightPosition": { "x": 13, "y": 16 },
-        "transparent": true
+        "transparent": true,
+        "windowEffects": {
+          "effects": ["underWindowBackground", "fullScreenUI"],
+          "state": "active"
+        }
       }
     ],
     "macOSPrivateApi": true,
     "security": {
-      "csp": null
+      "csp": null,
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["$HOME/**", "$APPDATA/**"]
+      }
     }
   },
   "plugins": {

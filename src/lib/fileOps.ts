@@ -2,7 +2,7 @@ import { save, open } from '@tauri-apps/plugin-dialog'
 import { readTextFile, writeTextFile, exists } from '@tauri-apps/plugin-fs'
 import type { Page } from '../types/frame'
 import type { ComponentData } from '../store/catalogStore'
-import { relativizeAssetPaths, absolutizeAssetPaths, migrateAssetsOnSave } from './assetOps'
+import { relativizeAssetPaths, absolutizeAssetPaths, migrateAssetsOnSave, garbageCollectAssets } from './assetOps'
 
 const FILE_EXTENSION = 'caja'
 const FILE_FILTER = { name: 'Caja Layout', extensions: [FILE_EXTENSION] }
@@ -24,6 +24,7 @@ export async function saveFile(pages: Page[], activePageId: string, components: 
       return saveFileAs(pages, activePageId, components)
     }
     await migrateAssetsOnSave(pages, currentPath)
+    await garbageCollectAssets(pages, currentPath)
     const portablePages = relativizeAssetPaths(pages)
     const data: CajaFileData = { pages: portablePages as Page[], activePageId, components }
     await writeTextFile(currentPath, JSON.stringify(data, null, 2))
@@ -39,6 +40,7 @@ export async function saveFileAs(pages: Page[], activePageId: string, components
   })
   if (!path) return null
   await migrateAssetsOnSave(pages, path)
+  await garbageCollectAssets(pages, path)
   const portablePages = relativizeAssetPaths(pages)
   const data: CajaFileData = { pages: portablePages as Page[], activePageId, components }
   await writeTextFile(path, JSON.stringify(data, null, 2))

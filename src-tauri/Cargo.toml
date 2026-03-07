@@ -13,7 +13,7 @@ crate-type = ["lib", "cdylib", "staticlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["macos-private-api", "image-png"] }
+tauri = { version = "2", features = ["protocol-asset", "macos-private-api", "image-png"] }
 tauri-plugin-opener = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
@@ -31,4 +31,3 @@ uuid = { version = "1", features = ["v4"] }
 cocoa = "0.26"
 objc = "0.2"
 block = "0.1"
-window-vibrancy = "0.5"

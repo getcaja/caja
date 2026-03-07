@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useFrameStore } from '../../store/frameStore'
 import { McpModal } from '../McpModal/McpModal'
 import { ShortcutsListener } from './ShortcutsPanel'
@@ -6,6 +6,8 @@ import { Cable, Loader2, Eye } from 'lucide-react'
 
 const TRAFFIC_LIGHT_WIDTH = 70
 const TITLE_BAR_HEIGHT = 38
+
+const isTauri = '__TAURI_INTERNALS__' in window
 
 export function TitleBar() {
   const filePath = useFrameStore((s) => s.filePath)
@@ -17,6 +19,23 @@ export function TitleBar() {
   const setPreviewMode = useFrameStore((s) => s.setPreviewMode)
   const setCanvasTool = useFrameStore((s) => s.setCanvasTool)
   const [showMcp, setShowMcp] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+
+  useEffect(() => {
+    if (!isTauri) return
+    let cancelled = false
+    let unlisten: (() => void) | undefined
+    import('@tauri-apps/api/event').then(({ listen }) => {
+      if (cancelled) return
+      listen<boolean>('fullscreen-change', (e) => {
+        setIsFullscreen(e.payload)
+      }).then((fn) => {
+        if (cancelled) { fn(); return }
+        unlisten = fn
+      })
+    })
+    return () => { cancelled = true; unlisten?.() }
+  }, [])
 
   const fileName = filePath ? filePath.split('/').pop()?.replace('.caja', '') : projectName ?? 'Untitled'
 
@@ -25,7 +44,7 @@ export function TitleBar() {
   return (
     <div
       className="relative flex items-center border-b border-border select-none"
-      style={{ height: TITLE_BAR_HEIGHT, paddingLeft: TRAFFIC_LIGHT_WIDTH, backgroundColor: 'var(--panel-bg)' }}
+      style={{ height: TITLE_BAR_HEIGHT, paddingLeft: isFullscreen ? 8 : TRAFFIC_LIGHT_WIDTH, backgroundColor: 'var(--panel-bg)' }}
       data-tauri-drag-region
     >
       {/* Centered title — absolute so it's truly centered across full width */}
