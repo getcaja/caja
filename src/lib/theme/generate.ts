@@ -61,11 +61,15 @@ export function deriveTokens(theme: CajaTheme): ThemeTokens {
   }
 }
 
+// Surface tokens are owned by index.css (supports vibrancy rgba overrides).
+// Generated theme CSS must not overwrite them.
+const CSS_OWNED_KEYS = new Set(['surface-0', 'surface-1', 'surface-2', 'surface-3', 'canvas-bg'])
+
 export function generateThemeCSS(theme: CajaTheme): string {
   const tokens = deriveTokens(theme)
-  const lines = Object.entries(tokens).map(
-    ([key, value]) => `  --color-${key}: ${value};`,
-  )
+  const lines = Object.entries(tokens)
+    .filter(([key]) => !CSS_OWNED_KEYS.has(key))
+    .map(([key, value]) => `  --color-${key}: ${value};`)
   return `:root {\n${lines.join('\n')}\n}`
 }
 

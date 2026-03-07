@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Settings2, Square, LayoutGrid, Columns3, Rows3, AlignHorizontalSpaceAround, AlignVerticalSpaceAround, Check } from 'lucide-react'
 import { FlexColumnIcon, FlexRowIcon } from '../icons/LayoutIcons'
 import type { Frame, BoxElement } from '../../types/frame'
@@ -35,6 +35,16 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
   const boxFrame = isBox ? (frame as BoxElement) : null
   const isFlex = boxFrame?.display === 'flex' || boxFrame?.display === 'inline-flex'
   const isGrid = boxFrame?.display === 'grid'
+
+  // Clear overlays when display mode changes or component unmounts
+  const display = boxFrame?.display
+  useEffect(() => {
+    return () => {
+      setShowGapOverlay(false)
+      setShowPaddingOverlay(false)
+      setShowMarginOverlay(false)
+    }
+  }, [frame.id, display, setShowGapOverlay, setShowPaddingOverlay, setShowMarginOverlay])
 
   const parentIsFlex = parentDisplay === 'flex' || parentDisplay === 'inline-flex'
   const parentIsGrid = parentDisplay === 'grid'
@@ -91,6 +101,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                     updates.display = 'grid'
                   }
                   updateFrame(frame.id, updates)
+                  setShowGapOverlay(false)
                 }}
                 className="flex-1"
               />

@@ -21,7 +21,8 @@
 
   /* ── Surfaces (Δ14 uniform steps) ── */
   --color-surface-0: #1e1e1e;
-  --color-surface-vibrancy: rgba(14, 14, 14, 0.50);
+  --color-surface-sunken: #161616;
+  --color-surface-vibrancy: rgba(30, 30, 30, 0.90);
   --color-surface-1: #2c2c2c;
   --color-surface-2: #3a3a3a;
   --color-surface-3: #484848;
@@ -59,7 +60,7 @@
   --panel-border:        var(--color-border);
 
   /* Menu (dropdowns, context menus, popovers) */
-  --menu-bg:             var(--color-surface-0);
+  --menu-bg:             var(--color-surface-sunken);
   --menu-bg-hover:       var(--color-surface-1);
   --menu-border:         var(--color-border-accent);
   --menu-text:           var(--fg-muted);
@@ -141,7 +142,7 @@
   color: var(--fg-muted);
 }
 .c-slot:hover           { color: var(--fg-default); background: var(--bg-inset); }
-.c-slot.is-active       { color: #fff; }
+.c-slot.is-active       { color: var(--color-accent); }
 .c-slot-spacer          { width: 1.5rem; flex-shrink: 0; }
 
 /* Token pill inside inputs */

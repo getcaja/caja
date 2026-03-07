@@ -235,8 +235,9 @@ fn set_menu_check(app: AppHandle, id: String, checked: bool) -> Result<(), Strin
 // Values must match trafficLightPosition { x: 13, y: 16 } in tauri.conf.json.
 
 #[cfg(target_os = "macos")]
-fn reposition_traffic_lights_after_title(ns_window: cocoa::base::id) {
-    // Same nudge trick: resize by 1pt and back to trigger TAO's native repositioning.
+fn reposition_traffic_lights(ns_window: cocoa::base::id) {
+    // Nudge window size by 1pt and back to trigger TAO's native repositioning
+    // of traffic light buttons to the trafficLightPosition from tauri.conf.json.
     unsafe {
         let frame: cocoa::foundation::NSRect = msg_send![ns_window, frame];
         let mut nudged = frame;
@@ -381,8 +382,18 @@ fn set_window_title(app: AppHandle, title: String) {
         #[cfg(target_os = "macos")]
         {
             let ns_window = window.ns_window().unwrap() as cocoa::base::id;
-            reposition_traffic_lights_after_title(ns_window);
+            reposition_traffic_lights(ns_window);
         }
+    }
+}
+
+// Tauri command: fix traffic light position (call after HMR or any event that resets them)
+#[tauri::command]
+fn fix_traffic_lights(app: AppHandle) {
+    #[cfg(target_os = "macos")]
+    if let Some(window) = app.get_webview_window("main") {
+        let ns_window = window.ns_window().unwrap() as cocoa::base::id;
+        reposition_traffic_lights(ns_window);
     }
 }
 
@@ -467,7 +478,7 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
-        .invoke_handler(tauri::generate_handler![mcp_respond, set_menu_check, set_window_title, install_mcp, resolve_mcp_server_path, get_recent_files, add_recent_file, clear_recent_files, check_has_launched, mark_has_launched])
+        .invoke_handler(tauri::generate_handler![mcp_respond, set_menu_check, set_window_title, fix_traffic_lights, install_mcp, resolve_mcp_server_path, get_recent_files, add_recent_file, clear_recent_files, check_has_launched, mark_has_launched])
         .setup(|app| {
             // ── Native Menu ──
             let icon = Image::from_bytes(include_bytes!("../icons/128x128@2x.png"))
@@ -637,8 +648,12 @@ pub fn run() {
 
             let shortcuts_item = MenuItemBuilder::with_id("keyboard-shortcuts", "Keyboard Shortcuts")
                 .build(app)?;
+            let docs_item = MenuItemBuilder::with_id("open-docs", "Documentation")
+                .build(app)?;
 
             let help_menu = SubmenuBuilder::new(app, "Help")
+                .item(&docs_item)
+                .separator()
                 .item(&shortcuts_item)
                 .build()?;
 

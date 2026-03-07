@@ -30,7 +30,7 @@ export function ColorInput({
   const [focused, setFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Track committed token (ignores preview changes)
+  // Track committed token (ignores preview hover changes while grid is open)
   const committedTokenRef = useRef(token)
   if (!showGrid) committedTokenRef.current = token
 
@@ -54,6 +54,7 @@ export function ColorInput({
 
   const removeToken = () => {
     onChange({ mode: 'custom', value: colorValue })
+    committedTokenRef.current = null
     setDraft(colorValue)
     requestAnimationFrame(() => {
       inputRef.current?.focus()
@@ -142,7 +143,7 @@ export function ColorInput({
             <ColorGridPicker
               value={value}
               onChange={onChange}
-              onCommit={() => setShowGrid(false)}
+              onCommit={() => { committedTokenRef.current = null; setShowGrid(false) }}
               classPrefix={classPrefix}
             />
           </div>

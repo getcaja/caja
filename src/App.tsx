@@ -349,6 +349,9 @@ function App() {
           case 'expand-all':
             useFrameStore.getState().expandAll()
             break
+          case 'open-docs':
+            window.open('https://docs.getcaja.app', '_blank')
+            break
           case 'keyboard-shortcuts':
             window.dispatchEvent(new Event('show-keyboard-shortcuts'))
             break

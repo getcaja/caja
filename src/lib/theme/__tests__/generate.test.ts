@@ -95,11 +95,11 @@ describe('generateThemeCSS', () => {
 
   it('contains all expected properties', () => {
     const expected = [
-      'surface-0', 'surface-1', 'surface-2', 'surface-3',
+      // surface-0..3, canvas-bg: owned by index.css (vibrancy support)
       'text-primary', 'text-secondary', 'text-muted',
       'border', 'border-accent',
       'accent', 'accent-hover',
-      'destructive', 'canvas-bg',
+      'destructive',
     ]
     for (const key of expected) {
       expect(css, `Missing --color-${key}`).toContain(`--color-${key}:`)
