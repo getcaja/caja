@@ -49,6 +49,7 @@ function savePanelState(state: { leftWidth: number; rightWidth: number }) {
 
 const isTauri = '__TAURI_INTERNALS__' in window
 
+
 // TODO: Global ErrorBoundary component for React render crashes
 
 /** Fire-and-forget Tauri menu sync — logs on failure instead of silently swallowing */
@@ -65,6 +66,8 @@ function App() {
   const [leftCollapsed, setLeftCollapsed] = useState(false)
   const [rightCollapsed, setRightCollapsed] = useState(false)
   const [layoutResetKey, setLayoutResetKey] = useState(0)
+  // Tracks whether the DOM paste event fired after ⌘V keydown (see paste handling comment)
+  const pasteHandledRef = useRef(false)
 
   // Persist panel state on change
   useEffect(() => {
@@ -105,11 +108,14 @@ function App() {
 
   const recentFilesRef = useRef<string[]>([])
 
-  /** Add path to recent files (fire-and-forget) */
+  /** Add path to recent files and re-sync the local ref */
   const addToRecent = useCallback((path: string) => {
     if (!isTauri) return
     import('@tauri-apps/api/core').then(({ invoke }) => {
-      invoke('add_recent_file', { path }).catch((err: unknown) => console.warn('Failed to add recent file:', err))
+      invoke('add_recent_file', { path })
+        .then(() => invoke<string[]>('get_recent_files'))
+        .then((files) => { recentFilesRef.current = files })
+        .catch((err: unknown) => console.warn('Failed to add recent file:', err))
     })
   }, [])
 
@@ -340,14 +346,69 @@ function App() {
           case 'check-for-updates':
             checkForUpdates()
             break
-          // Edit menu uses native WebView items (undo/redo/cut/copy/paste/select-all).
-          // They are NOT emitted as menu-event — the WebView handles them natively,
-          // so they work correctly in inputs, text fields, and dev tools.
+          // Edit menu — custom items with accelerators fire menu-event.
+          // Check activeElement to route: text input → execCommand, canvas → app logic.
+          case 'edit-undo': {
+            const el = document.activeElement as HTMLElement
+            if (el?.tagName === 'INPUT' || el?.tagName === 'TEXTAREA' || el?.isContentEditable) {
+              document.execCommand('undo')
+            } else {
+              const { editingComponentId } = useFrameStore.getState()
+              if (editingComponentId) {
+                useCatalogStore.getState().undo()
+              } else {
+                const nav = undoNav(useFrameStore.getState().selectedId)
+                if (nav) {
+                  const s = useFrameStore.getState()
+                  if (nav.id) s.expandToFrame(nav.id)
+                  s.select(nav.id)
+                } else {
+                  undo()
+                }
+              }
+            }
+            break
+          }
+          case 'edit-redo': {
+            const el = document.activeElement as HTMLElement
+            if (el?.tagName === 'INPUT' || el?.tagName === 'TEXTAREA' || el?.isContentEditable) {
+              document.execCommand('redo')
+            } else {
+              const { editingComponentId } = useFrameStore.getState()
+              if (editingComponentId) {
+                useCatalogStore.getState().redo()
+              } else {
+                const nav = redoNav(useFrameStore.getState().selectedId)
+                if (nav) {
+                  const s = useFrameStore.getState()
+                  if (nav.id) s.expandToFrame(nav.id)
+                  s.select(nav.id)
+                } else {
+                  redo()
+                }
+              }
+            }
+            break
+          }
+          // Cut/Copy/Paste/Select All use predefined menu items (NSResponder chain)
+          // — they don't fire menu-event. Canvas operations are handled by DOM
+          // copy/paste/cut event listeners registered in the keyboard shortcut effect.
+          case 'edit-duplicate': {
+            const el = document.activeElement as HTMLElement
+            if (el?.tagName !== 'INPUT' && el?.tagName !== 'TEXTAREA' && !el?.isContentEditable) {
+              const s = useFrameStore.getState()
+              if (s.selectedId && !isRootId(s.selectedId)) s.duplicateFrame(s.selectedId)
+            }
+            break
+          }
           case 'collapse-all':
             useFrameStore.getState().collapseAll()
             break
           case 'expand-all':
             useFrameStore.getState().expandAll()
+            break
+          case 'open-docs':
+            window.open('https://docs.getcaja.app', '_blank')
             break
           case 'keyboard-shortcuts':
             window.dispatchEvent(new Event('show-keyboard-shortcuts'))
@@ -444,6 +505,9 @@ function App() {
     const handler = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase()
       if ((e.metaKey || e.ctrlKey) && key === 'z' && !e.shiftKey) {
+        const tag = (e.target as HTMLElement).tagName
+        const isEditable = (e.target as HTMLElement).isContentEditable
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || isEditable) return
         e.preventDefault()
         const { editingComponentId } = useFrameStore.getState()
         if (editingComponentId) {
@@ -461,6 +525,9 @@ function App() {
         }
       }
       if ((e.metaKey || e.ctrlKey) && key === 'z' && e.shiftKey) {
+        const tag = (e.target as HTMLElement).tagName
+        const isEditable = (e.target as HTMLElement).isContentEditable
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || isEditable) return
         e.preventDefault()
         const { editingComponentId } = useFrameStore.getState()
         if (editingComponentId) {
@@ -556,31 +623,64 @@ function App() {
           if (s.selectedId && !isRootId(s.selectedId)) s.duplicateFrame(s.selectedId)
         }
       }
-      // Cmd+C — copy (global)
-      if ((e.metaKey || e.ctrlKey) && key === 'c' && !e.shiftKey && !e.defaultPrevented) {
+      // Cmd+C — copy (skip defaultPrevented: predefined Copy menu item sets it)
+      if ((e.metaKey || e.ctrlKey) && key === 'c' && !e.shiftKey) {
         const tag = (e.target as HTMLElement).tagName
         const isEditable = (e.target as HTMLElement).isContentEditable
         if (tag !== 'INPUT' && tag !== 'TEXTAREA' && !isEditable) {
           e.preventDefault()
           useFrameStore.getState().copySelected()
+          // Write text marker to system clipboard so read_clipboard_image returns
+          // null on next paste (prevents stale image from overriding frame paste)
+          navigator.clipboard?.writeText('__caja_copy__').catch(() => {})
         }
       }
-      // Cmd+X — cut (global)
-      if ((e.metaKey || e.ctrlKey) && key === 'x' && !e.shiftKey && !e.defaultPrevented) {
+      // Cmd+X — cut (skip defaultPrevented: predefined Cut menu item sets it)
+      if ((e.metaKey || e.ctrlKey) && key === 'x' && !e.shiftKey) {
         const tag = (e.target as HTMLElement).tagName
         const isEditable = (e.target as HTMLElement).isContentEditable
         if (tag !== 'INPUT' && tag !== 'TEXTAREA' && !isEditable) {
           e.preventDefault()
           useFrameStore.getState().cutSelected()
+          navigator.clipboard?.writeText('__caja_copy__').catch(() => {})
         }
       }
-      // Cmd+V — paste (global)
-      if ((e.metaKey || e.ctrlKey) && key === 'v' && !e.shiftKey && !e.defaultPrevented) {
+      // Cmd+V — paste: The predefined Paste menu item dispatches a DOM paste event
+      // via NSResponder, but ONLY when the clipboard has text/HTML. When the clipboard
+      // has only image data (e.g. "Copy Image" from Safari), no DOM paste event fires.
+      // We detect this by setting a flag here and checking it after a microtask.
+      // If the paste event fired, the onPaste handler clears the flag.
+      // If not (image-only clipboard), we call read_clipboard_image directly.
+      if ((e.metaKey || e.ctrlKey) && key === 'v' && !e.shiftKey) {
         const tag = (e.target as HTMLElement).tagName
         const isEditable = (e.target as HTMLElement).isContentEditable
-        if (tag !== 'INPUT' && tag !== 'TEXTAREA' && !isEditable) {
-          e.preventDefault()
-          useFrameStore.getState().pasteClipboard()
+        if (tag !== 'INPUT' && tag !== 'TEXTAREA' && !isEditable && isTauri) {
+          pasteHandledRef.current = false
+          setTimeout(() => {
+            if (!pasteHandledRef.current) {
+              // No paste event fired — clipboard likely has only image data
+              import('@tauri-apps/api/core').then(({ invoke }) =>
+                invoke<{ data: string; mime: string; url: string } | null>('read_clipboard_image')
+              ).then(async (result) => {
+                if (!result) return
+                const assetOps = await import('./lib/assetOps')
+                const fp = useFrameStore.getState().filePath
+                if (result.url && !result.data) {
+                  // URL-only: download original file (preserves GIF animation)
+                  const saved = await assetOps.downloadAsset(result.url, fp)
+                  const s = useFrameStore.getState()
+                  s.addChild(s.selectedId || s.root.id, 'image', { src: saved.localPath })
+                } else if (result.data) {
+                  const binary = atob(result.data)
+                  const bytes = new Uint8Array(binary.length)
+                  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+                  const saved = await assetOps.saveImageBytes(bytes, result.mime, fp)
+                  const s = useFrameStore.getState()
+                  s.addChild(s.selectedId || s.root.id, 'image', { src: saved.localPath })
+                }
+              }).catch(() => {})
+            }
+          }, 50)
         }
       }
       if ((e.metaKey || e.ctrlKey) && e.key === 's' && !e.shiftKey) {
@@ -677,9 +777,122 @@ function App() {
       }
     }
 
+    // DOM clipboard events — handle copy/cut/paste for canvas frames.
+    // These fire from both keyboard shortcuts (via NSResponder chain on macOS)
+    // and Edit menu clicks (predefined items trigger NSResponder → DOM event).
+    // For text inputs, the events bubble but we let the default action run.
+    const onCopy = (e: Event) => {
+      const el = document.activeElement as HTMLElement
+      if (el?.tagName !== 'INPUT' && el?.tagName !== 'TEXTAREA' && !el?.isContentEditable) {
+        e.preventDefault()
+        useFrameStore.getState().copySelected()
+        navigator.clipboard?.writeText('__caja_copy__').catch(() => {})
+      }
+    }
+    const onCut = (e: Event) => {
+      const el = document.activeElement as HTMLElement
+      if (el?.tagName !== 'INPUT' && el?.tagName !== 'TEXTAREA' && !el?.isContentEditable) {
+        e.preventDefault()
+        useFrameStore.getState().cutSelected()
+        navigator.clipboard?.writeText('__caja_copy__').catch(() => {})
+      }
+    }
+    const onPaste = (e: Event) => {
+      pasteHandledRef.current = true // Signal to ⌘V keydown that paste event fired
+      const el = document.activeElement as HTMLElement
+      if (el?.tagName === 'INPUT' || el?.tagName === 'TEXTAREA' || el?.isContentEditable) return
+      if (!isTauri) { e.preventDefault(); useFrameStore.getState().pasteClipboard(); return }
+
+      const ce = e as ClipboardEvent
+      const cd = ce.clipboardData
+      if (!cd) { e.preventDefault(); useFrameStore.getState().pasteClipboard(); return }
+
+      // 1. Check files (drag-drop, screenshots)
+      const file = cd.files?.length
+        ? [...cd.files].find(f => f.type.startsWith('image/'))
+        : undefined
+
+      // 2. Check items (browser "Copy Image" puts blob in items, not files)
+      const item = !file && cd.items?.length
+        ? [...cd.items].find(i => i.type.startsWith('image/'))
+        : undefined
+
+      // 3. Check HTML for <img src="..."> (browser "Copy Image" also includes HTML)
+      const html = !file && !item ? cd.getData('text/html') : ''
+      const imgMatch = html ? html.match(/<img[^>]+src=["']([^"']+)["']/) : null
+      const imgUrl = imgMatch?.[1]
+
+      if (file || item || imgUrl) {
+        e.preventDefault()
+        const insertImage = async () => {
+          const assetOps = await import('./lib/assetOps')
+          const filePath = useFrameStore.getState().filePath
+
+          if (file || item) {
+            // Get blob from file or item
+            const blob = file || item!.getAsFile()
+            if (!blob) return
+            const buf = await blob.arrayBuffer()
+            const result = await assetOps.saveImageBytes(new Uint8Array(buf), blob.type, filePath)
+            const s = useFrameStore.getState()
+            s.addChild(s.selectedId || s.root.id, 'image', { src: result.localPath })
+          } else if (imgUrl) {
+            // Download external image URL
+            const result = await assetOps.downloadAsset(imgUrl, filePath)
+            const s = useFrameStore.getState()
+            s.addChild(s.selectedId || s.root.id, 'image', { src: result.localPath })
+          }
+        }
+        insertImage().catch(err => console.warn('Failed to paste image:', err))
+        return
+      }
+
+      // No image in clipboardData — try NSPasteboard first (Tauri), fall back to internal clipboard.
+      // The __caja_copy__ marker written during ⌘C ensures read_clipboard_image returns null
+      // after copying frames, so internal clipboard is used correctly.
+      e.preventDefault()
+      if (isTauri) {
+        import('@tauri-apps/api/core').then(({ invoke }) =>
+          invoke<{ data: string; mime: string; url: string } | null>('read_clipboard_image')
+        ).then(async (result) => {
+          if (result?.url && !result.data) {
+            // URL-only: download original file (preserves GIF animation)
+            const assetOps = await import('./lib/assetOps')
+            const filePath = useFrameStore.getState().filePath
+            const saved = await assetOps.downloadAsset(result.url, filePath)
+            const s = useFrameStore.getState()
+            s.addChild(s.selectedId || s.root.id, 'image', { src: saved.localPath })
+          } else if (result?.data) {
+            const binary = atob(result.data)
+            const bytes = new Uint8Array(binary.length)
+            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+            const assetOps = await import('./lib/assetOps')
+            const filePath = useFrameStore.getState().filePath
+            const saved = await assetOps.saveImageBytes(bytes, result.mime, filePath)
+            const s = useFrameStore.getState()
+            s.addChild(s.selectedId || s.root.id, 'image', { src: saved.localPath })
+          } else {
+            // No image on system clipboard — use internal clipboard
+            useFrameStore.getState().pasteClipboard()
+          }
+        }).catch(() => {
+          // read_clipboard_image failed — fall back to internal clipboard
+          useFrameStore.getState().pasteClipboard()
+        })
+      } else {
+        useFrameStore.getState().pasteClipboard()
+      }
+    }
+
     window.addEventListener('keydown', handler)
+    document.addEventListener('copy', onCopy)
+    document.addEventListener('cut', onCut)
+    document.addEventListener('paste', onPaste)
     return () => {
       window.removeEventListener('keydown', handler)
+      document.removeEventListener('copy', onCopy)
+      document.removeEventListener('cut', onCut)
+      document.removeEventListener('paste', onPaste)
     }
   }, [undo, redo, handleSave, handleSaveAs, handleOpen])
 

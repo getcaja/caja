@@ -4,47 +4,98 @@
   --font-mono: SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, monospace;
   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 
-  /* Surfaces */
-  --color-surface-0: #0e0e0e;
-  --color-surface-1: #161616;
-  --color-surface-2: #27272a;
-  --color-surface-3: #3f3f46;
+  /* ── Base Ramp ──
+     Inspired by Figma's grey ramp. Dark mode UI lives in 900→600.
+     Steps are intentionally compressed (~12-14 hex apart). */
+  --color-ramp-black: #000000;
+  --color-ramp-900: #1a1a1a;
+  --color-ramp-800: #262626;
+  --color-ramp-700: #333333;
+  --color-ramp-600: #404040;
+  --color-ramp-500: #6b6b6b;
+  --color-ramp-400: #8c8c8c;
+  --color-ramp-300: #b3b3b3;
+  --color-ramp-200: #d9d9d9;
+  --color-ramp-100: #f0f0f0;
+  --color-ramp-white: #ffffff;
 
-  /* Accent — single color for the entire UI */
-  --color-accent: #0c8ce9;
-  --color-accent-hover: #47b5f5;
+  /* ── Surfaces (Δ14 uniform steps) ── */
+  --color-surface-0: #1e1e1e;
+  --color-surface-sunken: #161616;
+  --color-surface-vibrancy: rgba(30, 30, 30, 0.90);
+  --color-surface-1: #2c2c2c;
+  --color-surface-2: #3a3a3a;
+  --color-surface-3: #484848;
 
-  /* Text */
-  --color-text-primary: #f0f0f0;
-  --color-text-secondary: #a1a1a1;
-  --color-text-muted: #717171;
+  /* ── Accent ── */
+  --color-accent: #3378F6;
+  --color-accent-hover: #5A95F8;
+  --color-accent-text: color-mix(in srgb, #3378F6 65%, white);
 
-  /* Borders — white with low opacity for vibrancy compatibility */
-  --color-border: rgb(255 255 255 / 0.08);
-  --color-border-accent: rgb(255 255 255 / 0.12);
+  /* ── Text (3-tier: 100% / 70% / 47%) ── */
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #b3b3b3;
+  --color-text-muted: #787878;
 
-  /* Semantic */
+  /* ── Borders (solid, between surface steps) ── */
+  --color-border: #333333;
+  --color-border-accent: #3a3a3a;
+
+  /* ── Semantic ── */
   --color-destructive: #ef4444;
 
-  /* Canvas */
-  --color-canvas-bg: #0e0e11;
+  /* ── Canvas ── */
+  --color-canvas-bg: #161616;
 }
 
-/* ── Design tokens (Primer-inspired fg/bg/border) ──
-   Vibrancy-safe: white overlays that stack on translucent panels.
-   More layers = brighter. Works on any background. */
+/* ── Semantic Context Tokens ──
+   Each UI context defines its own bg/text/border hierarchy.
+   Components consume these, never raw ramp values.
+   Phase 1: mapped to existing values for zero visual change. */
 :root {
-  /* Foreground — text & icons (solid to avoid SVG stroke-overlap artifacts) */
-  --fg-default:  #fff;
-  --fg-muted:    #a1a1a1;
-  --fg-subtle:   #737373;
-  --fg-disabled: #333;
+  /* Panel (left sidebar, right properties) */
+  --panel-bg:            var(--color-surface-vibrancy);
+  --panel-bg-hover:      var(--color-surface-1);
+  --panel-bg-secondary:  var(--color-surface-2);
+  --panel-border:        var(--color-border);
 
-  /* Background — overlays on vibrancy panels */
-  --bg-overlay:  rgb(20 20 20 / 0.75);
-  --bg-subtle:   rgb(255 255 255 / 0.05);
-  --bg-inset:    rgb(255 255 255 / 0.10);
-  --bg-emphasis: rgb(255 255 255 / 0.15);
+  /* Menu (dropdowns, context menus, popovers) */
+  --menu-bg:             var(--color-surface-sunken);
+  --menu-bg-hover:       var(--color-surface-1);
+  --menu-border:         var(--color-border-accent);
+  --menu-text:           var(--fg-muted);
+  --menu-text-hover:     var(--fg-default);
+
+  /* Toolbar (floating bottom bar) */
+  --toolbar-bg:          var(--color-surface-1);
+  --toolbar-border:      var(--color-border);
+
+  /* Modal (dialogs, sheets) */
+  --modal-bg:            var(--color-surface-1);
+
+  /* Titlebar */
+  --titlebar-border:     var(--color-border);
+
+  /* Input (all form controls) */
+  --input-bg:            var(--color-surface-1);
+  --input-border:        transparent;
+  --input-border-focus:  var(--color-accent);
+}
+
+/* ── Primitive tokens ──
+   Solid colors — no opacity stacking issues.
+   fg = text & icons, bg = surface modifiers. */
+:root {
+  /* Foreground — 3-tier hierarchy: 100% / 70% / 47% (matches Figma) */
+  --fg-default:  #ffffff;
+  --fg-muted:    #999999;
+  --fg-subtle:   #787878;
+
+  /* Background — aliases to surface ramp (3 tiers above surface-0) */
+  --bg-overlay:  #141414;
+  --bg-subtle:   var(--color-surface-1);
+  --bg-inset:    var(--color-surface-2);
+  --bg-emphasis: var(--color-surface-3);
 }
 
 /* ── Utility classes ── */
@@ -53,7 +104,7 @@
 .fg-default  { color: var(--fg-default); }
 .fg-muted    { color: var(--fg-muted); }
 .fg-subtle   { color: var(--fg-subtle); }
-.fg-disabled { color: var(--fg-disabled); }
+.fg-disabled { color: var(--fg-subtle); }
 
 /* bg */
 .bg-overlay  { background-color: var(--bg-overlay); }
@@ -63,7 +114,59 @@
 
 /* fg-icon — aliases (all fg vars are now solid) */
 .fg-icon-muted  { color: var(--fg-muted); }
-.fg-icon-subtle { color: var(--fg-subtle); }
+.fg-icon-subtle { color: var(--fg-muted); }  /* unified — was fg-subtle */
+
+/* ── Semantic state classes ──
+   Two-state pattern: dimmed (default) → active (.is-active)
+   Change colors here, not in 50 component files. */
+/* Labels, icons, placeholders, segment items — two states only */
+.c-dimmed           { color: var(--fg-muted); }
+.c-dimmed.is-active { color: var(--fg-default); }
+
+/* Interactive dimmed (segments, tabs) — adds hover */
+.c-dimmed-i             { color: var(--fg-muted); }
+.c-dimmed-i:hover       { color: var(--fg-default); }
+.c-dimmed-i.is-active   { color: var(--fg-default); }
+
+/* Action icons (settings, expand, reset) — dimmed default, bright on hover, accent when open */
+.c-action           { color: var(--fg-muted); }
+.c-action:hover     { color: var(--fg-default); }
+.c-action.is-active { color: var(--color-accent); }
+
+/* Action slot — 20×24px button at the right edge of every property row */
+.c-slot {
+  width: 1.5rem;         /* 24px */
+  height: 1.5rem;        /* 24px */
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.25rem;
+  color: var(--fg-muted);
+}
+.c-slot:hover           { color: var(--fg-default); background: var(--bg-inset); }
+.c-slot.is-active       { color: var(--color-accent); }
+.c-slot-spacer          { width: 1.5rem; flex-shrink: 0; }
+
+/* Token pill inside inputs — canonical definition.
+   The @layer components block below defines c-pill for Advanced section pills
+   (inline-flex, gap, user-select). Both share the same selector; the unlayered
+   version here wins for token pills in scale-inputs. */
+.c-pill {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--color-border-accent);
+  border-radius: 0.25rem;
+  padding: 0 0.25rem;
+  font-size: 11px;
+  line-height: 18px;
+  font-weight: 500;
+  color: var(--fg-default);
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 /* hover:fg */
 .hover\:fg-default:hover { color: var(--fg-default); }
@@ -99,7 +202,7 @@ html, body, #root {
   position: fixed;
   inset: 0;
   border-radius: 10px;
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.15);
+  box-shadow: inset 0 0 0 1px var(--color-border);
   pointer-events: none;
   z-index: 9999;
 }
@@ -140,34 +243,35 @@ input[type=number] {
   /* --- Inputs --- */
   .c-input {
     height: 1.5rem;
-    border: 1px solid transparent;
+    border: 1px solid var(--input-border);
     border-radius: 0.25rem;
     padding-left: 0.5rem;
     padding-right: 0.5rem;
     font-size: 12px;
     color: var(--fg-default);
     outline: none;
-    background-color: var(--bg-inset);
+    background-color: var(--input-bg);
   }
   .c-scale-input {
     height: 1.5rem;
-    border: 1px solid transparent;
+    border: 1px solid var(--input-border);
     border-radius: 0.25rem;
     padding-left: 0.25rem;
     padding-right: 0.25rem;
+    gap: 0.25rem;
     font-size: 12px;
     color: var(--fg-default);
-    background-color: var(--bg-inset);
+    background-color: var(--input-bg);
   }
   .c-textarea {
-    border: 1px solid transparent;
+    border: 1px solid var(--input-border);
     border-radius: 0.25rem;
     padding: 0.25rem 0.5rem;
     font-size: 12px;
     color: var(--fg-default);
     outline: none;
     resize: none;
-    background-color: var(--bg-inset);
+    background-color: var(--input-bg);
   }
 
   /* --- Labels --- */
@@ -180,23 +284,91 @@ input[type=number] {
   .c-label-sm {
     color: var(--fg-subtle);
     font-size: 12px;
-    width: 1.25rem;
+    width: 1rem;
     flex-shrink: 0;
+  }
+
+  /* --- Section container --- */
+  .c-section {
+    padding: 1rem;           /* 16px all sides */
+    border-bottom: 1px solid var(--color-border);
   }
 
   /* --- Section heading --- */
   .c-section-title {
     color: #fff;
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 500;
+  }
+
+  /* --- Modals --- */
+  .c-modal {
+    background-color: var(--modal-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 0.75rem;
+    box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.5);
+  }
+
+  /* --- Popover content --- */
+  .c-popover {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    width: 16rem;
+  }
+  .c-popover-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .c-popover-label {
+    color: var(--fg-subtle);
+    font-size: 12px;
+    width: 3rem;
+    flex-shrink: 0;
+  }
+  .c-popover .c-label {
+    width: 4.5rem;
+  }
+  .c-popover-title {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--fg-default);
+  }
+  .c-popover-subtitle {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--fg-default);
+  }
+  .c-popover-divider {
+    border-top: 1px solid var(--color-border);
+    margin: 0.25rem 0;
+  }
+
+  /* --- Checkbox toggle --- */
+  .c-checkbox {
+    width: 0.875rem;
+    height: 0.875rem;
+    border-radius: 0.25rem;
+    border: 1px solid var(--color-border-accent);
+    background-color: var(--bg-inset);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .c-checkbox.is-checked {
+    background-color: var(--color-accent);
+    border-color: var(--color-accent);
+    color: #fff;
   }
 
   /* --- Menus & popups --- */
   .c-menu-popup {
-    background-color: var(--color-surface-2);
-    border: 1px solid var(--color-border-accent);
+    background-color: var(--menu-bg);
+    border: 1px solid var(--color-border);
     border-radius: 0.5rem;
-    box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+    box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.5);
     z-index: 9999;
     padding-top: 0.375rem;
     padding-bottom: 0.375rem;
@@ -208,16 +380,16 @@ input[type=number] {
     gap: 0.5rem;
     padding: 0.375rem 0.75rem;
     font-size: 12px;
-    color: var(--fg-muted);
+    color: var(--menu-text);
   }
   .c-menu-item:hover,
   .c-menu-item[data-highlighted] {
-    background-color: var(--bg-inset);
-    color: var(--fg-default);
+    background-color: var(--menu-bg-hover);
+    color: var(--menu-text-hover);
   }
   .c-menu-item-active {
-    background-color: var(--bg-inset);
-    color: var(--fg-default);
+    background-color: var(--menu-bg-hover);
+    color: var(--menu-text-hover);
   }
   .c-menu-item-destructive {
     width: 100%;
@@ -233,13 +405,32 @@ input[type=number] {
   }
 
   /* --- Icon buttons --- */
+  /* Icon button — universal for all icon-only buttons outside property slots */
   .c-icon-btn {
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 0.25rem;
-    color: var(--fg-subtle);
+    color: var(--fg-muted);
   }
+  .c-icon-btn:hover { color: var(--fg-default); background: var(--bg-inset); }
+  .c-icon-btn.is-active { color: var(--fg-default); background: var(--bg-inset); }
+
+  /* Internal input button — absolute positioned inside inputs (dropdown, clear, upload) */
+  .c-input-btn {
+    position: absolute;
+    right: 0.25rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1.25rem;
+    height: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.25rem;
+    color: var(--fg-muted);
+  }
+  .c-input-btn:hover { color: var(--fg-default); }
 
   /* --- Component preview insert button --- */
   .preview-insert-btn:hover {
@@ -250,11 +441,11 @@ input[type=number] {
   .c-input::placeholder,
   .c-scale-input input::placeholder,
   .c-textarea::placeholder {
-    color: var(--fg-subtle);
+    color: var(--fg-muted);
   }
 
   /* --- Class pills (Advanced section) --- */
-  .c-pill {
+  .c-class-pill {
     display: inline-flex;
     align-items: center;
     gap: 0.125rem;
@@ -270,24 +461,24 @@ input[type=number] {
    !important needed to beat Tailwind v4's unlayered &:focus ring-shadow. */
 .c-input:focus,
 .c-textarea:focus {
-  border-color: var(--color-accent);
+  border-color: var(--input-border-focus);
   outline: none;
   box-shadow: none !important;
 }
 .c-scale-input:focus-within {
-  border-color: var(--color-accent);
+  border-color: var(--input-border-focus);
   box-shadow: none !important;
 }
 
 /* Tree node selected state */
 .tree-node-selected,
 .tree-node-multi-selected {
-  background: color-mix(in srgb, var(--color-accent) 15%, transparent);
+  background: var(--color-surface-2);
 }
 
 /* Tree node selected state — neutral (for pages) */
 .tree-node-selected-neutral {
-  background: var(--bg-inset);
+  background: var(--bg-subtle);
 }
 
 /* TokenInput — reset the inner input */

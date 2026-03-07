@@ -7,9 +7,12 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tauri::image::Image;
-use tauri::menu::{AboutMetadata, CheckMenuItemBuilder, MenuBuilder, MenuItemBuilder, SubmenuBuilder};
+use tauri::menu::{AboutMetadata, CheckMenuItemBuilder, MenuBuilder, MenuItemBuilder, Submenu, SubmenuBuilder};
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::{oneshot, Mutex};
+
+// Managed state to hold the "Open Recent" submenu handle for dynamic rebuilds
+struct RecentMenuState(std::sync::Mutex<Option<Submenu<tauri::Wry>>>);
 
 // ── MCP Bridge Types ──
 
@@ -235,8 +238,9 @@ fn set_menu_check(app: AppHandle, id: String, checked: bool) -> Result<(), Strin
 // Values must match trafficLightPosition { x: 13, y: 16 } in tauri.conf.json.
 
 #[cfg(target_os = "macos")]
-fn reposition_traffic_lights_after_title(ns_window: cocoa::base::id) {
-    // Same nudge trick: resize by 1pt and back to trigger TAO's native repositioning.
+fn reposition_traffic_lights(ns_window: cocoa::base::id) {
+    // Nudge window size by 1pt and back to trigger TAO's native repositioning
+    // of traffic light buttons to the trafficLightPosition from tauri.conf.json.
     unsafe {
         let frame: cocoa::foundation::NSRect = msg_send![ns_window, frame];
         let mut nudged = frame;
@@ -381,8 +385,18 @@ fn set_window_title(app: AppHandle, title: String) {
         #[cfg(target_os = "macos")]
         {
             let ns_window = window.ns_window().unwrap() as cocoa::base::id;
-            reposition_traffic_lights_after_title(ns_window);
+            reposition_traffic_lights(ns_window);
         }
+    }
+}
+
+// Tauri command: fix traffic light position (call after HMR or any event that resets them)
+#[tauri::command]
+fn fix_traffic_lights(app: AppHandle) {
+    #[cfg(target_os = "macos")]
+    if let Some(window) = app.get_webview_window("main") {
+        let ns_window = window.ns_window().unwrap() as cocoa::base::id;
+        reposition_traffic_lights(ns_window);
     }
 }
 
@@ -446,13 +460,183 @@ fn get_recent_files() -> Vec<String> {
 }
 
 #[tauri::command]
-fn add_recent_file(path: String) {
+fn add_recent_file(app: AppHandle, path: String) {
     add_to_recent(&path);
+    rebuild_recent_menu_inner(&app);
 }
 
 #[tauri::command]
-fn clear_recent_files() {
+fn clear_recent_files(app: AppHandle) {
     save_recent_files(&[]);
+    rebuild_recent_menu_inner(&app);
+}
+
+fn rebuild_recent_menu_inner(app: &AppHandle) {
+    let state = match app.try_state::<RecentMenuState>() {
+        Some(s) => s,
+        None => return,
+    };
+    let guard = match state.0.lock() {
+        Ok(g) => g,
+        Err(_) => return,
+    };
+    let submenu = match guard.as_ref() {
+        Some(s) => s,
+        None => return,
+    };
+
+    // Remove all existing items
+    if let Ok(items) = submenu.items() {
+        for _ in 0..items.len() {
+            let _ = submenu.remove_at(0);
+        }
+    }
+
+    // Rebuild from disk
+    let files = load_recent_files();
+    if files.is_empty() {
+        if let Ok(item) = MenuItemBuilder::with_id("no-recent", "No Recent Files")
+            .enabled(false)
+            .build(app)
+        {
+            let _ = submenu.append(&item);
+        }
+    } else {
+        for (i, path) in files.iter().enumerate() {
+            let label = std::path::Path::new(path)
+                .file_name()
+                .map(|f| f.to_string_lossy().to_string())
+                .unwrap_or_else(|| path.clone());
+            if let Ok(item) = MenuItemBuilder::with_id(format!("recent-{}", i), &label).build(app) {
+                let _ = submenu.append(&item);
+            }
+        }
+        if let Ok(sep) = tauri::menu::PredefinedMenuItem::separator(app) {
+            let _ = submenu.append(&sep);
+        }
+        if let Ok(clear) = MenuItemBuilder::with_id("clear-recent", "Clear Recent").build(app) {
+            let _ = submenu.append(&clear);
+        }
+    }
+}
+
+// ── Clipboard Image (macOS) ──
+
+#[derive(Serialize)]
+struct ClipboardImageResult {
+    data: String, // base64-encoded image (empty if url is set)
+    mime: String,
+    url: String,  // image source URL from clipboard (for downloading original format)
+}
+
+#[tauri::command]
+fn read_clipboard_image() -> Option<ClipboardImageResult> {
+    #[cfg(target_os = "macos")]
+    {
+        use cocoa::base::{id, nil};
+        unsafe {
+            let pasteboard: id = msg_send![class!(NSPasteboard), generalPasteboard];
+
+            // Create NSString UTIs via msg_send to avoid trait resolution issues
+            fn nsstring(s: &str) -> id {
+                unsafe {
+                    let ns: id = msg_send![class!(NSString), alloc];
+                    let ns: id = msg_send![ns, initWithBytes: s.as_ptr()
+                        length: s.len()
+                        encoding: 4u64]; // NSUTF8StringEncoding
+                    ns
+                }
+            }
+
+            // Try animated formats first so GIFs/animated WebPs survive intact,
+            // then lossless/lossy stills, with TIFF as last resort.
+            let candidates: &[(&str, &str)] = &[
+                ("com.compuserve.gif", "image/gif"),
+                ("org.webmproject.webp", "image/webp"),
+                ("public.png", "image/png"),
+                ("public.jpeg", "image/jpeg"),
+                ("public.tiff", "image/tiff"),
+            ];
+
+            // Read URL from clipboard (Safari puts image source URL here)
+            let mut clipboard_url = String::new();
+            let url_uti = nsstring("public.url");
+            let url_data: id = msg_send![pasteboard, dataForType: url_uti];
+            if url_data != nil {
+                let len: usize = msg_send![url_data, length];
+                if len > 0 {
+                    let ptr: *const u8 = msg_send![url_data, bytes];
+                    let slice = std::slice::from_raw_parts(ptr, len);
+                    if let Ok(s) = std::str::from_utf8(slice) {
+                        clipboard_url = s.to_string();
+                    }
+                }
+            }
+
+            let mut image_data: id = nil;
+            let mut mime_str: &str = "";
+            for (uti, mime) in candidates {
+                let ns_uti = nsstring(uti);
+                let d: id = msg_send![pasteboard, dataForType: ns_uti];
+                if d != nil {
+                    image_data = d;
+                    mime_str = mime;
+                    break;
+                }
+            }
+
+            // If we have a URL but the image data is a lossy render (TIFF/PNG from
+            // a GIF/WebP source), return URL so the frontend can download the original.
+            let url_has_animated_ext = clipboard_url.ends_with(".gif")
+                || clipboard_url.ends_with(".webp")
+                || clipboard_url.contains(".gif?")
+                || clipboard_url.contains(".webp?");
+            let data_is_static = mime_str == "image/tiff" || mime_str == "image/png" || mime_str == "image/jpeg";
+            if url_has_animated_ext && data_is_static && !clipboard_url.is_empty() {
+                return Some(ClipboardImageResult {
+                    data: String::new(),
+                    mime: String::new(),
+                    url: clipboard_url,
+                });
+            }
+
+            if image_data == nil {
+                return None;
+            }
+
+            let length: usize = msg_send![image_data, length];
+            if length == 0 {
+                return None;
+            }
+
+            let bytes_ptr: *const u8 = msg_send![image_data, bytes];
+            let bytes = std::slice::from_raw_parts(bytes_ptr, length);
+
+            // base64 encode (no external dep needed)
+            const CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+            let mut b64 = String::with_capacity((bytes.len() + 2) / 3 * 4);
+            for chunk in bytes.chunks(3) {
+                let b0 = chunk[0] as u32;
+                let b1 = if chunk.len() > 1 { chunk[1] as u32 } else { 0 };
+                let b2 = if chunk.len() > 2 { chunk[2] as u32 } else { 0 };
+                let triple = (b0 << 16) | (b1 << 8) | b2;
+                b64.push(CHARS[((triple >> 18) & 0x3F) as usize] as char);
+                b64.push(CHARS[((triple >> 12) & 0x3F) as usize] as char);
+                if chunk.len() > 1 { b64.push(CHARS[((triple >> 6) & 0x3F) as usize] as char); } else { b64.push('='); }
+                if chunk.len() > 2 { b64.push(CHARS[(triple & 0x3F) as usize] as char); } else { b64.push('='); }
+            }
+
+            Some(ClipboardImageResult {
+                data: b64,
+                mime: mime_str.to_string(),
+                url: clipboard_url,
+            })
+        }
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        None
+    }
 }
 
 // ── App Setup ──
@@ -467,7 +651,8 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
-        .invoke_handler(tauri::generate_handler![mcp_respond, set_menu_check, set_window_title, install_mcp, resolve_mcp_server_path, get_recent_files, add_recent_file, clear_recent_files, check_has_launched, mark_has_launched])
+        .manage(RecentMenuState(std::sync::Mutex::new(None)))
+        .invoke_handler(tauri::generate_handler![mcp_respond, set_menu_check, set_window_title, fix_traffic_lights, install_mcp, resolve_mcp_server_path, get_recent_files, add_recent_file, clear_recent_files, check_has_launched, mark_has_launched, read_clipboard_image])
         .setup(|app| {
             // ── Native Menu ──
             let icon = Image::from_bytes(include_bytes!("../icons/128x128@2x.png"))
@@ -541,6 +726,13 @@ pub fn run() {
             }
             let recent_submenu = recent_menu.build()?;
 
+            // Store handle for dynamic rebuilds
+            if let Some(state) = app.try_state::<RecentMenuState>() {
+                if let Ok(mut guard) = state.0.lock() {
+                    *guard = Some(recent_submenu.clone());
+                }
+            }
+
             let file_menu = SubmenuBuilder::new(app, "File")
                 .item(&new_item)
                 .item(&open_item)
@@ -554,16 +746,35 @@ pub fn run() {
                 .close_window()
                 .build()?;
 
-            // Use native Edit menu — undo/redo/cut/copy/paste/select-all are handled
-            // by the WebView natively. Custom items would intercept Cmd+C/V/Z etc.
-            // and break text editing in inputs, dev tools, etc.
+            // Custom Edit menu items — fire on_menu_event so both menu clicks AND
+            // keyboard shortcuts reach the frontend. The frontend checks activeElement
+            // to route to document.execCommand() (text inputs) or app logic (canvas).
+            // Undo/Redo: custom items with accelerators — execCommand('undo'/'redo')
+            // works for text inputs (no clipboard security issues), app logic for canvas.
+            // Accelerators intercept ⌘Z/⌘⇧Z and fire on_menu_event reliably.
+            let edit_undo = MenuItemBuilder::with_id("edit-undo", "Undo")
+                .accelerator("CmdOrCtrl+Z")
+                .build(app)?;
+            let edit_redo = MenuItemBuilder::with_id("edit-redo", "Redo")
+                .accelerator("CmdOrCtrl+Shift+Z")
+                .build(app)?;
+
+            // Cut/Copy/Paste/Select All: PREDEFINED items — required for the macOS
+            // NSResponder chain so ⌘C/V/X work natively in text inputs/WebView.
+            // Custom items break the responder chain (tauri-apps/tauri#2397).
+            // Canvas operations are handled via DOM copy/paste/cut event listeners.
+            let edit_duplicate = MenuItemBuilder::with_id("edit-duplicate", "Duplicate")
+                .build(app)?;
+
             let edit_menu = SubmenuBuilder::new(app, "Edit")
-                .undo()
-                .redo()
+                .item(&edit_undo)
+                .item(&edit_redo)
                 .separator()
                 .cut()
                 .copy()
                 .paste()
+                .item(&edit_duplicate)
+                .separator()
                 .select_all()
                 .build()?;
 
@@ -637,8 +848,12 @@ pub fn run() {
 
             let shortcuts_item = MenuItemBuilder::with_id("keyboard-shortcuts", "Keyboard Shortcuts")
                 .build(app)?;
+            let docs_item = MenuItemBuilder::with_id("open-docs", "Documentation")
+                .build(app)?;
 
             let help_menu = SubmenuBuilder::new(app, "Help")
+                .item(&docs_item)
+                .separator()
                 .item(&shortcuts_item)
                 .build()?;
 
@@ -653,30 +868,99 @@ pub fn run() {
 
             app.set_menu(menu)?;
 
-            // Apply vibrancy (traffic light positioning handled by trafficLightPosition in tauri.conf.json)
+            // Vibrancy is now handled by windowEffects in tauri.conf.json
+            // (underWindowBackground + fullScreenUI effects).
             #[cfg(target_os = "macos")]
             if let Some(window) = app.get_webview_window("main") {
-                use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial, NSVisualEffectState};
-                let _ = apply_vibrancy(&window, NSVisualEffectMaterial::UnderWindowBackground, Some(NSVisualEffectState::Active), None);
+                // Self-healing traffic light positioning via NSWindow notification observer.
+                // Covers ALL cases: resize, fullscreen, Stage Manager, display change, setTitle, HMR.
+                // Replaces the fragile ad-hoc frontend calls.
+                let ns_window = window.ns_window().unwrap() as cocoa::base::id;
+                unsafe {
+                    use cocoa::base::{id, nil};
+                    use cocoa::foundation::NSString;
+                    use std::sync::atomic::{AtomicBool, Ordering};
 
-                // window-state plugin restores geometry after setup, resetting traffic lights.
-                // Nudge the window size after a delay to trigger Tauri/TAO's native repositioning.
-                let app_handle = app.handle().clone();
-                std::thread::spawn(move || {
-                    std::thread::sleep(std::time::Duration::from_millis(200));
-                    let h = app_handle.clone();
-                    let _ = app_handle.run_on_main_thread(move || {
-                        if let Some(w) = h.get_webview_window("main") {
-                            let ns = w.ns_window().unwrap() as cocoa::base::id;
-                            unsafe {
-                                let frame: cocoa::foundation::NSRect = msg_send![ns, frame];
-                                let mut nudged = frame;
-                                nudged.size.height += 1.0;
-                                let _: () = msg_send![ns, setFrame: nudged display: false];
-                                let _: () = msg_send![ns, setFrame: frame display: false];
-                            }
+                    let center: id = msg_send![class!(NSNotificationCenter), defaultCenter];
+
+                    // Re-entrancy guard: reposition_traffic_lights nudges size which fires
+                    // NSWindowDidResize again. The guard prevents infinite recursion.
+                    static REPOSITIONING: AtomicBool = AtomicBool::new(false);
+
+                    let block = block::ConcreteBlock::new(move |_notif: id| {
+                        if REPOSITIONING.compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst).is_ok() {
+                            reposition_traffic_lights(ns_window);
+                            REPOSITIONING.store(false, Ordering::SeqCst);
                         }
                     });
+                    let block = block.copy();
+
+                    let traffic_light_notifications = [
+                        "NSWindowDidResizeNotification",
+                        "NSWindowDidExitFullScreenNotification",
+                        "NSWindowDidChangeScreenNotification",
+                        "NSWindowDidBecomeKeyNotification",
+                        "NSWindowDidMoveNotification",
+                    ];
+
+                    for name in &traffic_light_notifications {
+                        let name_ns = NSString::alloc(nil).init_str(name);
+                        let _: id = msg_send![center,
+                            addObserverForName: name_ns
+                            object: ns_window
+                            queue: nil
+                            usingBlock: &*block
+                        ];
+                    }
+
+                    // Fullscreen: make the native titlebar opaque so it isn't a
+                    // transparent strip when the user hovers the menu bar.
+                    // titlebarAppearsTransparent is a simple BOOL property — safe
+                    // to toggle (unlike styleMask which conflicts with TAO).
+                    let app_for_fs = app.handle().clone();
+                    let fs_enter_block = block::ConcreteBlock::new(move |_notif: id| {
+                        let _ = app_for_fs.emit("fullscreen-change", true);
+                        let _: () = msg_send![ns_window, setTitlebarAppearsTransparent: false];
+                    });
+                    let fs_enter_block = fs_enter_block.copy();
+                    let enter_name = NSString::alloc(nil).init_str("NSWindowDidEnterFullScreenNotification");
+                    let _: id = msg_send![center,
+                        addObserverForName: enter_name
+                        object: ns_window
+                        queue: nil
+                        usingBlock: &*fs_enter_block
+                    ];
+
+                    let app_for_fs2 = app.handle().clone();
+                    let fs_exit_block = block::ConcreteBlock::new(move |_notif: id| {
+                        let _ = app_for_fs2.emit("fullscreen-change", false);
+                        let _: () = msg_send![ns_window, setTitlebarAppearsTransparent: true];
+                    });
+                    let fs_exit_block = fs_exit_block.copy();
+                    let exit_name = NSString::alloc(nil).init_str("NSWindowDidExitFullScreenNotification");
+                    let _: id = msg_send![center,
+                        addObserverForName: exit_name
+                        object: ns_window
+                        queue: nil
+                        usingBlock: &*fs_exit_block
+                    ];
+                }
+
+                // Initial nudge after window-state plugin restores geometry.
+                // Two passes: early (100ms) catches most cases, late (500ms) catches
+                // slow window-state restores between builds.
+                let app_handle = app.handle().clone();
+                std::thread::spawn(move || {
+                    for delay_ms in [100, 500] {
+                        std::thread::sleep(std::time::Duration::from_millis(delay_ms));
+                        let h = app_handle.clone();
+                        let _ = app_handle.run_on_main_thread(move || {
+                            if let Some(w) = h.get_webview_window("main") {
+                                let ns = w.ns_window().unwrap() as cocoa::base::id;
+                                reposition_traffic_lights(ns);
+                            }
+                        });
+                    }
                 });
             }
 

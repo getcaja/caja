@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react'
-import { Ellipsis, Square, LayoutGrid, Columns3, Rows3, AlignHorizontalSpaceAround, AlignVerticalSpaceAround, Check } from 'lucide-react'
+import { useState, useMemo, useEffect } from 'react'
+import { Settings2, Square, LayoutGrid, Columns3, Rows3, AlignHorizontalSpaceAround, AlignVerticalSpaceAround, Check } from 'lucide-react'
 import { FlexColumnIcon, FlexRowIcon } from '../icons/LayoutIcons'
 import type { Frame, BoxElement } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
@@ -35,6 +35,16 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
   const boxFrame = isBox ? (frame as BoxElement) : null
   const isFlex = boxFrame?.display === 'flex' || boxFrame?.display === 'inline-flex'
   const isGrid = boxFrame?.display === 'grid'
+
+  // Clear overlays when display mode changes or component unmounts
+  const display = boxFrame?.display
+  useEffect(() => {
+    return () => {
+      setShowGapOverlay(false)
+      setShowPaddingOverlay(false)
+      setShowMarginOverlay(false)
+    }
+  }, [frame.id, display, setShowGapOverlay, setShowPaddingOverlay, setShowMarginOverlay])
 
   const parentIsFlex = parentDisplay === 'flex' || parentDisplay === 'inline-flex'
   const parentIsGrid = parentDisplay === 'grid'
@@ -91,6 +101,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                     updates.display = 'grid'
                   }
                   updateFrame(frame.id, updates)
+                  setShowGapOverlay(false)
                 }}
                 className="flex-1"
               />
@@ -102,32 +113,44 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                     <button
                       type="button"
                       title="Display Options"
-                      className={`w-5 h-5 flex items-center justify-center rounded shrink-0 ${
-                        displayOptsActive
-                          ? 'text-blue-400 bg-blue-400/10'
-                          : 'fg-subtle hover:fg-muted hover:bg-inset'
-                      }`}
+                      className={`c-slot ${displayOptsActive ? 'is-active' : ''}`}
                     >
-                      <Ellipsis size={12} />
+                      <Settings2 size={12} />
                     </button>
                   }
                   side="bottom"
                   align="end"
                 >
-                  <div className="flex flex-col gap-1.5 p-2.5 min-w-[120px]">
+                  <div className="c-popover">
+                    <span className="c-popover-title">Display Options</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updateFrame(frame.id, {
+                          display: isFlex
+                            ? (isInline ? 'flex' : 'inline-flex')
+                            : (isInline ? 'block' : 'inline-block'),
+                        })
+                      }}
+                      className="c-popover-row cursor-pointer select-none"
+                    >
+                      <span className={`c-checkbox ${isInline ? 'is-checked' : ''}`}>
+                        {isInline && <Check size={10} strokeWidth={3} />}
+                      </span>
+                      <span className={`text-[12px] c-dimmed ${isInline ? 'is-active' : ''}`}>{isFlex ? 'Inline Flex' : 'Inline Block'}</span>
+                    </button>
                     {isFlex && (
                       <>
+                        <div className="c-popover-divider" />
                         <button
                           type="button"
                           onClick={() => updateFrame(frame.id, { wrap: !boxFrame!.wrap })}
-                          className="flex items-center gap-1.5 cursor-pointer select-none"
+                          className="c-popover-row cursor-pointer select-none"
                         >
-                          <span className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center ${
-                            boxFrame!.wrap ? 'bg-accent border-accent text-white' : 'border-border-accent bg-inset'
-                          }`}>
+                          <span className={`c-checkbox ${boxFrame!.wrap ? 'is-checked' : ''}`}>
                             {boxFrame!.wrap && <Check size={10} strokeWidth={3} />}
                           </span>
-                          <span className={`text-[12px] ${boxFrame!.wrap ? 'fg-default' : 'fg-subtle'}`}>Wrap</span>
+                          <span className={`text-[12px] c-dimmed ${boxFrame!.wrap ? 'is-active' : ''}`}>Wrap Children</span>
                         </button>
                         <button
                           type="button"
@@ -138,39 +161,19 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                               : `${dir}-reverse` as 'row-reverse' | 'column-reverse'
                             updateFrame(frame.id, { direction: newDir })
                           }}
-                          className="flex items-center gap-1.5 cursor-pointer select-none"
+                          className="c-popover-row cursor-pointer select-none"
                         >
-                          <span className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center ${
-                            isReverse ? 'bg-accent border-accent text-white' : 'border-border-accent bg-inset'
-                          }`}>
+                          <span className={`c-checkbox ${isReverse ? 'is-checked' : ''}`}>
                             {isReverse && <Check size={10} strokeWidth={3} />}
                           </span>
-                          <span className={`text-[12px] ${isReverse ? 'fg-default' : 'fg-subtle'}`}>Reverse</span>
+                          <span className={`text-[12px] c-dimmed ${isReverse ? 'is-active' : ''}`}>Reverse Order</span>
                         </button>
                       </>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        updateFrame(frame.id, {
-                          display: isFlex
-                            ? (isInline ? 'flex' : 'inline-flex')
-                            : (isInline ? 'block' : 'inline-block'),
-                        })
-                      }}
-                      className="flex items-center gap-1.5 cursor-pointer select-none"
-                    >
-                      <span className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center ${
-                        isInline ? 'bg-accent border-accent text-white' : 'border-border-accent bg-inset'
-                      }`}>
-                        {isInline && <Check size={10} strokeWidth={3} />}
-                      </span>
-                      <span className={`text-[12px] ${isInline ? 'fg-default' : 'fg-subtle'}`}>Inline</span>
-                    </button>
                   </div>
                 </Popover>
               ) : (
-                <div className="w-5 shrink-0" />
+                <div className="c-slot-spacer" />
               )}
             </div>
           </>
@@ -201,25 +204,22 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                 <button
                   type="button"
                   title="Size Constraints"
-                  className={`w-5 h-5 flex items-center justify-center rounded shrink-0 ${
-                    constraintsActive || childPropsActive
-                      ? 'text-blue-400 bg-blue-400/10'
-                      : 'fg-subtle hover:fg-muted hover:bg-inset'
-                  }`}
+                  className={`c-slot ${constraintsActive || childPropsActive ? 'is-active' : ''}`}
                 >
-                  <Ellipsis size={12} />
+                  <Settings2 size={12} />
                 </button>
               }
               side="bottom"
               align="end"
             >
-              <div className="flex flex-col gap-2 p-2.5 w-[200px]">
+              <div className="c-popover">
+                <span className="c-popover-title">Size Options</span>
                 <TokenInput
                   scale={filteredSize}
                   value={frame.minWidth}
                   onChange={(v) => updateFrame(frame.id, { minWidth: v })}
                   min={0}
-                  label="Min W"
+                  label="Min Width"
                   classPrefix="min-w"
                 />
                 <TokenInput
@@ -227,15 +227,16 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                   value={frame.maxWidth}
                   onChange={(v) => updateFrame(frame.id, { maxWidth: v })}
                   min={0}
-                  label="Max W"
+                  label="Max Width"
                   classPrefix="max-w"
                 />
+                <div className="c-popover-divider" />
                 <TokenInput
                   scale={filteredSize}
                   value={frame.minHeight}
                   onChange={(v) => updateFrame(frame.id, { minHeight: v })}
                   min={0}
-                  label="Min H"
+                  label="Min Height"
                   classPrefix="min-h"
                 />
                 <TokenInput
@@ -243,11 +244,13 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                   value={frame.maxHeight}
                   onChange={(v) => updateFrame(frame.id, { maxHeight: v })}
                   min={0}
-                  label="Max H"
+                  label="Max Height"
                   classPrefix="max-h"
                 />
                 {hasChildBehavior && !isFlex && (
                   <>
+                    <div className="c-popover-divider" />
+                    <span className="c-popover-subtitle">Child Behavior</span>
                     {parentIsFlex && (
                       <>
                         <TokenInput
@@ -272,16 +275,20 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                         />
                       </>
                     )}
-                    <Select
-                      value={frame.alignSelf}
-                      options={ALIGN_SELF_OPTIONS}
-                      onChange={(v) => updateFrame(frame.id, { alignSelf: v as Frame['alignSelf'] })}
-                      className="flex-1"
-                      initialValue="auto"
-                      tooltip="Align Self"
-                    />
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <span className="c-label">Align Self</span>
+                      <Select
+                        value={frame.alignSelf}
+                        options={ALIGN_SELF_OPTIONS}
+                        onChange={(v) => updateFrame(frame.id, { alignSelf: v as Frame['alignSelf'] })}
+                        className="flex-1"
+                        initialValue="auto"
+                        tooltip="Align Self"
+                      />
+                    </div>
                     {parentIsGrid && (
                       <>
+                        <div className="c-popover-divider" />
                         <TokenInput
                           scale={COL_SPAN_SCALE}
                           value={frame.colSpan}
@@ -319,8 +326,9 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
               <div className="flex gap-2 items-start">
                 <div className="flex-1 min-w-0">
                   <div
-                    className="grid gap-[2px] bg-inset rounded p-1 w-full h-[56px]"
+                    className="grid gap-[2px] rounded p-1 w-full h-[56px]"
                     style={{
+                      backgroundColor: 'var(--input-bg)',
                       gridTemplateColumns: 'repeat(3, 1fr)',
                       gridTemplateRows: 'repeat(3, 1fr)',
                     }}
@@ -342,9 +350,9 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                           }}
                         >
                           {active ? (
-                            <div className={`${isRow ? 'w-[2px] h-[8px]' : 'w-[8px] h-[2px]'} bg-accent rounded-full`} />
+                            <div className={`${isRow ? 'w-[2px] h-[8px]' : 'w-[8px] h-[2px]'} bg-white rounded-full`} />
                           ) : (
-                            <div className="w-[3px] h-[3px] rounded-full bg-text-muted/25 group-hover:bg-text-muted/50" />
+                            <div className="w-[3px] h-[3px] rounded-full bg-surface-3 group-hover:bg-emphasis" />
                           )}
                         </button>
                       )
@@ -382,19 +390,16 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                       <button
                         type="button"
                         title="Flex Child"
-                        className={`w-5 h-5 flex items-center justify-center rounded shrink-0 ${
-                          childPropsActive
-                            ? 'text-blue-400 bg-blue-400/10'
-                            : 'fg-subtle hover:fg-muted hover:bg-inset'
-                        }`}
+                        className={`c-slot ${childPropsActive ? 'is-active' : ''}`}
                       >
-                        <Ellipsis size={12} />
+                        <Settings2 size={12} />
                       </button>
                     }
                     side="bottom"
                     align="end"
                   >
-                    <div className="flex flex-col gap-2 p-2.5 w-[200px]">
+                    <div className="c-popover">
+                      <span className="c-popover-title">Child Options</span>
                       {parentIsFlex && (
                         <>
                           <TokenInput
@@ -419,16 +424,20 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                           />
                         </>
                       )}
-                      <Select
-                        value={frame.alignSelf}
-                        options={ALIGN_SELF_OPTIONS}
-                        onChange={(v) => updateFrame(frame.id, { alignSelf: v as Frame['alignSelf'] })}
-                        className="flex-1"
-                        initialValue="auto"
-                        tooltip="Align Self"
-                      />
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <span className="c-label">Align Self</span>
+                        <Select
+                          value={frame.alignSelf}
+                          options={ALIGN_SELF_OPTIONS}
+                          onChange={(v) => updateFrame(frame.id, { alignSelf: v as Frame['alignSelf'] })}
+                          className="flex-1"
+                          initialValue="auto"
+                          tooltip="Align Self"
+                        />
+                      </div>
                       {parentIsGrid && (
                         <>
+                          <div className="c-popover-divider" />
                           <TokenInput
                             scale={COL_SPAN_SCALE}
                             value={frame.colSpan}
@@ -456,7 +465,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                     </div>
                   </Popover>
                 ) : (
-                  <div className="w-5 shrink-0" />
+                  <div className="c-slot-spacer" />
                 )}
               </div>
             )}
@@ -489,7 +498,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                     unit=""
                     tooltip="Rows"
                   />
-                  <div className="w-5 shrink-0" />
+                  <div className="c-slot-spacer" />
                 </div>
                 <div
                   className="flex items-center gap-2"
@@ -505,7 +514,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                     classPrefix="gap"
                     tooltip="Gap"
                   />
-                  <div className="w-5 shrink-0" />
+                  <div className="c-slot-spacer" />
                 </div>
               </>
             )}
@@ -545,16 +554,12 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); updateFrame(frame.id, { overflow: frame.overflow !== 'visible' ? 'visible' : 'hidden' }) }}
-            className="flex items-center gap-1.5 cursor-pointer select-none"
+            className="flex items-center gap-2 cursor-pointer select-none"
           >
-            <span className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center ${
-              frame.overflow !== 'visible'
-                ? 'bg-accent border-accent text-white'
-                : 'border-border-accent bg-inset'
-            }`}>
+            <span className={`c-checkbox ${frame.overflow !== 'visible' ? 'is-checked' : ''}`}>
               {frame.overflow !== 'visible' && <Check size={10} strokeWidth={3} />}
             </span>
-            <span className={`text-[12px] ${frame.overflow !== 'visible' ? 'fg-default' : 'fg-subtle'}`}>Clip Content</span>
+            <span className={`text-[12px] c-dimmed ${frame.overflow !== 'visible' ? 'is-active' : ''}`}>Clip Content</span>
           </button>
           <div className="flex-1" />
           <Popover
@@ -564,32 +569,31 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                 <button
                   type="button"
                   title="Overflow"
-                  className={`w-5 h-5 shrink-0 flex items-center justify-center rounded ${
+                  className={`c-slot ${
                     frame.overflow === 'visible'
                       ? 'invisible'
                       : frame.overflow === 'scroll'
-                        ? 'text-blue-400 bg-blue-400/10'
-                        : 'fg-subtle hover:fg-muted hover:bg-inset'
+                        ? 'is-active'
+                        : ''
                   }`}
                 >
-                  <Ellipsis size={12} />
+                  <Settings2 size={12} />
                 </button>
               }
               side="bottom"
               align="end"
             >
-              <div className="flex flex-col gap-1.5 p-2.5 min-w-[120px]">
+              <div className="c-popover">
+                <span className="c-popover-title">Clip Options</span>
                 <button
                   type="button"
                   onClick={() => updateFrame(frame.id, { overflow: frame.overflow === 'scroll' ? 'hidden' : 'scroll' })}
-                  className="flex items-center gap-1.5 cursor-pointer select-none"
+                  className="c-popover-row cursor-pointer select-none"
                 >
-                  <span className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center ${
-                    frame.overflow === 'scroll' ? 'bg-accent border-accent text-white' : 'border-border-accent bg-inset'
-                  }`}>
+                  <span className={`c-checkbox ${frame.overflow === 'scroll' ? 'is-checked' : ''}`}>
                     {frame.overflow === 'scroll' && <Check size={10} strokeWidth={3} />}
                   </span>
-                  <span className={`text-[12px] ${frame.overflow === 'scroll' ? 'fg-default' : 'fg-subtle'}`}>Scroll</span>
+                  <span className={`text-[12px] c-dimmed ${frame.overflow === 'scroll' ? 'is-active' : ''}`}>Scroll</span>
                 </button>
               </div>
             </Popover>

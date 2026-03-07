@@ -25,7 +25,7 @@ function TreeSection({ label, collapsed, onToggle, trailing, children }: {
         <div className="relative flex items-center group/section">
           <ChevronRight
             size={12}
-            className={`absolute -left-3 top-1/2 -translate-y-1/2 fg-subtle cursor-pointer opacity-0 group-hover/section:opacity-100 ${collapsed ? '' : 'rotate-90'}`}
+            className={`absolute -left-3 top-1/2 -translate-y-1/2 fg-muted cursor-pointer opacity-0 group-hover/section:opacity-100 ${collapsed ? '' : 'rotate-90'}`}
             onClick={onToggle}
           />
           <span className="c-section-title cursor-pointer select-none" onClick={onToggle}>{label}</span>
@@ -267,9 +267,9 @@ export function TreePanel() {
 
   if (editingMaster) {
     return (
-      <div className="h-full bg-overlay flex flex-col">
-        <div className="pl-2.5 pr-4 py-2.5 border-b border-border flex items-center justify-between">
-          <div className="flex items-center gap-1 min-w-0">
+      <div className="h-full flex flex-col" style={{ backgroundColor: 'var(--panel-bg)' }}>
+        <div className="pl-3 pr-4 py-3 border-b border-border flex items-center justify-between">
+          <div className="flex items-center gap-2 min-w-0">
             <input
               className="text-[12px] font-semibold px-1.5 py-0.5 fg-default bg-transparent min-w-0 rounded focus:bg-inset outline-none"
               value={editingMaster.name}
@@ -279,7 +279,7 @@ export function TreePanel() {
           </div>
           <button
             onClick={exitComponentEditMode}
-            className="w-5 h-5 shrink-0 c-icon-btn hover:fg-default hover:bg-inset"
+            className="w-5 h-5 shrink-0 c-icon-btn"
             title="Close"
           >
             <X size={12} />
@@ -322,17 +322,17 @@ export function TreePanel() {
   }
 
   return (
-    <div className="h-full bg-overlay flex flex-col">
-      <div className="pl-2.5 pr-4 py-2.5 border-b border-border flex items-center justify-between">
-        <div className="flex items-center gap-1">
+    <div className="h-full flex flex-col" style={{ backgroundColor: 'var(--panel-bg)' }}>
+      <div className="pl-3 pr-4 py-3 border-b border-border flex items-center justify-between">
+        <div className="flex items-center gap-2">
           <button
-            className={`text-[12px] font-semibold px-1.5 py-0.5 rounded ${tab === 'layers' ? 'fg-default' : 'fg-subtle hover:fg-muted hover:bg-inset'}`}
+            className={`text-[12px] font-semibold px-1.5 py-0.5 rounded ${tab === 'layers' ? 'fg-default' : 'c-dimmed-i'}`}
             onClick={() => setTab('layers')}
           >
             File
           </button>
           <button
-            className={`text-[12px] font-semibold px-1.5 py-0.5 rounded ${tab === 'components' ? 'fg-default' : 'fg-subtle hover:fg-muted hover:bg-inset'}`}
+            className={`text-[12px] font-semibold px-1.5 py-0.5 rounded ${tab === 'components' ? 'fg-default' : 'c-dimmed-i'}`}
             onClick={handleAssetsTab}
           >
             Assets
@@ -437,7 +437,7 @@ export function TreePanel() {
               <div className="relative flex items-center group/section">
                 <ChevronRight
                   size={12}
-                  className={`absolute -left-3 top-1/2 -translate-y-1/2 fg-subtle cursor-pointer opacity-0 group-hover/section:opacity-100 ${componentsCollapsed ? '' : 'rotate-90'}`}
+                  className={`absolute -left-3 top-1/2 -translate-y-1/2 fg-muted cursor-pointer opacity-0 group-hover/section:opacity-100 ${componentsCollapsed ? '' : 'rotate-90'}`}
                   onClick={() => setComponentsCollapsed((v) => !v)}
                 />
                 <span className="c-section-title cursor-pointer select-none" onClick={() => setComponentsCollapsed((v) => !v)}>Components</span>

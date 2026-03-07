@@ -5,7 +5,7 @@
 // Rendering: resolveRenderSrc() maps localPath → blob URL at render time.
 // Export: resolveAssetSrc() maps localPath → ./assets/filename.ext for HTML/JSX.
 
-import { writeFile, readFile, copyFile, exists, mkdir } from '@tauri-apps/plugin-fs'
+import { writeFile, readFile, copyFile, exists, mkdir, readDir, remove } from '@tauri-apps/plugin-fs'
 import { join, dirname, appDataDir } from '@tauri-apps/api/path'
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http'
 import { open } from '@tauri-apps/plugin-dialog'
@@ -36,6 +36,7 @@ function extensionFromMime(mime: string): string {
     'image/gif': 'gif', 'image/webp': 'webp', 'image/svg+xml': 'svg',
     'image/avif': 'avif', 'image/bmp': 'bmp',
     'image/ico': 'ico', 'image/x-icon': 'ico',
+    'image/tiff': 'tiff',
   }
   return map[mime] || 'png'
 }
@@ -54,16 +55,19 @@ function extensionFromUrl(url: string): string {
 
 // --- Blob URL cache (localPath → blobUrl) ---
 // Prevents creating duplicate blob URLs for the same file.
-const blobCache = new Map<string, string>()
+// Stored on globalThis to survive HMR — module-level Maps are lost on re-evaluation.
+const _g = globalThis as any // eslint-disable-line @typescript-eslint/no-explicit-any
+const blobCache: Map<string, string> = _g.__caja_blobCache ??= new Map()
 
 // --- Asset version (for React re-render on cache changes) ---
 // Components call useSyncExternalStore(subscribeAssets, getAssetSnapshot)
 // to re-render when blob cache is populated (e.g. after restoreAllAssets).
-let assetVersion = 0
-const assetListeners = new Set<() => void>()
+// Stored on globalThis for same HMR reason as blobCache.
+_g.__caja_assetVersion ??= 0
+const assetListeners: Set<() => void> = _g.__caja_assetListeners ??= new Set()
 
 function bumpAssetVersion() {
-  assetVersion++
+  _g.__caja_assetVersion++
   assetListeners.forEach(cb => cb())
 }
 
@@ -73,7 +77,7 @@ export function subscribeAssets(cb: () => void) {
 }
 
 export function getAssetSnapshot() {
-  return assetVersion
+  return _g.__caja_assetVersion as number
 }
 
 /** Create a blob URL from a Uint8Array, revoking any previous blob for the same key */
@@ -214,6 +218,39 @@ export async function importLocalAsset(projectPath: string | null): Promise<Down
 }
 
 /**
+ * Save raw image bytes (e.g. from clipboard) to the local assets directory.
+ * Returns the local path and a blob URL for canvas rendering.
+ */
+export async function saveImageBytes(
+  data: Uint8Array,
+  mime: string,
+  projectPath: string | null,
+): Promise<DownloadResult> {
+  const assetsDir = projectPath
+    ? await getAssetsDir(projectPath)
+    : await getTempAssetsDir()
+  await ensureAssetsDir(assetsDir)
+
+  const hash = await hashArrayBuffer(data.buffer as ArrayBuffer)
+  const ext = extensionFromMime(mime)
+  const filename = `${hash}.${ext}`
+  const localPath = await join(assetsDir, filename)
+
+  if (!(await exists(localPath))) {
+    await writeFile(localPath, data)
+  }
+
+  let assetUrl = blobCache.get(localPath)
+  if (!assetUrl) {
+    assetUrl = createBlobUrl(data, ext, localPath)
+    blobCache.set(localPath, assetUrl)
+    bumpAssetVersion()
+  }
+
+  return { localPath, assetUrl }
+}
+
+/**
  * Migrate temp-assets to the real assets/ directory on save.
  * Walks frame trees, copies files from temp-assets → assets/ next to the .caja,
  * and updates frame paths in-place. Also re-keys the blobCache.
@@ -278,6 +315,41 @@ export async function migrateAssetsOnSave(pages: any[], projectPath: string): Pr
   for (const page of pages) rewrite(page.root)
 
   bumpAssetVersion()
+}
+
+/**
+ * Remove asset files that are no longer referenced by any frame.
+ * Walks all pages to collect referenced filenames, then deletes
+ * any file in the assets/ directory not in that set.
+ */
+export async function garbageCollectAssets(pages: any[], projectPath: string): Promise<void> {
+  const assetsDir = await getAssetsDir(projectPath)
+  if (!(await exists(assetsDir))) return
+
+  // Collect all referenced asset filenames
+  const referenced = new Set<string>()
+  function walk(frame: any) {
+    if (frame.type === 'image' && frame.src) {
+      const filename = frame.src.split('/').pop()
+      if (filename) referenced.add(filename)
+    }
+    if (frame.bgImage) {
+      const filename = frame.bgImage.split('/').pop()
+      if (filename) referenced.add(filename)
+    }
+    if (Array.isArray(frame.children)) frame.children.forEach(walk)
+  }
+  for (const page of pages) walk(page.root)
+
+  // List files on disk and delete unreferenced ones
+  const entries = await readDir(assetsDir)
+  for (const entry of entries) {
+    if (entry.isFile && entry.name && !referenced.has(entry.name)) {
+      try {
+        await remove(await join(assetsDir, entry.name))
+      } catch { /* expected: file locked or permission denied — skip */ }
+    }
+  }
 }
 
 /**
@@ -381,20 +453,17 @@ export async function absolutizeAssetPaths(pages: any[], cajaFilePath: string): 
  * Resolve a src for rendering: local filesystem paths → blob URLs.
  * Everything else (http, blob, data, empty) passes through unchanged.
  */
-// Tracks paths currently being restored to avoid duplicate restoreAssetUrl calls
-const _restoring = new Set<string>()
-
 export function resolveRenderSrc(src: string): string {
   if (!src) return src
   if (src.startsWith('blob:') || src.startsWith('data:') || src.startsWith('http')) return src
-  // Local filesystem path — resolve through blob cache
+  // Local filesystem path — use Tauri's asset protocol for direct file access.
+  // This is synchronous and survives HMR/reloads (no cache needed).
+  if (isLocalAssetPath(src) && typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window) {
+    return (window as any).__TAURI_INTERNALS__.convertFileSrc(src, 'asset')
+  }
+  // Fallback: check blob cache (for non-Tauri or non-local paths)
   const cached = blobCache.get(src)
   if (cached) return cached
-  // Not in cache — try restoring in background (e.g. after HMR clears blobCache)
-  if (isLocalAssetPath(src) && !_restoring.has(src) && typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window) {
-    _restoring.add(src)
-    restoreAssetUrl(src).finally(() => _restoring.delete(src))
-  }
   return src
 }
 

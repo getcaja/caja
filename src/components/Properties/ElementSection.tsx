@@ -25,11 +25,11 @@ const TEXT_LIKE = new Set(['text', 'email', 'password', 'number', 'search', 'tel
 function LabelInput({ value, onChange, label, icon, type = 'text', className }: { value: string | number; onChange: (v: string) => void; label?: string; icon?: React.ReactNode; type?: string; className?: string }) {
   const active = value !== '' && value !== 0
   return (
-    <div className={`min-w-0 c-scale-input flex items-center gap-0.5 overflow-hidden cursor-text ${className ?? 'flex-1'}`} onClick={(e) => { if (e.target === e.currentTarget) (e.currentTarget.querySelector('input') as HTMLInputElement)?.focus() }}>
+    <div className={`min-w-0 c-scale-input flex items-center overflow-hidden cursor-text ${className ?? 'flex-1'}`} onClick={(e) => { if (e.target === e.currentTarget) (e.currentTarget.querySelector('input') as HTMLInputElement)?.focus() }}>
       {icon ? (
-        <span className={`w-4 shrink-0 flex items-center justify-center ${active ? 'fg-icon-muted' : 'fg-icon-subtle'}`}>{icon}</span>
+        <span className={`w-4 shrink-0 flex items-center justify-center c-dimmed ${active ? 'is-active' : ''}`}>{icon}</span>
       ) : label ? (
-        <span className={`shrink-0 text-[12px] pl-0.5 ${active ? 'fg-muted' : 'fg-subtle'}`}>{label}</span>
+        <span className={`shrink-0 text-[12px] pl-0.5 c-dimmed ${active ? 'is-active' : ''}`}>{label}</span>
       ) : null}
       <input
         type={type}
@@ -46,14 +46,12 @@ function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: (v
     <button
       type="button"
       onClick={() => onChange(!checked)}
-      className="flex items-center gap-1.5 cursor-pointer select-none"
+      className="flex items-center gap-2 cursor-pointer select-none"
     >
-      <span className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center ${
-        checked ? 'bg-accent border-accent text-white' : 'border-border-accent bg-inset'
-      }`}>
+      <span className={`c-checkbox ${checked ? 'is-checked' : ''}`}>
         {checked && <Check size={10} strokeWidth={3} />}
       </span>
-      <span className={`text-[12px] ${checked ? 'fg-default' : 'fg-subtle'}`}>{label}</span>
+      <span className={`text-[12px] c-dimmed ${checked ? 'is-active' : ''}`}>{label}</span>
     </button>
   )
 }
@@ -87,7 +85,7 @@ function HrefPicker({ value, onChange }: { value: string; onChange: (v: string) 
           initialValue="__none__"
           tooltip="Link"
         />
-        <div className="w-5 shrink-0" />
+        <div className="c-slot-spacer" />
       </div>
       {isCustom && (
         <div className="flex items-center gap-2">
@@ -98,7 +96,7 @@ function HrefPicker({ value, onChange }: { value: string; onChange: (v: string) 
             placeholder="https://..."
             className="flex-1 c-input"
           />
-          <div className="w-5 shrink-0" />
+          <div className="c-slot-spacer" />
         </div>
       )}
     </>
@@ -110,12 +108,12 @@ function ComponentButton({ frame, isRoot, isMaster }: { frame: Frame; isRoot: bo
   const isInstance = !!frame._componentId
 
   // Root → no button, just the 20px slot
-  if (isRoot) return <div className="w-5 shrink-0" />
+  if (isRoot) return <div className="c-slot-spacer" />
 
   // Master → dimmed icon, no action
   if (isMaster) {
     return (
-      <div className="w-5 shrink-0 flex items-center justify-center text-purple-400 opacity-50">
+      <div className="c-slot text-accent opacity-50">
         <Component size={12} />
       </div>
     )
@@ -126,7 +124,7 @@ function ComponentButton({ frame, isRoot, isMaster }: { frame: Frame; isRoot: bo
     return (
       <button
         onClick={() => useFrameStore.getState().createComponent(frame.id)}
-        className="w-5 h-5 flex items-center justify-center shrink-0 rounded fg-icon-subtle hover:fg-icon-muted"
+        className="c-slot"
         title="Create Component"
       >
         <Component size={12} />
@@ -134,7 +132,7 @@ function ComponentButton({ frame, isRoot, isMaster }: { frame: Frame; isRoot: bo
     )
   }
 
-  // Instance → purple icon, popover with actions
+  // Instance → accent icon, popover with actions
   const menuItem = 'flex items-center gap-2 w-full px-3 py-1.5 text-[12px] fg-muted hover:bg-emphasis cursor-default first:rounded-t-lg last:rounded-b-lg'
 
   return (
@@ -143,7 +141,7 @@ function ComponentButton({ frame, isRoot, isMaster }: { frame: Frame; isRoot: bo
       onOpenChange={setOpen}
       trigger={
         <button
-          className="w-5 h-5 flex items-center justify-center shrink-0 rounded bg-purple-500 text-white hover:bg-purple-400"
+          className="c-slot is-active"
           title="Component instance"
         >
           <Component size={12} />
@@ -229,7 +227,7 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
       <div className="flex flex-col gap-2">
       {/* Badge + name + component action */}
       <div className="flex items-center gap-2">
-        <span className={`text-[12px] px-1.5 py-0.5 rounded-md font-medium ${TYPE_BADGE_STYLES[key]}`}>
+        <span className={`text-[12px] px-1.5 py-0.5 rounded-md font-semibold ${TYPE_BADGE_STYLES[key]}`}>
           {TYPE_BADGE_LABELS[key]}
         </span>
         <input
@@ -254,7 +252,7 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
             initialValue={getTagDefault(frame.type)}
             tooltip="HTML Tag"
           />
-          <div className="w-5 shrink-0" />
+          <div className="c-slot-spacer" />
         </div>
       )}
 
@@ -274,7 +272,7 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
                 rows={Math.min(6, Math.max(3, (t.content.match(/\n/g) || []).length + 1))}
                 className="flex-1 min-w-0 c-textarea resize-none"
               />
-              <div className="w-5 shrink-0" />
+              <div className="c-slot-spacer" />
             </div>
           </>
         )
@@ -291,8 +289,8 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
               <div className="flex-1 min-w-0">
                 {isLocal ? (
                   /* Read-only display for local assets — show filename only */
-                  <div className="c-scale-input flex items-center gap-0.5 pr-6 overflow-hidden relative">
-                    <span className="w-4 shrink-0 flex items-center justify-center fg-icon-muted">
+                  <div className="c-scale-input flex items-center pr-6 overflow-hidden relative">
+                    <span className="w-4 shrink-0 flex items-center justify-center c-dimmed is-active">
                       <ImageIcon size={12} />
                     </span>
                     <span className="flex-1 min-w-[20px] text-[12px] fg-muted truncate select-none">
@@ -302,7 +300,7 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
                       type="button"
                       tabIndex={-1}
                       onClick={() => updateFrame(frame.id, { src: '' })}
-                      className="absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:text-destructive hover:bg-inset"
+                      className="c-input-btn hover:!text-destructive"
                     >
                       <X size={12} />
                     </button>
@@ -310,10 +308,10 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
                 ) : (
                   /* Editable input for URLs or empty state */
                   <div
-                    className="c-scale-input flex items-center gap-0.5 pr-6 overflow-hidden cursor-text relative"
+                    className="c-scale-input flex items-center pr-6 overflow-hidden cursor-text relative"
                     onClick={(e) => { if (e.target === e.currentTarget) (e.currentTarget.querySelector('input') as HTMLInputElement)?.focus() }}
                   >
-                    <span className={`w-4 shrink-0 flex items-center justify-center ${img.src ? 'fg-icon-muted' : 'fg-icon-subtle'}`}>
+                    <span className={`w-4 shrink-0 flex items-center justify-center c-dimmed ${img.src ? 'is-active' : ''}`}>
                       <ImageIcon size={12} />
                     </span>
                     <input
@@ -333,7 +331,7 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
                         type="button"
                         tabIndex={-1}
                         onClick={() => updateFrame(frame.id, { src: '' })}
-                        className="absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:text-destructive hover:bg-inset"
+                        className="c-input-btn hover:!text-destructive"
                       >
                         <X size={12} />
                       </button>
@@ -349,7 +347,7 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
                             console.error('Import asset failed:', err)
                           }
                         }}
-                        className="absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted hover:bg-inset"
+                        className="c-input-btn"
                       >
                         <Upload size={12} />
                       </button>
@@ -357,7 +355,7 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
                   </div>
                 )}
               </div>
-              <div className="w-5 shrink-0" />
+              <div className="c-slot-spacer" />
             </div>
             {/* Alt + Object fit — only when image is set */}
             {img.src && (
@@ -378,10 +376,10 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
                 />
                 <div className="flex-1 min-w-0">
                   <div
-                    className="c-scale-input flex items-center gap-0.5 overflow-hidden cursor-text"
+                    className="c-scale-input flex items-center overflow-hidden cursor-text"
                     onClick={(e) => { if (e.target === e.currentTarget) (e.currentTarget.querySelector('input') as HTMLInputElement)?.focus() }}
                   >
-                    <span className={`w-4 shrink-0 flex items-center justify-center ${img.alt ? 'fg-icon-muted' : 'fg-icon-subtle'}`}><MessageSquareQuote size={12} /></span>
+                    <span className={`w-4 shrink-0 flex items-center justify-center c-dimmed ${img.alt ? 'is-active' : ''}`}><MessageSquareQuote size={12} /></span>
                     <input
                       type="text"
                       value={img.alt}
@@ -391,7 +389,7 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
                     />
                   </div>
                 </div>
-                <div className="w-5 shrink-0" />
+                <div className="c-slot-spacer" />
               </div>
             )}
           </>
@@ -411,7 +409,7 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
                 rows={Math.min(6, Math.max(3, (btn.content.match(/\n/g) || []).length + 1))}
                 className="flex-1 min-w-0 c-textarea resize-none"
               />
-              <div className="w-5 shrink-0" />
+              <div className="c-slot-spacer" />
             </div>
             <HrefPicker value={btn.href || ''} onChange={(v) => updateFrame(frame.id, { href: v })} />
           </>
@@ -434,19 +432,19 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
                 initialValue="text"
                 tooltip="Input Type"
               />
-              <div className="w-5 shrink-0" />
+              <div className="c-slot-spacer" />
             </div>
             {TEXT_LIKE.has(it) && (
               <div className="flex items-center gap-2">
                 <LabelInput icon={<TextCursorInput size={12} />} value={inp.placeholder} onChange={(v) => updateFrame(frame.id, { placeholder: v })} />
-                <div className="w-5 shrink-0" />
+                <div className="c-slot-spacer" />
               </div>
             )}
             {it === 'radio' && (
               <div className="flex items-center gap-2">
                 <LabelInput label="Name" value={inp.inputName} onChange={(v) => updateFrame(frame.id, { inputName: v })} />
                 <LabelInput label="Value" value={inp.inputValue} onChange={(v) => updateFrame(frame.id, { inputValue: v })} />
-                <div className="w-5 shrink-0" />
+                <div className="c-slot-spacer" />
               </div>
             )}
             {(it === 'range' || it === 'number') && (
@@ -454,13 +452,13 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
                 <LabelInput label="Min" type="number" value={inp.min} onChange={(v) => updateFrame(frame.id, { min: Number(v) })} />
                 <LabelInput label="Max" type="number" value={inp.max} onChange={(v) => updateFrame(frame.id, { max: Number(v) })} />
                 <LabelInput label="Step" type="number" value={inp.step} onChange={(v) => updateFrame(frame.id, { step: Number(v) })} />
-                <div className="w-5 shrink-0" />
+                <div className="c-slot-spacer" />
               </div>
             )}
             {it === 'range' && (
               <div className="flex items-center gap-2">
                 <LabelInput label="Default" type="number" value={inp.defaultValue} onChange={(v) => updateFrame(frame.id, { defaultValue: Number(v) })} />
-                <div className="w-5 shrink-0" />
+                <div className="c-slot-spacer" />
               </div>
             )}
             <div className="flex items-center gap-2">
@@ -469,7 +467,7 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
               )}
               <Checkbox checked={inp.disabled} onChange={(v) => updateFrame(frame.id, { disabled: v })} label="Disabled" />
               <div className="flex-1" />
-              <div className="w-5 shrink-0" />
+              <div className="c-slot-spacer" />
             </div>
           </>
         )
@@ -483,12 +481,12 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
             <div className="flex items-center gap-2">
               <LabelInput icon={<TextCursorInput size={12} />} value={ta.placeholder} onChange={(v) => updateFrame(frame.id, { placeholder: v })} />
               <LabelInput icon={<Rows3 size={12} />} type="number" value={ta.rows} onChange={(v) => updateFrame(frame.id, { rows: Math.max(1, Number(v)) })} className="w-20 shrink-0" />
-              <div className="w-5 shrink-0" />
+              <div className="c-slot-spacer" />
             </div>
             <div className="flex items-center gap-2">
               <Checkbox checked={ta.disabled} onChange={(v) => updateFrame(frame.id, { disabled: v })} label="Disabled" />
               <div className="flex-1" />
-              <div className="w-5 shrink-0" />
+              <div className="c-slot-spacer" />
             </div>
           </>
         )
@@ -504,7 +502,7 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
                 <LabelInput icon={<CircleDot size={12} />} value={opt.value} onChange={(v) => updateOption(i, 'value', v)} />
                 <LabelInput icon={<Pencil size={12} />} value={opt.label} onChange={(v) => updateOption(i, 'label', v)} />
                 <button
-                  className="c-icon-btn w-5 h-5 shrink-0 hover:text-destructive hover:bg-destructive/10"
+                  className="c-slot hover:text-destructive hover:!bg-destructive/10"
                   onClick={() => removeOption(i)}
                   disabled={sel.options.length <= 1}
                 >
@@ -515,7 +513,7 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
             <div className="flex items-center gap-2">
               <Checkbox checked={sel.disabled} onChange={(v) => updateFrame(frame.id, { disabled: v })} label="Disabled" />
               <div className="flex-1" />
-              <button className="c-icon-btn w-5 h-5 shrink-0 hover:fg-default hover:bg-inset" onClick={addOption} title="Add option">
+              <button className="c-slot" onClick={addOption} title="Add option">
                 <Plus size={12} />
               </button>
             </div>
@@ -526,8 +524,8 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
       {/* Attributes */}
       {/* Attributes */}
       <div className="flex items-center gap-2">
-        <div className="flex-1 min-w-0 c-scale-input flex items-center gap-0.5 overflow-hidden cursor-text" onClick={(e) => { if (e.target === e.currentTarget) (e.currentTarget.querySelector('input') as HTMLInputElement)?.focus() }}>
-          <span className={`w-4 shrink-0 flex items-center justify-center ${frame.className ? 'fg-icon-muted' : 'fg-icon-subtle'}`}><Braces size={12} /></span>
+        <div className="flex-1 min-w-0 c-scale-input flex items-center overflow-hidden cursor-text" onClick={(e) => { if (e.target === e.currentTarget) (e.currentTarget.querySelector('input') as HTMLInputElement)?.focus() }}>
+          <span className={`w-4 shrink-0 flex items-center justify-center c-dimmed ${frame.className ? 'is-active' : ''}`}><Braces size={12} /></span>
           <input
             type="text"
             value={frame.className}
@@ -536,8 +534,8 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
             className="flex-1 min-w-[20px] text-[12px] fg-default"
           />
         </div>
-        <div className="flex-1 min-w-0 c-scale-input flex items-center gap-0.5 overflow-hidden cursor-text" onClick={(e) => { if (e.target === e.currentTarget) (e.currentTarget.querySelector('input') as HTMLInputElement)?.focus() }}>
-          <span className={`w-4 shrink-0 flex items-center justify-center ${frame.htmlId ? 'fg-icon-muted' : 'fg-icon-subtle'}`}><Hash size={12} /></span>
+        <div className="flex-1 min-w-0 c-scale-input flex items-center overflow-hidden cursor-text" onClick={(e) => { if (e.target === e.currentTarget) (e.currentTarget.querySelector('input') as HTMLInputElement)?.focus() }}>
+          <span className={`w-4 shrink-0 flex items-center justify-center c-dimmed ${frame.htmlId ? 'is-active' : ''}`}><Hash size={12} /></span>
           <input
             type="text"
             value={frame.htmlId}
@@ -546,7 +544,7 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
             className="flex-1 min-w-[20px] text-[12px] fg-default"
           />
         </div>
-        <div className="w-5 shrink-0" />
+        <div className="c-slot-spacer" />
       </div>
       </div>
     </Section>

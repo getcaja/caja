@@ -79,7 +79,7 @@ function DragGhost({ id, count }: { id: string; count: number }) {
       <span className="shrink-0 fg-icon-subtle">{icon}</span>
       <span className="truncate max-w-[140px]">{frame.name}</span>
       {count > 1 && (
-        <span className="shrink-0 bg-accent text-white text-[10px] font-semibold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">{count}</span>
+        <span className="shrink-0 bg-accent fg-default text-[10px] font-semibold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">{count}</span>
       )}
     </div>
   )

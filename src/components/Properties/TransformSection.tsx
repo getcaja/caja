@@ -37,7 +37,7 @@ export function TransformSection({ frame }: { frame: Frame }) {
             unit="%"
             tooltip="Scale"
           />
-          <div className="w-5 shrink-0" />
+          <div className="c-slot-spacer" />
         </div>
         <div className="flex items-center gap-2">
           <TokenInput
@@ -60,7 +60,7 @@ export function TransformSection({ frame }: { frame: Frame }) {
             placeholder="0"
             tooltip="Translate Y"
           />
-          <div className="w-5 shrink-0" />
+          <div className="c-slot-spacer" />
         </div>
         <div className="flex items-center gap-2">
           <TokenInput
@@ -85,7 +85,7 @@ export function TransformSection({ frame }: { frame: Frame }) {
             unit="°"
             tooltip="Skew Y"
           />
-          <div className="w-5 shrink-0" />
+          <div className="c-slot-spacer" />
         </div>
         <div className="flex items-center gap-2">
           <Select
@@ -97,7 +97,7 @@ export function TransformSection({ frame }: { frame: Frame }) {
             initialValue="center"
             tooltip="Transform Origin"
           />
-          <div className="w-5 shrink-0" />
+          <div className="c-slot-spacer" />
         </div>
       </div>
     </Section>

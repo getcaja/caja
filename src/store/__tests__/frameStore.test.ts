@@ -1574,4 +1574,58 @@ describe('showMarginOverlay', () => {
     store().setShowMarginOverlay(false)
     expect(store().showMarginOverlay).toBe(false)
   })
+
+  // ===== Auto-save subscriber =====
+
+  describe('auto-save subscriber', () => {
+    it('persists state to localStorage after debounce', async () => {
+      storage.clear()
+      // Trigger a state change that the auto-save subscriber listens to
+      addChild('box')
+      // Auto-save debounces at 500ms
+      await vi.waitFor(() => {
+        expect(storage.get('caja-state')).toBeDefined()
+      }, { timeout: 1000 })
+      const saved = JSON.parse(storage.get('caja-state')!)
+      expect(saved.pages).toBeDefined()
+      expect(saved.activePageId).toBeDefined()
+    })
+
+    it('overwrites previous save on rapid edits (debounce)', async () => {
+      storage.clear()
+      addChild('box')
+      addChild('text')
+      addChild('box')
+      // Only one save should happen after the final edit settles
+      await vi.waitFor(() => {
+        expect(storage.get('caja-state')).toBeDefined()
+      }, { timeout: 1000 })
+      const saved = JSON.parse(storage.get('caja-state')!)
+      // All 3 children should be present (latest state)
+      const page = saved.pages.find((p: { id: string }) => p.id === saved.activePageId)
+      expect(page.root.children.length).toBe(3)
+    })
+  })
+
+  // ===== Load guard =====
+
+  describe('load guard', () => {
+    it('loadFromStorage succeeds once, fails on second call', () => {
+      const pageData = { pages: store().pages, activePageId: store().activePageId }
+      storage.set('caja-state', JSON.stringify(pageData))
+      _resetLoadGuard()
+      expect(store().loadFromStorage()).toBe(true)
+      // Second call returns false — guard prevents double load
+      expect(store().loadFromStorage()).toBe(false)
+    })
+
+    it('_resetLoadGuard allows loadFromStorage to succeed again', () => {
+      const pageData = { pages: store().pages, activePageId: store().activePageId }
+      storage.set('caja-state', JSON.stringify(pageData))
+      _resetLoadGuard()
+      expect(store().loadFromStorage()).toBe(true)
+      _resetLoadGuard()
+      expect(store().loadFromStorage()).toBe(true)
+    })
+  })
 })

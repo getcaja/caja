@@ -17,7 +17,7 @@ export function PagePanel() {
         <div className="flex flex-col gap-2">
           {/* Badge + name */}
           <div className="flex items-center gap-2">
-            <span className="text-[12px] px-1.5 py-0.5 rounded-md font-medium bg-accent/15 text-accent">
+            <span className="text-[12px] px-1.5 py-0.5 rounded-md font-semibold bg-accent fg-default">
               Page
             </span>
             <input
@@ -27,13 +27,13 @@ export function PagePanel() {
               className="flex-1 c-input min-w-0"
               placeholder="Page name"
             />
-            <div className="w-5 shrink-0" />
+            <div className="c-slot-spacer" />
           </div>
 
           {/* Route */}
           <div className="flex items-center gap-2">
-            <div className="c-scale-input flex-1 flex items-center gap-0.5 overflow-hidden cursor-text">
-              <span title="Page Route" className="w-4 shrink-0 flex items-center justify-center fg-subtle">
+            <div className="c-scale-input flex-1 flex items-center overflow-hidden cursor-text">
+              <span title="Page Route" className="w-4 shrink-0 flex items-center justify-center c-dimmed">
                 <Globe size={12} />
               </span>
               <input
@@ -44,7 +44,7 @@ export function PagePanel() {
                 placeholder="/page-route"
               />
             </div>
-            <div className="w-5 shrink-0" />
+            <div className="c-slot-spacer" />
           </div>
         </div>
       </Section>

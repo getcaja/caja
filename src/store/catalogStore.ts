@@ -394,17 +394,27 @@ export const useCatalogStore = create<CatalogStore>((_set, get) => {
 })
 
 // Auto-save components to localStorage
-let componentSaveTimeout: ReturnType<typeof setTimeout>
-useCatalogStore.subscribe((state) => {
-  clearTimeout(componentSaveTimeout)
-  componentSaveTimeout = setTimeout(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      items: state.components,
-      order: state.order,
-      categories: state.emptyCategories,
-    }))
-  }, 500)
-})
+function setupCatalogSubscribers() {
+  let componentSaveTimeout: ReturnType<typeof setTimeout>
+  const unsub = useCatalogStore.subscribe((state) => {
+    clearTimeout(componentSaveTimeout)
+    componentSaveTimeout = setTimeout(() => {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        items: state.components,
+        order: state.order,
+        categories: state.emptyCategories,
+      }))
+    }, 500)
+  })
+  return () => { unsub(); clearTimeout(componentSaveTimeout) }
+}
+
+let disposeCatalogSubscribers = setupCatalogSubscribers()
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => { disposeCatalogSubscribers() })
+  import.meta.hot.accept()
+}
 
 // Load components from localStorage on startup (called from App.tsx loadFromStorage flow)
 export function loadComponentsFromStorage() {

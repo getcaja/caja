@@ -32,7 +32,7 @@ export function EffectsSection({ frame }: { frame: Frame }) {
             initialValue="auto"
             tooltip="Cursor"
           />
-          <div className="w-5 shrink-0" />
+          <div className="c-slot-spacer" />
         </div>
         <div className="flex items-center gap-2">
           <TokenInput
@@ -57,7 +57,7 @@ export function EffectsSection({ frame }: { frame: Frame }) {
             placeholder="0"
             tooltip="Backdrop Blur"
           />
-          <div className="w-5 shrink-0" />
+          <div className="c-slot-spacer" />
         </div>
       </div>
     </Section>

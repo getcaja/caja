@@ -3,7 +3,7 @@ import { useFrameStore } from '../../store/frameStore'
 import { useContextMenu } from './hooks/useContextMenu'
 import { useInlineEdit } from './hooks/useInlineEdit'
 import { TreeRow } from './TreeRow'
-import { Check, Copy, Trash2 } from 'lucide-react'
+import { Copy, Trash2 } from 'lucide-react'
 
 interface PageNodeProps {
   page: Page
@@ -17,9 +17,7 @@ export function PageNode({ page }: PageNodeProps) {
   const duplicatePage = useFrameStore((s) => s.duplicatePage)
   const removePage = useFrameStore((s) => s.removePage)
 
-  const pageSelected = useFrameStore((s) => s.pageSelected)
   const isActive = page.id === activePageId
-  const isFocused = isActive && pageSelected
 
   const nameEdit = useInlineEdit((v) => renamePage(page.id, v))
   const ctxMenu = useContextMenu()
@@ -38,8 +36,8 @@ export function PageNode({ page }: PageNodeProps) {
         depth={0}
         indent={16}
         name={page.name}
-        nameClassName="font-semibold"
-        isSelected={isFocused}
+        nameClassName=""
+        isSelected={isActive}
         isMulti={false}
         selectionStyle="neutral"
         editing={nameEdit.editing}
@@ -50,7 +48,7 @@ export function PageNode({ page }: PageNodeProps) {
         onClick={handleClick}
         onDoubleClick={() => nameEdit.start(page.name)}
         onContextMenu={ctxMenu.open}
-        trailing={isActive ? <span className="w-5 h-5 flex items-center justify-center shrink-0"><Check size={12} className="fg-icon-muted" /></span> : undefined}
+        trailing={undefined}
       />
 
       {ctxMenu.backdrop}

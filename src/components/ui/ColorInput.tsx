@@ -30,7 +30,7 @@ export function ColorInput({
   const [focused, setFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Track committed token (ignores preview changes)
+  // Track committed token (ignores preview hover changes while grid is open)
   const committedTokenRef = useRef(token)
   if (!showGrid) committedTokenRef.current = token
 
@@ -54,6 +54,7 @@ export function ColorInput({
 
   const removeToken = () => {
     onChange({ mode: 'custom', value: colorValue })
+    committedTokenRef.current = null
     setDraft(colorValue)
     requestAnimationFrame(() => {
       inputRef.current?.focus()
@@ -75,7 +76,7 @@ export function ColorInput({
   return (
     <div className="relative flex-1 min-w-0">
       <div
-        className="group c-scale-input flex items-center gap-0.5 pr-6 overflow-hidden cursor-text relative"
+        className="group c-scale-input flex items-center pr-6 overflow-hidden cursor-text relative"
         onClick={(e) => { if (e.target === e.currentTarget) inputRef.current?.focus() }}
       >
         <span title={tooltip} className="w-4 shrink-0 flex items-center justify-center">
@@ -83,7 +84,7 @@ export function ColorInput({
             <span
               className="w-3 h-3 rounded-full border overflow-hidden"
               style={{
-                borderColor: 'var(--fg-subtle)',
+                borderColor: 'var(--fg-muted)',
                 backgroundImage: 'repeating-conic-gradient(var(--surface-3) 0% 25%, transparent 0% 50%)',
                 backgroundSize: '6px 6px',
               }}
@@ -91,7 +92,7 @@ export function ColorInput({
           ) : (
             <span
               className="w-3 h-3 rounded-full border"
-              style={{ borderColor: 'var(--fg-subtle)', backgroundColor: colorValue || 'transparent' }}
+              style={{ borderColor: 'var(--fg-default)', backgroundColor: colorValue || 'transparent' }}
             />
           )}
         </span>
@@ -105,7 +106,7 @@ export function ColorInput({
               e.stopPropagation()
               setShowGrid(true)
             }}
-            className="flex items-center bg-emphasis fg-default rounded px-1 text-[11px] leading-[18px] font-medium min-w-0 truncate cursor-pointer hover:bg-emphasis"
+            className="c-pill cursor-pointer"
           >
             {formatToken(stableToken)}
           </button>
@@ -131,7 +132,7 @@ export function ColorInput({
               type="button"
               tabIndex={-1}
               onMouseDown={(e) => e.stopPropagation()}
-              className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted hover:bg-inset ${showGrid ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}
+              className={`c-input-btn ${showGrid ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}
             >
               <Diamond size={12} />
             </button>
@@ -142,7 +143,7 @@ export function ColorInput({
             <ColorGridPicker
               value={value}
               onChange={onChange}
-              onCommit={() => setShowGrid(false)}
+              onCommit={() => { committedTokenRef.current = null; setShowGrid(false) }}
               classPrefix={classPrefix}
             />
           </div>

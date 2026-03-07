@@ -8,7 +8,7 @@ export function ContextMenu({ trigger, children }: { trigger: React.ReactNode; c
       </RadixContextMenu.Trigger>
       <RadixContextMenu.Portal>
         <RadixContextMenu.Content
-          className="bg-surface-2 border border-border-accent rounded-lg shadow-2xl z-50 py-1.5 min-w-[160px]"
+          className="c-menu-popup min-w-[160px]"
         >
           {children}
         </RadixContextMenu.Content>

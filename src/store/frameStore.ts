@@ -37,62 +37,83 @@ export const useFrameStore = create<FrameStore>()((...a) => ({
 }))
 
 // --- Subscribers ---
+// Wrapped in a function so HMR can dispose old subscriptions and timers.
 
-// Auto-select root when selection is empty (keeps tree + canvas + properties in sync)
-useFrameStore.subscribe((state, prev) => {
-  if (
-    state.selectedId === null &&
-    prev.selectedId !== null &&
-    !state.previewMode &&
-    !state.pageSelected
-  ) {
-    useFrameStore.setState({
-      selectedId: state.root.id,
-      selectedIds: new Set([state.root.id]),
-    })
+function setupSubscribers() {
+  const unsubs: (() => void)[] = []
+  let saveTimeout: ReturnType<typeof setTimeout>
+  let propagateTimer: ReturnType<typeof setTimeout> | null = null
+  let lastCompPageRoot: BoxElement | null = null
+
+  // Auto-select root when selection is empty (keeps tree + canvas + properties in sync)
+  unsubs.push(useFrameStore.subscribe((state, prev) => {
+    if (
+      state.selectedId === null &&
+      prev.selectedId !== null &&
+      !state.previewMode &&
+      !state.pageSelected
+    ) {
+      useFrameStore.setState({
+        selectedId: state.root.id,
+        selectedIds: new Set([state.root.id]),
+      })
+    }
+  }))
+
+  // Auto-save
+  unsubs.push(useFrameStore.subscribe((state) => {
+    clearTimeout(saveTimeout)
+    saveTimeout = setTimeout(() => {
+      try {
+        localStorage.setItem('caja-state', JSON.stringify({ pages: state.pages, activePageId: state.activePageId, projectName: state.projectName, filePath: state.filePath }))
+      } catch (err) {
+        console.warn('Failed to save state to localStorage:', err)
+      }
+    }, 500)
+  }))
+
+  // Auto-propagate: when editing masters on the Components page, sync all instances
+  unsubs.push(useFrameStore.subscribe((state) => {
+    const compPage = state.pages.find((p) => p.isComponentPage)
+    if (!compPage) { lastCompPageRoot = null; return }
+
+    // Only propagate when the Components page root actually changed
+    if (compPage.root === lastCompPageRoot) return
+    const prevRoot = lastCompPageRoot
+    lastCompPageRoot = compPage.root
+
+    // Skip the first time (initialization)
+    if (!prevRoot) return
+
+    // Debounce propagation to avoid redundant work during rapid edits
+    if (propagateTimer) clearTimeout(propagateTimer)
+    propagateTimer = setTimeout(() => {
+      propagateTimer = null
+      const s = useFrameStore.getState()
+      const cp = s.pages.find((p) => p.isComponentPage)
+      if (!cp || cp.root.type !== 'box') return
+      for (const master of cp.root.children) {
+        s.propagateComponent(master.id)
+      }
+    }, 0)
+  }))
+
+  return () => {
+    unsubs.forEach((u) => u())
+    clearTimeout(saveTimeout)
+    if (propagateTimer) clearTimeout(propagateTimer)
   }
-})
+}
 
-// Auto-save
-let saveTimeout: ReturnType<typeof setTimeout>
-useFrameStore.subscribe((state) => {
-  clearTimeout(saveTimeout)
-  saveTimeout = setTimeout(() => {
-    try {
-      localStorage.setItem('caja-state', JSON.stringify({ pages: state.pages, activePageId: state.activePageId, projectName: state.projectName, filePath: state.filePath }))
-    } catch (err) {
-      console.warn('Failed to save state to localStorage:', err)
-    }
-  }, 500)
-})
+let disposeSubscribers = setupSubscribers()
 
-// Auto-propagate: when editing masters on the Components page, sync all instances
-let propagateTimer: ReturnType<typeof setTimeout> | null = null
-let lastCompPageRoot: BoxElement | null = null
-useFrameStore.subscribe((state) => {
-  const compPage = state.pages.find((p) => p.isComponentPage)
-  if (!compPage) { lastCompPageRoot = null; return }
-
-  // Only propagate when the Components page root actually changed
-  if (compPage.root === lastCompPageRoot) return
-  const prevRoot = lastCompPageRoot
-  lastCompPageRoot = compPage.root
-
-  // Skip the first time (initialization)
-  if (!prevRoot) return
-
-  // Debounce propagation to avoid redundant work during rapid edits
-  if (propagateTimer) clearTimeout(propagateTimer)
-  propagateTimer = setTimeout(() => {
-    propagateTimer = null
-    const s = useFrameStore.getState()
-    const cp = s.pages.find((p) => p.isComponentPage)
-    if (!cp || cp.root.type !== 'box') return
-    for (const master of cp.root.children) {
-      s.propagateComponent(master.id)
-    }
-  }, 0)
-})
+// HMR: clean up old subscribers/timers, re-register fresh ones
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    disposeSubscribers()
+  })
+  import.meta.hot.accept()
+}
 
 // --- Re-exports for backward compatibility ---
 

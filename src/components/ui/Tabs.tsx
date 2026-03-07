@@ -16,15 +16,15 @@ interface TabsProps {
 export function Tabs({ value, onValueChange, tabs, children }: TabsProps) {
   return (
     <RadixTabs.Root value={value} onValueChange={onValueChange} className="h-full flex flex-col">
-      <RadixTabs.List className="flex items-center gap-1 px-2 py-1.5 border-b border-border shrink-0">
+      <RadixTabs.List className="flex items-center gap-2 px-2 py-1.5 border-b border-border shrink-0">
         {tabs.map((tab) => (
           <RadixTabs.Trigger
             key={tab.value}
             value={tab.value}
-            className={`flex items-center gap-1.5 px-2.5 py-1 text-[12px] rounded-md transition-all ${
+            className={`flex items-center gap-2 px-2 py-1 text-[12px] rounded-md transition-all ${
               value === tab.value
                 ? 'bg-inset fg-default'
-                : 'fg-subtle hover:fg-muted'
+                : 'c-dimmed-i'
             }`}
           >
             {tab.icon}

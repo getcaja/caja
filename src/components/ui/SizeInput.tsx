@@ -328,7 +328,7 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
       {hasFixedToken ? (
         // Fixed + token: pill (non-editable) + Unlink
         <div
-          className="group c-scale-input flex items-center gap-0.5 pr-6 overflow-hidden cursor-pointer relative"
+          className="group c-scale-input flex items-center pr-6 overflow-hidden cursor-pointer relative"
           tabIndex={0}
           onClick={toggleDropdown}
           onKeyDown={(e) => {
@@ -349,7 +349,7 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
           }}
         >
           <span title={tooltip} className="w-4 shrink-0 flex items-center justify-center fg-muted">{label}</span>
-          <span className="flex items-center bg-emphasis fg-default rounded px-1 text-[11px] leading-[18px] font-medium min-w-0 truncate">
+          <span className="c-pill">
             {filteredScale.find(s => s.token === fixedToken)?.label ?? `${fixedNumeric}px`}
           </span>
           <span className="flex-1" />
@@ -366,7 +366,7 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
               setDraft(String(fixedNumeric))
               requestAnimationFrame(() => inputRef.current?.focus())
             }}
-            className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted hover:bg-inset ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+            className={`c-input-btn ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
           >
             <Unlink size={12} />
           </button>
@@ -374,7 +374,7 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
       ) : hasPill ? (
         // Keyword pill (Hug/Fill) — non-editable, click opens dropdown, right button detaches
         <div
-          className="group c-scale-input flex items-center gap-0.5 pr-6 overflow-hidden cursor-pointer relative"
+          className="group c-scale-input flex items-center pr-6 overflow-hidden cursor-pointer relative"
           tabIndex={0}
           onClick={toggleDropdown}
           onKeyDown={(e) => {
@@ -392,7 +392,7 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
           }}
         >
           <span title={tooltip} className="w-4 shrink-0 flex items-center justify-center fg-muted">{label}</span>
-          <span className="flex items-center bg-emphasis fg-default rounded px-1 text-[11px] leading-[18px] font-medium min-w-0 truncate">
+          <span className="c-pill">
             {pillText}
           </span>
           <span className="flex-1" />
@@ -407,7 +407,7 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
               e.stopPropagation()
               removePill()
             }}
-            className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted hover:bg-inset ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+            className={`c-input-btn ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
           >
             <Unlink size={12} />
           </button>
@@ -415,10 +415,10 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
       ) : (
         // Editable input (default/fixed custom)
         <div
-          className="group c-scale-input flex items-center gap-0.5 pr-6 overflow-hidden cursor-text relative"
+          className="group c-scale-input flex items-center pr-6 overflow-hidden cursor-text relative"
           onClick={() => inputRef.current?.focus()}
         >
-          <span title={tooltip} className={`w-4 shrink-0 flex items-center justify-center ${isDefault ? 'fg-subtle' : 'fg-muted'}`}>{label}</span>
+          <span title={tooltip} className={`w-4 shrink-0 flex items-center justify-center c-dimmed ${isDefault ? '' : 'is-active'}`}>{label}</span>
 
           <input
             ref={inputRef}
@@ -441,7 +441,7 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
               toggleDropdown()
               inputRef.current?.focus()
             }}
-            className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted hover:bg-inset ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}
+            className={`c-input-btn ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}
           >
             <Diamond size={12} />
           </button>
@@ -461,7 +461,7 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
             minWidth: dropPos.width,
             zIndex: 9999,
           }}
-          className="bg-surface-2 border border-border-accent rounded-lg shadow-2xl overflow-y-auto max-h-[200px] py-1"
+          className="c-menu-popup overflow-y-auto max-h-[200px]"
           onMouseLeave={revertPreview}
         >
           {items.map((item, i) => (
@@ -484,7 +484,7 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
                     : 'fg-muted hover:bg-inset hover:fg-default'
                 }`}
               >
-                <span className="flex items-center gap-1.5">
+                <span className="flex items-center gap-2">
                   <span className="font-medium">{item.label}</span>
                   {item.key === committedKey && <Check size={10} />}
                 </span>

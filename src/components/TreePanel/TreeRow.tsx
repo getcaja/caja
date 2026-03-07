@@ -120,12 +120,12 @@ export function TreeRow({
           else if (rowRef) (rowRef as React.MutableRefObject<HTMLDivElement | null>).current = el
         }}
         {...(dndProps ?? {})}
-        className={`relative flex items-center gap-1 py-1 cursor-default group ${
+        className={`relative flex items-center gap-1.5 py-1 cursor-default group ${
           isSelected
             ? `${selectionStyle === 'neutral' ? 'tree-node-selected-neutral' : isMulti ? 'tree-node-multi-selected' : 'tree-node-selected'} fg-default`
             : dropPosition === 'inside'
               ? 'bg-[var(--color-accent)]/10 outline outline-1 outline-[var(--color-accent)]/40'
-              : 'hover:bg-[var(--color-accent)]/8 fg-muted hover:fg-default'
+              : 'hover:bg-subtle fg-muted hover:fg-default'
         } ${className ?? ''}`}
         style={{ paddingLeft: indent ?? (depth * 16 + 16), paddingRight: 16 }}
         onClick={onClick}
@@ -155,7 +155,7 @@ export function TreeRow({
             className={INPUT_CLASS}
           />
         ) : (
-          <span className={`flex-1 h-5 flex items-center gap-1.5 text-[12px] truncate ${nameClassName ?? ''}`}>
+          <span className={`flex-1 h-5 flex items-center gap-2 text-[12px] truncate ${nameClassName ?? ''}`}>
             <span className="truncate">{name}</span>
             {badges}
           </span>

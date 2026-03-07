@@ -46,7 +46,7 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={handleCopy}
-      className="flex items-center gap-1 px-2 py-1 rounded text-[11px] fg-icon-muted hover:fg-default hover:bg-inset transition-colors"
+      className="flex items-center gap-2 px-2 py-1 rounded text-[11px] fg-muted hover:fg-default hover:bg-inset transition-colors"
     >
       {copied ? <Check size={12} /> : <Copy size={12} />}
       {copied ? 'Copied' : 'Copy'}
@@ -89,11 +89,11 @@ export function McpModal({ open, onOpenChange }: McpModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <div className="bg-surface-1 border border-border rounded-xl shadow-xl w-[480px] max-h-[80vh] overflow-hidden">
+      <div className="c-modal w-[480px] max-h-[80vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <h2 className="text-[13px] font-semibold fg-default">MCP Server</h2>
-          <button className="w-5 h-5 c-icon-btn hover:fg-icon-muted hover:bg-subtle" onClick={() => onOpenChange(false)}>
+          <button className="w-5 h-5 c-icon-btn" onClick={() => onOpenChange(false)}>
             <X size={14} />
           </button>
         </div>
@@ -105,15 +105,15 @@ export function McpModal({ open, onOpenChange }: McpModalProps) {
         </p>
 
         {/* Client tabs */}
-        <div className="flex gap-1 px-4 pb-3">
+        <div className="flex gap-2 px-4 pb-3">
           {CLIENTS.map((c) => (
             <button
               key={c.id}
               onClick={() => { setActiveClient(c.id); setInstallState('idle') }}
-              className={`px-2.5 py-1.5 rounded-md text-[12px] transition-colors ${
+              className={`px-2 py-1.5 rounded-md text-[12px] transition-colors ${
                 activeClient === c.id
                   ? 'bg-emphasis fg-default'
-                  : 'fg-subtle hover:fg-muted hover:bg-inset'
+                  : 'fg-muted hover:fg-default hover:bg-inset'
               }`}
             >
               {c.label}
@@ -127,7 +127,7 @@ export function McpModal({ open, onOpenChange }: McpModalProps) {
             <button
               onClick={handleInstall}
               disabled={installState !== 'idle'}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-accent text-white text-[12px] font-medium hover:bg-accent-hover transition-colors disabled:opacity-60"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-accent fg-default text-[12px] font-medium hover:bg-accent-hover transition-colors disabled:opacity-60"
             >
               {installState === 'idle' && <>Add to {CLIENTS.find((c) => c.id === activeClient)!.label}</>}
               {installState === 'installed' && <><Check size={14} /> Installed</>}
@@ -142,7 +142,7 @@ export function McpModal({ open, onOpenChange }: McpModalProps) {
           <button
             type="button"
             onClick={() => setShowManual(!showManual)}
-            className="flex items-center gap-1 text-[11px] fg-subtle hover:fg-muted transition-colors mb-2"
+            className="flex items-center gap-2 text-[11px] fg-muted hover:fg-default transition-colors mb-2"
           >
             {showManual ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
             Manual setup

@@ -76,9 +76,9 @@ export const TEXT_TRANSFORM_OPTIONS = [
 ]
 
 export const WHITE_SPACE_OPTIONS = [
+  { value: 'nowrap', label: 'None', tooltip: 'No Wrap' },
   { value: 'normal', label: 'Wrap', tooltip: 'Wrap Text' },
-  { value: 'nowrap', label: 'No Wrap', tooltip: 'No Wrap' },
-  { value: 'pre-wrap', label: 'Pre Wrap', tooltip: 'Preserve Whitespace' },
+  { value: 'pre-wrap', label: 'Pre', tooltip: 'Preserve Whitespace' },
 ]
 
 export const ALIGN_SELF_OPTIONS = [
@@ -101,8 +101,8 @@ export const TRANSFORM_ORIGIN_OPTIONS = [
   { value: 'bottom-left', label: 'Bottom Left' },
 ]
 
-const BADGE = 'bg-accent/15 text-accent'
-const COMPONENT_BADGE = 'bg-purple-500/15 text-purple-400'
+const BADGE = 'bg-accent fg-default'
+const COMPONENT_BADGE = BADGE
 
 export const TYPE_BADGE_STYLES: Record<string, string> = {
   root: BADGE,

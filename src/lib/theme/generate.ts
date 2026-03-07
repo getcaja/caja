@@ -28,18 +28,18 @@ export function deriveTokens(theme: CajaTheme): ThemeTokens {
   if (theme.dark) {
     return {
       'surface-0': surface.css(),
-      'surface-1': surface.lift(0.042).css(),
-      'surface-2': surface.lift(0.088).css(),
-      'surface-3': surface.lift(0.193).css(),
+      'surface-1': surface.lift(0.062).css(),
+      'surface-2': surface.lift(0.124).css(),
+      'surface-3': surface.lift(0.187).css(),
       'text-primary': text.css(),
-      'text-secondary': text.lower(0.329).css(),
-      'text-muted': text.lower(0.529).css(),
-      border: surface.lift(0.139).css(),
-      'border-accent': surface.lift(0.189).css(),
+      'text-secondary': text.lower(0.30).css(),
+      'text-muted': text.lower(0.53).css(),
+      border: surface.lift(0.093).css(),
+      'border-accent': surface.lift(0.124).css(),
       accent: accent.css(),
       'accent-hover': accent.lift(0.066).css(),
       destructive: ThemeColor.parse(theme.base.destructive).css(),
-      'canvas-bg': surface.lower(0.088).css(),
+      'canvas-bg': surface.lower(0.25).css(),
     }
   }
 
@@ -61,11 +61,15 @@ export function deriveTokens(theme: CajaTheme): ThemeTokens {
   }
 }
 
+// Surface tokens are owned by index.css (supports vibrancy rgba overrides).
+// Generated theme CSS must not overwrite them.
+const CSS_OWNED_KEYS = new Set(['surface-0', 'surface-1', 'surface-2', 'surface-3', 'canvas-bg'])
+
 export function generateThemeCSS(theme: CajaTheme): string {
   const tokens = deriveTokens(theme)
-  const lines = Object.entries(tokens).map(
-    ([key, value]) => `  --color-${key}: ${value};`,
-  )
+  const lines = Object.entries(tokens)
+    .filter(([key]) => !CSS_OWNED_KEYS.has(key))
+    .map(([key, value]) => `  --color-${key}: ${value};`)
   return `:root {\n${lines.join('\n')}\n}`
 }
 

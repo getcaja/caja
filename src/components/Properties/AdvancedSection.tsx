@@ -126,16 +126,14 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
         {/* Computed classes — read-only */}
         {computedClasses.length > 0 && (
           <div className="flex items-start gap-2">
-            <div className="flex-1 min-w-0 bg-inset rounded px-1.5 py-1 flex flex-wrap gap-1 min-h-[24px]">
+            <div className="flex-1 min-w-0 rounded px-1.5 py-1 flex flex-wrap gap-1 min-h-[24px]" style={{ backgroundColor: 'var(--input-bg)' }}>
               {computedClasses.map((cls, i) => (
-                <span key={i} className="c-pill bg-inset fg-subtle">{cls}</span>
+                <span key={i} className="c-class-pill border border-border fg-muted">{cls}</span>
               ))}
             </div>
             <button
               onClick={copyAll}
-              className={`w-5 h-5 shrink-0 flex items-center justify-center rounded ${
-                copied ? 'text-blue-400 bg-blue-400/10' : 'fg-subtle hover:fg-muted hover:bg-inset'
-              }`}
+              className={`c-slot ${copied ? 'is-active' : ''}`}
               title="Copy all classes"
             >
               {copied ? <Check size={12} /> : <Copy size={12} />}
@@ -146,20 +144,20 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
         {/* Manual classes — editable */}
         {manualClasses.length > 0 && (
           <div className="flex items-start gap-2">
-            <div className="flex-1 min-w-0 bg-inset rounded px-1.5 py-1 flex flex-wrap gap-1">
+            <div className="flex-1 min-w-0 rounded px-1.5 py-1 flex flex-wrap gap-1" style={{ backgroundColor: 'var(--input-bg)' }}>
               {manualClasses.map((cls, i) => (
-                <span key={`${i}-${cls}`} className="c-pill bg-inset fg-subtle">
+                <span key={`${i}-${cls}`} className="c-class-pill border border-border fg-muted">
                   {cls}
                   <button
                     onClick={() => removeClass(cls)}
-                    className="-mr-0.5 flex items-center justify-center rounded hover:bg-destructive/20 hover:text-destructive text-current opacity-70 hover:opacity-100"
+                    className="-mr-0.5 flex items-center justify-center rounded text-current hover:fg-default"
                   >
                     <X size={10} />
                   </button>
                 </span>
               ))}
             </div>
-            <div className="w-5 shrink-0" />
+            <div className="c-slot-spacer" />
           </div>
         )}
 
@@ -170,7 +168,7 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
               className="c-scale-input flex items-center gap-1 cursor-text"
               onClick={() => inputRef.current?.focus()}
             >
-              <span className="w-4 shrink-0 flex items-center justify-center fg-subtle">
+              <span className="w-4 shrink-0 flex items-center justify-center c-dimmed">
                 <Plus size={12} />
               </span>
               <input
@@ -194,7 +192,7 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
             {showSuggestions && suggestions.length > 0 && (
               <div
                 ref={suggestionsRef}
-                className={`absolute left-0 right-0 z-50 bg-surface-2 border border-border-accent rounded-lg shadow-2xl overflow-y-auto max-h-[200px] py-1 ${dropAbove ? 'bottom-full mb-1' : 'top-full mt-1'}`}
+                className={`absolute left-0 right-0 c-menu-popup overflow-y-auto max-h-[200px] ${dropAbove ? 'bottom-full mb-1' : 'top-full mt-1'}`}
               >
                 {suggestions.map((cls, i) => (
                   <button
@@ -213,7 +211,7 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
               </div>
             )}
           </div>
-          <div className="w-5 shrink-0" />
+          <div className="c-slot-spacer" />
         </div>
       </div>
     </Section>

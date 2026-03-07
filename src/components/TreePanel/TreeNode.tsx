@@ -102,7 +102,7 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
     : boxIcon!
 
   // Icon color class
-  const iconColor = isMaster || isInstance ? 'text-purple-400' : ''
+  const iconColor = isMaster || isInstance ? 'text-accent-text' : ''
 
   // Chevron state
   const chevron: 'expanded' | 'collapsed' | 'leaf' | 'none' = !isBox ? 'none'
@@ -112,12 +112,12 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
   // Row className additions
   const rowClassName = [
     frame.hidden ? 'opacity-40' : '',
-    insideInstance ? 'text-purple-400!' : '',
+    insideInstance ? 'text-accent-text!' : '',
   ].filter(Boolean).join(' ')
 
   // Name display
   const displayName = isRoot && !editingComponentId ? 'Body' : frame.name
-  const nameClass = isMaster || isInstance ? 'text-purple-400' : ''
+  const nameClass = isMaster || isInstance ? 'text-accent-text' : ''
 
   // Drop position (only when hovered and not self-dragging)
   const dropPos = isOver && overPosition && activeId ? overPosition : null
@@ -133,7 +133,7 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
     return (
       <span className="flex items-center gap-0.5 shrink-0">
         {bps.map((bp) => (
-          <span key={bp} className="px-1 py-px text-[9px] leading-none font-medium rounded bg-subtle fg-subtle select-none">
+          <span key={bp} className="px-1 py-px text-[9px] leading-none font-medium rounded bg-accent/15 text-accent-text select-none uppercase">
             {bp}
           </span>
         ))}

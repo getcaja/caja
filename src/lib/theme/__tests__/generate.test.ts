@@ -29,43 +29,43 @@ describe('deriveTokens', () => {
   const tokens = deriveTokens(DEFAULT_DARK)
 
   it('surface-0 matches input', () => {
-    expectColorMatch(tokens['surface-0'], '#111111')
+    expectColorMatch(tokens['surface-0'], '#1e1e1e')
   })
 
-  it('surface-1 ≈ #1b1b1b', () => {
-    expectColorMatch(tokens['surface-1'], '#1b1b1b')
+  it('surface-1 ≈ #2c2c2c', () => {
+    expectColorMatch(tokens['surface-1'], '#2c2c2c')
   })
 
-  it('surface-2 ≈ #262626', () => {
-    expectColorMatch(tokens['surface-2'], '#262626')
+  it('surface-2 ≈ #3a3a3a', () => {
+    expectColorMatch(tokens['surface-2'], '#3a3a3a')
   })
 
-  it('surface-3 ≈ #3f3f3f', () => {
-    expectColorMatch(tokens['surface-3'], '#3f3f3f')
+  it('surface-3 ≈ #484848', () => {
+    expectColorMatch(tokens['surface-3'], '#484848')
   })
 
   it('text-primary matches input', () => {
-    expectColorMatch(tokens['text-primary'], '#f0f0f0')
+    expectColorMatch(tokens['text-primary'], '#ffffff')
   })
 
-  it('text-secondary ≈ #a1a1a1', () => {
-    expectColorMatch(tokens['text-secondary'], '#a1a1a1', 2)
+  it('text-secondary ≈ #b3b3b3', () => {
+    expectColorMatch(tokens['text-secondary'], '#b3b3b3', 2)
   })
 
-  it('text-muted ≈ #717171', () => {
-    expectColorMatch(tokens['text-muted'], '#717171', 2)
+  it('text-muted ≈ #787878', () => {
+    expectColorMatch(tokens['text-muted'], '#787878', 2)
   })
 
-  it('border ≈ #323232', () => {
-    expectColorMatch(tokens.border, '#323232', 2)
+  it('border ≈ #333333', () => {
+    expectColorMatch(tokens.border, '#333333', 2)
   })
 
-  it('border-accent ≈ #3e3e3e', () => {
-    expectColorMatch(tokens['border-accent'], '#3e3e3e', 2)
+  it('border-accent ≈ #3a3a3a', () => {
+    expectColorMatch(tokens['border-accent'], '#3a3a3a', 2)
   })
 
   it('accent matches input', () => {
-    expectColorMatch(tokens.accent, '#0c8ce9')
+    expectColorMatch(tokens.accent, '#3378F6')
   })
 
   it('accent-hover is lighter than accent', () => {
@@ -95,14 +95,21 @@ describe('generateThemeCSS', () => {
 
   it('contains all expected properties', () => {
     const expected = [
-      'surface-0', 'surface-1', 'surface-2', 'surface-3',
+      // surface-0..3, canvas-bg: owned by index.css (vibrancy support)
       'text-primary', 'text-secondary', 'text-muted',
       'border', 'border-accent',
       'accent', 'accent-hover',
-      'destructive', 'canvas-bg',
+      'destructive',
     ]
     for (const key of expected) {
       expect(css, `Missing --color-${key}`).toContain(`--color-${key}:`)
+    }
+  })
+
+  it('excludes CSS-owned surface tokens (vibrancy support)', () => {
+    const excluded = ['surface-0', 'surface-1', 'surface-2', 'surface-3', 'canvas-bg']
+    for (const key of excluded) {
+      expect(css, `Should not contain --color-${key}`).not.toContain(`--color-${key}:`)
     }
   })
 

@@ -40,7 +40,7 @@ export function Section({
   }
 
   return (
-    <div className="px-4 py-3.5 border-b border-border">
+    <div className="c-section">
       <div
         className={`relative flex items-center group/section${collapsed ? '' : ' mb-2'}`}
       >
@@ -58,7 +58,7 @@ export function Section({
         {hasOverrides && onResetOverrides && (
           <button
             onClick={(e) => { e.stopPropagation(); onResetOverrides() }}
-            className="w-4 h-4 flex items-center justify-center rounded fg-icon-subtle hover:fg-icon-muted opacity-0 group-hover/section:opacity-100"
+            className="w-4 h-4 c-icon-btn opacity-0 group-hover/section:opacity-100"
             title="Reset overrides for this section"
           >
             <RotateCcw size={10} />
