@@ -20,12 +20,12 @@
   --color-ramp-white: #ffffff;
 
   /* ── Surfaces — dark defaults, overridden by caja-theme style ── */
-  --color-surface-0: #282828;
-  --color-surface-sunken: #1a1a1a;
-  --color-surface-vibrancy: rgba(40, 40, 40, 0.85);
-  --color-surface-1: #333333;
-  --color-surface-2: #404040;
-  --color-surface-3: #4d4d4d;
+  --color-surface-0: #1e1e1e;
+  --color-surface-sunken: #121212;
+  --color-surface-vibrancy: rgba(30, 30, 30, 0.85);
+  --color-surface-1: #2c2c2c;
+  --color-surface-2: #3a3a3a;
+  --color-surface-3: #484848;
 
   /* ── Accent ── */
   --color-accent: #3378F6;
@@ -38,27 +38,27 @@
   --color-text-muted: #787878;
 
   /* ── Borders ── */
-  --color-border: #3a3a3a;
-  --color-border-accent: #404040;
+  --color-border: #333333;
+  --color-border-accent: #3a3a3a;
 
   /* ── Semantic ── */
   --color-destructive: #ef4444;
 
   /* ── Canvas ── */
-  --color-canvas-bg: #1a1a1a;
+  --color-canvas-bg: #121212;
 
   /* ── Primitives (fg/bg) — overridden by caja-theme style ── */
   --color-fg-default: #ffffff;
   --color-fg-muted: #999999;
   --color-fg-subtle: #787878;
-  --color-bg-overlay: #141414;
+  --color-bg-overlay: #131313;
 
   /* ── Controls — dark: no border, light: visible border ── */
-  --color-control-bg: #333333;
-  --color-control-border: transparent;
-  --color-control-active: #404040;
-  --color-chrome-border: #3a3a3a;
-  --color-float-border: #404040;
+  --color-control-bg: #2c2c2c;
+  --color-control-border: #333333;
+  --color-control-active: #1e1e1e;
+  --color-chrome-border: #333333;
+  --color-float-border: #3a3a3a;
 }
 
 /* ── Semantic Context Tokens ──
