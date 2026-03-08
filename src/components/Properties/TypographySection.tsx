@@ -28,7 +28,7 @@ const FONT_FAMILY_OPTIONS = [
   { value: 'mono', label: 'Monospace' },
 ]
 
-export function TypographySection({ frame, hasOverrides, onResetOverrides }: { frame: TextStyles & { id: string; color: DesignValue<string> }; hasOverrides?: boolean; onResetOverrides?: () => void }) {
+export function TypographySection({ frame, hasOverrides, onResetOverrides }: { frame: TextStyles & { id: string; color: DesignValue<string>; colorAlpha: DesignValue<number> }; hasOverrides?: boolean; onResetOverrides?: () => void }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
   const [moreOpen, setMoreOpen] = useState(false)
 
@@ -62,6 +62,8 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides }: { f
             label="Color"
             classPrefix="text"
             tooltip="Text Color"
+            alpha={frame.colorAlpha}
+            onAlphaChange={(v) => updateFrame(frame.id, { colorAlpha: v })}
           />
           <div className="c-slot-spacer" />
         </div>

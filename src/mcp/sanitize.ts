@@ -170,6 +170,8 @@ export function sanitizeFrameProperties(props: Record<string, unknown>, existing
     letterSpacing: LETTER_SPACING_LOOKUP,
     gap: SPACING_LOOKUP,
     opacity: OPACITY_LOOKUP,
+    bgAlpha: OPACITY_LOOKUP,
+    colorAlpha: OPACITY_LOOKUP,
     grow: GROW_LOOKUP,
     shrink: SHRINK_LOOKUP,
     minWidth: SIZE_CONSTRAINT_LOOKUP,

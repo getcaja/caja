@@ -68,6 +68,8 @@ export function FillSection({ frame, hasOverrides, onResetOverrides }: { frame: 
               label="Color"
               classPrefix="bg"
               tooltip="Background Color"
+              alpha={frame.bgAlpha}
+              onAlphaChange={(v) => updateFrame(frame.id, { bgAlpha: v })}
             />
             <div className="c-slot-spacer" />
           </div>

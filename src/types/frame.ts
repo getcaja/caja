@@ -82,6 +82,8 @@ interface BaseElement {
   borderRadius: BorderRadius
   overflow: 'visible' | 'hidden' | 'scroll'
   opacity: DesignValue<number> // 0–100
+  bgAlpha: DesignValue<number>    // 0–100 — per-color opacity for bg (Tailwind /N modifier)
+  colorAlpha: DesignValue<number> // 0–100 — per-color opacity for text color
   boxShadow: 'none' | 'sm' | 'base' | 'md' | 'lg' | 'xl' | '2xl'
   cursor: 'auto' | 'default' | 'pointer' | 'text' | 'not-allowed' | 'grab'
   blur: DesignValue<number>

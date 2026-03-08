@@ -380,6 +380,40 @@ describe('Background', () => {
 })
 
 // ══════════════════════════════════════════════════════════════
+// 8b. COLOR ALPHA (per-color opacity via Tailwind /N modifier)
+// ══════════════════════════════════════════════════════════════
+
+describe('Color alpha', () => {
+  it('emits bg-red-500/75 for token bg + token alpha', () => {
+    expect(has(makeBox({ bg: dvColorToken('red-500'), bgAlpha: dvToken('75', 75) }), 'bg-red-500/75')).toBe(true)
+  })
+
+  it('emits bg-[#ff0000]/50 for custom bg + token alpha', () => {
+    expect(has(makeBox({ bg: dvStr('#ff0000'), bgAlpha: dvToken('50', 50) }), 'bg-[#ff0000]/50')).toBe(true)
+  })
+
+  it('emits bg-blue-500/42 for custom alpha value', () => {
+    expect(has(makeBox({ bg: dvColorToken('blue-500'), bgAlpha: dvNum(42) }), 'bg-blue-500/42')).toBe(true)
+  })
+
+  it('omits alpha suffix when bgAlpha is 100', () => {
+    expect(has(makeBox({ bg: dvColorToken('red-500'), bgAlpha: dvNum(100) }), 'bg-red-500')).toBe(true)
+  })
+
+  it('emits text-red-500/75 for token color + token alpha', () => {
+    expect(has(makeText({ color: dvColorToken('red-500'), colorAlpha: dvToken('75', 75) }), 'text-red-500/75')).toBe(true)
+  })
+
+  it('emits text-[#333]/50 for custom color + alpha', () => {
+    expect(has(makeText({ color: dvStr('#333'), colorAlpha: dvToken('50', 50) }), 'text-[#333]/50')).toBe(true)
+  })
+
+  it('omits alpha suffix when colorAlpha is 100', () => {
+    expect(has(makeText({ color: dvColorToken('blue-500'), colorAlpha: dvNum(100) }), 'text-blue-500')).toBe(true)
+  })
+})
+
+// ══════════════════════════════════════════════════════════════
 // 9. BORDER
 // ══════════════════════════════════════════════════════════════
 

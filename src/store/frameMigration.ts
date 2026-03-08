@@ -107,6 +107,8 @@ export function migrateFrame(raw: Record<string, unknown>): Frame {
     shrink: migrateDVNum(raw.shrink, 1),
     overflow: (raw.overflow as Frame['overflow']) || 'visible',
     opacity: migrateDVNum(raw.opacity, 100),
+    bgAlpha: migrateDVNum(raw.bgAlpha, 100),
+    colorAlpha: migrateDVNum(raw.colorAlpha, 100),
     bg: migrateDVStr(raw.bg, ''),
     border: migrateBorder(raw.border),
     borderRadius: migrateBorderRadius(raw.borderRadius),

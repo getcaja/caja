@@ -107,6 +107,8 @@ const baseDefaults = {
   borderRadius: zeroBorderRadius(),
   overflow: 'visible' as const,
   opacity: dvNum(100),
+  bgAlpha: dvNum(100),
+  colorAlpha: dvNum(100),
   boxShadow: 'none' as const,
   cursor: 'auto' as const,
   tailwindClasses: '',

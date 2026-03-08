@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
-import { Diamond } from 'lucide-react'
+import { Diamond, Blend } from 'lucide-react'
 import { Popover } from './Popover'
 import { ColorGridPicker } from './ColorGridPicker'
+import { TokenInput } from './TokenInput'
+import { OPACITY_SCALE } from '../../data/scales'
 import type { DesignValue } from '../../types/frame'
 
 const VALID_HEX = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
@@ -15,12 +17,16 @@ export function ColorInput({
   label: _label,
   classPrefix,
   tooltip,
+  alpha,
+  onAlphaChange,
 }: {
   value: DesignValue<string>
   onChange: (v: DesignValue<string>) => void
   label: string
   classPrefix?: string
   tooltip?: string
+  alpha?: DesignValue<number>
+  onAlphaChange?: (v: DesignValue<number>) => void
 }) {
   const token = value.mode === 'token' ? value.token : null
   const colorValue = value.value
@@ -73,82 +79,99 @@ export function ColorInput({
   const isEmpty = !stableToken && colorValue === ''
   const emptyPlaceholder = 'None'
 
+  const hasAlpha = alpha !== undefined && onAlphaChange !== undefined
+
   return (
-    <div className="relative flex-1 min-w-0">
-      <div
-        className="group c-scale-input flex items-center pr-6 overflow-hidden cursor-text relative"
-        onClick={(e) => { if (e.target === e.currentTarget) inputRef.current?.focus() }}
-      >
-        <span title={tooltip} className="w-4 shrink-0 flex items-center justify-center">
-          {isEmpty ? (
-            <span
-              className="w-3 h-3 rounded-full border overflow-hidden"
-              style={{
-                borderColor: 'var(--fg-muted)',
-                backgroundImage: 'repeating-conic-gradient(var(--surface-3) 0% 25%, transparent 0% 50%)',
-                backgroundSize: '6px 6px',
-              }}
-            />
-          ) : (
-            <span
-              className="w-3 h-3 rounded-full border"
-              style={{ borderColor: 'var(--fg-default)', backgroundColor: colorValue || 'transparent' }}
-            />
-          )}
-        </span>
+    <div className="flex gap-2 flex-1 min-w-0">
+      <div className="relative flex-1 min-w-0">
+        <div
+          className="group c-scale-input flex items-center pr-6 overflow-hidden cursor-text relative"
+          onClick={(e) => { if (e.target === e.currentTarget) inputRef.current?.focus() }}
+        >
+          <span title={tooltip} className="w-4 shrink-0 flex items-center justify-center">
+            {isEmpty ? (
+              <span
+                className="w-3 h-3 rounded-full border overflow-hidden"
+                style={{
+                  borderColor: 'var(--fg-muted)',
+                  backgroundImage: 'repeating-conic-gradient(var(--surface-3) 0% 25%, transparent 0% 50%)',
+                  backgroundSize: '6px 6px',
+                }}
+              />
+            ) : (
+              <span
+                className="w-3 h-3 rounded-full border"
+                style={{ borderColor: 'var(--fg-default)', backgroundColor: colorValue || 'transparent' }}
+              />
+            )}
+          </span>
 
-        {stableToken && (
-          <button
-            type="button"
-            tabIndex={-1}
-            onMouseDown={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              setShowGrid(true)
-            }}
-            className="c-pill cursor-pointer"
-          >
-            {formatToken(stableToken)}
-          </button>
-        )}
-
-        <input
-          ref={inputRef}
-          type="text"
-          value={displayValue}
-          onFocus={() => { setFocused(true); setDraft(stableToken ? '' : colorValue) }}
-          onBlur={() => commitDraft()}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={stableToken ? '' : emptyPlaceholder}
-          className={`flex-1 ${stableToken ? 'min-w-0' : 'min-w-[20px]'} text-[12px]`}
-        />
-
-        <Popover
-          open={showGrid}
-          onOpenChange={setShowGrid}
-          trigger={
+          {stableToken && (
             <button
               type="button"
               tabIndex={-1}
-              onMouseDown={(e) => e.stopPropagation()}
-              className={`c-input-btn ${showGrid ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}
+              onMouseDown={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setShowGrid(true)
+              }}
+              className="c-pill cursor-pointer"
             >
-              <Diamond size={12} />
+              {formatToken(stableToken)}
             </button>
-          }
-          align="end"
-        >
-          <div className="p-2">
-            <ColorGridPicker
-              value={value}
-              onChange={onChange}
-              onCommit={() => { committedTokenRef.current = null; setShowGrid(false) }}
-              classPrefix={classPrefix}
-            />
-          </div>
-        </Popover>
+          )}
+
+          <input
+            ref={inputRef}
+            type="text"
+            value={displayValue}
+            onFocus={() => { setFocused(true); setDraft(stableToken ? '' : colorValue) }}
+            onBlur={() => commitDraft()}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={stableToken ? '' : emptyPlaceholder}
+            className={`flex-1 ${stableToken ? 'min-w-0' : 'min-w-[20px]'} text-[12px]`}
+          />
+
+          <Popover
+            open={showGrid}
+            onOpenChange={setShowGrid}
+            trigger={
+              <button
+                type="button"
+                tabIndex={-1}
+                onMouseDown={(e) => e.stopPropagation()}
+                className={`c-input-btn ${showGrid ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}
+              >
+                <Diamond size={12} />
+              </button>
+            }
+            align="end"
+          >
+            <div className="p-2">
+              <ColorGridPicker
+                value={value}
+                onChange={onChange}
+                onCommit={() => { committedTokenRef.current = null; setShowGrid(false) }}
+                classPrefix={classPrefix}
+              />
+            </div>
+          </Popover>
+        </div>
       </div>
+      {hasAlpha && (
+        <TokenInput
+          scale={OPACITY_SCALE}
+          value={alpha}
+          onChange={onAlphaChange}
+          min={0}
+          max={100}
+          defaultValue={100}
+          unit=""
+          inlineLabel={<Blend size={12} />}
+          tooltip="Color Opacity"
+        />
+      )}
     </div>
   )
 }

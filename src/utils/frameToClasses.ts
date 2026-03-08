@@ -30,9 +30,12 @@ function dvClass(prefix: string, dv: DesignValue<number>, unit = 'px'): string {
   return `${prefix}-[${dv.value}${unit}]`
 }
 
-function dvColorClass(prefix: string, dv: DesignValue<string>): string {
-  if (dv.mode === 'token') return `${prefix}-${dv.token}`
-  return `${prefix}-[${dv.value}]`
+function dvColorClass(prefix: string, dv: DesignValue<string>, alpha?: DesignValue<number>): string {
+  const suffix = alpha && (alpha.mode === 'token' || alpha.value < 100)
+    ? `/${alpha.mode === 'token' ? alpha.token : alpha.value}`
+    : ''
+  if (dv.mode === 'token') return `${prefix}-${dv.token}${suffix}`
+  return `${prefix}-[${dv.value}]${suffix}`
 }
 
 // Check if two DesignValues are equal (same mode, token, and value)
@@ -255,7 +258,7 @@ export function frameToClasses(frame: Frame): string {
   }
 
   // Text color (all elements — enables CSS cascade inheritance)
-  if (frame.color?.value) cls.push(dvColorClass('text', frame.color))
+  if (frame.color?.value) cls.push(dvColorClass('text', frame.color, frame.colorAlpha))
 
   // Text styles (text, button, input, textarea, select — anything with TextStyles)
   if ('fontSize' in frame) {
@@ -372,7 +375,7 @@ export function frameToClasses(frame: Frame): string {
   cls.push(...spacingClasses('m', frame.margin))
 
   // Background
-  if (frame.bg.value) cls.push(dvColorClass('bg', frame.bg))
+  if (frame.bg.value) cls.push(dvColorClass('bg', frame.bg, frame.bgAlpha))
 
   // Background image (size/position/repeat classes only — url set via inline style)
   if (frame.bgImage) {
