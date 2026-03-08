@@ -27,7 +27,7 @@ export const DEFAULT_LIGHT: CajaTheme = {
   label: 'Light',
   dark: false,
   base: {
-    surface: '#ececec',
+    surface: '#ffffff',
     text: '#1a1a1a',
     accent: '#3378F6',
     destructive: '#ef4444',

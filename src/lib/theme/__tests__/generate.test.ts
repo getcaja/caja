@@ -106,7 +106,7 @@ describe('deriveTokens (light)', () => {
   const tokens = deriveTokens(DEFAULT_LIGHT)
 
   it('surface-0 matches input', () => {
-    expectColorMatch(tokens['surface-0'], '#ececec')
+    expectColorMatch(tokens['surface-0'], '#ffffff')
   })
 
   it('surface-1 is darker than surface-0', () => {
