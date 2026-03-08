@@ -82,12 +82,12 @@
   /* Toolbar (floating bottom bar) */
   --toolbar-bg:          var(--color-surface-0);
   /* Elevation — Figma's exact values: thin blur outline + ambient + direct */
-  --elevation-menu:      0 0 0.5px rgba(0,0,0,0.18), 0 3px 8px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1);
-  --elevation-toolbar:   0 0 0.5px rgba(0,0,0,0.18), 0 3px 8px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.1);
-  --elevation-modal:     0 0 0.5px rgba(0,0,0,0.18), 0 8px 24px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.1);
+  --elevation-menu:      0 1px 4px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.08);
+  --elevation-toolbar:   0 1px 4px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.08);
+  --elevation-modal:     0 2px 8px rgba(0,0,0,0.12), 0 12px 32px rgba(0,0,0,0.10);
 
   /* Modal (dialogs, sheets) */
-  --modal-bg:            var(--color-surface-1);
+  --modal-bg:            var(--color-surface-0);
 
   /* Titlebar */
   --titlebar-border:     var(--color-border);
@@ -345,7 +345,7 @@ input[type=number] {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    padding: 0.5rem;
+    padding: 0.75rem;
     width: 16rem;
   }
   .c-popover-row {
@@ -380,8 +380,7 @@ input[type=number] {
   /* --- Segment active item — card-like, matches pill style --- */
   .c-segment-active {
     background-color: var(--color-control-active);
-    border: 1px solid var(--color-border-accent);
-    border-radius: 0.1875rem;  /* slightly inset from container's 4px */
+    border-radius: 0.25rem;
   }
 
   /* --- Checkbox toggle --- */
@@ -408,8 +407,8 @@ input[type=number] {
     border-radius: 0.5rem;
     box-shadow: var(--elevation-menu);
     z-index: 9999;
-    padding-top: 0.375rem;
-    padding-bottom: 0.375rem;
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
   }
   .c-menu-item {
     width: 100%;

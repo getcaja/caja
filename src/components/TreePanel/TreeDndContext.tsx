@@ -17,9 +17,9 @@ import { useFrameStore, findInTree, findParent } from '../../store/frameStore'
 import type { Frame, BoxElement } from '../../types/frame'
 import {
   Frame as FrameIcon, Type, ImageIcon, RectangleHorizontal,
-  TextCursorInput, AlignLeft, ListCollapse, Link, Grid2x2,
-  SquareArrowRight, SquareArrowDown,
+  TextCursorInput, AlignLeft, ListCollapse, Link, LayoutGrid, Icon,
 } from 'lucide-react'
+import { layoutGridMoveHorizontal, layoutGridMoveVertical } from '@lucide/lab'
 import { computeZone, closestByY, type DropPosition } from './dndUtils'
 
 export type { DropPosition } from './dndUtils'
@@ -58,9 +58,9 @@ function DragGhost({ id, count }: { id: string; count: number }) {
   if (!frame) return null
 
   const boxIcon = frame.type === 'box'
-    ? (frame as BoxElement).display === 'grid' ? <Grid2x2 size={12} />
+    ? (frame as BoxElement).display === 'grid' ? <LayoutGrid size={12} />
     : (frame as BoxElement).display === 'flex' || (frame as BoxElement).display === 'inline-flex'
-      ? (frame as BoxElement).direction === 'row' ? <SquareArrowRight size={12} /> : <SquareArrowDown size={12} />
+      ? (frame as BoxElement).direction === 'row' ? <Icon iconNode={layoutGridMoveHorizontal} size={12} /> : <Icon iconNode={layoutGridMoveVertical} size={12} />
     : <FrameIcon size={12} />
     : null
 

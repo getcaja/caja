@@ -1,5 +1,9 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Settings2, Square, Grid2x2, Columns3, Rows3, AlignHorizontalSpaceAround, AlignVerticalSpaceAround, Check, SquareArrowRight, SquareArrowDown } from 'lucide-react'
+import { Settings2, LayoutGrid, Icon, Columns3, Rows3, AlignHorizontalSpaceAround, AlignVerticalSpaceAround, Check } from 'lucide-react'
+import { layoutGridMoveHorizontal, layoutGridMoveVertical } from '@lucide/lab'
+
+// Single rect matching LayoutGrid's footprint (18×18 from 3,3) with rx=1 for lab icon consistency
+const layoutBlock = [["rect", { width: "18", height: "18", x: "3", y: "3", rx: "1" }]] as unknown as import('lucide-react').IconNode
 import type { Frame, BoxElement } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { Section } from '../ui/Section'
@@ -81,10 +85,10 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
               <ToggleGroup
                 value={displayMode}
                 options={[
-                  { value: 'block', label: <Square size={12} />, tooltip: 'Block' },
-                  { value: 'flex-col', label: <SquareArrowDown size={12} />, tooltip: 'Vertical' },
-                  { value: 'flex-row', label: <SquareArrowRight size={12} />, tooltip: 'Horizontal' },
-                  { value: 'grid', label: <Grid2x2 size={12} />, tooltip: 'Grid' },
+                  { value: 'block', label: <Icon iconNode={layoutBlock} size={12} />, tooltip: 'Block' },
+                  { value: 'flex-col', label: <Icon iconNode={layoutGridMoveVertical} size={12} />, tooltip: 'Vertical' },
+                  { value: 'flex-row', label: <Icon iconNode={layoutGridMoveHorizontal} size={12} />, tooltip: 'Horizontal' },
+                  { value: 'grid', label: <LayoutGrid size={12} />, tooltip: 'Grid' },
                 ]}
                 onChange={(v) => {
                   const updates: Partial<BoxElement> = {}
@@ -509,7 +513,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                     value={boxFrame!.gap}
                     onChange={(v) => updateFrame(frame.id, { gap: v })}
                     min={0}
-                    inlineLabel={<Grid2x2 size={12} />}
+                    inlineLabel={<LayoutGrid size={12} />}
                     classPrefix="gap"
                     tooltip="Gap"
                   />
