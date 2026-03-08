@@ -76,31 +76,30 @@ export function deriveTokens(theme: CajaTheme): ThemeTokens {
   const s2 = away(surface, STEP_2)
   const s3 = away(surface, STEP_3)
 
+  // Sunken: deep recess in dark, subtle off-white in light
+  const sunken = theme.dark ? surface.lower(0.40) : surface.lower(0.04)
+
   return {
-    // ── Surfaces ──
+    // ── Surfaces (symmetric) ──
     'surface-0': surface.css(),
-    'surface-sunken': theme.dark
-      ? surface.lower(0.40).css()       // deep dark for canvas/console
-      : surface.lower(0.04).css(),      // subtle off-white
+    'surface-sunken': sunken.css(),
     'surface-vibrancy': surface.translucify(VIBRANCY_A).css(),
     'surface-1': s1.css(),
     'surface-2': s2.css(),
     'surface-3': s3.css(),
 
-    // ── Text ──
+    // ── Text (symmetric via fade) ──
     'text-primary': text.css(),
     'text-secondary': fade(text, TEXT_SEC).css(),
     'text-muted': fade(text, TEXT_MUTED).css(),
 
-    // ── Borders ──
+    // ── Borders (symmetric via away) ──
     border: away(surface, BORDER_STEP).css(),
     'border-accent': s2.css(),
 
-    // ── Accent ──
+    // ── Accent (symmetric via away) ──
     accent: accent.css(),
-    'accent-hover': theme.dark
-      ? accent.lift(ACCENT_HOVER).css()
-      : accent.lower(ACCENT_HOVER).css(),
+    'accent-hover': away(accent, ACCENT_HOVER).css(),
     'accent-text': theme.dark
       ? `color-mix(in srgb, ${accent.css()} 65%, white)`
       : `color-mix(in srgb, ${accent.css()} 65%, black)`,
@@ -109,26 +108,22 @@ export function deriveTokens(theme: CajaTheme): ThemeTokens {
     destructive: ThemeColor.parse(theme.base.destructive).css(),
 
     // ── Canvas ──
-    'canvas-bg': theme.dark
-      ? surface.lower(0.40).css()       // same as sunken
-      : surface.lower(0.04).css(),      // same as sunken
+    'canvas-bg': sunken.css(),
 
-    // ── Foreground / overlay ──
+    // ── Foreground (symmetric via fade) ──
     'fg-default': text.css(),
     'fg-muted': fade(text, FG_MUTED).css(),
     'fg-subtle': fade(text, FG_SUBTLE).css(),
     'bg-overlay': theme.dark
       ? surface.lower(0.35).css()
-      : surface.lower(0.04).css(),
+      : sunken.css(),
 
-    // ── Controls ──
+    // ── Controls (symmetric) ──
     'control-bg': s1.css(),
-    'control-border': theme.dark
-      ? 'transparent'                   // dark: bg contrast is enough
-      : away(surface, BORDER_STEP).css(), // light: needs visible border
-    'control-active': surface.css(),      // surface-0: pops against s1 container in both modes
+    'control-border': away(surface, BORDER_STEP).css(),
+    'control-active': surface.css(),
 
-    // ── Chrome & floating ── (mode-specific by nature)
+    // ── Chrome & floating (mode-specific by nature) ──
     'chrome-border': theme.dark
       ? away(surface, BORDER_STEP).css()
       : 'transparent',

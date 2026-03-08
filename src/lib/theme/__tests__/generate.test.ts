@@ -96,8 +96,9 @@ describe('deriveTokens (dark)', () => {
     expect(tokens['surface-vibrancy']).toMatch(/^rgba\(/)
   })
 
-  it('control-border is transparent in dark mode', () => {
-    expect(tokens['control-border']).toBe('transparent')
+  it('control-border is visible in dark mode (symmetric with light)', () => {
+    expect(tokens['control-border']).not.toBe('transparent')
+    expect(tokens['control-border']).toMatch(/^#[0-9a-f]{6}$/)
   })
 })
 
