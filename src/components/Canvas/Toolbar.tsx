@@ -83,7 +83,7 @@ function DropdownButton({ icon, title, isActive, menu, menuClassName, children }
       <button
         ref={btnRef}
         onClick={handleClick}
-        className={`${btnIconCls} ${open || isActive ? 'bg-accent fg-default' : 'fg-default opacity-80 hover:opacity-100'}`}
+        className={`${btnIconCls} ${open || isActive ? 'bg-accent fg-default' : 'fg-default hover:bg-surface-1'}`}
         title={title}
       >
         {icon ?? children}
@@ -195,10 +195,10 @@ export function Toolbar({ hidden = false }: { hidden?: boolean }) {
     >
       <div className={`flex items-stretch rounded-lg ${shouldHide ? 'pointer-events-none' : 'pointer-events-auto'}`} style={{ backgroundColor: 'var(--toolbar-bg)', border: '1px solid var(--color-float-border)', boxShadow: 'var(--elevation-toolbar)' }}>
         <div className="flex items-center gap-0.5 py-1 pl-1.5 pr-1">
-          <div className="flex items-center rounded-md">
+          <div className="flex items-center gap-0.5">
             <button
               onClick={() => setCanvasTool('pointer')}
-              className={`${btnIcon} ${canvasTool === 'pointer' ? 'bg-accent fg-default' : 'fg-default opacity-80 hover:opacity-100'}`}
+              className={`${btnIcon} ${canvasTool === 'pointer' ? 'bg-accent fg-default' : 'fg-default hover:bg-surface-1'}`}
               title="Pointer (V)"
             >
               <MousePointer2 size={12} />
@@ -206,7 +206,7 @@ export function Toolbar({ hidden = false }: { hidden?: boolean }) {
             <button
               onClick={() => setCanvasTool('frame')}
               onDoubleClick={() => { handleInsert('box'); setCanvasTool('pointer') }}
-              className={`${btnIcon} ${canvasTool === 'frame' ? 'bg-accent fg-default' : 'fg-default opacity-80 hover:opacity-100'}`}
+              className={`${btnIcon} ${canvasTool === 'frame' ? 'bg-accent fg-default' : 'fg-default hover:bg-surface-1'}`}
               title="Frame (F)"
             >
               <FrameIcon size={12} />
@@ -214,7 +214,7 @@ export function Toolbar({ hidden = false }: { hidden?: boolean }) {
             <button
               onClick={() => setCanvasTool('text')}
               onDoubleClick={() => { handleInsert('text'); setCanvasTool('pointer') }}
-              className={`${btnIcon} ${canvasTool === 'text' ? 'bg-accent fg-default' : 'fg-default opacity-80 hover:opacity-100'}`}
+              className={`${btnIcon} ${canvasTool === 'text' ? 'bg-accent fg-default' : 'fg-default hover:bg-surface-1'}`}
               title="Text (T)"
             >
               <Type size={12} />
@@ -222,7 +222,7 @@ export function Toolbar({ hidden = false }: { hidden?: boolean }) {
             <button
               onClick={onImageClick}
               onDoubleClick={onImageDoubleClick}
-              className={`${btnIcon} ${canvasTool === 'image' ? 'bg-accent fg-default' : 'fg-default opacity-80 hover:opacity-100'}`}
+              className={`${btnIcon} ${canvasTool === 'image' ? 'bg-accent fg-default' : 'fg-default hover:bg-surface-1'}`}
               title="Image (I)"
             >
               <ImageIcon size={12} />

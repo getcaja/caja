@@ -363,7 +363,7 @@ input[type=number] {
   }
   .c-popover-title {
     font-size: 12px;
-    font-weight: 500;
+    font-weight: 600;
     color: var(--fg-default);
   }
   .c-popover-subtitle {
@@ -389,7 +389,7 @@ input[type=number] {
     height: 0.875rem;
     border-radius: 0.25rem;
     border: 1px solid var(--color-border-accent);
-    background-color: var(--bg-inset);
+    background-color: transparent;
     display: flex;
     align-items: center;
     justify-content: center;

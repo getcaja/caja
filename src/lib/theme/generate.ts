@@ -82,7 +82,7 @@ export function deriveTokens(theme: CajaTheme): ThemeTokens {
 
   // Light mode — symmetric deltas to dark mode (Radix-validated approach).
   // Dark lifts: 0.062, 0.124, 0.187 → Light lowers: same values.
-  const s1 = surface.lower(0.062)   // ~#f0f0f0 — inputs, cards (≈ Radix gray3)
+  const s1 = surface.lower(0.08)    // ~#ebebeb — inputs, cards, segment bg
   const s2 = surface.lower(0.124)   // ~#e0e0e0 — hover, inset  (≈ Radix gray5)
   const s3 = surface.lower(0.187)   // ~#d0d0d0 — emphasis       (≈ Radix gray7)
   return {
