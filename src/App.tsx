@@ -73,7 +73,8 @@ function App() {
   useEffect(() => {
     savePanelState({ leftWidth, rightWidth })
   }, [leftWidth, rightWidth])
-  const [isResizing, setIsResizing] = useState(false)
+  const [resizingSide, setResizingSide] = useState<'left' | 'right' | null>(null)
+  const isResizing = resizingSide !== null
   const dragging = useRef<'left' | 'right' | null>(null)
   const startX = useRef(0)
   const startWidth = useRef(0)
@@ -409,6 +410,9 @@ function App() {
             break
           case 'open-docs':
             window.open('https://docs.getcaja.app', '_blank')
+            break
+          case 'send-feedback':
+            window.open('https://github.com/getcaja/caja/issues', '_blank')
             break
           case 'keyboard-shortcuts':
             window.dispatchEvent(new Event('show-keyboard-shortcuts'))
@@ -935,7 +939,7 @@ function App() {
     dragging.current = side
     startX.current = e.clientX
     startWidth.current = side === 'left' ? leftWidth : rightWidth
-    setIsResizing(true)
+    setResizingSide(side)
 
     const onMove = (ev: PointerEvent) => {
       const delta = ev.clientX - startX.current
@@ -947,7 +951,7 @@ function App() {
     }
     const onUp = () => {
       dragging.current = null
-      setIsResizing(false)
+      setResizingSide(null)
       document.documentElement.removeEventListener('pointermove', onMove)
       document.documentElement.removeEventListener('pointerup', onUp)
     }
@@ -968,9 +972,11 @@ function App() {
               <div style={{ width: leftWidth }} className="shrink-0 border-r border-border relative">
                 <TreePanel key={layoutResetKey} />
                 <div
-                  className="absolute top-0 -right-[3px] bottom-0 w-[7px] cursor-col-resize hover:bg-accent/40 transition-colors z-10"
+                  className="absolute top-0 -right-1 bottom-0 w-2 cursor-col-resize z-10 group"
                   onPointerDown={(e) => startDrag('left', e)}
-                />
+                >
+                  <div className={`absolute inset-y-0 left-0.5 w-1 group-hover:bg-accent ${resizingSide === 'left' ? 'bg-accent' : ''}`} />
+                </div>
               </div>
             )}
             <div className="flex-1 flex flex-col overflow-hidden">
@@ -979,9 +985,11 @@ function App() {
             {!previewMode && !rightCollapsed && (
               <div style={{ width: rightWidth }} className="shrink-0 border-l border-border relative">
                 <div
-                  className="absolute top-0 -left-[3px] bottom-0 w-[7px] cursor-col-resize hover:bg-accent/40 transition-colors z-10"
+                  className="absolute top-0 -left-1 bottom-0 w-2 cursor-col-resize z-10 group"
                   onPointerDown={(e) => startDrag('right', e)}
-                />
+                >
+                  <div className={`absolute inset-y-0 right-0.5 w-1 group-hover:bg-accent ${resizingSide === 'right' ? 'bg-accent' : ''}`} />
+                </div>
                 <RightPanel key={layoutResetKey} />
               </div>
             )}

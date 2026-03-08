@@ -1327,9 +1327,12 @@ pub fn run() {
                 .build(app)?;
             let docs_item = MenuItemBuilder::with_id("open-docs", "Documentation")
                 .build(app)?;
+            let feedback_item = MenuItemBuilder::with_id("send-feedback", "Send Feedback…")
+                .build(app)?;
 
             let help_menu = SubmenuBuilder::new(app, "Help")
                 .item(&docs_item)
+                .item(&feedback_item)
                 .separator()
                 .item(&shortcuts_item)
                 .build()?;
