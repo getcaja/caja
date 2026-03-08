@@ -1295,6 +1295,11 @@ pub fn run() {
                 .checked(true)
                 .build(app)?;
 
+            let show_hints = CheckMenuItemBuilder::new("Show Hints")
+                .id("show-hints")
+                .checked(true)
+                .build(app)?;
+
             let collapse_all = MenuItemBuilder::with_id("collapse-all", "Collapse All Layers")
                 .build(app)?;
             let expand_all = MenuItemBuilder::with_id("expand-all", "Expand All Layers")
@@ -1310,6 +1315,7 @@ pub fn run() {
                 .item(&themes_submenu)
                 .item(&spacing_grid_submenu)
                 .item(&style_new_frames)
+                .item(&show_hints)
                 .separator()
                 .item(&collapse_all)
                 .item(&expand_all)
@@ -1472,7 +1478,7 @@ pub fn run() {
 
             // For check menu items, emit their new checked state
             match id {
-                "toggle-left-panel" | "toggle-right-panel" | "style-new-frames" => {
+                "toggle-left-panel" | "toggle-right-panel" | "style-new-frames" | "show-hints" => {
                     use tauri::menu::MenuItemKind;
                     if let Some(menu) = app.menu() {
                         for item in menu.items().unwrap_or_default() {

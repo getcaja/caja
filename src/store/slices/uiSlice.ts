@@ -15,6 +15,7 @@ interface ViewPrefs {
   collapsedIds: string[]
   spacingGrid: SpacingGrid
   styleNewFrames: boolean
+  showHints: boolean
 }
 
 export function loadViewPrefs(): ViewPrefs {
@@ -29,10 +30,11 @@ export function loadViewPrefs(): ViewPrefs {
         collapsedIds: parsed.collapsedIds ?? [],
         spacingGrid: (['off', '4px', '8px'].includes(parsed.spacingGrid) ? parsed.spacingGrid : '4px') as SpacingGrid,
         styleNewFrames: parsed.styleNewFrames ?? true,
+        showHints: parsed.showHints ?? true,
       }
     }
   } catch (err) { console.warn('Failed to load view preferences:', err) }
-  return { previewMode: false, canvasWidth: null, activeBreakpoint: 'base' as Breakpoint, collapsedIds: [], spacingGrid: '4px' as SpacingGrid, styleNewFrames: true }
+  return { previewMode: false, canvasWidth: null, activeBreakpoint: 'base' as Breakpoint, collapsedIds: [], spacingGrid: '4px' as SpacingGrid, styleNewFrames: true, showHints: true }
 }
 
 export function saveViewPrefs(prefs: Partial<ViewPrefs>) {
@@ -100,7 +102,9 @@ export interface UiSlice {
   showMarginOverlay: boolean
   showPaddingOverlay: boolean
   showGapOverlay: boolean
+  showHints: boolean
 
+  setShowHints: (value: boolean) => void
   setShowMarginOverlay: (value: boolean) => void
   setShowPaddingOverlay: (value: boolean) => void
   setShowGapOverlay: (value: boolean) => void
@@ -141,7 +145,12 @@ export const createUiSlice: StateCreator<FrameStore, [], [], UiSlice> = (set, ge
     showMarginOverlay: false,
     showPaddingOverlay: false,
     showGapOverlay: false,
+    showHints: initialViewPrefs.showHints,
 
+    setShowHints: (value) => {
+      saveViewPrefs({ showHints: value })
+      set({ showHints: value })
+    },
     setShowMarginOverlay: (value) => set({ showMarginOverlay: value }),
     setShowPaddingOverlay: (value) => set({ showPaddingOverlay: value }),
     setShowGapOverlay: (value) => set({ showGapOverlay: value }),

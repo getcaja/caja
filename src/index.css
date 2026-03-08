@@ -400,6 +400,21 @@ input[type=number] {
     color: #fff; /* always white on accent bg */
   }
 
+  /* --- Canvas hints (Safari-style) --- */
+  .c-canvas-hint {
+    position: absolute;
+    bottom: 0.5rem;
+    left: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.75);
+    background: rgba(0, 0, 0, 0.75);
+    border-radius: 0.25rem;
+    pointer-events: none;
+    z-index: 10;
+    white-space: nowrap;
+  }
+
   /* --- Menus & popups --- */
   .c-menu-popup {
     background-color: var(--menu-bg);

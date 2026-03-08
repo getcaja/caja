@@ -224,6 +224,7 @@ function App() {
         safeMenuSync(invoke, 'toggle-left-panel', true)
         safeMenuSync(invoke, 'toggle-right-panel', true)
         safeMenuSync(invoke, 'style-new-frames', useFrameStore.getState().styleNewFrames)
+        safeMenuSync(invoke, 'show-hints', useFrameStore.getState().showHints)
         // Sync theme radio checks
         const pref = getThemePreference()
         for (const tid of ['system', 'default-dark', 'default-light']) {
@@ -492,6 +493,8 @@ function App() {
           setRightCollapsed(!checked)
         } else if (id === 'style-new-frames') {
           useFrameStore.getState().setStyleNewFrames(checked)
+        } else if (id === 'show-hints') {
+          useFrameStore.getState().setShowHints(checked)
         }
       }).then((fn) => {
         if (active) unlisteners.push(fn); else fn()

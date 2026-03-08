@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState, useCallback } from 'react'
 import { useFrameStore } from '../../store/frameStore'
 import { CanvasInline } from './CanvasInline'
+import { CanvasHints } from './CanvasHints'
 import { Toolbar } from './Toolbar'
 
 /** Threshold in px — when scroll is within this distance of the bottom, hide toolbar. */
@@ -47,6 +48,7 @@ export function Canvas() {
           </div>
         )}
       </div>
+      {!previewMode && <CanvasHints />}
       <Toolbar hidden={nearBottom} />
     </div>
   )
