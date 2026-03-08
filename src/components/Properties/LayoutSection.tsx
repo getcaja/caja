@@ -82,10 +82,10 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
               <ToggleGroup
                 value={displayMode}
                 options={[
-                  { value: 'block', label: <Square size={14} />, tooltip: 'Block' },
-                  { value: 'flex-col', label: <FlexColumnIcon size={14} />, tooltip: 'Vertical' },
-                  { value: 'flex-row', label: <FlexRowIcon size={14} />, tooltip: 'Horizontal' },
-                  { value: 'grid', label: <LayoutGrid size={14} />, tooltip: 'Grid' },
+                  { value: 'block', label: <Square size={12} />, tooltip: 'Block' },
+                  { value: 'flex-col', label: <FlexColumnIcon size={12} />, tooltip: 'Vertical' },
+                  { value: 'flex-row', label: <FlexRowIcon size={12} />, tooltip: 'Horizontal' },
+                  { value: 'grid', label: <LayoutGrid size={12} />, tooltip: 'Grid' },
                 ]}
                 onChange={(v) => {
                   const updates: Partial<BoxElement> = {}

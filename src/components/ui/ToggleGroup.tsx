@@ -21,7 +21,7 @@ export function ToggleGroup<T extends string>({
       value={value}
       onValueChange={(v) => { if (v) onChange(v as T) }}
       className={`flex rounded overflow-hidden h-6 ${className ?? ''}`}
-      style={{ backgroundColor: 'var(--input-bg)' }}
+      style={{ backgroundColor: 'var(--color-surface-1)' }}
     >
       {options.map((opt) => (
         <RadixToggleGroup.Item
@@ -32,7 +32,7 @@ export function ToggleGroup<T extends string>({
             opt.disabled
               ? 'fg-disabled cursor-not-allowed'
               : value === opt.value
-                ? 'fg-default bg-inset'
+                ? 'fg-default c-segment-active'
                 : 'c-dimmed-i'
           }`}
           disabled={opt.disabled}

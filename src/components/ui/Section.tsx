@@ -40,9 +40,9 @@ export function Section({
   }
 
   return (
-    <div className="c-section">
+    <div className={`c-section${collapsed ? ' is-collapsed' : ''}`}>
       <div
-        className={`relative flex items-center group/section${collapsed ? '' : ' mb-2'}`}
+        className="c-section-header relative group/section"
       >
         {collapsible && (
           <ChevronRight

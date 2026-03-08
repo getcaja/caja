@@ -20,9 +20,9 @@ function TreeSection({ label, collapsed, onToggle, trailing, children }: {
   children?: React.ReactNode
 }) {
   return (
-    <div className="py-3 border-b border-border">
-      <div className={`px-4${collapsed ? '' : ' mb-2'}`}>
-        <div className="relative flex items-center group/section">
+    <div className="border-b border-border">
+      <div className="c-section-header px-4">
+        <div className="relative flex items-center group/section flex-1">
           <ChevronRight
             size={12}
             className={`absolute -left-3 top-1/2 -translate-y-1/2 fg-muted cursor-pointer opacity-0 group-hover/section:opacity-100 ${collapsed ? '' : 'rotate-90'}`}
@@ -268,7 +268,7 @@ export function TreePanel() {
   if (editingMaster) {
     return (
       <div className="h-full flex flex-col" style={{ backgroundColor: 'var(--panel-bg)' }}>
-        <div className="pl-3 pr-4 py-3 border-b border-border flex items-center justify-between">
+        <div className="c-section-header pl-3 pr-4 border-b border-border justify-between">
           <div className="flex items-center gap-2 min-w-0">
             <input
               className="text-[12px] font-semibold px-1.5 py-0.5 fg-default bg-transparent min-w-0 rounded focus:bg-inset outline-none"
@@ -323,16 +323,16 @@ export function TreePanel() {
 
   return (
     <div className="h-full flex flex-col" style={{ backgroundColor: 'var(--panel-bg)' }}>
-      <div className="pl-3 pr-4 py-3 border-b border-border flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div className="c-section-header pl-3 pr-4 border-b border-border justify-between">
+        <div className="flex items-center gap-1">
           <button
-            className={`text-[12px] font-semibold px-1.5 py-0.5 rounded ${tab === 'layers' ? 'fg-default' : 'c-dimmed-i'}`}
+            className={`text-[12px] font-semibold px-1 py-0.5 rounded ${tab === 'layers' ? 'fg-default' : 'c-dimmed-i'}`}
             onClick={() => setTab('layers')}
           >
             File
           </button>
           <button
-            className={`text-[12px] font-semibold px-1.5 py-0.5 rounded ${tab === 'components' ? 'fg-default' : 'c-dimmed-i'}`}
+            className={`text-[12px] font-semibold px-1 py-0.5 rounded ${tab === 'components' ? 'fg-default' : 'c-dimmed-i'}`}
             onClick={handleAssetsTab}
           >
             Assets
@@ -397,7 +397,7 @@ export function TreePanel() {
                 </button>
               }
             >
-              <div className="pb-0.5 flex flex-col gap-0.5">
+              <div className="pb-2 flex flex-col gap-0.5">
                 {pages.filter((p) => !p.isComponentPage).map((page) => (
                   <PageNode key={page.id} page={page} />
                 ))}

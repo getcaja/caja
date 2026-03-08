@@ -17,7 +17,7 @@ export function PagePanel() {
         <div className="flex flex-col gap-2">
           {/* Badge + name */}
           <div className="flex items-center gap-2">
-            <span className="text-[12px] px-1.5 py-0.5 rounded-md font-semibold bg-accent fg-default">
+            <span className="text-[12px] px-1.5 py-0.5 rounded font-semibold bg-accent fg-default">
               Page
             </span>
             <input

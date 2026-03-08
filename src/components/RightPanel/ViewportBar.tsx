@@ -150,7 +150,7 @@ export function ViewportBar() {
   </>
 
   return (
-    <div className="flex items-center justify-between c-section">
+    <div className="c-section-header px-4 justify-between border-b border-border">
       <Dropdown
         trigger={
           <button className="h-6 flex items-center gap-2 rounded fg-default" title={currentBp.label}>

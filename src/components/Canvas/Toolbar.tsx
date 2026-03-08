@@ -193,7 +193,7 @@ export function Toolbar({ hidden = false }: { hidden?: boolean }) {
         transition: 'opacity 200ms ease, transform 200ms ease',
       }}
     >
-      <div className={`flex items-stretch border border-border rounded-lg shadow-[0_3px_8px_rgba(0,0,0,0.35),0_1px_3px_rgba(0,0,0,0.5)] ${shouldHide ? 'pointer-events-none' : 'pointer-events-auto'}`} style={{ backgroundColor: 'var(--toolbar-bg)' }}>
+      <div className={`flex items-stretch rounded-lg ${shouldHide ? 'pointer-events-none' : 'pointer-events-auto'}`} style={{ backgroundColor: 'var(--toolbar-bg)', border: '1px solid var(--color-float-border)', boxShadow: 'var(--elevation-toolbar)' }}>
         <div className="flex items-center gap-0.5 py-1 pl-1.5 pr-1">
           <div className="flex items-center rounded-md">
             <button

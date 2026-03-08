@@ -49,10 +49,10 @@ export function TitleBar() {
     >
       {/* Centered title — absolute so it's truly centered across full width */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <span className="text-[12px] fg-default">
+        <span className="text-[12px] fg-default flex items-center">
           {fileName}
           {dirty && (
-            <span className="fg-default text-[10px] ml-1" title="Unsaved changes">●</span>
+            <span className="w-[6px] h-[6px] rounded-full ml-1.5 opacity-30 shrink-0" style={{ backgroundColor: 'var(--fg-default)' }} title="Unsaved changes" />
           )}
         </span>
       </div>

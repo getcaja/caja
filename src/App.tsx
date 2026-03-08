@@ -16,7 +16,7 @@ import { ZOOM_LEVELS } from './components/Canvas/ZoomBar'
 import { isRootId, findParent } from './store/treeHelpers'
 import { pushNav, undoNav, redoNav } from './store/selectionHistory'
 import { canvasZoomTo } from './components/Canvas/CanvasInline'
-import { switchTheme, getThemePreference } from './lib/theme'
+import { switchTheme, getThemePreference, getActiveTheme } from './lib/theme'
 import { checkForUpdates, checkForUpdatesOnStartup } from './lib/updater'
 import { askUnsavedChanges } from './lib/unsavedDialog'
 
@@ -461,7 +461,13 @@ function App() {
             // Theme menu items: "theme-<id>" → strip prefix
             if (e.payload.startsWith('theme-')) {
               const themeId = e.payload.slice(6) // "theme-default-dark" → "default-dark"
-              switchTheme(themeId)
+              const theme = switchTheme(themeId)
+              // Sync macOS window appearance so vibrancy matches
+              import('@tauri-apps/api/core').then(({ invoke: inv }) => {
+                inv('set_appearance', {
+                  appearance: themeId === 'system' ? 'system' : theme.dark ? 'dark' : 'light',
+                }).catch(() => {})
+              })
             }
             // Spacing grid menu items: "spacing-grid-<mode>"
             if (e.payload.startsWith('spacing-grid-')) {
@@ -493,10 +499,25 @@ function App() {
   // Re-apply theme when system color scheme changes (only matters when preference is 'system')
   useEffect(() => {
     const mq = window.matchMedia('(prefers-color-scheme: light)')
+    const syncAppearance = (theme: { dark: boolean }) => {
+      if (isTauri) {
+        import('@tauri-apps/api/core').then(({ invoke }) => {
+          const pref = getThemePreference()
+          invoke('set_appearance', {
+            appearance: pref === 'system' ? 'system' : theme.dark ? 'dark' : 'light',
+          }).catch(() => {})
+        })
+      }
+    }
     const onChange = () => {
-      if (getThemePreference() === 'system') switchTheme('system')
+      if (getThemePreference() === 'system') {
+        const theme = switchTheme('system')
+        syncAppearance(theme)
+      }
     }
     mq.addEventListener('change', onChange)
+    // Sync on mount
+    syncAppearance(getActiveTheme())
     return () => mq.removeEventListener('change', onChange)
   }, [])
 

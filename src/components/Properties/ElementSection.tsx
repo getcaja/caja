@@ -227,7 +227,7 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
       <div className="flex flex-col gap-2">
       {/* Badge + name + component action */}
       <div className="flex items-center gap-2">
-        <span className={`text-[12px] px-1.5 py-0.5 rounded-md font-semibold ${TYPE_BADGE_STYLES[key]}`}>
+        <span className={`text-[12px] px-1.5 py-0.5 rounded font-semibold ${TYPE_BADGE_STYLES[key]}`}>
           {TYPE_BADGE_LABELS[key]}
         </span>
         <input

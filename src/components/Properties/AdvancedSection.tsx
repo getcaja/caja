@@ -123,30 +123,15 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
   return (
     <Section title="Output" defaultCollapsed>
       <div className="flex flex-col gap-2">
-        {/* Computed classes — read-only */}
-        {computedClasses.length > 0 && (
+        {/* All classes — computed (read-only) + manual (editable) */}
+        {(computedClasses.length > 0 || manualClasses.length > 0) && (
           <div className="flex items-start gap-2">
-            <div className="flex-1 min-w-0 rounded px-1.5 py-1 flex flex-wrap gap-1 min-h-[24px]" style={{ backgroundColor: 'var(--input-bg)' }}>
+            <div className="flex-1 min-w-0 rounded px-1.5 py-1 flex flex-wrap gap-1 min-h-[24px] text-[12px]" style={{ backgroundColor: 'var(--input-bg)', border: '1px solid var(--input-border)' }}>
               {computedClasses.map((cls, i) => (
-                <span key={i} className="c-class-pill border border-border fg-muted">{cls}</span>
+                <span key={`c-${i}`} className="c-class-pill border border-border-accent fg-muted">{cls}</span>
               ))}
-            </div>
-            <button
-              onClick={copyAll}
-              className={`c-slot ${copied ? 'is-active' : ''}`}
-              title="Copy all classes"
-            >
-              {copied ? <Check size={12} /> : <Copy size={12} />}
-            </button>
-          </div>
-        )}
-
-        {/* Manual classes — editable */}
-        {manualClasses.length > 0 && (
-          <div className="flex items-start gap-2">
-            <div className="flex-1 min-w-0 rounded px-1.5 py-1 flex flex-wrap gap-1" style={{ backgroundColor: 'var(--input-bg)' }}>
               {manualClasses.map((cls, i) => (
-                <span key={`${i}-${cls}`} className="c-class-pill border border-border fg-muted">
+                <span key={`m-${i}-${cls}`} className="c-class-pill border border-border-accent fg-muted">
                   {cls}
                   <button
                     onClick={() => removeClass(cls)}
@@ -157,7 +142,13 @@ export function AdvancedSection({ frame }: { frame: Frame }) {
                 </span>
               ))}
             </div>
-            <div className="c-slot-spacer" />
+            <button
+              onClick={copyAll}
+              className={`c-slot ${copied ? 'is-active' : ''}`}
+              title="Copy all classes"
+            >
+              {copied ? <Check size={12} /> : <Copy size={12} />}
+            </button>
           </div>
         )}
 

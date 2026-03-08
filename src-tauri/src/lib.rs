@@ -619,6 +619,39 @@ fn fix_traffic_lights(app: AppHandle) {
     let _ = app;
 }
 
+/// Set the NSAppearance on the window so macOS vibrancy matches the app theme.
+/// `appearance`: "dark", "light", or "system" (removes override).
+#[tauri::command]
+fn set_appearance(app: AppHandle, appearance: String) {
+    #[cfg(target_os = "macos")]
+    if let Some(window) = app.get_webview_window("main") {
+        let win = window.clone();
+        let _ = window.run_on_main_thread(move || {
+            use cocoa::base::{id, nil};
+            use cocoa::foundation::NSString;
+            #[allow(deprecated)]
+            unsafe {
+                let ns_window = win.ns_window().unwrap() as id;
+                let appearance_obj: id = match appearance.as_str() {
+                    "dark" => {
+                        let name = NSString::alloc(nil).init_str("NSAppearanceNameDarkAqua");
+                        msg_send![class!(NSAppearance), appearanceNamed: name]
+                    }
+                    "light" => {
+                        let name = NSString::alloc(nil).init_str("NSAppearanceNameAqua");
+                        msg_send![class!(NSAppearance), appearanceNamed: name]
+                    }
+                    _ => nil, // "system" — remove override, follow system
+                };
+                let _: () = msg_send![ns_window, setAppearance: appearance_obj];
+                position_traffic_lights(ns_window);
+            }
+        });
+    }
+    #[cfg(not(target_os = "macos"))]
+    let _ = (app, appearance);
+}
+
 // ── First Launch Flag ──
 
 fn has_launched_path() -> std::path::PathBuf {
@@ -873,7 +906,7 @@ pub fn run() {
             .with_state_flags(tauri_plugin_window_state::StateFlags::all() - tauri_plugin_window_state::StateFlags::DECORATIONS)
             .build())
         .manage(RecentMenuState(std::sync::Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![mcp_respond, set_menu_check, set_window_title, fix_traffic_lights, install_mcp, resolve_mcp_server_path, get_recent_files, add_recent_file, clear_recent_files, check_has_launched, mark_has_launched, read_clipboard_image])
+        .invoke_handler(tauri::generate_handler![mcp_respond, set_menu_check, set_window_title, fix_traffic_lights, set_appearance, install_mcp, resolve_mcp_server_path, get_recent_files, add_recent_file, clear_recent_files, check_has_launched, mark_has_launched, read_clipboard_image])
         .setup(|app| {
             // ── Native Menu ──
             let icon = Image::from_bytes(include_bytes!("../icons/128x128@2x.png"))

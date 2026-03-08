@@ -1,4 +1,5 @@
-import { Type, MoveVertical, MoveHorizontal, AlignLeft, AlignCenter, AlignRight, Settings2, ArrowUpToLine, FoldVertical, ArrowDownToLine } from 'lucide-react'
+import { Type, MoveVertical, MoveHorizontal, AlignLeft, AlignCenter, AlignRight, Settings2, ArrowUpToLine, ArrowDownToLine } from 'lucide-react'
+import { AlignVerticalCenterIcon } from '../icons/LayoutIcons'
 import { useState } from 'react'
 import type { TextStyles, DesignValue } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
@@ -139,7 +140,7 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides }: { f
             value={frame.textAlignVertical}
             options={[
               { value: 'start', label: <ArrowUpToLine size={12} />, tooltip: 'Align Top' },
-              { value: 'center', label: <FoldVertical size={12} />, tooltip: 'Align Middle' },
+              { value: 'center', label: <AlignVerticalCenterIcon size={12} />, tooltip: 'Align Middle' },
               { value: 'end', label: <ArrowDownToLine size={12} />, tooltip: 'Align Bottom' },
             ]}
             onChange={(v) => updateFrame(frame.id, { textAlignVertical: v as TextStyles['textAlignVertical'] })}
