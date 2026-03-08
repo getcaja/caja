@@ -102,6 +102,7 @@ export interface CoreTreeSlice {
   updateSpacing: (id: string, field: 'padding' | 'margin' | 'inset', values: Partial<Spacing>) => void
   updateSize: (id: string, dimension: 'width' | 'height', size: Partial<SizeValue>) => void
   clearResponsiveOverrides: (id: string, bp: 'md' | 'sm') => void
+  clearAllResponsiveOverrides: (bp: 'md' | 'sm') => void
   removeResponsiveKeys: (id: string, bp: 'md' | 'sm', keys: string[]) => void
   updateBorderRadius: (id: string, values: Partial<BorderRadius>) => void
   renameFrame: (id: string, name: string) => void
@@ -536,6 +537,27 @@ export const createCoreTreeSlice: StateCreator<FrameStore, [], [], CoreTreeSlice
         if (!responsive.md && !responsive.sm) return { ...f, responsive: undefined } as Frame
         return { ...f, responsive } as Frame
       }) as BoxElement
+      return { ...updateActiveRoot(state, newRoot), ...history }
+    }),
+
+  clearAllResponsiveOverrides: (bp) =>
+    set((state) => {
+      const history = pushHistory(state)
+      function strip(frame: Frame): Frame {
+        const children = frame.type === 'box' ? (frame as BoxElement).children.map(strip) : undefined
+        const hasOverride = frame.responsive?.[bp]
+        if (!hasOverride && !children) return frame
+        let result = frame
+        if (hasOverride) {
+          const responsive = { ...frame.responsive, [bp]: undefined }
+          result = (!responsive.md && !responsive.sm)
+            ? { ...result, responsive: undefined } as Frame
+            : { ...result, responsive } as Frame
+        }
+        if (children) result = { ...result, children } as Frame
+        return result
+      }
+      const newRoot = strip(state.root) as BoxElement
       return { ...updateActiveRoot(state, newRoot), ...history }
     }),
 

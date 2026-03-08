@@ -1,6 +1,6 @@
 import { useState, useRef, useMemo, useEffect } from 'react'
 import { useFrameStore } from '../../store/frameStore'
-import { ChevronDown, Monitor, Tablet, Smartphone } from 'lucide-react'
+import { ChevronDown, Monitor, Tablet, Smartphone, RotateCcw } from 'lucide-react'
 import { ZOOM_LEVELS } from '../Canvas/ZoomBar'
 import { canvasZoomTo } from '../Canvas/CanvasInline'
 import type { Frame, Breakpoint } from '../../types/frame'
@@ -82,6 +82,7 @@ export function ViewportBar() {
   const activeBreakpoint = useFrameStore((s) => s.activeBreakpoint)
   const setActiveBreakpoint = useFrameStore((s) => s.setActiveBreakpoint)
   const root = useFrameStore((s) => s.root)
+  const clearAllResponsiveOverrides = useFrameStore((s) => s.clearAllResponsiveOverrides)
 
   const overrideCounts = useMemo(() => {
     const counts: Record<string, number> = { md: 0, sm: 0 }
@@ -95,6 +96,7 @@ export function ViewportBar() {
   }, [root])
 
   const activeBpHasOverrides = activeBreakpoint !== 'base' && overrideCounts[activeBreakpoint] > 0
+
   const currentBp = BREAKPOINTS.find((bp) => bp.width === canvasWidth) ?? BREAKPOINTS[0]
   const CurrentIcon = currentBp.icon
 
@@ -151,22 +153,33 @@ export function ViewportBar() {
 
   return (
     <div className="c-section-header px-4 justify-between border-b border-border">
-      <Dropdown
-        trigger={
-          <button className="h-6 flex items-center gap-2 rounded fg-default" title={currentBp.label}>
-            <span className="relative">
-              <CurrentIcon size={12} />
-              {activeBpHasOverrides && (
-                <span className="absolute -top-0.5 -right-1 w-1.5 h-1.5 rounded-full bg-accent" />
-              )}
-            </span>
-            <span className="text-[12px]">{currentBp.label}</span>
-            <ChevronDown size={8} />
+      <div className="flex items-center gap-1">
+        <Dropdown
+          trigger={
+            <button className="h-6 flex items-center gap-2 rounded fg-default" title={currentBp.label}>
+              <span className="relative">
+                <CurrentIcon size={12} />
+                {activeBpHasOverrides && (
+                  <span className="absolute -top-0.5 -right-1 w-1.5 h-1.5 rounded-full bg-accent" />
+                )}
+              </span>
+              <span className="text-[12px]">{currentBp.label}</span>
+              <ChevronDown size={8} />
+            </button>
+          }
+          menuClassName="min-w-[180px]"
+          menu={breakpointMenu}
+        />
+        {activeBpHasOverrides && (
+          <button
+            onClick={() => clearAllResponsiveOverrides(activeBreakpoint as 'md' | 'sm')}
+            className="c-icon-btn w-5 h-5"
+            title="Reset all overrides at this breakpoint"
+          >
+            <RotateCcw size={10} />
           </button>
-        }
-        menuClassName="min-w-[180px]"
-        menu={breakpointMenu}
-      />
+        )}
+      </div>
       <Dropdown
         trigger={
           <button className="h-6 flex items-center gap-0.5 rounded fg-default" title="Zoom">
