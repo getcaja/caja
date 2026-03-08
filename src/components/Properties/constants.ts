@@ -101,7 +101,7 @@ export const TRANSFORM_ORIGIN_OPTIONS = [
   { value: 'bottom-left', label: 'Bottom Left' },
 ]
 
-const BADGE = 'bg-accent fg-default'
+const BADGE = 'c-type-badge'
 const COMPONENT_BADGE = BADGE
 
 export const TYPE_BADGE_STYLES: Record<string, string> = {
