@@ -1,4 +1,4 @@
-import { Type, MoveVertical, MoveHorizontal, AlignLeft, AlignCenter, AlignRight, Settings2, ArrowUpToLine, ArrowDownToLine } from 'lucide-react'
+import { Type, SeparatorHorizontal, SeparatorVertical, AlignLeft, AlignCenter, AlignRight, Settings2, ArrowUpToLine, ArrowDownToLine } from 'lucide-react'
 import { AlignVerticalCenterIcon } from '../icons/LayoutIcons'
 import { useState } from 'react'
 import type { TextStyles, DesignValue } from '../../types/frame'
@@ -106,7 +106,7 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides }: { f
             unit=""
             placeholder="Auto"
             classPrefix="leading"
-            inlineLabel={<MoveVertical size={12} />}
+            inlineLabel={<SeparatorHorizontal size={12} />}
             tooltip="Line Height"
           />
           <TokenInput
@@ -118,7 +118,7 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides }: { f
             unit="em"
             placeholder="Auto"
             classPrefix="tracking"
-            inlineLabel={<MoveHorizontal size={12} />}
+            inlineLabel={<SeparatorVertical size={12} />}
             tooltip="Letter Spacing"
           />
           <div className="c-slot-spacer" />
