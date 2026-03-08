@@ -80,7 +80,7 @@ export function findInTree(root: Frame, id: string): Frame | null {
 // Find and update a frame in the tree by id
 export function updateInTree(root: Frame, id: string, updater: (f: Frame) => Frame): Frame {
   if (root.id === id) {
-    return updater(cloneTree(root))
+    return updater(root)
   }
   return withChildren(
     root,

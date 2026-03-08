@@ -18,6 +18,29 @@ import { randomNewFrameColor } from '../../data/colors'
 
 const MAX_HISTORY = 50
 
+/** Shallow-compare two values (works for DesignValue, Spacing, SizeValue objects).
+ *  Falls back to JSON.stringify only for nested objects. */
+function shallowEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true
+  if (a == null || b == null) return a === b
+  if (typeof a !== 'object' || typeof b !== 'object') return false
+  const keysA = Object.keys(a as Record<string, unknown>)
+  const keysB = Object.keys(b as Record<string, unknown>)
+  if (keysA.length !== keysB.length) return false
+  const objA = a as Record<string, unknown>
+  const objB = b as Record<string, unknown>
+  for (const key of keysA) {
+    const va = objA[key], vb = objB[key]
+    if (va === vb) continue
+    if (typeof va === 'object' && typeof vb === 'object' && va !== null && vb !== null) {
+      if (!shallowEqual(va, vb)) return false
+    } else {
+      return false
+    }
+  }
+  return true
+}
+
 export type HistoryEntry = { root: BoxElement; selectedId: string | null; selectedIds: string[] }
 
 export function pushHistory(state: { root: BoxElement; selectedId: string | null; selectedIds: Set<string>; past: Record<string, HistoryEntry[]>; future: Record<string, HistoryEntry[]>; activePageId: string; _previewSnapshot: BoxElement | null }): { past: Record<string, HistoryEntry[]>; future: Record<string, HistoryEntry[]>; dirty: boolean } {
@@ -414,7 +437,7 @@ export const createCoreTreeSlice: StateCreator<FrameStore, [], [], CoreTreeSlice
         const merged = { ...existing, ...updates } as ResponsiveOverrides
         // Remove keys that match the base value (keep overrides sparse)
         for (const key of Object.keys(merged) as (keyof ResponsiveOverrides)[]) {
-          if (JSON.stringify(merged[key]) === JSON.stringify((f as unknown as Record<string, unknown>)[key])) {
+          if (shallowEqual(merged[key], (f as unknown as Record<string, unknown>)[key])) {
             delete merged[key]
           }
         }
@@ -447,7 +470,7 @@ export const createCoreTreeSlice: StateCreator<FrameStore, [], [], CoreTreeSlice
         const existing = f.responsive?.[bp] ?? {}
         const merged = { ...existing, [field]: newSpacing } as ResponsiveOverrides
         // Remove if matches base
-        if (JSON.stringify(merged[field as keyof ResponsiveOverrides]) === JSON.stringify(f[field])) {
+        if (shallowEqual(merged[field as keyof ResponsiveOverrides], f[field])) {
           delete merged[field as keyof ResponsiveOverrides]
         }
         const responsive = { ...f.responsive, [bp]: Object.keys(merged).length > 0 ? merged : undefined }
@@ -472,7 +495,7 @@ export const createCoreTreeSlice: StateCreator<FrameStore, [], [], CoreTreeSlice
         const existing = f.responsive?.[bp] ?? {}
         const merged = { ...existing, [dimension]: newSize } as ResponsiveOverrides
         // Remove if matches base
-        if (JSON.stringify(merged[dimension as keyof ResponsiveOverrides]) === JSON.stringify(f[dimension])) {
+        if (shallowEqual(merged[dimension as keyof ResponsiveOverrides], f[dimension])) {
           delete merged[dimension as keyof ResponsiveOverrides]
         }
         const responsive = { ...f.responsive, [bp]: Object.keys(merged).length > 0 ? merged : undefined }

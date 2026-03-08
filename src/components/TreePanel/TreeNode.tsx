@@ -1,4 +1,4 @@
-import { useRef, useCallback, useMemo } from 'react'
+import { useRef, useCallback, useMemo, memo } from 'react'
 import { useDraggable, useDroppable, useDndContext } from '@dnd-kit/core'
 import type { Frame } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
@@ -20,7 +20,7 @@ interface TreeNodeProps {
   insideInstance?: boolean
 }
 
-export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = false, insideInstance = false }: TreeNodeProps) {
+export const TreeNode = memo(function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = false, insideInstance = false }: TreeNodeProps) {
   const selectedId = useFrameStore((s) => s.selectedId)
   const selectedIds = useFrameStore((s) => s.selectedIds)
   const collapsedIds = useFrameStore((s) => s.collapsedIds)
@@ -122,6 +122,27 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
   // Drop position (only when hovered and not self-dragging)
   const dropPos = isOver && overPosition && activeId ? overPosition : null
 
+  // Memoize handlers passed to TreeRow to preserve memo effectiveness
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    if (e.shiftKey) useFrameStore.getState().selectRange(frame.id)
+    else if (e.metaKey) useFrameStore.getState().selectMulti(frame.id)
+    else select(frame.id)
+  }, [frame.id, select])
+
+  const handleDoubleClick = useCallback(() => {
+    if (isRoot) return
+    nameEdit.start(frame.name)
+  }, [isRoot, frame.name, nameEdit])
+
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    if (isRoot) { e.preventDefault(); return }
+    if (!useFrameStore.getState().selectedIds.has(frame.id)) select(frame.id)
+    ctxMenu.open(e)
+  }, [isRoot, frame.id, select, ctxMenu])
+
+  const handleMouseEnter = useCallback(() => hover(frame.id, 'tree'), [frame.id, hover])
+  const handleMouseLeave = useCallback(() => hover(null, 'tree'), [hover])
+
   // Responsive override badges — show which breakpoints have overrides
   const responsiveBadges = useMemo(() => {
     const resp = frame.responsive
@@ -170,22 +191,11 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
         onEditChange={nameEdit.setValue}
         onEditCommit={nameEdit.commit}
         onEditCancel={nameEdit.cancel}
-        onClick={(e) => {
-          if (e.shiftKey) useFrameStore.getState().selectRange(frame.id)
-          else if (e.metaKey) useFrameStore.getState().selectMulti(frame.id)
-          else select(frame.id)
-        }}
-        onDoubleClick={() => {
-          if (isRoot) return
-          nameEdit.start(frame.name)
-        }}
-        onContextMenu={(e) => {
-          if (isRoot) { e.preventDefault(); return }
-          if (!selectedIds.has(frame.id)) select(frame.id)
-          ctxMenu.open(e)
-        }}
-        onMouseEnter={() => hover(frame.id, 'tree')}
-        onMouseLeave={() => hover(null, 'tree')}
+        onClick={handleClick}
+        onDoubleClick={handleDoubleClick}
+        onContextMenu={handleContextMenu}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
         chevron={chevron}
         onChevronClick={() => toggleCollapse(frame.id)}
         badges={responsiveBadges}
@@ -219,4 +229,4 @@ export function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = fa
         ))}
     </>
   )
-}
+})

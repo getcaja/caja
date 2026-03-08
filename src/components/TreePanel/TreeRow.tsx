@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, memo } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { INPUT_CLASS } from './hooks/useInlineEdit'
 
@@ -33,7 +33,7 @@ export interface TreeRowProps {
   selectionStyle?: 'accent' | 'neutral'
 }
 
-export function TreeRow({
+export const TreeRow = memo(function TreeRow({
   depth,
   icon,
   name,
@@ -166,4 +166,4 @@ export function TreeRow({
       </div>
     </div>
   )
-}
+})

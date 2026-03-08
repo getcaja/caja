@@ -112,7 +112,7 @@ function cloneResponsive(responsive: Frame['responsive']): Frame['responsive'] {
   for (const key of ['md', 'sm'] as const) {
     const ov = responsive[key]
     if (!ov) continue
-    result[key] = JSON.parse(JSON.stringify(ov))
+    result[key] = structuredClone(ov)
   }
   return Object.keys(result).length > 0 ? result : undefined
 }

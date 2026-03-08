@@ -1,5 +1,6 @@
 import { useMemo, useCallback } from 'react'
 import { useFrameStore } from '../../store/frameStore'
+import { findInTree } from '../../store/treeHelpers'
 import { PagePanel } from './PagePanel'
 import { ElementSection } from './ElementSection'
 import { LayoutSection } from './LayoutSection'
@@ -27,8 +28,9 @@ function sectionHasOverrides(section: string, overrideKeys: Set<string>): boolea
 }
 
 export function Properties() {
-  const selected = useFrameStore((s) => s.getSelected())
   const root = useFrameStore((s) => s.root)
+  const selectedId = useFrameStore((s) => s.selectedId)
+  const selected = useMemo(() => selectedId ? findInTree(root, selectedId) : null, [root, selectedId])
   const multiCount = useFrameStore((s) => s.selectedIds.size)
   const rootId = useFrameStore((s) => s.getRootId())
   const pageSelected = useFrameStore((s) => s.pageSelected)
