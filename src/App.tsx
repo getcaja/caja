@@ -680,25 +680,24 @@ function App() {
           setTimeout(() => {
             if (!pasteHandledRef.current) {
               // No paste event fired — clipboard likely has only image data
+              // Use save_clipboard_image: Rust writes to disk directly (no base64 over IPC)
               import('@tauri-apps/api/core').then(({ invoke }) =>
-                invoke<{ data: string; mime: string; url: string } | null>('read_clipboard_image')
+                invoke<{ local_path: string; mime: string; width: number; height: number } | null>('save_clipboard_image', {
+                  projectPath: useFrameStore.getState().filePath,
+                })
               ).then(async (result) => {
                 if (!result) return
-                const assetOps = await import('./lib/assetOps')
-                const fp = useFrameStore.getState().filePath
-                if (result.url && !result.data) {
-                  // URL-only: download original file (preserves GIF animation)
-                  const saved = await assetOps.downloadAsset(result.url, fp)
-                  const s = useFrameStore.getState()
-                  s.addChild(s.selectedId || s.root.id, 'image', { src: saved.localPath })
-                } else if (result.data) {
-                  const binary = atob(result.data)
-                  const bytes = new Uint8Array(binary.length)
-                  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
-                  const saved = await assetOps.saveImageBytes(bytes, result.mime, fp)
-                  const s = useFrameStore.getState()
-                  s.addChild(s.selectedId || s.root.id, 'image', { src: saved.localPath })
+                const { dvNum } = await import('./store/frameFactories')
+                const s = useFrameStore.getState()
+                const overrides: Record<string, unknown> = { src: result.local_path }
+                if (result.width > 0 && result.height > 0) {
+                  overrides.width = { mode: 'custom' as const, value: dvNum(result.width) }
+                  overrides.height = { mode: 'custom' as const, value: dvNum(result.height) }
                 }
+                s.addChild(s.selectedId || s.root.id, 'image', overrides)
+                // Populate blob cache async (frame renders with correct size immediately)
+                const assetOps = await import('./lib/assetOps')
+                assetOps.restoreAssetUrl(result.local_path)
               }).catch(() => {})
             }
           }, 50)
@@ -874,29 +873,40 @@ function App() {
       e.preventDefault()
       if (isTauri) {
         import('@tauri-apps/api/core').then(({ invoke }) =>
+          // First check for URL-only (animated GIF/WebP) via lightweight read
           invoke<{ data: string; mime: string; url: string } | null>('read_clipboard_image')
-        ).then(async (result) => {
-          if (result?.url && !result.data) {
-            // URL-only: download original file (preserves GIF animation)
-            const assetOps = await import('./lib/assetOps')
-            const filePath = useFrameStore.getState().filePath
-            const saved = await assetOps.downloadAsset(result.url, filePath)
-            const s = useFrameStore.getState()
-            s.addChild(s.selectedId || s.root.id, 'image', { src: saved.localPath })
-          } else if (result?.data) {
-            const binary = atob(result.data)
-            const bytes = new Uint8Array(binary.length)
-            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
-            const assetOps = await import('./lib/assetOps')
-            const filePath = useFrameStore.getState().filePath
-            const saved = await assetOps.saveImageBytes(bytes, result.mime, filePath)
-            const s = useFrameStore.getState()
-            s.addChild(s.selectedId || s.root.id, 'image', { src: saved.localPath })
-          } else {
-            // No image on system clipboard — use internal clipboard
-            useFrameStore.getState().pasteClipboard()
-          }
-        }).catch(() => {
+            .then(async (peek) => {
+              if (peek?.url && !peek.data) {
+                // URL-only: download original file (preserves GIF animation)
+                const assetOps = await import('./lib/assetOps')
+                const filePath = useFrameStore.getState().filePath
+                const saved = await assetOps.downloadAsset(peek.url, filePath)
+                const s = useFrameStore.getState()
+                s.addChild(s.selectedId || s.root.id, 'image', { src: saved.localPath })
+                return
+              }
+              // Save image directly to disk (no base64 over IPC)
+              const result = await invoke<{ local_path: string; mime: string; width: number; height: number } | null>('save_clipboard_image', {
+                projectPath: useFrameStore.getState().filePath,
+              })
+              if (result) {
+                const { dvNum } = await import('./store/frameFactories')
+                const s = useFrameStore.getState()
+                const overrides: Record<string, unknown> = { src: result.local_path }
+                if (result.width > 0 && result.height > 0) {
+                  overrides.width = { mode: 'custom' as const, value: dvNum(result.width) }
+                  overrides.height = { mode: 'custom' as const, value: dvNum(result.height) }
+                }
+                s.addChild(s.selectedId || s.root.id, 'image', overrides)
+                // Populate blob cache async
+                const assetOps = await import('./lib/assetOps')
+                assetOps.restoreAssetUrl(result.local_path)
+              } else {
+                // No image on system clipboard — use internal clipboard
+                useFrameStore.getState().pasteClipboard()
+              }
+            })
+        ).catch(() => {
           // read_clipboard_image failed — fall back to internal clipboard
           useFrameStore.getState().pasteClipboard()
         })

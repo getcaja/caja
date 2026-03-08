@@ -891,6 +891,228 @@ fn read_clipboard_image() -> Option<ClipboardImageResult> {
     }
 }
 
+// ── Save Clipboard Image to Disk ──
+
+#[derive(Serialize)]
+struct SavedImageResult {
+    local_path: String,
+    mime: String,
+    width: u32,
+    height: u32,
+}
+
+/// Read image dimensions from raw bytes by parsing format headers.
+/// Supports PNG, JPEG, GIF, WebP, TIFF. Returns (width, height) or (0, 0).
+fn image_dimensions(bytes: &[u8]) -> (u32, u32) {
+    // PNG: bytes 16..24 contain width (4 bytes BE) and height (4 bytes BE) in IHDR
+    if bytes.len() >= 24 && &bytes[0..8] == b"\x89PNG\r\n\x1a\n" {
+        let w = u32::from_be_bytes([bytes[16], bytes[17], bytes[18], bytes[19]]);
+        let h = u32::from_be_bytes([bytes[20], bytes[21], bytes[22], bytes[23]]);
+        return (w, h);
+    }
+    // GIF: bytes 6..10 contain width and height as 16-bit LE
+    if bytes.len() >= 10 && (&bytes[0..6] == b"GIF87a" || &bytes[0..6] == b"GIF89a") {
+        let w = u16::from_le_bytes([bytes[6], bytes[7]]) as u32;
+        let h = u16::from_le_bytes([bytes[8], bytes[9]]) as u32;
+        return (w, h);
+    }
+    // WebP: RIFF header, then VP8/VP8L/VP8X chunk
+    if bytes.len() >= 30 && &bytes[0..4] == b"RIFF" && &bytes[8..12] == b"WEBP" {
+        if &bytes[12..16] == b"VP8 " && bytes.len() >= 30 {
+            // Lossy VP8: frame header at byte 26
+            let w = (u16::from_le_bytes([bytes[26], bytes[27]]) & 0x3FFF) as u32;
+            let h = (u16::from_le_bytes([bytes[28], bytes[29]]) & 0x3FFF) as u32;
+            return (w, h);
+        }
+        if &bytes[12..16] == b"VP8L" && bytes.len() >= 25 {
+            // Lossless VP8L: signature byte + 32-bit bitstream
+            let bits = u32::from_le_bytes([bytes[21], bytes[22], bytes[23], bytes[24]]);
+            let w = (bits & 0x3FFF) + 1;
+            let h = ((bits >> 14) & 0x3FFF) + 1;
+            return (w, h);
+        }
+        if &bytes[12..16] == b"VP8X" && bytes.len() >= 30 {
+            // Extended VP8X: canvas size at bytes 24..30
+            let w = (bytes[24] as u32 | (bytes[25] as u32) << 8 | (bytes[26] as u32) << 16) + 1;
+            let h = (bytes[27] as u32 | (bytes[28] as u32) << 8 | (bytes[29] as u32) << 16) + 1;
+            return (w, h);
+        }
+    }
+    // JPEG: scan for SOF0/SOF2 markers (0xFF 0xC0 / 0xFF 0xC2)
+    if bytes.len() >= 2 && bytes[0] == 0xFF && bytes[1] == 0xD8 {
+        let mut i = 2;
+        while i + 9 < bytes.len() {
+            if bytes[i] != 0xFF { i += 1; continue; }
+            let marker = bytes[i + 1];
+            if marker == 0xC0 || marker == 0xC2 {
+                let h = u16::from_be_bytes([bytes[i + 5], bytes[i + 6]]) as u32;
+                let w = u16::from_be_bytes([bytes[i + 7], bytes[i + 8]]) as u32;
+                return (w, h);
+            }
+            // Skip this marker segment
+            if i + 3 < bytes.len() {
+                let seg_len = u16::from_be_bytes([bytes[i + 2], bytes[i + 3]]) as usize;
+                i += 2 + seg_len;
+            } else {
+                break;
+            }
+        }
+    }
+    // TIFF: byte order mark, then IFD with ImageWidth/ImageLength tags
+    if bytes.len() >= 8 && (&bytes[0..4] == b"II\x2a\x00" || &bytes[0..4] == b"MM\x00\x2a") {
+        let le = bytes[0] == b'I';
+        let read_u16 = |off: usize| -> u16 {
+            if le { u16::from_le_bytes([bytes[off], bytes[off+1]]) }
+            else { u16::from_be_bytes([bytes[off], bytes[off+1]]) }
+        };
+        let read_u32 = |off: usize| -> u32 {
+            if le { u32::from_le_bytes([bytes[off], bytes[off+1], bytes[off+2], bytes[off+3]]) }
+            else { u32::from_be_bytes([bytes[off], bytes[off+1], bytes[off+2], bytes[off+3]]) }
+        };
+        let ifd_offset = read_u32(4) as usize;
+        if ifd_offset + 2 <= bytes.len() {
+            let entry_count = read_u16(ifd_offset) as usize;
+            let mut w: u32 = 0;
+            let mut h: u32 = 0;
+            for e in 0..entry_count {
+                let off = ifd_offset + 2 + e * 12;
+                if off + 12 > bytes.len() { break; }
+                let tag = read_u16(off);
+                let typ = read_u16(off + 2);
+                let val = if typ == 3 { read_u16(off + 8) as u32 } else { read_u32(off + 8) };
+                if tag == 256 { w = val; }
+                if tag == 257 { h = val; }
+            }
+            if w > 0 && h > 0 { return (w, h); }
+        }
+    }
+    (0, 0)
+}
+
+/// SHA-256 hash of bytes, truncated to 16 hex chars (matches frontend hashArrayBuffer).
+fn sha256_hex16(bytes: &[u8]) -> String {
+    use std::fmt::Write;
+    // Minimal SHA-256 using macOS CommonCrypto (always available)
+    #[cfg(target_os = "macos")]
+    {
+        extern "C" {
+            fn CC_SHA256(data: *const u8, len: u32, md: *mut u8) -> *mut u8;
+        }
+        let mut digest = [0u8; 32];
+        unsafe { CC_SHA256(bytes.as_ptr(), bytes.len() as u32, digest.as_mut_ptr()); }
+        let mut hex = String::with_capacity(16);
+        for b in &digest[..8] {
+            let _ = write!(hex, "{:02x}", b);
+        }
+        hex
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        // Fallback: use first 16 chars of a simple hash (non-macOS)
+        let mut hash: u64 = 0xcbf29ce484222325;
+        for &b in bytes { hash ^= b as u64; hash = hash.wrapping_mul(0x100000001b3); }
+        format!("{:016x}", hash)
+    }
+}
+
+fn extension_from_mime(mime: &str) -> &str {
+    match mime {
+        "image/png" => "png",
+        "image/jpeg" | "image/jpg" => "jpg",
+        "image/gif" => "gif",
+        "image/webp" => "webp",
+        "image/tiff" => "tiff",
+        "image/svg+xml" => "svg",
+        "image/avif" => "avif",
+        "image/bmp" => "bmp",
+        _ => "png",
+    }
+}
+
+#[tauri::command]
+fn save_clipboard_image(app_handle: tauri::AppHandle, project_path: Option<String>) -> Option<SavedImageResult> {
+    #[cfg(target_os = "macos")]
+    {
+        use cocoa::base::{id, nil};
+        unsafe {
+            let pasteboard: id = msg_send![class!(NSPasteboard), generalPasteboard];
+
+            fn nsstring(s: &str) -> id {
+                unsafe {
+                    let ns: id = msg_send![class!(NSString), alloc];
+                    let ns: id = msg_send![ns, initWithBytes: s.as_ptr()
+                        length: s.len()
+                        encoding: 4u64];
+                    ns
+                }
+            }
+
+            let candidates: &[(&str, &str)] = &[
+                ("com.compuserve.gif", "image/gif"),
+                ("org.webmproject.webp", "image/webp"),
+                ("public.png", "image/png"),
+                ("public.jpeg", "image/jpeg"),
+                ("public.tiff", "image/tiff"),
+            ];
+
+            let mut image_data: id = nil;
+            let mut mime_str: &str = "";
+            for (uti, mime) in candidates {
+                let ns_uti = nsstring(uti);
+                let d: id = msg_send![pasteboard, dataForType: ns_uti];
+                if d != nil {
+                    image_data = d;
+                    mime_str = mime;
+                    break;
+                }
+            }
+
+            if image_data == nil { return None; }
+
+            let length: usize = msg_send![image_data, length];
+            if length == 0 { return None; }
+
+            let bytes_ptr: *const u8 = msg_send![image_data, bytes];
+            let bytes = std::slice::from_raw_parts(bytes_ptr, length);
+
+            // Determine assets directory
+            let assets_dir = if let Some(ref pp) = project_path {
+                let parent = std::path::Path::new(pp).parent()?;
+                parent.join("assets")
+            } else {
+                let app_data = app_handle.path().app_data_dir().ok()?;
+                app_data.join("temp-assets")
+            };
+            std::fs::create_dir_all(&assets_dir).ok()?;
+
+            // Hash + write
+            let hash = sha256_hex16(bytes);
+            let ext = extension_from_mime(mime_str);
+            let filename = format!("{}.{}", hash, ext);
+            let local_path = assets_dir.join(&filename);
+
+            if !local_path.exists() {
+                std::fs::write(&local_path, bytes).ok()?;
+            }
+
+            // Read dimensions from header
+            let (width, height) = image_dimensions(bytes);
+
+            Some(SavedImageResult {
+                local_path: local_path.to_string_lossy().to_string(),
+                mime: mime_str.to_string(),
+                width,
+                height,
+            })
+        }
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = (app_handle, project_path);
+        None
+    }
+}
+
 // ── App Setup ──
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -906,7 +1128,7 @@ pub fn run() {
             .with_state_flags(tauri_plugin_window_state::StateFlags::all() - tauri_plugin_window_state::StateFlags::DECORATIONS)
             .build())
         .manage(RecentMenuState(std::sync::Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![mcp_respond, set_menu_check, set_window_title, fix_traffic_lights, set_appearance, install_mcp, resolve_mcp_server_path, get_recent_files, add_recent_file, clear_recent_files, check_has_launched, mark_has_launched, read_clipboard_image])
+        .invoke_handler(tauri::generate_handler![mcp_respond, set_menu_check, set_window_title, fix_traffic_lights, set_appearance, install_mcp, resolve_mcp_server_path, get_recent_files, add_recent_file, clear_recent_files, check_has_launched, mark_has_launched, read_clipboard_image, save_clipboard_image])
         .setup(|app| {
             // ── Native Menu ──
             let icon = Image::from_bytes(include_bytes!("../icons/128x128@2x.png"))
