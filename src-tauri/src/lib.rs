@@ -1,6 +1,9 @@
 #[cfg(target_os = "macos")]
 #[macro_use]
 extern crate objc;
+#[cfg(target_os = "macos")]
+#[macro_use]
+extern crate cocoa;
 
 use axum::{extract::State, routing::{get, post}, Json, Router};
 use serde::{Deserialize, Serialize};
@@ -233,20 +236,215 @@ fn set_menu_check(app: AppHandle, id: String, checked: bool) -> Result<(), Strin
 }
 
 // ── macOS Traffic Light Positioning ──
-// Tauri's trafficLightPosition in tauri.conf.json handles startup + resize natively.
-// But setTitle() resets position (tauri-apps/tauri#13044), so we re-apply via objc.
-// Values must match trafficLightPosition { x: 13, y: 16 } in tauri.conf.json.
+// Custom delegate approach (same as Yaak/tauri-plugin-trafficlights-positioner).
+// Replaces Tauri's NSWindow delegate so windowDidResize: fires synchronously
+// BEFORE macOS redraws, eliminating flicker from layout-system resets.
 
 #[cfg(target_os = "macos")]
-fn reposition_traffic_lights(ns_window: cocoa::base::id) {
-    // Nudge window size by 1pt and back to trigger TAO's native repositioning
-    // of traffic light buttons to the trafficLightPosition from tauri.conf.json.
+const TL_PAD_X: f64 = 13.0;
+#[cfg(target_os = "macos")]
+const TL_PAD_Y: f64 = 17.0;
+
+#[cfg(target_os = "macos")]
+#[allow(deprecated, unexpected_cfgs)]
+fn position_traffic_lights(ns_window: cocoa::base::id) {
+    use cocoa::appkit::{NSView, NSWindow, NSWindowButton};
+    use std::sync::OnceLock;
+
     unsafe {
-        let frame: cocoa::foundation::NSRect = msg_send![ns_window, frame];
-        let mut nudged = frame;
-        nudged.size.height += 1.0;
-        let _: () = msg_send![ns_window, setFrame: nudged display: false];
-        let _: () = msg_send![ns_window, setFrame: frame display: false];
+        let close = ns_window.standardWindowButton_(NSWindowButton::NSWindowCloseButton);
+        let miniaturize = ns_window.standardWindowButton_(NSWindowButton::NSWindowMiniaturizeButton);
+        let zoom = ns_window.standardWindowButton_(NSWindowButton::NSWindowZoomButton);
+
+        if close.is_null() || miniaturize.is_null() || zoom.is_null() { return; }
+
+        let title_bar_container = close.superview().superview();
+        if title_bar_container.is_null() { return; }
+
+        let close_rect: cocoa::foundation::NSRect = msg_send![close, frame];
+        let button_height = close_rect.size.height;
+
+        // Capture the OS default title bar height on the first call, before
+        // we've modified it. This avoids the height growing on repeated calls.
+        static DEFAULT_H: OnceLock<f64> = OnceLock::new();
+        let default_h = *DEFAULT_H.get_or_init(|| NSView::frame(title_bar_container).size.height);
+
+        // On pre-Tahoe, button_height + PAD_Y is larger than the default title
+        // bar height, so the resize works. On Tahoe (macOS 26+), the default is
+        // already >= desired, so add extra pixels to push the buttons down.
+        let desired = button_height + TL_PAD_Y;
+        let title_bar_h = if desired > default_h { desired } else { default_h + 4.0 };
+
+        let mut rect = NSView::frame(title_bar_container);
+        rect.size.height = title_bar_h;
+        rect.origin.y = NSView::frame(ns_window).size.height - title_bar_h;
+        let _: () = msg_send![title_bar_container, setFrame: rect];
+
+        let space_between = NSView::frame(miniaturize).origin.x - NSView::frame(close).origin.x;
+        for (i, button) in [close, miniaturize, zoom].iter().enumerate() {
+            let mut r: cocoa::foundation::NSRect = NSView::frame(*button);
+            r.origin.x = TL_PAD_X + (i as f64 * space_between);
+            button.setFrameOrigin(r.origin);
+        }
+    }
+}
+
+#[cfg(target_os = "macos")]
+#[allow(deprecated, unexpected_cfgs)]
+fn setup_traffic_light_delegate(window: &tauri::WebviewWindow, app_handle: &AppHandle) {
+    use cocoa::appkit::NSWindow;
+    use cocoa::base::{BOOL, id};
+    use cocoa::foundation::NSUInteger;
+    use objc::runtime::{Object, Sel};
+    use std::ffi::c_void;
+    use tauri::Emitter;
+
+    struct TlState {
+        ns_window: id,
+        app: AppHandle,
+    }
+
+    let ns_win = window.ns_window().expect("NS Window required") as id;
+
+    // Initial positioning
+    position_traffic_lights(ns_win);
+
+    fn with_state<F: FnOnce(&mut TlState)>(this: &Object, func: F) {
+        let ptr = unsafe {
+            let x: *mut c_void = *this.get_ivar("app_box");
+            &mut *(x as *mut TlState)
+        };
+        func(ptr);
+    }
+
+    unsafe {
+        let current_delegate: id = ns_win.delegate();
+
+        // ── Simple forwarding methods ──
+        extern "C" fn on_window_should_close(this: &Object, _cmd: Sel, sender: id) -> BOOL {
+            unsafe { let d: id = *this.get_ivar("super_delegate"); msg_send![d, windowShouldClose: sender] }
+        }
+        extern "C" fn on_window_will_close(this: &Object, _cmd: Sel, n: id) {
+            unsafe { let d: id = *this.get_ivar("super_delegate"); let _: () = msg_send![d, windowWillClose: n]; }
+        }
+        extern "C" fn on_window_did_move(this: &Object, _cmd: Sel, n: id) {
+            unsafe { let d: id = *this.get_ivar("super_delegate"); let _: () = msg_send![d, windowDidMove: n]; }
+        }
+        extern "C" fn on_window_did_change_backing(this: &Object, _cmd: Sel, n: id) {
+            unsafe { let d: id = *this.get_ivar("super_delegate"); let _: () = msg_send![d, windowDidChangeBackingProperties: n]; }
+        }
+        extern "C" fn on_window_did_become_key(this: &Object, _cmd: Sel, n: id) {
+            unsafe { let d: id = *this.get_ivar("super_delegate"); let _: () = msg_send![d, windowDidBecomeKey: n]; }
+        }
+        extern "C" fn on_window_did_resign_key(this: &Object, _cmd: Sel, n: id) {
+            unsafe { let d: id = *this.get_ivar("super_delegate"); let _: () = msg_send![d, windowDidResignKey: n]; }
+        }
+        extern "C" fn on_dragging_entered(this: &Object, _cmd: Sel, n: id) -> BOOL {
+            unsafe { let d: id = *this.get_ivar("super_delegate"); msg_send![d, draggingEntered: n] }
+        }
+        extern "C" fn on_prepare_for_drag(this: &Object, _cmd: Sel, n: id) -> BOOL {
+            unsafe { let d: id = *this.get_ivar("super_delegate"); msg_send![d, prepareForDragOperation: n] }
+        }
+        extern "C" fn on_perform_drag(this: &Object, _cmd: Sel, s: id) -> BOOL {
+            unsafe { let d: id = *this.get_ivar("super_delegate"); msg_send![d, performDragOperation: s] }
+        }
+        extern "C" fn on_conclude_drag(this: &Object, _cmd: Sel, n: id) {
+            unsafe { let d: id = *this.get_ivar("super_delegate"); let _: () = msg_send![d, concludeDragOperation: n]; }
+        }
+        extern "C" fn on_dragging_exited(this: &Object, _cmd: Sel, n: id) {
+            unsafe { let d: id = *this.get_ivar("super_delegate"); let _: () = msg_send![d, draggingExited: n]; }
+        }
+        extern "C" fn on_will_use_fs_options(this: &Object, _cmd: Sel, w: id, opts: NSUInteger) -> NSUInteger {
+            unsafe { let d: id = *this.get_ivar("super_delegate"); msg_send![d, window: w willUseFullScreenPresentationOptions: opts] }
+        }
+        extern "C" fn on_did_fail_enter_fs(this: &Object, _cmd: Sel, w: id) {
+            unsafe { let d: id = *this.get_ivar("super_delegate"); let _: () = msg_send![d, windowDidFailToEnterFullScreen: w]; }
+        }
+        extern "C" fn on_appearance_change(this: &Object, _cmd: Sel, n: id) {
+            unsafe { let d: id = *this.get_ivar("super_delegate"); let _: () = msg_send![d, effectiveAppearanceDidChange: n]; }
+        }
+        extern "C" fn on_appearance_change_main(this: &Object, _cmd: Sel, n: id) {
+            unsafe { let d: id = *this.get_ivar("super_delegate"); let _: () = msg_send![d, effectiveAppearanceDidChangedOnMainThread: n]; }
+        }
+
+        // ── Methods with custom logic ──
+        extern "C" fn on_window_did_resize(this: &Object, _cmd: Sel, n: id) {
+            unsafe {
+                with_state(&*this, |state| {
+                    position_traffic_lights(state.ns_window);
+                });
+                let d: id = *this.get_ivar("super_delegate");
+                let _: () = msg_send![d, windowDidResize: n];
+            }
+        }
+        extern "C" fn on_will_enter_fs(this: &Object, _cmd: Sel, n: id) {
+            unsafe {
+                with_state(&*this, |state| {
+                    let _ = state.app.emit("fullscreen-change", true);
+                });
+                let d: id = *this.get_ivar("super_delegate");
+                let _: () = msg_send![d, windowWillEnterFullScreen: n];
+            }
+        }
+        extern "C" fn on_did_enter_fs(this: &Object, _cmd: Sel, n: id) {
+            unsafe {
+                with_state(&*this, |state| {
+                    let _: () = msg_send![state.ns_window, setTitlebarAppearsTransparent: false];
+                });
+                let d: id = *this.get_ivar("super_delegate");
+                let _: () = msg_send![d, windowDidEnterFullScreen: n];
+            }
+        }
+        extern "C" fn on_will_exit_fs(this: &Object, _cmd: Sel, n: id) {
+            unsafe {
+                let d: id = *this.get_ivar("super_delegate");
+                let _: () = msg_send![d, windowWillExitFullScreen: n];
+            }
+        }
+        extern "C" fn on_did_exit_fs(this: &Object, _cmd: Sel, n: id) {
+            unsafe {
+                with_state(&*this, |state| {
+                    let _ = state.app.emit("fullscreen-change", false);
+                    let _: () = msg_send![state.ns_window, setTitlebarAppearsTransparent: true];
+                    position_traffic_lights(state.ns_window);
+                });
+                let d: id = *this.get_ivar("super_delegate");
+                let _: () = msg_send![d, windowDidExitFullScreen: n];
+            }
+        }
+
+        let state = TlState { ns_window: ns_win, app: app_handle.clone() };
+        let app_box = Box::into_raw(Box::new(state)) as *mut c_void;
+
+        static COUNTER: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+        let n = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let delegate_name = format!("windowDelegate_caja_{}", n);
+
+        ns_win.setDelegate_(delegate!(&delegate_name, {
+            window: id = ns_win,
+            app_box: *mut c_void = app_box,
+            super_delegate: id = current_delegate,
+            (windowShouldClose:) => on_window_should_close as extern "C" fn(&Object, Sel, id) -> BOOL,
+            (windowWillClose:) => on_window_will_close as extern "C" fn(&Object, Sel, id),
+            (windowDidResize:) => on_window_did_resize as extern "C" fn(&Object, Sel, id),
+            (windowDidMove:) => on_window_did_move as extern "C" fn(&Object, Sel, id),
+            (windowDidChangeBackingProperties:) => on_window_did_change_backing as extern "C" fn(&Object, Sel, id),
+            (windowDidBecomeKey:) => on_window_did_become_key as extern "C" fn(&Object, Sel, id),
+            (windowDidResignKey:) => on_window_did_resign_key as extern "C" fn(&Object, Sel, id),
+            (draggingEntered:) => on_dragging_entered as extern "C" fn(&Object, Sel, id) -> BOOL,
+            (prepareForDragOperation:) => on_prepare_for_drag as extern "C" fn(&Object, Sel, id) -> BOOL,
+            (performDragOperation:) => on_perform_drag as extern "C" fn(&Object, Sel, id) -> BOOL,
+            (concludeDragOperation:) => on_conclude_drag as extern "C" fn(&Object, Sel, id),
+            (draggingExited:) => on_dragging_exited as extern "C" fn(&Object, Sel, id),
+            (window:willUseFullScreenPresentationOptions:) => on_will_use_fs_options as extern "C" fn(&Object, Sel, id, NSUInteger) -> NSUInteger,
+            (windowDidEnterFullScreen:) => on_did_enter_fs as extern "C" fn(&Object, Sel, id),
+            (windowWillEnterFullScreen:) => on_will_enter_fs as extern "C" fn(&Object, Sel, id),
+            (windowDidExitFullScreen:) => on_did_exit_fs as extern "C" fn(&Object, Sel, id),
+            (windowWillExitFullScreen:) => on_will_exit_fs as extern "C" fn(&Object, Sel, id),
+            (windowDidFailToEnterFullScreen:) => on_did_fail_enter_fs as extern "C" fn(&Object, Sel, id),
+            (effectiveAppearanceDidChange:) => on_appearance_change as extern "C" fn(&Object, Sel, id),
+            (effectiveAppearanceDidChangedOnMainThread:) => on_appearance_change_main as extern "C" fn(&Object, Sel, id)
+        }));
     }
 }
 
@@ -377,27 +575,48 @@ fn install_mcp(client: String) -> Result<String, String> {
     }
 }
 
-// Tauri command: set window title + reposition traffic lights (setTitle resets them)
+// Tauri command: set window title + reposition traffic lights (setTitle resets them).
+// Uses run_on_main_thread so setTitle + positioning happen atomically on the main
+// thread with no gap for macOS to redraw the wrong state.
 #[tauri::command]
 fn set_window_title(app: AppHandle, title: String) {
     if let Some(window) = app.get_webview_window("main") {
-        let _ = window.set_title(&title);
         #[cfg(target_os = "macos")]
         {
-            let ns_window = window.ns_window().unwrap() as cocoa::base::id;
-            reposition_traffic_lights(ns_window);
+            let win = window.clone();
+            let _ = window.run_on_main_thread(move || {
+                use cocoa::appkit::NSWindow;
+                use cocoa::base::nil;
+                use cocoa::foundation::NSString;
+                #[allow(deprecated)]
+                unsafe {
+                    let ns_window = win.ns_window().unwrap() as cocoa::base::id;
+                    let ns_title = NSString::alloc(nil).init_str(&title);
+                    NSWindow::setTitle_(ns_window, ns_title);
+                    position_traffic_lights(ns_window);
+                }
+            });
         }
+        #[cfg(not(target_os = "macos"))]
+        let _ = window.set_title(&title);
     }
 }
 
-// Tauri command: fix traffic light position (call after HMR or any event that resets them)
 #[tauri::command]
 fn fix_traffic_lights(app: AppHandle) {
     #[cfg(target_os = "macos")]
     if let Some(window) = app.get_webview_window("main") {
-        let ns_window = window.ns_window().unwrap() as cocoa::base::id;
-        reposition_traffic_lights(ns_window);
+        let win = window.clone();
+        let _ = window.run_on_main_thread(move || {
+            #[allow(deprecated)]
+            unsafe {
+                let ns_window = win.ns_window().unwrap() as cocoa::base::id;
+                position_traffic_lights(ns_window);
+            }
+        });
     }
+    #[cfg(not(target_os = "macos"))]
+    let _ = app;
 }
 
 // ── First Launch Flag ──
@@ -650,7 +869,9 @@ pub fn run() {
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
-        .plugin(tauri_plugin_window_state::Builder::default().build())
+        .plugin(tauri_plugin_window_state::Builder::default()
+            .with_state_flags(tauri_plugin_window_state::StateFlags::all() - tauri_plugin_window_state::StateFlags::DECORATIONS)
+            .build())
         .manage(RecentMenuState(std::sync::Mutex::new(None)))
         .invoke_handler(tauri::generate_handler![mcp_respond, set_menu_check, set_window_title, fix_traffic_lights, install_mcp, resolve_mcp_server_path, get_recent_files, add_recent_file, clear_recent_files, check_has_launched, mark_has_launched, read_clipboard_image])
         .setup(|app| {
@@ -831,6 +1052,7 @@ pub fn run() {
                 .item(&toggle_left_panel)
                 .item(&toggle_right_panel)
                 .separator()
+                .item(&themes_submenu)
                 .item(&spacing_grid_submenu)
                 .item(&style_new_frames)
                 .separator()
@@ -868,100 +1090,11 @@ pub fn run() {
 
             app.set_menu(menu)?;
 
-            // Vibrancy is now handled by windowEffects in tauri.conf.json
-            // (underWindowBackground + fullScreenUI effects).
+            // Custom NSWindow delegate handles traffic light positioning
+            // synchronously during resize (before redraw) and fullscreen events.
             #[cfg(target_os = "macos")]
             if let Some(window) = app.get_webview_window("main") {
-                // Self-healing traffic light positioning via NSWindow notification observer.
-                // Covers ALL cases: resize, fullscreen, Stage Manager, display change, setTitle, HMR.
-                // Replaces the fragile ad-hoc frontend calls.
-                let ns_window = window.ns_window().unwrap() as cocoa::base::id;
-                unsafe {
-                    use cocoa::base::{id, nil};
-                    use cocoa::foundation::NSString;
-                    use std::sync::atomic::{AtomicBool, Ordering};
-
-                    let center: id = msg_send![class!(NSNotificationCenter), defaultCenter];
-
-                    // Re-entrancy guard: reposition_traffic_lights nudges size which fires
-                    // NSWindowDidResize again. The guard prevents infinite recursion.
-                    static REPOSITIONING: AtomicBool = AtomicBool::new(false);
-
-                    let block = block::ConcreteBlock::new(move |_notif: id| {
-                        if REPOSITIONING.compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst).is_ok() {
-                            reposition_traffic_lights(ns_window);
-                            REPOSITIONING.store(false, Ordering::SeqCst);
-                        }
-                    });
-                    let block = block.copy();
-
-                    let traffic_light_notifications = [
-                        "NSWindowDidResizeNotification",
-                        "NSWindowDidExitFullScreenNotification",
-                        "NSWindowDidChangeScreenNotification",
-                        "NSWindowDidBecomeKeyNotification",
-                        "NSWindowDidMoveNotification",
-                    ];
-
-                    for name in &traffic_light_notifications {
-                        let name_ns = NSString::alloc(nil).init_str(name);
-                        let _: id = msg_send![center,
-                            addObserverForName: name_ns
-                            object: ns_window
-                            queue: nil
-                            usingBlock: &*block
-                        ];
-                    }
-
-                    // Fullscreen: make the native titlebar opaque so it isn't a
-                    // transparent strip when the user hovers the menu bar.
-                    // titlebarAppearsTransparent is a simple BOOL property — safe
-                    // to toggle (unlike styleMask which conflicts with TAO).
-                    let app_for_fs = app.handle().clone();
-                    let fs_enter_block = block::ConcreteBlock::new(move |_notif: id| {
-                        let _ = app_for_fs.emit("fullscreen-change", true);
-                        let _: () = msg_send![ns_window, setTitlebarAppearsTransparent: false];
-                    });
-                    let fs_enter_block = fs_enter_block.copy();
-                    let enter_name = NSString::alloc(nil).init_str("NSWindowDidEnterFullScreenNotification");
-                    let _: id = msg_send![center,
-                        addObserverForName: enter_name
-                        object: ns_window
-                        queue: nil
-                        usingBlock: &*fs_enter_block
-                    ];
-
-                    let app_for_fs2 = app.handle().clone();
-                    let fs_exit_block = block::ConcreteBlock::new(move |_notif: id| {
-                        let _ = app_for_fs2.emit("fullscreen-change", false);
-                        let _: () = msg_send![ns_window, setTitlebarAppearsTransparent: true];
-                    });
-                    let fs_exit_block = fs_exit_block.copy();
-                    let exit_name = NSString::alloc(nil).init_str("NSWindowDidExitFullScreenNotification");
-                    let _: id = msg_send![center,
-                        addObserverForName: exit_name
-                        object: ns_window
-                        queue: nil
-                        usingBlock: &*fs_exit_block
-                    ];
-                }
-
-                // Initial nudge after window-state plugin restores geometry.
-                // Two passes: early (100ms) catches most cases, late (500ms) catches
-                // slow window-state restores between builds.
-                let app_handle = app.handle().clone();
-                std::thread::spawn(move || {
-                    for delay_ms in [100, 500] {
-                        std::thread::sleep(std::time::Duration::from_millis(delay_ms));
-                        let h = app_handle.clone();
-                        let _ = app_handle.run_on_main_thread(move || {
-                            if let Some(w) = h.get_webview_window("main") {
-                                let ns = w.ns_window().unwrap() as cocoa::base::id;
-                                reposition_traffic_lights(ns);
-                            }
-                        });
-                    }
-                });
+                setup_traffic_light_delegate(&window, app.handle());
             }
 
             // ── MCP HTTP Bridge ──
@@ -1021,7 +1154,7 @@ pub fn run() {
             match event {
                 tauri::WindowEvent::CloseRequested { .. } => {
                     use tauri_plugin_window_state::AppHandleExt;
-                    let _ = window.app_handle().save_window_state(tauri_plugin_window_state::StateFlags::all());
+                    let _ = window.app_handle().save_window_state(tauri_plugin_window_state::StateFlags::all() - tauri_plugin_window_state::StateFlags::DECORATIONS);
                 }
                 tauri::WindowEvent::Resized(..)
                 | tauri::WindowEvent::ThemeChanged(..)
