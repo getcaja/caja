@@ -15,7 +15,7 @@ export const DEFAULT_DARK: CajaTheme = {
   label: 'Dark',
   dark: true,
   base: {
-    surface: '#1e1e1e',
+    surface: '#282828',
     text: '#ffffff',
     accent: '#3378F6',
     destructive: '#ef4444',

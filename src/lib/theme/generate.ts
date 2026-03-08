@@ -42,76 +42,99 @@ export interface ThemeTokens {
   'float-border': string
 }
 
+// ── Shared derivation constants ──
+// One set of deltas, direction flips per mode (dark lifts, light lowers).
+// Light mode uses a perceptual multiplier (1.5×) on surface steps to
+// compensate for Weber's law — the eye needs bigger deltas to perceive
+// the same contrast in light tones as in dark tones.
+const STEP_1       = 0.062   // surface → s1 (inputs, segments, cards)
+const STEP_2       = 0.124   // surface → s2 (hover, inset, border-accent)
+const STEP_3       = 0.187   // surface → s3 (emphasis)
+const BORDER_STEP  = 0.093   // surface → border (between s1 and s2)
+const LIGHT_BOOST  = 1.5     // perceptual compensation for light surfaces
+const TEXT_SEC     = 0.30    // text → secondary
+const TEXT_MUTED   = 0.53    // text → muted (section labels)
+const FG_MUTED     = 0.35    // text → fg-muted (interactive dimmed)
+const FG_SUBTLE    = 0.50    // text → fg-subtle (placeholders)
+const ACCENT_HOVER = 0.08    // accent shift for hover
+const VIBRANCY_A   = 0.15    // surface-vibrancy opacity factor
+
 export function deriveTokens(theme: CajaTheme): ThemeTokens {
   const surface = ThemeColor.parse(theme.base.surface)
   const text = ThemeColor.parse(theme.base.text)
   const accent = ThemeColor.parse(theme.base.accent)
 
-  if (theme.dark) {
-    const s1 = surface.lift(0.062)
-    const s2 = surface.lift(0.124)
-    const s3 = surface.lift(0.187)
-    return {
-      'surface-0': surface.css(),
-      'surface-sunken': surface.lower(0.25).css(),
-      'surface-vibrancy': surface.translucify(0.10).css(),
-      'surface-1': s1.css(),
-      'surface-2': s2.css(),
-      'surface-3': s3.css(),
-      'text-primary': text.css(),
-      'text-secondary': text.lower(0.30).css(),
-      'text-muted': text.lower(0.53).css(),
-      border: surface.lift(0.093).css(),
-      'border-accent': s2.css(),
-      accent: accent.css(),
-      'accent-hover': accent.lift(0.066).css(),
-      'accent-text': `color-mix(in srgb, ${accent.css()} 65%, white)`,
-      destructive: ThemeColor.parse(theme.base.destructive).css(),
-      'canvas-bg': surface.lower(0.25).css(),
-      'fg-default': text.css(),
-      'fg-muted': text.lower(0.35).css(),
-      'fg-subtle': text.lower(0.50).css(),
-      'bg-overlay': surface.lower(0.35).css(),
-      'control-bg': s1.css(),            // darker than panel → contrast defines them
-      'control-border': 'transparent',   // no border needed in dark
-      'control-active': s2.css(),        // lighter than control-bg → stands out
-      'chrome-border': surface.lift(0.093).css(), // subtle window edge in dark
-      'float-border': surface.lift(0.124).css(), // visible border on floating surfaces in dark
-    }
-  }
+  // Direction: dark lifts from surface, light lowers (with perceptual boost)
+  const boost = theme.dark ? 1 : LIGHT_BOOST
+  const away = (base: ThemeColor, delta: number) =>
+    theme.dark ? base.lift(delta) : base.lower(delta * boost)
+  // Text fades toward surface
+  const fade = (base: ThemeColor, delta: number) =>
+    theme.dark ? base.lower(delta) : base.lift(delta)
 
-  // Light mode — symmetric deltas to dark mode (Radix-validated approach).
-  // Dark lifts: 0.062, 0.124, 0.187 → Light lowers: same values.
-  const s1 = surface.lower(0.08)    // ~#ebebeb — inputs, cards, segment bg
-  const s2 = surface.lower(0.124)   // ~#e0e0e0 — hover, inset  (≈ Radix gray5)
-  const s3 = surface.lower(0.187)   // ~#d0d0d0 — emphasis       (≈ Radix gray7)
+  const s1 = away(surface, STEP_1)
+  const s2 = away(surface, STEP_2)
+  const s3 = away(surface, STEP_3)
+
   return {
+    // ── Surfaces ──
     'surface-0': surface.css(),
-    'surface-sunken': surface.lower(0.04).css(),
-    'surface-vibrancy': surface.translucify(0.15).css(),
+    'surface-sunken': theme.dark
+      ? surface.lower(0.40).css()       // deep dark for canvas/console
+      : surface.lower(0.04).css(),      // subtle off-white
+    'surface-vibrancy': surface.translucify(VIBRANCY_A).css(),
     'surface-1': s1.css(),
     'surface-2': s2.css(),
     'surface-3': s3.css(),
+
+    // ── Text ──
     'text-primary': text.css(),
-    'text-secondary': text.lift(0.35).css(),
-    'text-muted': text.lift(0.55).css(),
-    border: surface.lower(0.14).css(),    // ≈ Radix gray6 #d9d9d9
-    'border-accent': surface.lower(0.187).css(), // ≈ Radix gray7
+    'text-secondary': fade(text, TEXT_SEC).css(),
+    'text-muted': fade(text, TEXT_MUTED).css(),
+
+    // ── Borders ──
+    border: away(surface, BORDER_STEP).css(),
+    'border-accent': s2.css(),
+
+    // ── Accent ──
     accent: accent.css(),
-    'accent-hover': accent.lower(0.1).css(),
-    'accent-text': `color-mix(in srgb, ${accent.css()} 65%, black)`,
+    'accent-hover': theme.dark
+      ? accent.lift(ACCENT_HOVER).css()
+      : accent.lower(ACCENT_HOVER).css(),
+    'accent-text': theme.dark
+      ? `color-mix(in srgb, ${accent.css()} 65%, white)`
+      : `color-mix(in srgb, ${accent.css()} 65%, black)`,
+
+    // ── Semantic ──
     destructive: ThemeColor.parse(theme.base.destructive).css(),
-    'canvas-bg': surface.lower(0.04).css(),
+
+    // ── Canvas ──
+    'canvas-bg': theme.dark
+      ? surface.lower(0.40).css()       // same as sunken
+      : surface.lower(0.04).css(),      // same as sunken
+
+    // ── Foreground / overlay ──
     'fg-default': text.css(),
-    'fg-muted': text.lift(0.38).css(),
-    'fg-subtle': text.lift(0.55).css(),
-    'bg-overlay': surface.lower(0.04).css(),
-    // Paper pattern: controls lighter than panel, border defines them
-    'control-bg': surface.lower(0.02).css(),     // ~#fafafa — near white
-    'control-border': surface.lower(0.15).css(), // ~#d9d9d9 — visible separator
-    'control-active': surface.css(),             // white — pops against control-bg
-    'chrome-border': 'transparent',              // OS shadow defines window edge in light
-    'float-border': 'transparent',              // shadow outline is enough in light
+    'fg-muted': fade(text, FG_MUTED).css(),
+    'fg-subtle': fade(text, FG_SUBTLE).css(),
+    'bg-overlay': theme.dark
+      ? surface.lower(0.35).css()
+      : surface.lower(0.04).css(),
+
+    // ── Controls ──
+    'control-bg': s1.css(),
+    'control-border': theme.dark
+      ? 'transparent'                   // dark: bg contrast is enough
+      : away(surface, BORDER_STEP).css(), // light: needs visible border
+    'control-active': surface.css(),      // surface-0: pops against s1 container in both modes
+
+    // ── Chrome & floating ── (mode-specific by nature)
+    'chrome-border': theme.dark
+      ? away(surface, BORDER_STEP).css()
+      : 'transparent',
+    'float-border': theme.dark
+      ? s2.css()
+      : 'transparent',
   }
 }
 

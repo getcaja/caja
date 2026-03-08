@@ -6,9 +6,8 @@ import { useTreeDnd } from './TreeDndContext'
 import { useContextMenu } from './hooks/useContextMenu'
 import { useInlineEdit } from './hooks/useInlineEdit'
 import { TreeRow } from './TreeRow'
-import { Frame as FrameIcon, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse, Eye, EyeOff, Link, Diamond, LayoutGrid, FileCodeCorner } from 'lucide-react'
+import { Frame as FrameIcon, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse, Eye, EyeOff, Link, Diamond, Grid2x2, FileCodeCorner, SquareArrowRight, SquareArrowDown } from 'lucide-react'
 import type { BoxElement } from '../../types/frame'
-import { FlexColumnIcon, FlexRowIcon } from '../icons/LayoutIcons'
 import { FrameContextMenu } from '../shared/FrameContextMenu'
 
 interface TreeNodeProps {
@@ -83,9 +82,9 @@ export const TreeNode = memo(function TreeNode({ frame, depth, parentId = null, 
 
   // Determine icon
   const boxIcon = frame.type === 'box'
-    ? (frame as BoxElement).display === 'grid' ? <LayoutGrid size={12} />
+    ? (frame as BoxElement).display === 'grid' ? <Grid2x2 size={12} />
     : (frame as BoxElement).display === 'flex' || (frame as BoxElement).display === 'inline-flex'
-      ? (frame as BoxElement).direction === 'row' ? <FlexRowIcon size={12} /> : <FlexColumnIcon size={12} />
+      ? (frame as BoxElement).direction === 'row' ? <SquareArrowRight size={12} /> : <SquareArrowDown size={12} />
     : <FrameIcon size={12} />
     : null
 

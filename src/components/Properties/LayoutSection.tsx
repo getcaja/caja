@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Settings2, Square, LayoutGrid, Columns3, Rows3, AlignHorizontalSpaceAround, AlignVerticalSpaceAround, Check } from 'lucide-react'
-import { FlexColumnIcon, FlexRowIcon } from '../icons/LayoutIcons'
+import { Settings2, Square, Grid2x2, Columns3, Rows3, AlignHorizontalSpaceAround, AlignVerticalSpaceAround, Check, SquareArrowRight, SquareArrowDown } from 'lucide-react'
 import type { Frame, BoxElement } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { Section } from '../ui/Section'
@@ -83,9 +82,9 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                 value={displayMode}
                 options={[
                   { value: 'block', label: <Square size={12} />, tooltip: 'Block' },
-                  { value: 'flex-col', label: <FlexColumnIcon size={12} />, tooltip: 'Vertical' },
-                  { value: 'flex-row', label: <FlexRowIcon size={12} />, tooltip: 'Horizontal' },
-                  { value: 'grid', label: <LayoutGrid size={12} />, tooltip: 'Grid' },
+                  { value: 'flex-col', label: <SquareArrowDown size={12} />, tooltip: 'Vertical' },
+                  { value: 'flex-row', label: <SquareArrowRight size={12} />, tooltip: 'Horizontal' },
+                  { value: 'grid', label: <Grid2x2 size={12} />, tooltip: 'Grid' },
                 ]}
                 onChange={(v) => {
                   const updates: Partial<BoxElement> = {}
@@ -510,7 +509,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                     value={boxFrame!.gap}
                     onChange={(v) => updateFrame(frame.id, { gap: v })}
                     min={0}
-                    inlineLabel={<LayoutGrid size={12} />}
+                    inlineLabel={<Grid2x2 size={12} />}
                     classPrefix="gap"
                     tooltip="Gap"
                   />

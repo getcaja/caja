@@ -297,7 +297,7 @@ export function TreePanel() {
         <TreeDndProvider>
           <div className="flex-1 overflow-y-auto flex flex-col">
             <TreeSection
-              label="Layers"
+              label="Elements"
               collapsed={layersCollapsed}
               onToggle={() => setLayersCollapsed((v) => !v)}
               trailing={
@@ -404,9 +404,9 @@ export function TreePanel() {
               </div>
             </TreeSection>
 
-            {/* Layers section */}
+            {/* Elements section */}
             <TreeSection
-              label="Layers"
+              label="Elements"
               collapsed={layersCollapsed}
               onToggle={() => setLayersCollapsed((v) => !v)}
               trailing={

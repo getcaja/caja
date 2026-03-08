@@ -33,19 +33,19 @@ describe('deriveTokens (dark)', () => {
   const tokens = deriveTokens(DEFAULT_DARK)
 
   it('surface-0 matches input', () => {
-    expectColorMatch(tokens['surface-0'], '#1e1e1e')
+    expectColorMatch(tokens['surface-0'], '#282828')
   })
 
-  it('surface-1 ≈ #2c2c2c', () => {
-    expectColorMatch(tokens['surface-1'], '#2c2c2c')
+  it('surface-1 ≈ #333333', () => {
+    expectColorMatch(tokens['surface-1'], '#333333', 2)
   })
 
-  it('surface-2 ≈ #3a3a3a', () => {
-    expectColorMatch(tokens['surface-2'], '#3a3a3a')
+  it('surface-2 ≈ #434343', () => {
+    expectColorMatch(tokens['surface-2'], '#434343', 2)
   })
 
-  it('surface-3 ≈ #484848', () => {
-    expectColorMatch(tokens['surface-3'], '#484848')
+  it('surface-3 ≈ #505050', () => {
+    expectColorMatch(tokens['surface-3'], '#505050', 2)
   })
 
   it('text-primary matches input', () => {
@@ -60,12 +60,12 @@ describe('deriveTokens (dark)', () => {
     expectColorMatch(tokens['text-muted'], '#787878', 2)
   })
 
-  it('border ≈ #333333', () => {
-    expectColorMatch(tokens.border, '#333333', 2)
+  it('border ≈ #3a3a3a', () => {
+    expectColorMatch(tokens.border, '#3a3a3a', 2)
   })
 
-  it('border-accent ≈ #3a3a3a', () => {
-    expectColorMatch(tokens['border-accent'], '#3a3a3a', 2)
+  it('border-accent ≈ #434343', () => {
+    expectColorMatch(tokens['border-accent'], '#434343', 2)
   })
 
   it('accent matches input', () => {
@@ -141,10 +141,10 @@ describe('deriveTokens (light)', () => {
     expect(tokens['control-border']).not.toBe('transparent')
   })
 
-  it('control-bg is lighter than surface-1', () => {
+  it('control-bg equals surface-1 (unified across modes)', () => {
     const [cb] = rgb(tokens['control-bg'])
     const [s1] = rgb(tokens['surface-1'])
-    expect(cb).toBeGreaterThan(s1)
+    expect(cb).toBe(s1)
   })
 })
 
