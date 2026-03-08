@@ -83,7 +83,7 @@ function DropdownButton({ icon, title, isActive, menu, menuClassName, children }
       <button
         ref={btnRef}
         onClick={handleClick}
-        className={`${btnIconCls} fg-default ${open || isActive ? 'bg-accent' : 'opacity-60 hover:opacity-100'}`}
+        className={`${btnIconCls} ${open || isActive ? 'bg-accent fg-default' : 'fg-default opacity-80 hover:opacity-100'}`}
         title={title}
       >
         {icon ?? children}
@@ -198,7 +198,7 @@ export function Toolbar({ hidden = false }: { hidden?: boolean }) {
           <div className="flex items-center rounded-md">
             <button
               onClick={() => setCanvasTool('pointer')}
-              className={`${btnIcon} fg-default ${canvasTool === 'pointer' ? 'bg-accent' : 'opacity-60 hover:opacity-100'}`}
+              className={`${btnIcon} ${canvasTool === 'pointer' ? 'bg-accent fg-default' : 'fg-default opacity-80 hover:opacity-100'}`}
               title="Pointer (V)"
             >
               <MousePointer2 size={12} />
@@ -206,7 +206,7 @@ export function Toolbar({ hidden = false }: { hidden?: boolean }) {
             <button
               onClick={() => setCanvasTool('frame')}
               onDoubleClick={() => { handleInsert('box'); setCanvasTool('pointer') }}
-              className={`${btnIcon} fg-default ${canvasTool === 'frame' ? 'bg-accent' : 'opacity-60 hover:opacity-100'}`}
+              className={`${btnIcon} ${canvasTool === 'frame' ? 'bg-accent fg-default' : 'fg-default opacity-80 hover:opacity-100'}`}
               title="Frame (F)"
             >
               <FrameIcon size={12} />
@@ -214,7 +214,7 @@ export function Toolbar({ hidden = false }: { hidden?: boolean }) {
             <button
               onClick={() => setCanvasTool('text')}
               onDoubleClick={() => { handleInsert('text'); setCanvasTool('pointer') }}
-              className={`${btnIcon} fg-default ${canvasTool === 'text' ? 'bg-accent' : 'opacity-60 hover:opacity-100'}`}
+              className={`${btnIcon} ${canvasTool === 'text' ? 'bg-accent fg-default' : 'fg-default opacity-80 hover:opacity-100'}`}
               title="Text (T)"
             >
               <Type size={12} />
@@ -222,7 +222,7 @@ export function Toolbar({ hidden = false }: { hidden?: boolean }) {
             <button
               onClick={onImageClick}
               onDoubleClick={onImageDoubleClick}
-              className={`${btnIcon} fg-default ${canvasTool === 'image' ? 'bg-accent' : 'opacity-60 hover:opacity-100'}`}
+              className={`${btnIcon} ${canvasTool === 'image' ? 'bg-accent fg-default' : 'fg-default opacity-80 hover:opacity-100'}`}
               title="Image (I)"
             >
               <ImageIcon size={12} />
