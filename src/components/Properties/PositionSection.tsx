@@ -31,7 +31,7 @@ function AnchorBox({ frame }: { frame: Frame }) {
   }
 
   const pinCls = (active: boolean) =>
-    active ? 'bg-white' : 'bg-surface-3 hover:bg-emphasis'
+    active ? 'bg-accent' : 'bg-surface-3 hover:bg-emphasis'
 
   return (
     <div className="rounded-lg relative w-full h-full" style={{ backgroundColor: 'var(--input-bg)' }}>

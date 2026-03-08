@@ -353,7 +353,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                           }}
                         >
                           {active ? (
-                            <div className={`${isRow ? 'w-[2px] h-[8px]' : 'w-[8px] h-[2px]'} bg-white rounded-full`} />
+                            <div className={`${isRow ? 'w-[2px] h-[8px]' : 'w-[8px] h-[2px]'} bg-accent rounded-full`} />
                           ) : (
                             <div className="w-[3px] h-[3px] rounded-full bg-surface-3 group-hover:bg-emphasis" />
                           )}
