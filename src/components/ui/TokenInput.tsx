@@ -76,6 +76,18 @@ export function TokenInput(props: TokenInputProps) {
   draftRef.current = draft
   const [focused, setFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const pendingFocusRef = useRef(false)
+
+  // --- Auto-focus input after detaching token ---
+  useEffect(() => {
+    if (pendingFocusRef.current && !hasToken) {
+      pendingFocusRef.current = false
+      requestAnimationFrame(() => {
+        inputRef.current?.focus()
+        inputRef.current?.select()
+      })
+    }
+  }, [hasToken])
 
   // --- Inline label (with optional title tooltip) ---
   const inlineLabelEl = inlineLabel ? (
@@ -428,6 +440,7 @@ export function TokenInput(props: TokenInputProps) {
               if (e.key === 'Backspace' || e.key === 'Delete') {
                 e.preventDefault()
                 // Detach: keep value, remove token
+                pendingFocusRef.current = true
                 onChange({ mode: 'custom', value: scaleNumeric })
                 setDraft(scaleNumeric === scaleResetValue ? '' : String(scaleNumeric))
               } else if (e.key === 'Enter' || e.key === ' ') {
@@ -449,9 +462,9 @@ export function TokenInput(props: TokenInputProps) {
                 e.preventDefault()
                 e.stopPropagation()
                 // Detach: keep value, remove token
+                pendingFocusRef.current = true
                 onChange({ mode: 'custom', value: scaleNumeric })
                 setDraft(scaleNumeric === scaleResetValue ? '' : String(scaleNumeric))
-                requestAnimationFrame(() => inputRef.current?.focus())
               }}
               className={`c-input-btn ${showDropdown ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
             >

@@ -163,6 +163,7 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
     if (originalRef.current === null) return
     onChange(originalRef.current)
     originalRef.current = null
+    setSelectedIdx(-1)
   }, [onChange])
 
   // --- Remove pill (Backspace) ---
@@ -353,8 +354,6 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
             {filteredScale.find(s => s.token === fixedToken)?.label ?? `${fixedNumeric}px`}
           </span>
           <span className="flex-1" />
-          {/* Hidden input for focus management */}
-          <input ref={inputRef} type="text" className="sr-only" tabIndex={-1} />
           <button
             type="button"
             tabIndex={-1}
@@ -396,8 +395,6 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
             {pillText}
           </span>
           <span className="flex-1" />
-          {/* Hidden input for focus management */}
-          <input ref={inputRef} type="text" className="sr-only" tabIndex={-1} />
           <button
             type="button"
             tabIndex={-1}

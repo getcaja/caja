@@ -115,7 +115,7 @@ export function ColorGridPicker({
           gap: '2px',
         }}
       >
-        {COLOR_GRID.map((family) =>
+        {COLOR_GRID.flatMap((family) =>
           family.shades.map((swatch) => (
             <button
               key={swatch.token}

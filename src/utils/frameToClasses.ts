@@ -1,5 +1,6 @@
 import type { Frame, Spacing, Inset, BorderRadius, Border, DesignValue, ResponsiveOverrides } from '../types/frame'
 import { toGoogleFontClass } from './googleFonts'
+import { isRootId } from '../store/treeHelpers'
 
 const weightMap: Record<number, string> = {
   100: 'font-thin',
@@ -252,6 +253,11 @@ export function frameToClasses(frame: Frame): string {
       if (!dvIsZero(frame.gridCols)) cls.push(dvClass('grid-cols', frame.gridCols, ''))
       if (!dvIsZero(frame.gridRows)) cls.push(dvClass('grid-rows', frame.gridRows, ''))
       if (!dvIsZero(frame.gap)) cls.push(dvClass('gap', frame.gap))
+    } else if (frame.display === 'block' && isRootId(frame.id)) {
+      // Root page frame: use flow-root instead of block to prevent child
+      // margin collapse from escaping to the canvas background.
+      // UI still shows "Block" — this is transparent to the user.
+      cls.push('[display:flow-root]')
     } else if (frame.display !== 'block') {
       cls.push(frame.display) // 'inline-block', 'inline'
     }
