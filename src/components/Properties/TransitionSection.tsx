@@ -22,11 +22,11 @@ const EASE_OPTIONS = [
   { value: 'in-out', label: 'Ease In Out' },
 ]
 
-export function TransitionSection({ frame }: { frame: Frame }) {
+export function TransitionSection({ frame, isDirty, onReset }: { frame: Frame; isDirty?: boolean; onReset?: () => void }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
 
   return (
-    <Section title="Transition" defaultCollapsed>
+    <Section title="Transition" defaultCollapsed isDirty={isDirty} onReset={onReset}>
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
           <Select

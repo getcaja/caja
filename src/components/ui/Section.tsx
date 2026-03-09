@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronRight, RotateCcw } from 'lucide-react'
+import { ChevronRight, RotateCcw, X } from 'lucide-react'
 
 function getStorageKey(title: string) {
   return `caja-section-${title}`
@@ -21,6 +21,8 @@ export function Section({
   defaultCollapsed = false,
   hasOverrides = false,
   onResetOverrides,
+  isDirty = false,
+  onReset,
 }: {
   title: string
   children: React.ReactNode
@@ -29,6 +31,8 @@ export function Section({
   defaultCollapsed?: boolean
   hasOverrides?: boolean
   onResetOverrides?: () => void
+  isDirty?: boolean
+  onReset?: () => void
 }) {
   const [collapsed, setCollapsed] = useState(() => collapsible ? readCollapsed(title, defaultCollapsed) : false)
 
@@ -55,13 +59,22 @@ export function Section({
         <span className={`c-section-title${collapsible ? ' cursor-pointer select-none' : ''}`} onClick={collapsible ? toggle : undefined}>{title}</span>
         {hasOverrides && <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0 ml-1" title="Modified at this breakpoint" />}
         <div className="flex-1" />
+        {isDirty && onReset && !hasOverrides && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onReset() }}
+            className="c-slot"
+            title="Reset section to defaults"
+          >
+            <X size={12} />
+          </button>
+        )}
         {hasOverrides && onResetOverrides && (
           <button
             onClick={(e) => { e.stopPropagation(); onResetOverrides() }}
-            className="w-4 h-4 c-icon-btn opacity-0 group-hover/section:opacity-100"
+            className="c-slot"
             title="Reset overrides for this section"
           >
-            <RotateCcw size={10} />
+            <RotateCcw size={12} />
           </button>
         )}
       </div>

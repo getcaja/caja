@@ -28,7 +28,7 @@ const FONT_FAMILY_OPTIONS = [
   { value: 'mono', label: 'Monospace' },
 ]
 
-export function TypographySection({ frame, hasOverrides, onResetOverrides }: { frame: TextStyles & { id: string; color: DesignValue<string>; colorAlpha: DesignValue<number> }; hasOverrides?: boolean; onResetOverrides?: () => void }) {
+export function TypographySection({ frame, hasOverrides, onResetOverrides, isDirty, onReset }: { frame: TextStyles & { id: string; color: DesignValue<string>; colorAlpha: DesignValue<number> }; hasOverrides?: boolean; onResetOverrides?: () => void; isDirty?: boolean; onReset?: () => void }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
   const [moreOpen, setMoreOpen] = useState(false)
 
@@ -38,7 +38,7 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides }: { f
     || frame.whiteSpace !== 'normal'
 
   return (
-    <Section title="Typography" hasOverrides={hasOverrides} onResetOverrides={onResetOverrides}>
+    <Section title="Typography" hasOverrides={hasOverrides} onResetOverrides={onResetOverrides} isDirty={isDirty} onReset={onReset}>
       <div className="flex flex-col gap-2">
         {/* Font family */}
         <div className="flex items-center gap-2">

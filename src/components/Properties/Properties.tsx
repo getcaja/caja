@@ -13,6 +13,12 @@ import { PositionSection } from './PositionSection'
 import { TransformSection } from './TransformSection'
 import { TransitionSection } from './TransitionSection'
 import { AdvancedSection } from './AdvancedSection'
+import {
+  isTypographyDirty, isLayoutDirty, isFillDirty, isAppearanceDirty,
+  isBorderDirty, isEffectsDirty, isPositionDirty, isTransformDirty, isTransitionDirty,
+  typographyResetValues, layoutResetValues, fillResetValues, appearanceResetValues,
+  borderResetValues, effectsResetValues, positionResetValues, transformResetValues, transitionResetValues,
+} from './sectionReset'
 
 const SECTION_KEYS: Record<string, string[]> = {
   Layout: ['display', 'direction', 'justify', 'align', 'gap', 'wrap', 'gridCols', 'gridRows', 'padding', 'margin', 'width', 'height', 'minWidth', 'maxWidth', 'minHeight', 'maxHeight', 'grow', 'shrink', 'alignSelf'],
@@ -37,6 +43,7 @@ export function Properties() {
   const activeBreakpoint = useFrameStore((s) => s.activeBreakpoint)
   const getEffectiveFrame = useFrameStore((s) => s.getEffectiveFrame)
   const removeResponsiveKeys = useFrameStore((s) => s.removeResponsiveKeys)
+  const updateFrame = useFrameStore((s) => s.updateFrame)
 
   // Store auto-selects root when selection clears; keep UI fallback as safety net
   const frame = selected ?? root
@@ -56,6 +63,11 @@ export function Properties() {
     return () => removeResponsiveKeys(frame.id, activeBreakpoint as 'md' | 'sm', keys)
   }, [frame, activeBreakpoint, overrideKeys, removeResponsiveKeys])
 
+  // Section reset: single updateFrame call → one Cmd+Z
+  const resetSection = useCallback((values: Partial<typeof frame>) => {
+    updateFrame(frame.id, values)
+  }, [frame.id, updateFrame])
+
   if (multiCount > 1) return null
   if (pageSelected && !selected) return <PagePanel />
 
@@ -68,15 +80,46 @@ export function Properties() {
   return (
     <div key={frame.id} className="">
       <ElementSection frame={effective} isRoot={isRoot} />
-      <PositionSection frame={effective} />
-      <LayoutSection frame={effective} isRoot={isRoot} hasOverrides={sectionHasOverrides('Layout', overrideKeys)} onResetOverrides={makeResetHandler('Layout')} />
-      {hasTextStyles && <TypographySection frame={effective} hasOverrides={sectionHasOverrides('Typography', overrideKeys)} onResetOverrides={makeResetHandler('Typography')} />}
-      <AppearanceSection frame={effective} hasOverrides={sectionHasOverrides('Appearance', overrideKeys)} onResetOverrides={makeResetHandler('Appearance')} />
-      <FillSection frame={effective} hasOverrides={sectionHasOverrides('Fill', overrideKeys)} onResetOverrides={makeResetHandler('Fill')} />
-      <BorderSection frame={effective} />
-      <EffectsSection frame={effective} />
-      <TransformSection frame={effective} />
-      <TransitionSection frame={effective} />
+      <PositionSection frame={effective}
+        isDirty={isPositionDirty(effective)}
+        onReset={() => resetSection(positionResetValues())}
+      />
+      <LayoutSection frame={effective} isRoot={isRoot}
+        hasOverrides={sectionHasOverrides('Layout', overrideKeys)} onResetOverrides={makeResetHandler('Layout')}
+        isDirty={isLayoutDirty(effective)}
+        onReset={() => resetSection(layoutResetValues(effective))}
+      />
+      {hasTextStyles && <TypographySection frame={effective}
+        hasOverrides={sectionHasOverrides('Typography', overrideKeys)} onResetOverrides={makeResetHandler('Typography')}
+        isDirty={isTypographyDirty(effective)}
+        onReset={() => resetSection(typographyResetValues())}
+      />}
+      <AppearanceSection frame={effective}
+        hasOverrides={sectionHasOverrides('Appearance', overrideKeys)} onResetOverrides={makeResetHandler('Appearance')}
+        isDirty={isAppearanceDirty(effective)}
+        onReset={() => resetSection(appearanceResetValues())}
+      />
+      <FillSection frame={effective}
+        hasOverrides={sectionHasOverrides('Fill', overrideKeys)} onResetOverrides={makeResetHandler('Fill')}
+        isDirty={isFillDirty(effective)}
+        onReset={() => resetSection(fillResetValues())}
+      />
+      <BorderSection frame={effective}
+        isDirty={isBorderDirty(effective)}
+        onReset={() => resetSection(borderResetValues())}
+      />
+      <EffectsSection frame={effective}
+        isDirty={isEffectsDirty(effective)}
+        onReset={() => resetSection(effectsResetValues())}
+      />
+      <TransformSection frame={effective}
+        isDirty={isTransformDirty(effective)}
+        onReset={() => resetSection(transformResetValues())}
+      />
+      <TransitionSection frame={effective}
+        isDirty={isTransitionDirty(effective)}
+        onReset={() => resetSection(transitionResetValues())}
+      />
       <AdvancedSection frame={effective} />
     </div>
   )
