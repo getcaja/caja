@@ -8,7 +8,7 @@ vi.stubGlobal('localStorage', {
   removeItem: (key: string) => storage.delete(key),
 })
 
-import { useFrameStore, findInTree, isRootId, normalizeFrame, findTopLevelAncestor, resolveToDirectChild, COMPONENT_PAGE_ID } from '../frameStore'
+import { useFrameStore, findInTree, isRootId, normalizeFrame, findTopLevelAncestor, resolveToDirectChild, getDrillContext, resolveToContextLevel, COMPONENT_PAGE_ID } from '../frameStore'
 import { _resetLoadGuard } from '../slices/fileSlice'
 import type { BoxElement, Frame, InputElement, TextElement } from '../../types/frame'
 
@@ -1555,6 +1555,65 @@ describe('drill-down click resolution', () => {
     // Fallback: findTopLevelAncestor returns the top-level branch
     const fallback = findTopLevelAncestor(store().root, b1)
     expect(fallback).toBe(branchB)
+  })
+})
+
+// ── Shared drill-down helpers (getDrillContext + resolveToContextLevel) ──
+
+describe('getDrillContext', () => {
+  beforeEach(() => { resetStore() })
+
+  it('returns root when nothing is selected', () => {
+    expect(getDrillContext(store().root, null)).toBe(store().root.id)
+  })
+
+  it('returns root when root is selected', () => {
+    expect(getDrillContext(store().root, store().root.id)).toBe(store().root.id)
+  })
+
+  it('returns parent of selected non-root frame', () => {
+    const parent = addChild('box')
+    const child = addChild('box', parent)
+    expect(getDrillContext(store().root, child)).toBe(parent)
+  })
+
+  it('returns root when a top-level child is selected', () => {
+    const topLevel = addChild('box')
+    expect(getDrillContext(store().root, topLevel)).toBe(store().root.id)
+  })
+})
+
+describe('resolveToContextLevel', () => {
+  beforeEach(() => { resetStore() })
+
+  it('returns null when target is the context (hovering background)', () => {
+    const ctx = addChild('box')
+    expect(resolveToContextLevel(store().root, ctx, ctx)).toBeNull()
+  })
+
+  it('resolves direct child of context', () => {
+    const ctx = addChild('box')
+    const child = addChild('box', ctx)
+    expect(resolveToContextLevel(store().root, ctx, child)).toBe(child)
+  })
+
+  it('resolves deeply nested to direct child of context', () => {
+    const ctx = addChild('box')
+    const mid = addChild('box', ctx)
+    const deep = addChild('box', mid)
+    expect(resolveToContextLevel(store().root, ctx, deep)).toBe(mid)
+  })
+
+  it('falls back to top-level ancestor when target is outside context', () => {
+    const branchA = addChild('box')
+    const branchB = addChild('box')
+    const b1 = addChild('box', branchB)
+    expect(resolveToContextLevel(store().root, branchA, b1)).toBe(branchB)
+  })
+
+  it('returns the target itself if not found anywhere (safety fallback)', () => {
+    const ctx = addChild('box')
+    expect(resolveToContextLevel(store().root, ctx, 'nonexistent')).toBe('nonexistent')
   })
 })
 

@@ -94,7 +94,7 @@
 
   /* Input (all form controls) — Paper pattern: border in light, transparent in dark */
   --input-bg:            var(--color-control-bg);
-  --input-border:        var(--color-control-border);
+  --input-border:        var(--color-control-bg);
   --input-border-focus:  var(--color-accent);
 }
 
@@ -426,6 +426,12 @@ input[type=number] {
     z-index: 9999;
     padding-top: 0.25rem;
     padding-bottom: 0.25rem;
+  }
+  .c-menu-label {
+    padding: 0.25rem 0.75rem;
+    font-size: 11px;
+    color: var(--color-text-muted);
+    font-weight: 500;
   }
   .c-menu-item {
     width: 100%;

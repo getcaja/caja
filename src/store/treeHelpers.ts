@@ -305,6 +305,35 @@ export function isInstanceOrInsideInstance(root: Frame, targetId: string): boole
   return walk(root, false)
 }
 
+// --- Drill-down resolution (shared by canvas click + hover) ---
+
+/** Compute the drill-down context: the container whose direct children are the
+ *  candidates for selection/hover.  When a non-root frame is selected, the context
+ *  is its parent; when root (or nothing) is selected, the context is root itself. */
+export function getDrillContext(root: Frame, selectedId: string | null): string {
+  if (selectedId && !isRootId(selectedId)) {
+    const parent = findParent(root, selectedId)
+    if (parent) return parent.id
+  }
+  return root.id
+}
+
+/** Resolve a target frame to the current drill-down level.
+ *  Returns the direct child of `contextId` that contains `targetId`,
+ *  or the top-level ancestor if `targetId` is outside the context.
+ *  Returns `null` when `targetId` IS the context (hovering the background). */
+export function resolveToContextLevel(root: Frame, contextId: string, targetId: string): string | null {
+  // Clicking/hovering the context itself → select root (click) or suppress (hover)
+  if (targetId === contextId) return null
+
+  // Try to resolve within context
+  const resolved = resolveToDirectChild(root, contextId, targetId)
+  if (resolved) return resolved
+
+  // Outside context → fall back to top-level ancestor
+  return findTopLevelAncestor(root, targetId) ?? targetId
+}
+
 /** Check if a frame is a child INSIDE an instance (but not the instance root itself). */
 export function isChildOfInstance(root: Frame, frameId: string): boolean {
   function walk(frame: Frame, insideInstance: boolean): boolean {

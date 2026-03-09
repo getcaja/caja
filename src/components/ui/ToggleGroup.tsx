@@ -21,7 +21,7 @@ export function ToggleGroup<T extends string>({
       value={value}
       onValueChange={(v) => { if (v) onChange(v as T) }}
       className={`flex rounded overflow-hidden h-6 ${className ?? ''}`}
-      style={{ backgroundColor: 'var(--color-surface-1)', border: '1px solid var(--color-control-border)' }}
+      style={{ backgroundColor: 'var(--color-surface-1)', border: '1px solid var(--input-border)' }}
     >
       {options.map((opt) => (
         <RadixToggleGroup.Item

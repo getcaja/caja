@@ -1,4 +1,4 @@
-import { useFrameStore, findInTree } from '../../store/frameStore'
+import { useFrameStore, findInTree, isRootId } from '../../store/frameStore'
 
 /** Contextual keyboard shortcut hints — Safari-style bar at bottom-left of canvas. */
 export function CanvasHints() {
@@ -6,7 +6,7 @@ export function CanvasHints() {
     if (!s.showHints || s.previewMode) return null
 
     if (s.canvasDragId) {
-      return 'Hold \u2318 to deep drop'
+      return '\u2318 Hold to drop inside'
     }
 
     // Show navigate hint when hovering a link with href
@@ -15,6 +15,16 @@ export function CanvasHints() {
       if (frame && (frame.type === 'text' || frame.type === 'button') && frame.href) {
         return '\u2318 Click to follow link'
       }
+    }
+
+    // Deep-select mode active
+    if (s.deepSelect) {
+      return '\u2318 Click to deep select'
+    }
+
+    // Show "Esc to go up" when a non-root element is selected
+    if (s.selectedId && !isRootId(s.selectedId)) {
+      return 'Esc to select parent'
     }
 
     return null

@@ -3,8 +3,8 @@ import { ImageIcon } from 'lucide-react'
 import type { Frame } from '../../types/frame'
 import { frameToClasses } from '../../utils/frameToClasses'
 import { toContainerQueries } from '../../utils/responsiveClasses'
-import { useFrameStore, isRootId, findInTree, findTopLevelAncestor, resolveToDirectChild } from '../../store/frameStore'
-import { findParent } from '../../store/treeHelpers'
+import { useFrameStore, isRootId, findInTree, resolveToDirectChild } from '../../store/frameStore'
+import { getDrillContext, resolveToContextLevel } from '../../store/treeHelpers'
 import { pushNav } from '../../store/selectionHistory'
 import { resolveCanvasDrop, getFrameDepth } from '../../utils/canvasDrop'
 import { resolveRenderSrc, subscribeAssets, getAssetSnapshot } from '../../lib/assetOps'
@@ -14,27 +14,12 @@ import './FrameRenderer.css'
 // Module-level flag: skip the next click after a drag completes
 let _skipNextClick = false
 
-/** Resolve which frame a canvas click should select in drill-down mode.
- *  Context = parent of selected (or root if nothing selected).
- *  Returns the direct child of context that contains clickedId,
- *  or top-level ancestor if clickedId is outside the context. */
+/** Resolve which frame a canvas click should select in drill-down mode. */
 function resolveDrillClick(root: Frame, selectedId: string | null, clickedId: string): string {
-  // Root click → just select root
   if (clickedId === root.id) return root.id
-
-  // Determine context: parent of selected, or root
-  let contextId = root.id
-  if (selectedId && !isRootId(selectedId)) {
-    const parent = findParent(root, selectedId)
-    if (parent) contextId = parent.id
-  }
-
-  // Try to resolve within context
-  const resolved = resolveToDirectChild(root, contextId, clickedId)
-  if (resolved) return resolved
-
-  // Outside context → fall back to top-level
-  return findTopLevelAncestor(root, clickedId) ?? clickedId
+  const contextId = getDrillContext(root, selectedId)
+  // null = clicked on context itself → select it (go up one level)
+  return resolveToContextLevel(root, contextId, clickedId) ?? contextId
 }
 
 interface FrameRendererProps {

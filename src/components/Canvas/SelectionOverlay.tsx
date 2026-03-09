@@ -14,7 +14,8 @@
  */
 
 import { useEffect, useLayoutEffect, useState, useRef } from 'react'
-import { useFrameStore, findParent, isRootId, resolveToDirectChild, findTopLevelAncestor } from '../../store/frameStore'
+import { useFrameStore, findParent, isRootId } from '../../store/frameStore'
+import { getDrillContext, resolveToContextLevel } from '../../store/treeHelpers'
 
 interface Rect { top: number; left: number; width: number; height: number }
 
@@ -435,26 +436,11 @@ export function SelectionOverlay() {
   // Tree hovers bypass drill-down — the user explicitly targets the element.
   const effectiveHoveredId = useFrameStore((s) => {
     if (!s.hoveredId) return null
-
-    // Tree panel hover → show directly on the element, no drill-down
-    if (s.isTreeHover) return s.hoveredId
-
-    // Determine context: parent of selected, or root
-    let contextId = s.root.id
-    if (s.selectedId && !isRootId(s.selectedId)) {
-      const parent = findParent(s.root, s.selectedId)
-      if (parent) contextId = parent.id
-    }
-
-    // If hovering on the context itself, no hover (it's the background)
-    if (s.hoveredId === contextId) return null
-
-    // Resolve to direct child of context
-    const resolved = resolveToDirectChild(s.root, contextId, s.hoveredId)
-    if (resolved) return resolved
-
-    // Outside context — fall back to top-level ancestor
-    return findTopLevelAncestor(s.root, s.hoveredId) ?? s.hoveredId
+    // Tree hover or deep-select (Cmd held) → show exact element, no drill-down
+    if (s.isTreeHover || s.deepSelect) return s.hoveredId
+    // Canvas hover → resolve to current drill-down level
+    const contextId = getDrillContext(s.root, s.selectedId)
+    return resolveToContextLevel(s.root, contextId, s.hoveredId)
   })
   const showHov = !previewMode && !!effectiveHoveredId && !canvasDragId
 

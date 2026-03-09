@@ -922,12 +922,21 @@ function App() {
       }
     }
 
+    // Deep-select mode: Cmd held → bypass drill-down for hover + click
+    const onMetaDown = (e: KeyboardEvent) => { if (e.key === 'Meta') useFrameStore.getState().setDeepSelect(true) }
+    const onMetaUp = (e: KeyboardEvent) => { if (e.key === 'Meta') useFrameStore.getState().setDeepSelect(false) }
+
     window.addEventListener('keydown', handler)
+    window.addEventListener('keydown', onMetaDown)
+    window.addEventListener('keyup', onMetaUp)
+    window.addEventListener('blur', () => useFrameStore.getState().setDeepSelect(false))
     document.addEventListener('copy', onCopy)
     document.addEventListener('cut', onCut)
     document.addEventListener('paste', onPaste)
     return () => {
       window.removeEventListener('keydown', handler)
+      window.removeEventListener('keydown', onMetaDown)
+      window.removeEventListener('keyup', onMetaUp)
       document.removeEventListener('copy', onCopy)
       document.removeEventListener('cut', onCut)
       document.removeEventListener('paste', onPaste)

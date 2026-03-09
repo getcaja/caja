@@ -273,7 +273,7 @@ describe('Tree hover vs canvas hover behavior', () => {
     return parent ? current : null
   }
 
-  /** Mirrors SelectionOverlay's effectiveHoveredId logic */
+  /** Mirrors the shared getDrillContext + resolveToContextLevel logic */
   function resolveHover(
     root: Node,
     selectedId: string | null,
@@ -284,12 +284,13 @@ describe('Tree hover vs canvas hover behavior', () => {
     // Tree hover bypasses drill-down
     if (isTreeHover) return hoveredId
 
-    // Determine context
+    // getDrillContext equivalent
     let contextId = root.id
     if (selectedId && !selectedId.startsWith('__root__')) {
       const parent = findParent(root, selectedId)
       if (parent) contextId = parent.id
     }
+    // resolveToContextLevel equivalent
     if (hoveredId === contextId) return null
     const resolved = resolveToDirectChild(root, contextId, hoveredId)
     if (resolved) return resolved
