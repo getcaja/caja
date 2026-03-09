@@ -72,7 +72,6 @@ interface BaseElement {
   inset: Inset
 
   // Visuals
-  color: DesignValue<string>   // text color — inheritable via CSS cascade
   bg: DesignValue<string>
   bgImage: string
   bgSize: 'auto' | 'cover' | 'contain'
@@ -83,7 +82,6 @@ interface BaseElement {
   overflow: 'visible' | 'hidden' | 'scroll'
   opacity: DesignValue<number> // 0–100
   bgAlpha: DesignValue<number>    // 0–100 — per-color opacity for bg (Tailwind /N modifier)
-  colorAlpha: DesignValue<number> // 0–100 — per-color opacity for text color
   boxShadow: 'none' | 'sm' | 'base' | 'md' | 'lg' | 'xl' | '2xl'
   cursor: 'auto' | 'default' | 'pointer' | 'text' | 'not-allowed' | 'grab'
   blur: DesignValue<number>
@@ -123,9 +121,9 @@ interface BaseElement {
 
 export type BoxTag = 'body' | 'div' | 'section' | 'nav' | 'header' | 'footer' | 'main' | 'article' | 'aside' | 'ul' | 'ol' | 'li' | 'form'
 
-export type BoxDisplay = 'flex' | 'inline-flex' | 'block' | 'inline-block' | 'inline' | 'grid'
+export type BoxDisplay = 'flex' | 'inline-flex' | 'grid'
 
-export interface BoxElement extends BaseElement, TextStyles {
+export interface BoxElement extends BaseElement {
   type: 'box'
 
   // Semantic tag
@@ -151,6 +149,8 @@ export interface BoxElement extends BaseElement, TextStyles {
 
 // Shared text styling — used by text, button, input, textarea, select
 export interface TextStyles {
+  color: DesignValue<string>        // text color
+  colorAlpha: DesignValue<number>   // 0–100 — per-color opacity for text color
   fontSize: DesignValue<number>
   fontWeight: DesignValue<number>
   lineHeight: DesignValue<number> // multiplier, e.g. 1.5

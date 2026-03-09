@@ -88,9 +88,10 @@ function matchLayout(cls: string, props: Props): boolean {
   if (cls === 'flex') { props.display = 'flex'; props.direction = 'row'; return true }
   if (cls === 'inline-flex') { props.display = 'inline-flex'; props.direction = 'row'; return true }
   if (cls === 'grid') { props.display = 'grid'; return true }
-  if (cls === 'block') { props.display = 'block'; return true }
-  if (cls === 'inline-block') { props.display = 'inline-block'; return true }
-  if (cls === 'inline') { props.display = 'inline'; return true }
+  // Legacy block/inline-block/inline → convert to flex (block deprecated)
+  if (cls === 'block') { props.display = 'flex'; props.direction = 'column'; return true }
+  if (cls === 'inline-block') { props.display = 'inline-flex'; props.direction = 'column'; return true }
+  if (cls === 'inline') { props.display = 'inline-flex'; props.direction = 'row'; return true }
   if (cls === 'flex-row') { props.direction = 'row'; return true }
   if (cls === 'flex-col') { props.direction = 'column'; return true }
   if (cls === 'flex-wrap') { props.wrap = true; return true }

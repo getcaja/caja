@@ -63,7 +63,7 @@ export function Properties() {
   const effective = activeBreakpoint !== 'base' ? getEffectiveFrame(frame) : frame
 
   const isRoot = frame.id === rootId
-  const hasTextStyles = 'fontSize' in effective
+  const hasTextStyles = effective.type !== 'box' && 'fontSize' in effective
 
   return (
     <div key={frame.id} className="">

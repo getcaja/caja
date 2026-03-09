@@ -3,7 +3,6 @@ import { Settings2, LayoutGrid, Icon, Columns3, Rows3, AlignHorizontalSpaceAroun
 import { layoutGridMoveHorizontal, layoutGridMoveVertical } from '@lucide/lab'
 
 // Single rect matching LayoutGrid's footprint (18×18 from 3,3) with rx=1 for lab icon consistency
-const layoutBlock = [["rect", { width: "18", height: "18", x: "3", y: "3", rx: "1" }]] as unknown as import('lucide-react').IconNode
 import type { Frame, BoxElement } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { Section } from '../ui/Section'
@@ -63,8 +62,8 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
   // Always show: padding/margin apply to all elements
 
   const baseDir = boxFrame?.direction?.replace('-reverse', '') as 'row' | 'column' | undefined
-  const displayMode = isGrid ? 'grid' : isFlex ? (baseDir === 'column' ? 'flex-col' : 'flex-row') : 'block'
-  const isInline = boxFrame?.display === 'inline-flex' || boxFrame?.display === 'inline-block'
+  const displayMode = isGrid ? 'grid' : (baseDir === 'column' ? 'flex-col' : 'flex-row')
+  const isInline = boxFrame?.display === 'inline-flex'
   const isReverse = boxFrame?.direction?.endsWith('-reverse') ?? false
   const displayOptsActive = isInline || (isFlex && (boxFrame!.wrap || isReverse))
 
@@ -85,16 +84,13 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
               <ToggleGroup
                 value={displayMode}
                 options={[
-                  { value: 'block', label: <Icon iconNode={layoutBlock} size={12} />, tooltip: 'Block' },
                   { value: 'flex-col', label: <Icon iconNode={layoutGridMoveVertical} size={12} />, tooltip: 'Vertical' },
                   { value: 'flex-row', label: <Icon iconNode={layoutGridMoveHorizontal} size={12} />, tooltip: 'Horizontal' },
                   { value: 'grid', label: <LayoutGrid size={12} />, tooltip: 'Grid' },
                 ]}
                 onChange={(v) => {
                   const updates: Partial<BoxElement> = {}
-                  if (v === 'block') {
-                    updates.display = isInline ? 'inline-block' : 'block'
-                  } else if (v === 'flex-col') {
+                  if (v === 'flex-col') {
                     updates.display = isInline ? 'inline-flex' : 'flex'
                     updates.direction = isReverse ? 'column-reverse' : 'column'
                   } else if (v === 'flex-row') {
@@ -135,9 +131,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                       type="button"
                       onClick={() => {
                         updateFrame(frame.id, {
-                          display: isFlex
-                            ? (isInline ? 'flex' : 'inline-flex')
-                            : (isInline ? 'block' : 'inline-block'),
+                          display: isInline ? 'flex' : 'inline-flex',
                         })
                       }}
                       className="c-popover-row cursor-pointer select-none"
@@ -145,7 +139,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                       <span className={`c-checkbox ${isInline ? 'is-checked' : ''}`}>
                         {isInline && <Check size={10} strokeWidth={3} />}
                       </span>
-                      <span className={`text-[12px] c-dimmed ${isInline ? 'is-active' : ''}`}>{isFlex ? 'Inline Flex' : 'Inline Block'}</span>
+                      <span className={`text-[12px] c-dimmed ${isInline ? 'is-active' : ''}`}>Inline Flex</span>
                     </button>
                     {isFlex && (
                       <>

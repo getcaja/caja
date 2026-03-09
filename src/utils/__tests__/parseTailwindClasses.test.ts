@@ -33,19 +33,22 @@ describe('parseTailwindClasses', () => {
       expect(props.display).toBe('grid')
     })
 
-    it('block → display block', () => {
+    it('block → migrates to flex column', () => {
       const { properties: props } = parseTailwindClasses('block')
-      expect(props.display).toBe('block')
+      expect(props.display).toBe('flex')
+      expect(props.direction).toBe('column')
     })
 
-    it('inline-block → display inline-block', () => {
+    it('inline-block → migrates to inline-flex column', () => {
       const { properties: props } = parseTailwindClasses('inline-block')
-      expect(props.display).toBe('inline-block')
+      expect(props.display).toBe('inline-flex')
+      expect(props.direction).toBe('column')
     })
 
-    it('inline → display inline', () => {
+    it('inline → migrates to inline-flex row', () => {
       const { properties: props } = parseTailwindClasses('inline')
-      expect(props.display).toBe('inline')
+      expect(props.display).toBe('inline-flex')
+      expect(props.direction).toBe('row')
     })
 
     it('flex-col → direction column', () => {

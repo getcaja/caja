@@ -61,6 +61,8 @@ export function newFeatureDefaults() {
 
 export function defaultTextStyles(): TextStyles {
   return {
+    color: dvStr(''),
+    colorAlpha: dvNum(100),
     fontSize: dvNum(0),        // 0 = inherit
     fontWeight: dvNum(0),      // 0 = inherit
     lineHeight: dvNum(0),      // 0 = inherit
@@ -131,11 +133,10 @@ export function cloneTree(frame: Frame): Frame {
     shrink: cloneDV(frame.shrink),
     border: cloneBorder(frame.border),
     borderRadius: cloneBorderRadius(frame.borderRadius),
-    color: cloneDV(frame.color),
+    ...('color' in frame ? { color: cloneDV((frame as TextElement).color), colorAlpha: cloneDV((frame as TextElement).colorAlpha) } : {}),
     bg: cloneDV(frame.bg),
     opacity: cloneDV(frame.opacity),
     bgAlpha: cloneDV(frame.bgAlpha),
-    colorAlpha: cloneDV(frame.colorAlpha),
     minWidth: cloneDV(frame.minWidth),
     maxWidth: cloneDV(frame.maxWidth),
     minHeight: cloneDV(frame.minHeight),
@@ -175,7 +176,7 @@ export function createInternalRoot(pageId: string, children: Frame[] = []): BoxE
     className: '',
     htmlId: '',
     tag: 'body',
-    display: 'block',
+    display: 'flex',
     direction: 'column',
     justify: 'start',
     align: 'stretch',
@@ -183,7 +184,6 @@ export function createInternalRoot(pageId: string, children: Frame[] = []): BoxE
     wrap: false,
     gridCols: dvNum(0),
     gridRows: dvNum(0),
-    ...defaultTextStyles(),
     padding: zeroSpacing(),
     margin: zeroSpacing(),
     width: { mode: 'default', value: dvNum(0) },
@@ -193,8 +193,6 @@ export function createInternalRoot(pageId: string, children: Frame[] = []): BoxE
     overflow: 'visible',
     opacity: dvNum(100),
     bgAlpha: dvNum(100),
-    colorAlpha: dvNum(100),
-    color: dvStr(''),
     bg: { mode: 'token', token: 'white', value: '#ffffff' },
     border: defaultBorder(),
     borderRadius: zeroBorderRadius(),
@@ -229,7 +227,6 @@ export function createBox(overrides?: Partial<BoxElement>): BoxElement {
     wrap: false,
     gridCols: dvNum(0),
     gridRows: dvNum(0),
-    ...defaultTextStyles(),
     padding: zeroSpacing(),
     margin: zeroSpacing(),
     width: { mode: 'default', value: dvNum(0) },
@@ -239,8 +236,6 @@ export function createBox(overrides?: Partial<BoxElement>): BoxElement {
     overflow: 'visible',
     opacity: dvNum(100),
     bgAlpha: dvNum(100),
-    colorAlpha: dvNum(100),
-    color: dvStr(''),
     bg: dvStr(''),
     border: defaultBorder(),
     borderRadius: zeroBorderRadius(),
@@ -319,8 +314,6 @@ export function createImage(overrides?: Partial<ImageElement>): ImageElement {
     overflow: 'visible',
     opacity: dvNum(100),
     bgAlpha: dvNum(100),
-    colorAlpha: dvNum(100),
-    color: dvStr(''),
     bg: dvStr(''),
     border: defaultBorder(),
     borderRadius: zeroBorderRadius(),

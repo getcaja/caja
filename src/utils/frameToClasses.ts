@@ -1,6 +1,5 @@
 import type { Frame, Spacing, Inset, BorderRadius, Border, DesignValue, ResponsiveOverrides } from '../types/frame'
 import { toGoogleFontClass } from './googleFonts'
-import { isRootId } from '../store/treeHelpers'
 
 const weightMap: Record<number, string> = {
   100: 'font-thin',
@@ -253,21 +252,13 @@ export function frameToClasses(frame: Frame): string {
       if (!dvIsZero(frame.gridCols)) cls.push(dvClass('grid-cols', frame.gridCols, ''))
       if (!dvIsZero(frame.gridRows)) cls.push(dvClass('grid-rows', frame.gridRows, ''))
       if (!dvIsZero(frame.gap)) cls.push(dvClass('gap', frame.gap))
-    } else if (frame.display === 'block' && isRootId(frame.id)) {
-      // Root page frame: use flow-root instead of block to prevent child
-      // margin collapse from escaping to the canvas background.
-      // UI still shows "Block" — this is transparent to the user.
-      cls.push('[display:flow-root]')
-    } else if (frame.display !== 'block') {
-      cls.push(frame.display) // 'inline-block', 'inline'
     }
   }
 
-  // Text color (all elements — enables CSS cascade inheritance)
-  if (frame.color?.value) cls.push(dvColorClass('text', frame.color, frame.colorAlpha))
-
   // Text styles (text, button, input, textarea, select — anything with TextStyles)
   if ('fontSize' in frame) {
+    // Text color
+    if (frame.color?.value) cls.push(dvColorClass('text', frame.color, frame.colorAlpha))
     const hasFontSize = !dvIsZero(frame.fontSize)
     const hasLineHeight = !dvIsZero(frame.lineHeight)
 
@@ -307,10 +298,9 @@ export function frameToClasses(frame: Frame): string {
         cls.push(weightMap[frame.fontWeight.value] || `font-[${frame.fontWeight.value}]`)
       }
     }
-    // Always emit text-align (including text-left) so CSS inheritance from
-    // ancestors with text-center is properly overridden. Previously we omitted
-    // text-left as "default", but that broke when a parent set text-center.
-    // Revisit: could be conditional if we ever track "explicitly set" vs "default".
+    // Always emit text-align (including text-left) — boxes no longer have
+    // typography, but external CSS or tailwindClasses on ancestors could still
+    // set text-center, so explicit text-left prevents inheritance surprises.
     if (frame.textAlign) cls.push(`text-${frame.textAlign}`)
     if (frame.textAlignVertical && frame.textAlignVertical !== 'start') cls.push(`content-${frame.textAlignVertical}`)
     if (frame.fontStyle === 'italic') cls.push('italic')
@@ -486,8 +476,17 @@ function overrideClasses(ov: ResponsiveOverrides, _base: Frame, prefix: string):
   const cls: string[] = []
   const p = (c: string) => `${prefix}${c}`
 
-  // Hidden
-  if (ov.hidden !== undefined) cls.push(p(ov.hidden ? 'hidden' : 'block'))
+  // Hidden — when un-hiding, restore the base display (flex/grid for boxes, block for leaf elements)
+  if (ov.hidden !== undefined) {
+    if (ov.hidden) {
+      cls.push(p('hidden'))
+    } else if (_base.type === 'box') {
+      const d = (_base as import('../types/frame').BoxElement).display
+      cls.push(p(d === 'grid' ? 'grid' : d === 'inline-flex' ? 'inline-flex' : 'flex'))
+    } else {
+      cls.push(p('block'))
+    }
+  }
 
   // Display / direction / justify / align / gap / wrap (box-only)
   if (ov.display !== undefined) {
@@ -495,10 +494,6 @@ function overrideClasses(ov: ResponsiveOverrides, _base: Frame, prefix: string):
       cls.push(p(ov.display === 'inline-flex' ? 'inline-flex' : 'flex'))
     } else if (ov.display === 'grid') {
       cls.push(p('grid'))
-    } else if (ov.display !== 'block') {
-      cls.push(p(ov.display))
-    } else {
-      cls.push(p('block'))
     }
   }
   if (ov.direction !== undefined) {

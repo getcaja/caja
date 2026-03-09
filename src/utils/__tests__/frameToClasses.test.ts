@@ -45,18 +45,6 @@ describe('Box layout', () => {
     expect(c).toContain('grid-rows-[4]')
   })
 
-  it('emits inline-block', () => {
-    expect(has(makeBox({ display: 'inline-block' }), 'inline-block')).toBe(true)
-  })
-
-  it('emits inline', () => {
-    expect(has(makeBox({ display: 'inline' }), 'inline')).toBe(true)
-  })
-
-  it('does NOT emit block (it is default)', () => {
-    expect(has(makeBox({ display: 'block' }), 'block')).toBe(false)
-  })
-
   describe('justify', () => {
     it('omits class for start (default)', () => {
       expect(has(makeBox({ justify: 'start' }), 'justify-start')).toBe(false)

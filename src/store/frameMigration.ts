@@ -71,6 +71,8 @@ export function migrateSizeValue(raw: unknown): SizeValue {
 
 export function migrateTextStyles(raw: Record<string, unknown>): TextStyles {
   return {
+    color: migrateDVStr(raw.color, ''),
+    colorAlpha: migrateDVNum(raw.colorAlpha, 100),
     fontSize: migrateDVNum(raw.fontSize, 0),
     fontWeight: migrateDVNum(raw.fontWeight, 0),
     lineHeight: migrateDVNum(raw.lineHeight, 0),
@@ -83,6 +85,13 @@ export function migrateTextStyles(raw: Record<string, unknown>): TextStyles {
     whiteSpace: (raw.whiteSpace as TextStyles['whiteSpace']) || 'normal',
     fontFamily: (raw.fontFamily as string) === 'sans' ? '' : ((raw.fontFamily as string) || ''),
   }
+}
+
+/** Convert deprecated display values to flex/grid (block/inline-block/inline removed) */
+function migrateDisplay(d: string | undefined): BoxDisplay {
+  if (d === 'grid') return 'grid'
+  if (d === 'inline-flex') return 'inline-flex'
+  return 'flex' // block, inline-block, inline, undefined → flex
 }
 
 // Migrate old format data to current schema
@@ -108,7 +117,6 @@ export function migrateFrame(raw: Record<string, unknown>): Frame {
     overflow: (raw.overflow as Frame['overflow']) || 'visible',
     opacity: migrateDVNum(raw.opacity, 100),
     bgAlpha: migrateDVNum(raw.bgAlpha, 100),
-    colorAlpha: migrateDVNum(raw.colorAlpha, 100),
     bg: migrateDVStr(raw.bg, ''),
     border: migrateBorder(raw.border),
     borderRadius: migrateBorderRadius(raw.borderRadius),
@@ -124,7 +132,6 @@ export function migrateFrame(raw: Record<string, unknown>): Frame {
     position: (raw.position as Frame['position']) || 'static',
     zIndex: migrateDVNum(raw.zIndex, 0),
     inset: migrateSpacing(raw.inset),
-    color: migrateDVStr(raw.color, ''),
     bgImage: ((raw.bgImage as string) || '').startsWith('blob:') ? '' : (raw.bgImage as string) || '',
     bgSize: (raw.bgSize as Frame['bgSize']) || 'auto',
     bgPosition: (raw.bgPosition as Frame['bgPosition']) || 'center',
@@ -214,7 +221,7 @@ export function migrateFrame(raw: Record<string, unknown>): Frame {
       ...base,
       type: 'box',
       tag: (raw.tag as BoxTag) || 'div',
-      display: (raw.display as BoxDisplay) || 'flex',
+      display: migrateDisplay(raw.display as string),
       direction: (raw.direction as BoxElement['direction']) || 'column',
       justify: (raw.justify as BoxElement['justify']) || 'start',
       align: (raw.align as BoxElement['align']) || 'stretch',
@@ -222,7 +229,6 @@ export function migrateFrame(raw: Record<string, unknown>): Frame {
       wrap: (raw.wrap as boolean) ?? false,
       gridCols: migrateDVNum(raw.gridCols, 0),
       gridRows: migrateDVNum(raw.gridRows, 0),
-      ...migrateTextStyles(raw),
       children: children.map(migrateFrame),
     } as BoxElement
   }
