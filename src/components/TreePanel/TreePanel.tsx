@@ -12,15 +12,16 @@ import { useContextMenu } from './hooks/useContextMenu'
 import { useTreeKeyboard } from './hooks/useTreeKeyboard'
 import { Plus, X, ChevronRight } from 'lucide-react'
 
-function TreeSection({ label, collapsed, onToggle, trailing, children }: {
+function TreeSection({ label, collapsed, onToggle, trailing, isLast, children }: {
   label: string
   collapsed: boolean
   onToggle: () => void
   trailing?: React.ReactNode
+  isLast?: boolean
   children?: React.ReactNode
 }) {
   return (
-    <div className="border-b border-border">
+    <div className={`border-b border-border${isLast && !collapsed ? ' border-b-0' : ''}`}>
       <div className="c-section-header px-4">
         <div className="relative flex items-center group/section flex-1">
           <ChevronRight
@@ -105,7 +106,7 @@ export function TreePanel() {
     },
     copySelected: () => useFrameStore.getState().copySelected(),
     cutSelected: () => useFrameStore.getState().cutSelected(),
-    pasteClipboard: () => useFrameStore.getState().pasteClipboard(),
+
     selectAll: () => useFrameStore.getState().selectAllSiblings(),
     reorder: (dir: 'up' | 'down', arrowKey: string) => {
       const s = useFrameStore.getState()
@@ -140,7 +141,7 @@ export function TreePanel() {
     },
     copySelected: () => useFrameStore.getState().copySelected(),
     cutSelected: () => useFrameStore.getState().cutSelected(),
-    pasteClipboard: () => useFrameStore.getState().pasteClipboard(),
+
     selectAll: () => useFrameStore.getState().selectAllSiblings(),
     reorder: (dir: 'up' | 'down', arrowKey: string) => {
       const s = useFrameStore.getState()
@@ -409,6 +410,7 @@ export function TreePanel() {
               label="Elements"
               collapsed={layersCollapsed}
               onToggle={() => setLayersCollapsed((v) => !v)}
+              isLast
               trailing={
                 <button
                   ref={addBtnRef}
@@ -432,7 +434,7 @@ export function TreePanel() {
 
       {tab === 'components' && (
         <div className="flex-1 flex flex-col overflow-hidden">
-          <div className={`py-3 border-b border-border flex-1 flex flex-col${!componentsCollapsed && hasComponents ? ' overflow-auto' : ''}`}>
+          <div className={`py-3 flex flex-col${componentsCollapsed ? ' border-b border-border' : ' flex-1'}${!componentsCollapsed && hasComponents ? ' overflow-auto' : ''}`}>
             <div className={`px-4${componentsCollapsed ? '' : ' mb-2'}`}>
               <div className="relative flex items-center group/section">
                 <ChevronRight

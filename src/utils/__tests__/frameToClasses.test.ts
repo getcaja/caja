@@ -774,7 +774,8 @@ describe('Text styles', () => {
 
   it('omits fontSize and lineHeight when 0 (inherit)', () => {
     const c = classes(makeText({ fontSize: dvNum(0), lineHeight: dvNum(0) }))
-    expect(c.some(cl => cl.startsWith('text-') || cl.startsWith('leading'))).toBe(false)
+    // text-left is always emitted, so filter it out for this check
+    expect(c.some(cl => (cl.startsWith('text-') && cl !== 'text-left') || cl.startsWith('leading'))).toBe(false)
   })
 
   it('emits font-bold for weight 700', () => {
@@ -800,15 +801,16 @@ describe('Text styles', () => {
 
   it('omits color when empty (inherit)', () => {
     const c = classes(makeText({ color: dvStr('') }))
-    expect(c.some(cl => cl.startsWith('text-'))).toBe(false)
+    // text-left is always emitted, so filter it out for this check
+    expect(c.some(cl => cl.startsWith('text-') && cl !== 'text-left')).toBe(false)
   })
 
   it('emits text-center', () => {
     expect(has(makeText({ textAlign: 'center' }), 'text-center')).toBe(true)
   })
 
-  it('omits text-left (default)', () => {
-    expect(has(makeText({ textAlign: 'left' }), 'text-left')).toBe(false)
+  it('emits text-left explicitly (prevents inherited text-center from ancestors)', () => {
+    expect(has(makeText({ textAlign: 'left' }), 'text-left')).toBe(true)
   })
 
   it('emits italic', () => {
@@ -918,14 +920,14 @@ describe('tailwindClasses', () => {
 // ══════════════════════════════════════════════════════════════
 
 describe('Default frame (minimal output)', () => {
-  it('default box only has flex + flex-col + items-stretch', () => {
+  it('default box has flex + flex-col + items-stretch + text-left', () => {
     const c = classes(makeBox())
-    expect(c).toEqual(['flex', 'flex-col', 'items-stretch'])
+    expect(c).toEqual(['flex', 'flex-col', 'items-stretch', 'text-left'])
   })
 
-  it('default text has no classes (all defaults)', () => {
+  it('default text emits text-left', () => {
     const c = classes(makeText())
-    expect(c).toEqual([])
+    expect(c).toEqual(['text-left'])
   })
 
   it('default image has object-cover', () => {
@@ -933,8 +935,8 @@ describe('Default frame (minimal output)', () => {
     expect(c).toEqual(['object-cover'])
   })
 
-  it('default button has no classes', () => {
+  it('default button emits text-left', () => {
     const c = classes(makeButton())
-    expect(c).toEqual([])
+    expect(c).toEqual(['text-left'])
   })
 })

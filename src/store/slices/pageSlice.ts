@@ -1,5 +1,5 @@
 import type { StateCreator } from 'zustand'
-import type { BoxElement, Page } from '../../types/frame'
+import type { BoxElement, Frame, Page } from '../../types/frame'
 import type { FrameStore } from '../frameStore'
 import { generatePageId, rootIdForPage, cloneWithNewIds } from '../treeHelpers'
 import { createInternalRoot, cloneTree } from '../frameFactories'
@@ -13,6 +13,18 @@ export interface PageSlice {
   setActivePage: (id: string) => void
   duplicatePage: (id: string) => void
   reorderPages: (fromIndex: number, toIndex: number) => void
+}
+
+/** Recursively update href on text/button frames that match oldRoute */
+function updateHrefs(frame: Frame, oldRoute: string, newRoute: string): void {
+  if ((frame.type === 'text' || frame.type === 'button') && frame.href === oldRoute) {
+    frame.href = newRoute
+  }
+  if ('children' in frame) {
+    for (const child of (frame as BoxElement).children) {
+      updateHrefs(child, oldRoute, newRoute)
+    }
+  }
 }
 
 export const createPageSlice: StateCreator<FrameStore, [], [], PageSlice> = (set) => ({
@@ -73,10 +85,19 @@ export const createPageSlice: StateCreator<FrameStore, [], [], PageSlice> = (set
     dirty: true,
   })),
 
-  setPageRoute: (id, route) => set((state) => ({
-    pages: state.pages.map((p) => p.id === id ? { ...p, route } : p),
-    dirty: true,
-  })),
+  setPageRoute: (id, route) => set((state) => {
+    const page = state.pages.find((p) => p.id === id)
+    if (!page || page.route === route) return {}
+    const oldRoute = page.route
+    // Update hrefs in all pages that reference the old route
+    for (const p of state.pages) {
+      updateHrefs(p.root, oldRoute, route)
+    }
+    return {
+      pages: state.pages.map((p) => p.id === id ? { ...p, route } : p),
+      dirty: true,
+    }
+  }),
 
   setActivePage: (id) => set((state) => {
     if (state.activePageId === id) return {}

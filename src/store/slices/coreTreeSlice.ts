@@ -635,18 +635,28 @@ export const createCoreTreeSlice: StateCreator<FrameStore, [], [], CoreTreeSlice
     const history = pushHistory(state)
     let newRoot = state.root
 
-    // Determine insert target — always paste as sibling after selected frame
+    // Determine insert target:
+    // - If selected frame is a box (container): paste inside it as last child
+    // - If selected frame is a leaf (text, image, etc.): paste as sibling after it
+    // - No selection or root selected: paste at root level
     let targetParentId: string
     let insertIndex: number
     if (state.selectedId && !isRootId(state.selectedId)) {
-      const parent = findParent(state.root, state.selectedId)
-      if (parent) {
-        targetParentId = parent.id
-        const idx = parent.children.findIndex((c) => c.id === state.selectedId)
-        insertIndex = idx + 1
+      const selected = findInTree(state.root, state.selectedId)
+      if (selected && selected.type === 'box') {
+        // Paste inside the selected container
+        targetParentId = selected.id
+        insertIndex = selected.children.length
       } else {
-        targetParentId = state.root.id
-        insertIndex = state.root.children.length
+        const parent = findParent(state.root, state.selectedId)
+        if (parent) {
+          targetParentId = parent.id
+          const idx = parent.children.findIndex((c) => c.id === state.selectedId)
+          insertIndex = idx + 1
+        } else {
+          targetParentId = state.root.id
+          insertIndex = state.root.children.length
+        }
       }
     } else {
       // No selection or root selected: paste at root level

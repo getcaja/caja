@@ -493,6 +493,11 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
             contentEditable
             suppressContentEditableWarning
             onBlur={commitText}
+            onPaste={(e) => {
+              e.preventDefault()
+              const text = e.clipboardData.getData('text/plain')
+              document.execCommand('insertText', false, text)
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Escape') {
                 e.preventDefault()

@@ -8,7 +8,6 @@ export interface TreeKeyboardConfig {
   duplicateSelected?: () => void
   copySelected?: () => void
   cutSelected?: () => void
-  pasteClipboard?: () => void
   selectAll?: () => void
   rename?: () => void
   escape?: () => void
@@ -87,12 +86,8 @@ export function useTreeKeyboard(config: TreeKeyboardConfig) {
         return
       }
 
-      // Cmd+V — paste
-      if (mod && key === 'v' && !e.shiftKey && !e.defaultPrevented && config.pasteClipboard) {
-        e.preventDefault()
-        config.pasteClipboard()
-        return
-      }
+      // Cmd+V — paste is handled globally by App.tsx (image detection + internal fallback).
+      // Do NOT handle here — dual handlers cause duplicate paste (image + internal clipboard).
 
       // Cmd+D — duplicate
       if (mod && key === 'd' && !e.defaultPrevented && config.duplicateSelected) {

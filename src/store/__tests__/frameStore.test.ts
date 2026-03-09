@@ -411,6 +411,22 @@ describe('frameStore', () => {
       expect(rootChildren()).toHaveLength(1)
     })
 
+    it('paste inside selected box container', () => {
+      const textId = addChild('text')
+      const boxId = addChild('box')
+      // Copy the text frame
+      store().select(textId)
+      store().copySelected()
+      // Select the box container and paste
+      store().select(boxId)
+      store().pasteClipboard()
+      // Should paste inside the box, not as sibling
+      expect(rootChildren()).toHaveLength(2) // text + box (no new sibling)
+      const box = rootChildren()[1] as any
+      expect(box.children).toHaveLength(1) // pasted inside
+      expect(box.children[0].type).toBe('text')
+    })
+
     it('cut does not copy root', () => {
       store().select(root().id)
       store().cutSelected()
@@ -700,6 +716,28 @@ describe('frameStore', () => {
     it('sets page route', () => {
       store().setPageRoute(store().pages[0].id, '/landing')
       expect(store().pages[0].route).toBe('/landing')
+    })
+
+    it('setPageRoute syncs hrefs in links across all pages', () => {
+      const pageId = store().pages[0].id
+      const oldRoute = store().pages[0].route
+      // Add a link pointing to this page's route
+      const linkId = addChild('link')
+      store().updateFrame(linkId, { href: oldRoute } as any)
+      expect((rootChildren()[0] as any).href).toBe(oldRoute)
+      // Add a second page with a link pointing to page 1
+      store().addPage('Other')
+      const otherLinkId = addChild('link')
+      store().updateFrame(otherLinkId, { href: oldRoute } as any)
+      // Change page 1's route
+      store().setPageRoute(pageId, '/new-route')
+      // Both links should be updated
+      const page1 = store().pages.find(p => p.id === pageId)!
+      const page2 = store().pages.find(p => p.id !== pageId && !p.isComponentPage)!
+      const link1 = page1.root.children.find((c: any) => c.id === linkId) as any
+      const link2 = page2.root.children.find((c: any) => c.id === otherLinkId) as any
+      expect(link1.href).toBe('/new-route')
+      expect(link2.href).toBe('/new-route')
     })
   })
 

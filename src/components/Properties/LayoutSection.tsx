@@ -105,6 +105,11 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                   }
                   updateFrame(frame.id, updates)
                   setShowGapOverlay(false)
+                  // Force WebKit reflow after direction change — without this,
+                  // children retain stale widths from the previous flex layout.
+                  requestAnimationFrame(() => {
+                    document.getElementById('caja-canvas')?.offsetHeight
+                  })
                 }}
                 className="flex-1"
               />
@@ -163,6 +168,9 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                               ? dir.replace('-reverse', '') as 'row' | 'column'
                               : `${dir}-reverse` as 'row-reverse' | 'column-reverse'
                             updateFrame(frame.id, { direction: newDir })
+                            requestAnimationFrame(() => {
+                              document.getElementById('caja-canvas')?.offsetHeight
+                            })
                           }}
                           className="c-popover-row cursor-pointer select-none"
                         >

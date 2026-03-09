@@ -65,7 +65,7 @@ function HrefPicker({ value, onChange }: { value: string; onChange: (v: string) 
 
   const options = [
     { value: '__none__', label: 'None' },
-    ...pages.map(p => ({ value: p.route, label: p.name, hint: p.route })),
+    ...pages.filter(p => !p.isComponentPage).map(p => ({ value: p.route, label: p.name, hint: p.route })),
     { value: '__custom__', label: 'URL' },
   ]
 

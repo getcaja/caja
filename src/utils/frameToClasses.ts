@@ -307,7 +307,11 @@ export function frameToClasses(frame: Frame): string {
         cls.push(weightMap[frame.fontWeight.value] || `font-[${frame.fontWeight.value}]`)
       }
     }
-    if (frame.textAlign !== 'left') cls.push(`text-${frame.textAlign}`)
+    // Always emit text-align (including text-left) so CSS inheritance from
+    // ancestors with text-center is properly overridden. Previously we omitted
+    // text-left as "default", but that broke when a parent set text-center.
+    // Revisit: could be conditional if we ever track "explicitly set" vs "default".
+    if (frame.textAlign) cls.push(`text-${frame.textAlign}`)
     if (frame.textAlignVertical && frame.textAlignVertical !== 'start') cls.push(`content-${frame.textAlignVertical}`)
     if (frame.fontStyle === 'italic') cls.push('italic')
     if (frame.textDecoration === 'underline') cls.push('underline')
@@ -587,7 +591,7 @@ function overrideClasses(ov: ResponsiveOverrides, _base: Frame, prefix: string):
     if (ov.lineHeight.mode === 'token') cls.push(p(`leading-${ov.lineHeight.token}`))
     else cls.push(p(`leading-[${ov.lineHeight.value}]`))
   }
-  if (ov.textAlign !== undefined && ov.textAlign !== 'left') cls.push(p(`text-${ov.textAlign}`))
+  if (ov.textAlign !== undefined) cls.push(p(`text-${ov.textAlign}`))
 
   return cls
 }

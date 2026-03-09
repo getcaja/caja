@@ -285,6 +285,18 @@ function computeGapInfo(
   }
 
   const wrapperRect = wrapperEl.getBoundingClientRect()
+  const elRect = el.getBoundingClientRect()
+
+  // Use container's content box for cross-axis extent (resilient to child transforms)
+  const pt = parseFloat(cs.paddingTop) || 0
+  const pr = parseFloat(cs.paddingRight) || 0
+  const pb = parseFloat(cs.paddingBottom) || 0
+  const pl = parseFloat(cs.paddingLeft) || 0
+  const contentTop = elRect.top + pt - wrapperRect.top
+  const contentLeft = elRect.left + pl - wrapperRect.left
+  const contentHeight = elRect.height - pt - pb
+  const contentWidth = elRect.width - pl - pr
+
   const rects: Rect[] = []
 
   for (let i = 0; i < children.length - 1; i++) {
@@ -296,10 +308,10 @@ function computeGapInfo(
       const gapWidth = next.left - cur.right
       if (gapWidth > 0) {
         rects.push({
-          top: cur.top - wrapperRect.top,
+          top: contentTop,
           left,
           width: gapWidth,
-          height: Math.max(cur.height, next.height),
+          height: contentHeight,
         })
       }
     } else {
@@ -308,8 +320,8 @@ function computeGapInfo(
       if (gapHeight > 0) {
         rects.push({
           top,
-          left: cur.left - wrapperRect.left,
-          width: Math.max(cur.width, next.width),
+          left: contentLeft,
+          width: contentWidth,
           height: gapHeight,
         })
       }
