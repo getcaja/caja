@@ -69,13 +69,13 @@ function AnchorBox({ frame }: { frame: Frame }) {
   )
 }
 
-export function PositionSection({ frame, isDirty, onReset }: { frame: Frame; isDirty?: boolean; onReset?: () => void }) {
+export function PositionSection({ frame, onReset }: { frame: Frame; onReset?: () => void }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
   const updateSpacing = useFrameStore((s) => s.updateSpacing)
   const isPositioned = frame.position !== 'static' && frame.position !== 'relative'
 
   return (
-    <Section title="Position" defaultCollapsed isDirty={isDirty} onReset={onReset}>
+    <Section title="Position" defaultCollapsed onReset={onReset}>
       <div className="flex flex-col gap-2">
         {/* Row: Select + action slot */}
         <div className="flex items-center gap-2">

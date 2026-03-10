@@ -64,6 +64,15 @@ export function CanvasInline() {
   const root = useFrameStore((s) => s.root)
   const editingComponentId = useFrameStore((s) => s.editingComponentId)
   const hover = useFrameStore((s) => s.hover)
+  const setActiveBreakpoint = useFrameStore((s) => s.setActiveBreakpoint)
+
+  // Derive activeBreakpoint from effective canvas width (fluid-first model)
+  const effectiveWidth = canvasWidth ?? workspaceW
+  useEffect(() => {
+    if (previewMode || editingComponentId) return
+    const bp = effectiveWidth < 640 ? 'sm' : 'base'
+    setActiveBreakpoint(bp)
+  }, [effectiveWidth, previewMode, editingComponentId, setActiveBreakpoint])
 
   // In edit mode, render only the master being edited
   const renderFrame = editingComponentId && root.type === 'box'

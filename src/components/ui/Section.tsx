@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { ChevronRight, RotateCcw } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { ChevronRight, RotateCcw, Ellipsis } from 'lucide-react'
+import { useFrameStore } from '../../store/frameStore'
 
 function getStorageKey(title: string) {
   return `caja-section-${title}`
@@ -13,6 +14,46 @@ function readCollapsed(title: string, defaultCollapsed: boolean): boolean {
   return defaultCollapsed
 }
 
+function SectionMenu({ onReset, onResetOverrides, onClose }: {
+  onReset?: () => void
+  onResetOverrides?: () => void
+  onClose: () => void
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const onDown = (e: MouseEvent) => {
+      if (ref.current?.contains(e.target as Node)) return
+      onClose()
+    }
+    window.addEventListener('mousedown', onDown, true)
+    return () => window.removeEventListener('mousedown', onDown, true)
+  }, [onClose])
+
+  return (
+    <div ref={ref} className="absolute right-0 top-full mt-1 c-menu-popup min-w-[200px] z-50">
+      {onReset && (
+        <button
+          className="c-menu-item"
+          onClick={() => { onReset(); onClose() }}
+        >
+          <RotateCcw size={12} />
+          Reset to defaults
+        </button>
+      )}
+      {onResetOverrides && (
+        <button
+          className="c-menu-item"
+          onClick={() => { onResetOverrides(); onClose() }}
+        >
+          <RotateCcw size={12} />
+          Reset overrides
+        </button>
+      )}
+    </div>
+  )
+}
+
 export function Section({
   title,
   children,
@@ -21,7 +62,6 @@ export function Section({
   defaultCollapsed = false,
   hasOverrides = false,
   onResetOverrides,
-  isDirty = false,
   onReset,
 }: {
   title: string
@@ -31,10 +71,11 @@ export function Section({
   defaultCollapsed?: boolean
   hasOverrides?: boolean
   onResetOverrides?: () => void
-  isDirty?: boolean
   onReset?: () => void
 }) {
+  const activeBreakpoint = useFrameStore((s) => s.activeBreakpoint)
   const [collapsed, setCollapsed] = useState(() => collapsible ? readCollapsed(title, defaultCollapsed) : false)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const toggle = () => {
     if (!collapsible) return
@@ -46,7 +87,7 @@ export function Section({
   return (
     <div className={`c-section${collapsed ? ' is-collapsed' : ''}`}>
       <div
-        className="c-section-header relative group/section"
+        className="c-section-header relative group/section gap-2"
       >
         {collapsible && (
           <ChevronRight
@@ -57,25 +98,26 @@ export function Section({
         )}
         {icon && <span className="fg-icon-subtle">{icon}</span>}
         <span className={`c-section-title${collapsible ? ' cursor-pointer select-none' : ''}`} onClick={collapsible ? toggle : undefined}>{title}</span>
-        {hasOverrides && <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0 ml-1" title="Modified at this breakpoint" />}
         <div className="flex-1" />
-        {isDirty && onReset && !hasOverrides && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onReset() }}
-            className="c-slot"
-            title="Reset section to defaults"
-          >
-            <RotateCcw size={12} />
-          </button>
+        {onReset && activeBreakpoint !== 'base' && (
+          <span className={`c-bp-pill ${hasOverrides ? 'is-active' : ''}`}>{activeBreakpoint}</span>
         )}
-        {hasOverrides && onResetOverrides && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onResetOverrides() }}
-            className="c-slot"
-            title="Reset overrides for this section"
-          >
-            <RotateCcw size={12} />
-          </button>
+        {onReset && (
+          <div className="relative">
+            <button
+              onClick={(e) => { e.stopPropagation(); setMenuOpen((p) => !p) }}
+              className={`c-slot ${menuOpen ? 'is-active' : ''}`}
+            >
+              <Ellipsis size={12} />
+            </button>
+            {menuOpen && (
+              <SectionMenu
+                onReset={onReset}
+                onResetOverrides={hasOverrides && onResetOverrides ? onResetOverrides : undefined}
+                onClose={() => setMenuOpen(false)}
+              />
+            )}
+          </div>
         )}
       </div>
       {!collapsed && children}

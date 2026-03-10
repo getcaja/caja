@@ -15,7 +15,7 @@ import { SPACING_SCALE, SIZE_CONSTRAINT_SCALE, GRID_COLS_SCALE, GRID_ROWS_SCALE,
 import { Select } from '../ui/Select'
 import { ALIGN_SELF_OPTIONS } from './constants'
 
-export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOverrides, isDirty, onReset }: { frame: Frame; isRoot?: boolean; hasOverrides?: boolean; onResetOverrides?: () => void; isDirty?: boolean; onReset?: () => void }) {
+export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOverrides, onReset }: { frame: Frame; isRoot?: boolean; hasOverrides?: boolean; onResetOverrides?: () => void; onReset?: () => void }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
   const updateSize = useFrameStore((s) => s.updateSize)
   const updateSpacing = useFrameStore((s) => s.updateSpacing)
@@ -75,7 +75,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
   const currentA = boxFrame?.align === 'stretch' ? 'start' : (boxFrame?.align as 'start' | 'center' | 'end') ?? 'start'
 
   return (
-    <Section title="Layout" hasOverrides={hasOverrides} onResetOverrides={onResetOverrides} isDirty={isDirty} onReset={onReset}>
+    <Section title="Layout" hasOverrides={hasOverrides} onResetOverrides={onResetOverrides} onReset={onReset}>
       <div className="flex flex-col gap-2">
         {/* Display mode */}
         {isBox && (
@@ -564,7 +564,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
             <span className={`c-checkbox ${frame.overflow !== 'visible' ? 'is-checked' : ''}`}>
               {frame.overflow !== 'visible' && <Check size={10} strokeWidth={3} />}
             </span>
-            <span className={`text-[12px] c-dimmed ${frame.overflow !== 'visible' ? 'is-active' : ''}`}>Clip Content</span>
+            <span className={`text-[12px] c-dimmed ${frame.overflow !== 'visible' ? 'is-active' : ''}`}>Clip Overflow</span>
           </button>
           <div className="flex-1" />
           <Popover
@@ -602,6 +602,22 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                 </button>
               </div>
             </Popover>
+        </div>
+
+        {/* Hidden (display:none) */}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); updateFrame(frame.id, { hidden: !frame.hidden }) }}
+            className="flex items-center gap-2 cursor-pointer select-none"
+          >
+            <span className={`c-checkbox ${frame.hidden ? 'is-checked' : ''}`}>
+              {frame.hidden && <Check size={10} strokeWidth={3} />}
+            </span>
+            <span className={`text-[12px] c-dimmed ${frame.hidden ? 'is-active' : ''}`}>Hide Element</span>
+          </button>
+          <div className="flex-1" />
+          <div className="c-slot-spacer" />
         </div>
       </div>
     </Section>

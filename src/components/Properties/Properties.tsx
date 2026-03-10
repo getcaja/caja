@@ -14,17 +14,15 @@ import { TransformSection } from './TransformSection'
 import { TransitionSection } from './TransitionSection'
 import { AdvancedSection } from './AdvancedSection'
 import {
-  isTypographyDirty, isLayoutDirty, isFillDirty, isAppearanceDirty,
-  isBorderDirty, isEffectsDirty, isPositionDirty, isTransformDirty, isTransitionDirty,
   typographyResetValues, layoutResetValues, fillResetValues, appearanceResetValues,
   borderResetValues, effectsResetValues, positionResetValues, transformResetValues, transitionResetValues,
 } from './sectionReset'
 
 const SECTION_KEYS: Record<string, string[]> = {
-  Layout: ['display', 'direction', 'justify', 'align', 'gap', 'wrap', 'gridCols', 'gridRows', 'padding', 'margin', 'width', 'height', 'minWidth', 'maxWidth', 'minHeight', 'maxHeight', 'grow', 'shrink', 'alignSelf'],
+  Layout: ['display', 'direction', 'justify', 'align', 'gap', 'wrap', 'gridCols', 'gridRows', 'padding', 'margin', 'width', 'height', 'minWidth', 'maxWidth', 'minHeight', 'maxHeight', 'grow', 'shrink', 'alignSelf', 'hidden'],
   Typography: ['fontSize', 'fontWeight', 'lineHeight', 'textAlign'],
   Fill: ['bg'],
-  Appearance: ['opacity', 'hidden'],
+  Appearance: ['opacity'],
 }
 
 function sectionHasOverrides(section: string, overrideKeys: Set<string>): boolean {
@@ -81,43 +79,43 @@ export function Properties() {
     <div key={frame.id} className="">
       <ElementSection frame={effective} isRoot={isRoot} />
       <PositionSection frame={effective}
-        isDirty={isPositionDirty(effective)}
+       
         onReset={() => resetSection(positionResetValues())}
       />
       <LayoutSection frame={effective} isRoot={isRoot}
         hasOverrides={sectionHasOverrides('Layout', overrideKeys)} onResetOverrides={makeResetHandler('Layout')}
-        isDirty={isLayoutDirty(effective)}
+       
         onReset={() => resetSection(layoutResetValues(effective))}
       />
       {hasTextStyles && <TypographySection frame={effective}
         hasOverrides={sectionHasOverrides('Typography', overrideKeys)} onResetOverrides={makeResetHandler('Typography')}
-        isDirty={isTypographyDirty(effective)}
+       
         onReset={() => resetSection(typographyResetValues())}
       />}
       <AppearanceSection frame={effective}
         hasOverrides={sectionHasOverrides('Appearance', overrideKeys)} onResetOverrides={makeResetHandler('Appearance')}
-        isDirty={isAppearanceDirty(effective)}
+       
         onReset={() => resetSection(appearanceResetValues())}
       />
       <FillSection frame={effective}
         hasOverrides={sectionHasOverrides('Fill', overrideKeys)} onResetOverrides={makeResetHandler('Fill')}
-        isDirty={isFillDirty(effective)}
+       
         onReset={() => resetSection(fillResetValues())}
       />
       <BorderSection frame={effective}
-        isDirty={isBorderDirty(effective)}
+       
         onReset={() => resetSection(borderResetValues())}
       />
       <EffectsSection frame={effective}
-        isDirty={isEffectsDirty(effective)}
+       
         onReset={() => resetSection(effectsResetValues())}
       />
       <TransformSection frame={effective}
-        isDirty={isTransformDirty(effective)}
+       
         onReset={() => resetSection(transformResetValues())}
       />
       <TransitionSection frame={effective}
-        isDirty={isTransitionDirty(effective)}
+       
         onReset={() => resetSection(transitionResetValues())}
       />
       <AdvancedSection frame={effective} />

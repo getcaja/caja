@@ -1,13 +1,12 @@
 import { useState, useRef, useMemo, useEffect } from 'react'
 import { useFrameStore } from '../../store/frameStore'
-import { ChevronDown, Monitor, Tablet, Smartphone, RotateCcw } from 'lucide-react'
+import { ChevronDown, Monitor, Smartphone, RotateCcw } from 'lucide-react'
 import { ZOOM_LEVELS } from '../Canvas/ZoomBar'
 import { canvasZoomTo } from '../Canvas/CanvasInline'
 import type { Frame, Breakpoint } from '../../types/frame'
 
 const BREAKPOINTS: { label: string; width: number | null; icon: typeof Monitor; bp: Breakpoint }[] = [
   { label: 'Fluid', width: null, icon: Monitor, bp: 'base' },
-  { label: 'Tablet', width: 767, icon: Tablet, bp: 'md' },
   { label: 'Mobile', width: 375, icon: Smartphone, bp: 'sm' },
 ]
 
@@ -85,9 +84,8 @@ export function ViewportBar() {
   const clearAllResponsiveOverrides = useFrameStore((s) => s.clearAllResponsiveOverrides)
 
   const overrideCounts = useMemo(() => {
-    const counts: Record<string, number> = { md: 0, sm: 0 }
+    const counts: Record<string, number> = { sm: 0 }
     const walk = (f: Frame) => {
-      if (f.responsive?.md && Object.keys(f.responsive.md).length > 0) counts.md++
       if (f.responsive?.sm && Object.keys(f.responsive.sm).length > 0) counts.sm++
       if (f.type === 'box') f.children.forEach(walk)
     }

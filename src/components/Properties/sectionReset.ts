@@ -60,6 +60,7 @@ export function isLayoutDirty(frame: Frame): boolean {
   if (!dvNumEq(frame.grow, 0) || !dvNumEq(frame.shrink, 1)) return true
   if (frame.alignSelf !== 'auto') return true
   if (frame.overflow !== 'visible') return true
+  if (frame.hidden) return true
   return false
 }
 
@@ -75,7 +76,7 @@ export function isFillDirty(frame: Frame): boolean {
 }
 
 export function isAppearanceDirty(frame: Frame): boolean {
-  return !dvNumEq(frame.opacity, 100) || frame.hidden !== false
+  return !dvNumEq(frame.opacity, 100)
     || frame.boxShadow !== 'none' || frame.cursor !== 'auto'
 }
 
@@ -130,6 +131,7 @@ export function layoutResetValues(frame: Frame): Partial<Frame> {
     shrink: dvNum(1),
     alignSelf: 'auto',
     overflow: 'visible',
+    hidden: false,
   }
   if (frame.type === 'box') {
     return {
@@ -161,7 +163,6 @@ export function fillResetValues(): Partial<Frame> {
 export function appearanceResetValues(): Partial<Frame> {
   return {
     opacity: dvNum(100),
-    hidden: false,
     boxShadow: 'none',
     cursor: 'auto',
   }

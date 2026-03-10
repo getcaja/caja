@@ -334,6 +334,23 @@ input[type=number] {
     font-weight: 600;
   }
 
+  /* --- Breakpoint pill (section headers) --- */
+  .c-bp-pill {
+    padding: 2px 4px;
+    font-size: 10px;
+    line-height: 1;
+    font-weight: 600;
+    text-transform: uppercase;
+    border-radius: 3px;
+    color: var(--color-text-muted);
+    background: var(--color-surface-2);
+    user-select: none;
+  }
+  .c-bp-pill.is-active {
+    color: #fff;
+    background: var(--color-accent);
+  }
+
   /* --- Modals --- */
   .c-modal {
     background-color: var(--modal-bg);

@@ -29,13 +29,13 @@ const STYLE_OPTIONS: { value: string; label: string; tooltip?: string }[] = [
   { value: 'dotted', label: 'Dotted', tooltip: 'Dotted Border' },
 ]
 
-export function BorderSection({ frame, isDirty, onReset }: { frame: Frame; isDirty?: boolean; onReset?: () => void }) {
+export function BorderSection({ frame, onReset }: { frame: Frame; onReset?: () => void }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
 
   const hasBorder = frame.border.style !== 'none'
 
   return (
-    <Section title="Border" isDirty={isDirty} onReset={onReset}>
+    <Section title="Border" onReset={onReset}>
       <div className="flex flex-col gap-2">
         {/* Style toggle */}
         <div className="flex items-center gap-2">

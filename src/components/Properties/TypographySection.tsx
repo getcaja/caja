@@ -1,4 +1,4 @@
-import { Type, SeparatorHorizontal, SeparatorVertical, AlignLeft, AlignCenter, AlignRight, Settings2, ArrowUpToLine, ArrowDownToLine } from 'lucide-react'
+import { Type, SeparatorHorizontal, SeparatorVertical, AlignLeft, AlignCenter, AlignRight, Settings2, ArrowUpToLine, ArrowDownToLine, ALargeSmall, Bold } from 'lucide-react'
 import { AlignVerticalCenterIcon } from '../icons/LayoutIcons'
 import { useState } from 'react'
 import type { TextStyles, DesignValue } from '../../types/frame'
@@ -11,8 +11,6 @@ import { ToggleGroup } from '../ui/ToggleGroup'
 import { Popover } from '../ui/Popover'
 import { FONT_SIZE_SCALE, FONT_WEIGHT_SCALE, LINE_HEIGHT_SCALE, LETTER_SPACING_SCALE } from '../../data/scales'
 import { TEXT_TRANSFORM_OPTIONS, WHITE_SPACE_OPTIONS } from './constants'
-
-const lbl = (text: string) => <span className="text-[12px]">{text}</span>
 
 const DECORATION_OPTIONS = [
   { value: '__none__', label: 'None', tooltip: 'No Style' },
@@ -28,7 +26,7 @@ const FONT_FAMILY_OPTIONS = [
   { value: 'mono', label: 'Monospace' },
 ]
 
-export function TypographySection({ frame, hasOverrides, onResetOverrides, isDirty, onReset }: { frame: TextStyles & { id: string; color: DesignValue<string>; colorAlpha: DesignValue<number> }; hasOverrides?: boolean; onResetOverrides?: () => void; isDirty?: boolean; onReset?: () => void }) {
+export function TypographySection({ frame, hasOverrides, onResetOverrides, onReset }: { frame: TextStyles & { id: string; color: DesignValue<string>; colorAlpha: DesignValue<number> }; hasOverrides?: boolean; onResetOverrides?: () => void; onReset?: () => void }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
   const [moreOpen, setMoreOpen] = useState(false)
 
@@ -38,7 +36,7 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides, isDir
     || frame.whiteSpace !== 'normal'
 
   return (
-    <Section title="Typography" hasOverrides={hasOverrides} onResetOverrides={onResetOverrides} isDirty={isDirty} onReset={onReset}>
+    <Section title="Typography" hasOverrides={hasOverrides} onResetOverrides={onResetOverrides} onReset={onReset}>
       <div className="flex flex-col gap-2">
         {/* Font family */}
         <div className="flex items-center gap-2">
@@ -78,7 +76,7 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides, isDir
             defaultValue={0}
             placeholder="400"
             unit=""
-            inlineLabel={lbl('W')}
+            inlineLabel={<Bold size={12} />}
             tooltip="Font Weight"
           />
           <TokenInput
@@ -91,7 +89,7 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides, isDir
             defaultValue={0}
             placeholder="16"
             classPrefix="text"
-            inlineLabel={lbl('S')}
+            inlineLabel={<ALargeSmall size={12} />}
             tooltip="Font Size"
           />
           <div className="c-slot-spacer" />

@@ -7,11 +7,11 @@ import { Select } from '../ui/Select'
 import { SPACING_SCALE, ROTATE_SCALE, SCALE_SCALE, SKEW_SCALE } from '../../data/scales'
 import { TRANSFORM_ORIGIN_OPTIONS } from './constants'
 
-export function TransformSection({ frame, isDirty, onReset }: { frame: Frame; isDirty?: boolean; onReset?: () => void }) {
+export function TransformSection({ frame, onReset }: { frame: Frame; onReset?: () => void }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
 
   return (
-    <Section title="Transform" defaultCollapsed isDirty={isDirty} onReset={onReset}>
+    <Section title="Transform" defaultCollapsed onReset={onReset}>
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
           <TokenInput

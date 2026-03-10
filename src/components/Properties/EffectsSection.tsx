@@ -7,11 +7,11 @@ import { Select } from '../ui/Select'
 import { BLUR_SCALE } from '../../data/scales'
 import { BOX_SHADOW_OPTIONS, CURSOR_OPTIONS } from './constants'
 
-export function EffectsSection({ frame, isDirty, onReset }: { frame: Frame; isDirty?: boolean; onReset?: () => void }) {
+export function EffectsSection({ frame, onReset }: { frame: Frame; onReset?: () => void }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
 
   return (
-    <Section title="Effects" defaultCollapsed isDirty={isDirty} onReset={onReset}>
+    <Section title="Effects" defaultCollapsed onReset={onReset}>
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
           <Select
