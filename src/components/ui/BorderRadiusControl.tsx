@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Scan } from 'lucide-react'
+import { Squircle, Scan } from 'lucide-react'
 import type { BorderRadius, DesignValue } from '../../types/frame'
 import { TokenInput } from './TokenInput'
 import { BORDER_RADIUS_SCALE } from '../../data/scales'
@@ -49,7 +49,7 @@ export function BorderRadiusControl({
             onChange={(v) => onChange({ topLeft: v, topRight: v, bottomRight: v, bottomLeft: v })}
             min={0}
             classPrefix="rounded"
-            inlineLabel={<Scan size={12} />}
+            inlineLabel={<Squircle size={12} />}
             tooltip="Border Radius"
           />
         )}

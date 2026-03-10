@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ImageIcon, Upload, X, Blend } from 'lucide-react'
+import { ImageIcon, Upload, X, Contrast } from 'lucide-react'
 import type { Frame } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { importLocalAsset, isLocalAssetPath, getAssetDisplayName } from '../../lib/assetOps'
@@ -47,6 +47,24 @@ export function FillSection({ frame, hasOverrides, onResetOverrides, onReset }: 
   return (
     <Section title="Fill" hasOverrides={hasOverrides} onResetOverrides={onResetOverrides} onReset={onReset}>
       <div className="flex flex-col gap-2">
+        {/* Element Opacity */}
+        <div className="flex items-center gap-2">
+          <TokenInput
+            scale={OPACITY_SCALE}
+            value={frame.opacity}
+            onChange={(v) => updateFrame(frame.id, { opacity: v })}
+            min={0}
+            max={100}
+            unit="%"
+            classPrefix="opacity"
+            defaultValue={100}
+            placeholder="100"
+            inlineLabel={<Contrast size={12} />}
+            tooltip="Opacity"
+          />
+          <div className="c-slot-spacer" />
+        </div>
+
         {/* Mode toggle */}
         <div className="flex items-center gap-2">
           <ToggleGroup
@@ -187,23 +205,6 @@ export function FillSection({ frame, hasOverrides, onResetOverrides, onReset }: 
           </>
         )}
 
-        {/* Opacity */}
-        <div className="flex items-center gap-2">
-          <TokenInput
-            scale={OPACITY_SCALE}
-            value={frame.opacity}
-            onChange={(v) => updateFrame(frame.id, { opacity: v })}
-            min={0}
-            max={100}
-            unit="%"
-            classPrefix="opacity"
-            defaultValue={100}
-            placeholder="100"
-            inlineLabel={<Blend size={12} />}
-            tooltip="Opacity"
-          />
-          <div className="c-slot-spacer" />
-        </div>
       </div>
     </Section>
   )
