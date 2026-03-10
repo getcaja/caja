@@ -17,9 +17,7 @@ import { isRootId, findParent } from './store/treeHelpers'
 import { pushNav, undoNav, redoNav } from './store/selectionHistory'
 import { canvasZoomTo } from './components/Canvas/CanvasInline'
 import { switchTheme, getThemePreference, getActiveTheme } from './lib/theme'
-import { checkForUpdates, checkForUpdatesOnStartup, setUpdateHandler } from './lib/updater'
-import type { UpdateInfo } from './lib/updater'
-import { UpdateModal } from './components/UpdateModal'
+import { checkForUpdates, checkForUpdatesOnStartup } from './lib/updater'
 import { askUnsavedChanges } from './lib/unsavedDialog'
 
 const LEFT_MIN = 320
@@ -62,7 +60,6 @@ function safeMenuSync(invoke: (cmd: string, args?: Record<string, unknown>) => P
 function App() {
   const [showExport, setShowExport] = useState(false)
   const [showWelcome, setShowWelcome] = useState(false)
-  const [pendingUpdate, setPendingUpdate] = useState<UpdateInfo | null>(null)
   const initial = useRef(loadPanelState())
   const [leftWidth, setLeftWidth] = useState(initial.current.leftWidth)
   const [rightWidth, setRightWidth] = useState(initial.current.rightWidth)
@@ -246,7 +243,6 @@ function App() {
     }
 
     if (isTauri) {
-      setUpdateHandler(setPendingUpdate)
       checkForUpdatesOnStartup()
     }
 
@@ -1017,7 +1013,6 @@ function App() {
         {/* Export modal */}
         <ExportModal open={showExport} onOpenChange={setShowExport} />
         <WelcomeModal open={showWelcome} onOpenChange={setShowWelcome} />
-        <UpdateModal open={pendingUpdate !== null} onOpenChange={(open) => { if (!open) setPendingUpdate(null) }} update={pendingUpdate} />
 
       </div>
     </TooltipProvider>
