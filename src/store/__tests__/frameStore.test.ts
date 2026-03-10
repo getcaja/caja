@@ -9,6 +9,7 @@ vi.stubGlobal('localStorage', {
 })
 
 import { useFrameStore, findInTree, isRootId, normalizeFrame, findTopLevelAncestor, resolveToDirectChild, getDrillContext, resolveToContextLevel, COMPONENT_PAGE_ID } from '../frameStore'
+import { appendCopySuffix } from '../treeHelpers'
 import { _resetLoadGuard } from '../slices/fileSlice'
 import { mergeResponsiveOverrides } from '../slices/uiSlice'
 import { isLayoutDirty, isTypographyDirty, isFillDirty, isBorderDirty, isEffectsDirty, isPositionDirty, isTransformDirty, isTransitionDirty, layoutResetValues, typographyResetValues, fillResetValues, borderResetValues, effectsResetValues, positionResetValues, transformResetValues, transitionResetValues } from '../../components/Properties/sectionReset'
@@ -2034,6 +2035,68 @@ describe('showMarginOverlay', () => {
       const frame = findInTree(root(), id)!
       const effective = store().getEffectiveFrame(frame)
       expect(effective.hidden).toBe(false) // base value
+    })
+  })
+
+  // ===== Copy suffix =====
+
+  describe('appendCopySuffix', () => {
+    it('adds (Copy) to a plain name', () => {
+      expect(appendCopySuffix('Frame')).toBe('Frame (Copy)')
+    })
+
+    it('increments (Copy) to (Copy 2)', () => {
+      expect(appendCopySuffix('Frame (Copy)')).toBe('Frame (Copy 2)')
+    })
+
+    it('increments (Copy 2) to (Copy 3)', () => {
+      expect(appendCopySuffix('Frame (Copy 2)')).toBe('Frame (Copy 3)')
+    })
+
+    it('handles names with spaces before (Copy)', () => {
+      expect(appendCopySuffix('My Frame (Copy)')).toBe('My Frame (Copy 2)')
+    })
+  })
+
+  describe('duplicateFrame adds (Copy) suffix', () => {
+    it('duplicate gets (Copy) name', () => {
+      const id = addChild('text')
+      store().renameFrame(id, 'Header')
+      store().duplicateFrame(id)
+      expect(rootChildren()[1].name).toBe('Header (Copy)')
+    })
+
+    it('duplicating a copy increments suffix', () => {
+      const id = addChild('text')
+      store().renameFrame(id, 'Header')
+      store().duplicateFrame(id)
+      const copyId = rootChildren()[1].id
+      store().duplicateFrame(copyId)
+      expect(rootChildren()[2].name).toBe('Header (Copy 2)')
+    })
+  })
+
+  describe('pasteClipboard adds (Copy) suffix', () => {
+    it('pasted frame gets (Copy) name', () => {
+      const id = addChild('text')
+      store().renameFrame(id, 'Card')
+      store().select(id)
+      store().copySelected()
+      store().pasteClipboard()
+      expect(rootChildren()[1].name).toBe('Card (Copy)')
+    })
+
+    it('pasting multiple frames adds (Copy) to each', () => {
+      const id1 = addChild('text')
+      const id2 = addChild('image')
+      store().renameFrame(id1, 'Title')
+      store().renameFrame(id2, 'Photo')
+      store().select(id1)
+      store().selectMulti(id2)
+      store().copySelected()
+      store().pasteClipboard()
+      expect(rootChildren()[2].name).toBe('Title (Copy)')
+      expect(rootChildren()[3].name).toBe('Photo (Copy)')
     })
   })
 })

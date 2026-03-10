@@ -223,6 +223,17 @@ export function cloneWithNewIds(frame: Frame, idMap?: Record<string, string>): F
   return base as Frame
 }
 
+/** Append " (Copy)" to a name, or increment "Copy N" if already a copy */
+export function appendCopySuffix(name: string): string {
+  const match = name.match(/^(.*)\(Copy(?: (\d+))?\)\s*$/)
+  if (match) {
+    const base = match[1].trimEnd()
+    const n = match[2] ? parseInt(match[2], 10) + 1 : 2
+    return `${base} (Copy ${n})`
+  }
+  return `${name} (Copy)`
+}
+
 // Duplicate a frame next to itself
 export function duplicateInTree(root: Frame, id: string): { tree: Frame; newId: string; idMap: Record<string, string> } | null {
   const target = findInTree(root, id)
@@ -230,6 +241,7 @@ export function duplicateInTree(root: Frame, id: string): { tree: Frame; newId: 
   if (isRootId(target.id)) return null // can't duplicate internal root
   const idMap: Record<string, string> = {}
   const clone = cloneWithNewIds(target, idMap)
+  clone.name = appendCopySuffix(clone.name)
   const parent = findParent(root, id)
   if (!parent) return null
 

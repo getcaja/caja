@@ -6,7 +6,7 @@ import { useTreeDnd } from './TreeDndContext'
 import { useContextMenu } from './hooks/useContextMenu'
 import { useInlineEdit } from './hooks/useInlineEdit'
 import { TreeRow } from './TreeRow'
-import { Frame as FrameIcon, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse, Link, Diamond, LayoutGrid, Icon, FileCodeCorner } from 'lucide-react'
+import { Frame as FrameIcon, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse, Link, Diamond, LayoutGrid, Icon, FileCodeCorner, Eye, EyeOff } from 'lucide-react'
 import { layoutGridMoveHorizontal, layoutGridMoveVertical } from '@lucide/lab'
 import type { BoxElement } from '../../types/frame'
 import { FrameContextMenu } from '../shared/FrameContextMenu'
@@ -114,9 +114,13 @@ export const TreeNode = memo(function TreeNode({ frame, depth, parentId = null, 
     insideInstance ? 'text-accent-text!' : '',
   ].filter(Boolean).join(' ')
 
+  // Visibility toggle
+  const toggleHidden = useFrameStore((s) => s.toggleHidden)
+  const isHidden = frame.hidden
+
   // Name display
   const displayName = isRoot && !editingComponentId ? 'Body' : frame.name
-  const nameClass = isMaster || isInstance ? 'text-accent-text' : ''
+  const nameClass = isMaster || isInstance ? 'text-accent-text' : isHidden ? 'opacity-40' : ''
 
   // Drop position (only when hovered and not self-dragging)
   const dropPos = isOver && overPosition && activeId ? overPosition : null
@@ -161,17 +165,21 @@ export const TreeNode = memo(function TreeNode({ frame, depth, parentId = null, 
     )
   }, [frame.responsive])
 
-  // Semantic tag label — shown dimmed on the right (like Subframe)
-  const tagLabel = useMemo(() => {
-    if (isRoot && !editingComponentId) return 'body'
-    if (frame.type === 'box') return (frame as BoxElement).tag
-    if (frame.type === 'text') return (frame as import('../../types/frame').TextElement).tag
-    if (frame.type === 'button') return (frame as import('../../types/frame').ButtonElement).href ? 'a' : 'button'
-    if (frame.type === 'image') return 'img'
-    return frame.type // input, textarea, select
-  }, [frame, isRoot, editingComponentId])
+  const handleToggleHidden = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    toggleHidden(frame.id)
+  }, [frame.id, toggleHidden])
 
-  const trailing = <span className="fg-subtle opacity-50 text-[10px] font-mono shrink-0 select-none">{tagLabel}</span>
+  const trailing = isRoot ? null : (
+    <button
+      className={`c-icon-btn shrink-0 ${isHidden ? 'is-active' : ''} ${isHidden ? '' : 'opacity-0 group-hover:opacity-100'}`}
+      style={{ width: 20, height: 20 }}
+      onClick={handleToggleHidden}
+      onDoubleClick={(e) => e.stopPropagation()}
+    >
+      {isHidden ? <EyeOff size={12} /> : <Eye size={12} />}
+    </button>
+  )
 
   return (
     <>

@@ -5,7 +5,7 @@ import {
   isRootId, findInTree, findParent, cloneWithNewIds, updateInTree,
   insertChildInTree, addChildInTree, removeFromTree, moveInTree,
   duplicateInTree, wrapInFrameInTree, updateActiveRoot, updatePageRoot,
-  getChildren, withChildren, nextName,
+  getChildren, withChildren, nextName, appendCopySuffix,
   isInstanceOrInsideInstance, isChildOfInstance,
 } from '../treeHelpers'
 import {
@@ -696,6 +696,7 @@ export const createCoreTreeSlice: StateCreator<FrameStore, [], [], CoreTreeSlice
     const pastedIds: string[] = []
     for (let i = 0; i < state.clipboard.length; i++) {
       const cloned = cloneWithNewIds(normalizeFrame(state.clipboard[i]))
+      cloned.name = appendCopySuffix(cloned.name)
       pastedIds.push(cloned.id)
       newRoot = insertChildInTree(newRoot, targetParentId, cloned, insertIndex + i) as BoxElement
     }
