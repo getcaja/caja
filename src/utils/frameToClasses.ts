@@ -471,12 +471,19 @@ function generateResponsiveClasses(frame: Frame): string {
   return cls.join(' ')
 }
 
-/** Generate Tailwind classes for a sparse set of responsive overrides. */
+/** Generate Tailwind classes for a sparse set of responsive overrides.
+ *
+ * Every override class uses `!important` (`!` prefix in Tailwind) because
+ * container-query variants (`@max-[768px]:`) have the same CSS specificity as
+ * base utilities.  Without `!important`, source order in the Tailwind CDN
+ * stylesheet can let the base class win (e.g. `flex` beating `hidden`,
+ * `text-3xl` beating `text-base`).  The `!` prefix is the standard Tailwind
+ * way to add `!important`. */
 function overrideClasses(ov: ResponsiveOverrides, _base: Frame, prefix: string): string[] {
   const cls: string[] = []
-  const p = (c: string) => `${prefix}${c}`
+  const p = (c: string) => `${prefix}!${c}`
 
-  // Hidden — when un-hiding, restore the base display (flex/grid for boxes, block for leaf elements)
+  // Hidden
   if (ov.hidden !== undefined) {
     if (ov.hidden) {
       cls.push(p('hidden'))

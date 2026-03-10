@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, X, Check, Link, ImageIcon, Upload, MessageSquareQuote, Scaling, Component, Pencil, RotateCcw, Unlink, Hash, Braces, Code, CircleDot, TextCursorInput, Rows3 } from 'lucide-react'
+import { Plus, X, Check, Link, ImageIcon, Upload, MessageSquareQuote, Scaling, Component, Pencil, RotateCcw, Unlink, Hash, Braces, Code, CircleDot, TextCursorInput, Rows3, Eye, EyeOff } from 'lucide-react'
 import type { Frame, TextElement, ImageElement, ButtonElement, InputElement, TextareaElement, SelectElement, SelectOption } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { Select } from '../ui/Select'
@@ -177,6 +177,7 @@ function ComponentButton({ frame, isRoot, isMaster }: { frame: Frame; isRoot: bo
 export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolean }) {
   const renameFrame = useFrameStore((s) => s.renameFrame)
   const updateFrame = useFrameStore((s) => s.updateFrame)
+  const activeBreakpoint = useFrameStore((s) => s.activeBreakpoint)
   const filePath = useFrameStore((s) => s.filePath)
   const [downloading, setDownloading] = useState(false)
 
@@ -225,7 +226,7 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
   return (
     <Section title="Properties">
       <div className="flex flex-col gap-2">
-      {/* Badge + name + component action */}
+      {/* Badge + name + visibility + component action */}
       <div className="flex items-center gap-2">
         <span className={TYPE_BADGE_STYLES[key]}>
           {TYPE_BADGE_LABELS[key]}
@@ -237,6 +238,17 @@ export function ElementSection({ frame, isRoot }: { frame: Frame; isRoot: boolea
           disabled={isRoot}
           className={`flex-1 c-input min-w-0${isRoot ? ' fg-muted' : ''}`}
         />
+        {!isRoot && (
+          <button
+            onClick={() => updateFrame(frame.id, { hidden: !frame.hidden })}
+            className={`c-slot ${frame.hidden ? 'is-active' : ''}`}
+            title={frame.hidden
+              ? `Hidden${activeBreakpoint !== 'base' ? ` at ${activeBreakpoint}` : ''}`
+              : `Visible${activeBreakpoint !== 'base' ? ` at ${activeBreakpoint}` : ''}`}
+          >
+            {frame.hidden ? <EyeOff size={12} /> : <Eye size={12} />}
+          </button>
+        )}
         <ComponentButton frame={frame} isRoot={isRoot} isMaster={isMaster} />
       </div>
 

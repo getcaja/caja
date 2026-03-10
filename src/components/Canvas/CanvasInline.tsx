@@ -218,37 +218,32 @@ export function CanvasInline() {
       minHeight: '100%',
     }
   } else {
-    const zoom = canvasZoom
+    const userZoom = canvasZoom
 
-    if (zoom === 1) {
-      wrapperStyle = { width: '100%', height: '100%' }
-      canvasStyle = {
-        ...canvasResetStyle,
-        width: '100%',
-        maxWidth: canvasWidth ?? undefined,
-        margin: '0 auto',
+    if (!canvasWidth) {
+      // Fluid mode — canvas fills available space, container queries respond naturally
+      if (userZoom === 1) {
+        wrapperStyle = { width: '100%', height: '100%' }
+        canvasStyle = { ...canvasResetStyle, width: '100%', margin: '0 auto' }
+      } else {
+        const canvasW = workspaceW
+        const canvasH = workspaceH
+        wrapperStyle = { width: canvasW * userZoom, height: canvasH * userZoom, flexShrink: 0, position: 'relative', margin: 'auto' }
+        canvasStyle = { ...canvasResetStyle, position: 'absolute', top: 0, left: 0, width: canvasW, height: canvasH, transform: `scale(${userZoom})`, transformOrigin: 'top left' }
       }
     } else {
-      const canvasW = canvasWidth || workspaceW
-      const canvasH = workspaceH
+      // Fixed breakpoint (tablet/mobile) — fixed width, auto-scale if workspace is narrower
+      const autoScale = Math.min(1, workspaceW / canvasWidth)
+      const zoom = userZoom * autoScale
+      const canvasW = canvasWidth
+      const canvasH = workspaceH // same layout as 100%, just scaled
 
-      wrapperStyle = {
-        width: canvasW * zoom,
-        height: canvasH * zoom,
-        flexShrink: 0,
-        position: 'relative',
-        margin: 'auto',
-      }
-
-      canvasStyle = {
-        ...canvasResetStyle,
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: canvasW,
-        height: canvasH,
-        transform: `scale(${zoom})`,
-        transformOrigin: 'top left',
+      if (zoom === 1) {
+        wrapperStyle = { width: '100%', height: '100%' }
+        canvasStyle = { ...canvasResetStyle, width: canvasW, margin: '0 auto' }
+      } else {
+        wrapperStyle = { width: canvasW * zoom, height: canvasH * zoom, flexShrink: 0, position: 'relative', margin: 'auto' }
+        canvasStyle = { ...canvasResetStyle, position: 'absolute', top: 0, left: 0, width: canvasW, height: canvasH, transform: `scale(${zoom})`, transformOrigin: 'top left' }
       }
     }
   }

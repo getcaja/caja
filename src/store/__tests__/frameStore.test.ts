@@ -998,6 +998,44 @@ describe('frameStore', () => {
     })
   })
 
+  // ===== responsive override deduplication =====
+
+  describe('responsive override deduplication', () => {
+    it('keeps sm override when md overrides the same key (cascade counteract)', () => {
+      const id = addChild('box')
+      // Set hidden at md
+      store().setActiveBreakpoint('md')
+      store().updateFrame(id, { hidden: true })
+      expect(findInTree(root(), id)!.responsive?.md?.hidden).toBe(true)
+
+      // Set hidden: false at sm to counteract md
+      store().setActiveBreakpoint('sm')
+      store().updateFrame(id, { hidden: false })
+      // sm override must be kept even though it matches base (false)
+      expect(findInTree(root(), id)!.responsive?.sm?.hidden).toBe(false)
+      store().setActiveBreakpoint('base')
+    })
+
+    it('strips sm override when md does NOT override the same key', () => {
+      const id = addChild('box')
+      // Set hidden: false at sm (no md override exists)
+      store().setActiveBreakpoint('sm')
+      store().updateFrame(id, { hidden: false })
+      // Should be stripped — matches base and md doesn't override it
+      expect(findInTree(root(), id)!.responsive?.sm?.hidden).toBeUndefined()
+      store().setActiveBreakpoint('base')
+    })
+
+    it('strips md override that matches base', () => {
+      const id = addChild('box')
+      store().setActiveBreakpoint('md')
+      store().updateFrame(id, { hidden: false })
+      // Should be stripped — matches base
+      expect(findInTree(root(), id)!.responsive?.md?.hidden).toBeUndefined()
+      store().setActiveBreakpoint('base')
+    })
+  })
+
   // ===== normalizeFrame / migrateFrame robustness =====
 
   describe('normalizeFrame', () => {

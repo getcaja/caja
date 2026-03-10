@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronRight, RotateCcw, X } from 'lucide-react'
+import { ChevronRight, RotateCcw } from 'lucide-react'
 
 function getStorageKey(title: string) {
   return `caja-section-${title}`
@@ -65,7 +65,7 @@ export function Section({
             className="c-slot"
             title="Reset section to defaults"
           >
-            <X size={12} />
+            <RotateCcw size={12} />
           </button>
         )}
         {hasOverrides && onResetOverrides && (

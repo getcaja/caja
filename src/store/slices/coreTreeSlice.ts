@@ -436,9 +436,15 @@ export const createCoreTreeSlice: StateCreator<FrameStore, [], [], CoreTreeSlice
       const newRoot = updateInTree(state.root, id, (f) => {
         const existing = f.responsive?.[bp] ?? {}
         const merged = { ...existing, ...updates } as ResponsiveOverrides
-        // Remove keys that match the base value (keep overrides sparse)
+        // Remove keys that match the base value (keep overrides sparse).
+        // Exception: when editing sm, keep the override if md already overrides
+        // the same key — sm needs to explicitly counteract md's override even if
+        // sm's value matches the base (desktop-first cascade: base → md → sm).
+        const largerBpOverrides = bp === 'sm' ? f.responsive?.md : undefined
         for (const key of Object.keys(merged) as (keyof ResponsiveOverrides)[]) {
           if (shallowEqual(merged[key], (f as unknown as Record<string, unknown>)[key])) {
+            // Keep if a larger breakpoint overrides this key (sm needs to counteract md)
+            if (largerBpOverrides && key in largerBpOverrides) continue
             delete merged[key]
           }
         }
@@ -470,9 +476,11 @@ export const createCoreTreeSlice: StateCreator<FrameStore, [], [], CoreTreeSlice
         const newSpacing = { top: spacingMerged.top ?? ZERO, right: spacingMerged.right ?? ZERO, bottom: spacingMerged.bottom ?? ZERO, left: spacingMerged.left ?? ZERO }
         const existing = f.responsive?.[bp] ?? {}
         const merged = { ...existing, [field]: newSpacing } as ResponsiveOverrides
-        // Remove if matches base
-        if (shallowEqual(merged[field as keyof ResponsiveOverrides], f[field])) {
-          delete merged[field as keyof ResponsiveOverrides]
+        // Remove if matches base (unless larger bp overrides the same key)
+        const fieldKey = field as keyof ResponsiveOverrides
+        const largerBpHasField = bp === 'sm' && f.responsive?.md && fieldKey in f.responsive.md
+        if (!largerBpHasField && shallowEqual(merged[fieldKey], f[field])) {
+          delete merged[fieldKey]
         }
         const responsive = { ...f.responsive, [bp]: Object.keys(merged).length > 0 ? merged : undefined }
         if (!responsive.md && !responsive.sm) return { ...f, responsive: undefined } as Frame
@@ -495,9 +503,11 @@ export const createCoreTreeSlice: StateCreator<FrameStore, [], [], CoreTreeSlice
         const newSize = { ...existingOverride, ...size }
         const existing = f.responsive?.[bp] ?? {}
         const merged = { ...existing, [dimension]: newSize } as ResponsiveOverrides
-        // Remove if matches base
-        if (shallowEqual(merged[dimension as keyof ResponsiveOverrides], f[dimension])) {
-          delete merged[dimension as keyof ResponsiveOverrides]
+        // Remove if matches base (unless larger bp overrides the same key)
+        const dimKey = dimension as keyof ResponsiveOverrides
+        const largerBpHasDim = bp === 'sm' && f.responsive?.md && dimKey in f.responsive.md
+        if (!largerBpHasDim && shallowEqual(merged[dimKey], f[dimension])) {
+          delete merged[dimKey]
         }
         const responsive = { ...f.responsive, [bp]: Object.keys(merged).length > 0 ? merged : undefined }
         if (!responsive.md && !responsive.sm) return { ...f, responsive: undefined } as Frame

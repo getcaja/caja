@@ -6,7 +6,7 @@ import { useTreeDnd } from './TreeDndContext'
 import { useContextMenu } from './hooks/useContextMenu'
 import { useInlineEdit } from './hooks/useInlineEdit'
 import { TreeRow } from './TreeRow'
-import { Frame as FrameIcon, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse, Eye, EyeOff, Link, Diamond, LayoutGrid, Icon, FileCodeCorner } from 'lucide-react'
+import { Frame as FrameIcon, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse, Link, Diamond, LayoutGrid, Icon, FileCodeCorner } from 'lucide-react'
 import { layoutGridMoveHorizontal, layoutGridMoveVertical } from '@lucide/lab'
 import type { BoxElement } from '../../types/frame'
 import { FrameContextMenu } from '../shared/FrameContextMenu'
@@ -28,7 +28,7 @@ export const TreeNode = memo(function TreeNode({ frame, depth, parentId = null, 
   const hover = useFrameStore((s) => s.hover)
   const toggleCollapse = useFrameStore((s) => s.toggleCollapse)
   const renameFrame = useFrameStore((s) => s.renameFrame)
-  const toggleHidden = useFrameStore((s) => s.toggleHidden)
+
 
   const { activeId, overId, overPosition, multiDragCount } = useTreeDnd()
   const { active: dndActive } = useDndContext()
@@ -111,7 +111,6 @@ export const TreeNode = memo(function TreeNode({ frame, depth, parentId = null, 
 
   // Row className additions
   const rowClassName = [
-    frame.hidden ? 'opacity-40' : '',
     insideInstance ? 'text-accent-text!' : '',
   ].filter(Boolean).join(' ')
 
@@ -162,19 +161,7 @@ export const TreeNode = memo(function TreeNode({ frame, depth, parentId = null, 
     )
   }, [frame.responsive])
 
-  // Visibility button as trailing
-  const trailing = !isRoot ? (
-    <button
-      className={`w-4 h-4 c-icon-btn text-[10px] shrink-0 ${frame.hidden ? '' : 'hidden group-hover:flex'} ${frame.hidden ? 'fg-icon-subtle' : 'hover:fg-icon-muted hover:bg-subtle'}`}
-      onClick={(e) => {
-        e.stopPropagation()
-        toggleHidden(frame.id)
-      }}
-      title={frame.hidden ? 'Show' : 'Hide'}
-    >
-      {frame.hidden ? <EyeOff size={10} /> : <Eye size={10} />}
-    </button>
-  ) : undefined
+  const trailing = undefined
 
   return (
     <>
