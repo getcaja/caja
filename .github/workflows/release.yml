@@ -103,6 +103,9 @@ jobs:
         run: |
           VERSION="${TAG#v}"
 
+          # Fetch release notes from the GitHub release body
+          RELEASE_BODY=$(gh release view "$TAG" --repo "${{ github.repository }}" --json body -q '.body' 2>/dev/null || echo "")
+
           mkdir -p sigs
           gh release download "$TAG" --repo "${{ github.repository }}" --pattern "*.sig" --dir sigs/
 
@@ -114,6 +117,7 @@ jobs:
 
           jq -n \
             --arg version "$VERSION" \
+            --arg notes "${RELEASE_BODY:-Caja v$VERSION}" \
             --arg pub_date "$PUB_DATE" \
             --arg aarch64_sig "$AARCH64_SIG" \
             --arg aarch64_url "https://github.com/${{ github.repository }}/releases/download/$TAG/Caja_aarch64.app.tar.gz" \
@@ -121,7 +125,7 @@ jobs:
             --arg x64_url "https://github.com/${{ github.repository }}/releases/download/$TAG/Caja_x64.app.tar.gz" \
             '{
               version: $version,
-              notes: ("Caja v" + $version),
+              notes: $notes,
               pub_date: $pub_date,
               platforms: {
                 "darwin-aarch64": { signature: $aarch64_sig, url: $aarch64_url },

@@ -683,13 +683,13 @@ const handlers: Record<string, ToolHandler> = {
 
   set_breakpoint(params) {
     const { breakpoint } = params as { breakpoint: Breakpoint }
-    const valid: Breakpoint[] = ['base', 'md', 'sm']
+    const valid: Breakpoint[] = ['base', 'sm']
     if (!valid.includes(breakpoint)) {
-      return { success: false, error: `Invalid breakpoint "${breakpoint}". Must be one of: base, md, sm` }
+      return { success: false, error: `Invalid breakpoint "${breakpoint}". Must be one of: base, sm` }
     }
     const store = getStore()
-    // Sync canvas width to match breakpoint
-    const widthMap: Record<Breakpoint, number | null> = { base: null, md: 767, sm: 375 }
+    // Sync canvas width to match UI presets: base=Fluid(null), sm=Mobile(640)
+    const widthMap: Record<string, number | null> = { base: null, sm: 640 }
     store.setCanvasWidth(widthMap[breakpoint])
     store.setActiveBreakpoint(breakpoint)
     return {

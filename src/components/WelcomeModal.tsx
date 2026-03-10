@@ -62,14 +62,6 @@ export function WelcomeModal({ open, onOpenChange }: WelcomeModalProps) {
           >
             Get Started
           </button>
-          <a
-            href="https://buymeacoffee.com/miguelinskey"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[11px] fg-muted hover:fg-default transition-colors"
-          >
-            Support the project
-          </a>
         </div>
       </div>
     </Dialog>

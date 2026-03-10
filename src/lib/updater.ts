@@ -1,30 +1,45 @@
-import { check } from '@tauri-apps/plugin-updater'
-import { relaunch } from '@tauri-apps/plugin-process'
-import { ask, message } from '@tauri-apps/plugin-dialog'
+import { check, type Update, type DownloadEvent } from '@tauri-apps/plugin-updater'
+import { message } from '@tauri-apps/plugin-dialog'
 
-/** Silent check on startup — only prompts if an update is available */
+export interface UpdateInfo {
+  version: string
+  currentVersion: string
+  body: string | undefined
+  contentLength: number | undefined
+  downloadAndInstall: (onEvent?: (event: DownloadEvent) => void) => Promise<void>
+}
+
+/** Callback set by App.tsx to show the update modal */
+let _onUpdateAvailable: ((info: UpdateInfo) => void) | null = null
+
+export function setUpdateHandler(handler: (info: UpdateInfo) => void) {
+  _onUpdateAvailable = handler
+}
+
+function createUpdateInfo(update: Update): UpdateInfo {
+  const info: UpdateInfo = {
+    version: update.version,
+    currentVersion: update.currentVersion,
+    body: update.body ?? undefined,
+    contentLength: undefined,
+    downloadAndInstall: async (onEvent) => {
+      await update.downloadAndInstall((event) => {
+        if (event.event === 'Started' && event.data.contentLength) {
+          info.contentLength = event.data.contentLength
+        }
+        onEvent?.(event)
+      })
+    },
+  }
+  return info
+}
+
+/** Silent check on startup — only shows modal if an update is available */
 export async function checkForUpdatesOnStartup(): Promise<void> {
   try {
     const update = await check()
     if (!update) return
-
-    const shouldUpdate = await ask(
-      `Version ${update.version} is available. Download and install?`,
-      { title: 'Update Available', kind: 'info', okLabel: 'Update', cancelLabel: 'Later' },
-    )
-
-    if (!shouldUpdate) return
-
-    await update.downloadAndInstall()
-
-    const shouldRestart = await ask(
-      'Update installed. Restart now to apply?',
-      { title: 'Caja', kind: 'info', okLabel: 'Restart', cancelLabel: 'Later' },
-    )
-
-    if (shouldRestart) {
-      await relaunch()
-    }
+    _onUpdateAvailable?.(createUpdateInfo(update))
   } catch {
     // Silent on startup — don't bother the user
   }
@@ -43,23 +58,7 @@ export async function checkForUpdates(): Promise<void> {
       return
     }
 
-    const shouldUpdate = await ask(
-      `Version ${update.version} is available. Download and install?`,
-      { title: 'Update Available', kind: 'info', okLabel: 'Update', cancelLabel: 'Later' },
-    )
-
-    if (!shouldUpdate) return
-
-    await update.downloadAndInstall()
-
-    const shouldRestart = await ask(
-      'Update installed. Restart now to apply?',
-      { title: 'Caja', kind: 'info', okLabel: 'Restart', cancelLabel: 'Later' },
-    )
-
-    if (shouldRestart) {
-      await relaunch()
-    }
+    _onUpdateAvailable?.(createUpdateInfo(update))
   } catch (err) {
     await message(`Failed to check for updates: ${err}`, {
       title: 'Caja',
