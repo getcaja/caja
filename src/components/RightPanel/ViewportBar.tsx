@@ -106,7 +106,6 @@ export function ViewportBar() {
   const breakpointMenu = BREAKPOINTS.map((bpItem, i) => {
     const Icon = bpItem.icon
     const active = bpItem.width === canvasWidth
-    const hasOverrides = bpItem.bp !== 'base' && overrideCounts[bpItem.bp] > 0
     return (
       <div key={bpItem.label}>
         {i === 1 && <div className="h-px bg-border my-1" />}
@@ -114,15 +113,12 @@ export function ViewportBar() {
           className={`c-menu-item ${active ? 'c-menu-item-active' : ''}`}
           onClick={() => { setCanvasWidth(bpItem.width); setActiveBreakpoint(bpItem.bp) }}
         >
-          <span className="relative">
-            <Icon size={12} />
-            {hasOverrides && <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-accent" />}
-          </span>
+          <Icon size={12} />
           <span className="flex flex-col items-start">
             <span>{bpItem.label}</span>
             <span className="fg-muted text-[10px]">{
               !bpItem.width ? 'Auto Switching' :
-              bpItem.bp === 'sm' ? 'sm < 640px' : 'baseline > 640px'
+              bpItem.bp === 'sm' ? 'Small · 640px' : 'Baseline · 1280px'
             }</span>
           </span>
           <span className="flex-1" />
@@ -166,12 +162,7 @@ export function ViewportBar() {
         <Dropdown
           trigger={
             <button className="h-6 flex items-center gap-2 rounded fg-default" title={currentBp.label}>
-              <span className="relative">
-                <CurrentIcon size={12} />
-                {showReset && (
-                  <span className="absolute -top-0.5 -right-1 w-1.5 h-1.5 rounded-full bg-accent" />
-                )}
-              </span>
+              <CurrentIcon size={12} />
               <span className="text-[12px]">{currentLabel}</span>
               <ChevronDown size={8} />
             </button>

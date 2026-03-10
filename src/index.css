@@ -343,8 +343,8 @@ input[type=number] {
     font-weight: 600;
     text-transform: uppercase;
     border-radius: 3px;
-    color: var(--color-text-muted);
-    background: var(--color-surface-2);
+    color: color-mix(in srgb, var(--color-text-muted) 75%, transparent);
+    background: var(--color-surface-1);
     user-select: none;
   }
   .c-bp-pill.is-active {
@@ -438,19 +438,6 @@ input[type=number] {
     box-shadow: 0 0 0 2px var(--color-surface-1);
     pointer-events: none;
   }
-  /* Checkbox override: dot after label text */
-  .c-overridden .c-override-dot {
-    display: block;
-  }
-  .c-override-dot {
-    display: none;
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background-color: var(--color-accent);
-    flex-shrink: 0;
-  }
-
   /* --- Toggle group (ToggleGroup.tsx) --- */
   .c-toggle-group {
     background-color: var(--color-surface-1);

@@ -10,6 +10,8 @@ vi.stubGlobal('localStorage', {
 
 import { useFrameStore, findInTree, isRootId, normalizeFrame, findTopLevelAncestor, resolveToDirectChild, getDrillContext, resolveToContextLevel, COMPONENT_PAGE_ID } from '../frameStore'
 import { _resetLoadGuard } from '../slices/fileSlice'
+import { mergeResponsiveOverrides } from '../slices/uiSlice'
+import { isLayoutDirty, isTypographyDirty, isFillDirty, isBorderDirty, isEffectsDirty, isPositionDirty, isTransformDirty, isTransitionDirty, layoutResetValues, typographyResetValues, fillResetValues, borderResetValues, effectsResetValues, positionResetValues, transformResetValues, transitionResetValues } from '../../components/Properties/sectionReset'
 import type { BoxElement, Frame, InputElement, TextElement } from '../../types/frame'
 
 // --- Helpers ---
@@ -1761,6 +1763,277 @@ describe('showMarginOverlay', () => {
       expect(store().loadFromStorage()).toBe(true)
       _resetLoadGuard()
       expect(store().loadFromStorage()).toBe(true)
+    })
+  })
+
+  // ===== clearAllResponsiveOverrides =====
+
+  describe('clearAllResponsiveOverrides', () => {
+    it('strips all sm overrides from every frame in the tree', () => {
+      const boxId = addChild('box')
+      const textId = addChild('text', boxId)
+
+      // Add sm overrides to both
+      store().setActiveBreakpoint('sm')
+      store().updateFrame(boxId, { hidden: true })
+      store().updateFrame(textId, { hidden: true })
+      store().setActiveBreakpoint('base')
+
+      expect(findInTree(root(), boxId)!.responsive?.sm?.hidden).toBe(true)
+      expect(findInTree(root(), textId)!.responsive?.sm?.hidden).toBe(true)
+
+      store().clearAllResponsiveOverrides('sm')
+
+      expect(findInTree(root(), boxId)!.responsive?.sm).toBeUndefined()
+      expect(findInTree(root(), textId)!.responsive?.sm).toBeUndefined()
+    })
+
+    it('preserves md overrides when clearing sm', () => {
+      const id = addChild('box')
+      store().setActiveBreakpoint('md')
+      store().updateFrame(id, { hidden: true })
+      store().setActiveBreakpoint('sm')
+      store().updateFrame(id, { hidden: false })
+      store().setActiveBreakpoint('base')
+
+      store().clearAllResponsiveOverrides('sm')
+
+      expect(findInTree(root(), id)!.responsive?.md?.hidden).toBe(true)
+      expect(findInTree(root(), id)!.responsive?.sm).toBeUndefined()
+    })
+
+    it('is undoable', () => {
+      const id = addChild('box')
+      store().setActiveBreakpoint('sm')
+      store().updateFrame(id, { hidden: true })
+      store().setActiveBreakpoint('base')
+
+      store().clearAllResponsiveOverrides('sm')
+      expect(findInTree(root(), id)!.responsive?.sm).toBeUndefined()
+
+      store().undo()
+      expect(findInTree(root(), id)!.responsive?.sm?.hidden).toBe(true)
+    })
+  })
+
+  // ===== mergeResponsiveOverrides =====
+
+  describe('mergeResponsiveOverrides', () => {
+    it('returns frame unchanged for base breakpoint', () => {
+      const id = addChild('box')
+      const frame = findInTree(root(), id)!
+      // mergeResponsiveOverrides is only called with md|sm, but getEffectiveFrame handles base
+      expect(store().getEffectiveFrame(frame)).toBe(frame)
+    })
+
+    it('applies sm overrides', () => {
+      const id = addChild('box')
+      store().setActiveBreakpoint('sm')
+      store().updateFrame(id, { hidden: true })
+      store().setActiveBreakpoint('base')
+
+      const frame = findInTree(root(), id)!
+      const merged = mergeResponsiveOverrides(frame, 'sm')
+      expect(merged.hidden).toBe(true)
+      expect(frame.hidden).toBe(false) // original unchanged
+    })
+
+    it('cascades md into sm (desktop-first)', () => {
+      const id = addChild('box')
+      store().setActiveBreakpoint('md')
+      store().updateFrame(id, { hidden: true })
+      store().setActiveBreakpoint('base')
+
+      const frame = findInTree(root(), id)!
+      const merged = mergeResponsiveOverrides(frame, 'sm')
+      expect(merged.hidden).toBe(true) // md cascades to sm
+    })
+
+    it('sm overrides take precedence over md in cascade', () => {
+      const id = addChild('box')
+      store().setActiveBreakpoint('md')
+      store().updateFrame(id, { hidden: true })
+      store().setActiveBreakpoint('sm')
+      store().updateFrame(id, { hidden: false })
+      store().setActiveBreakpoint('base')
+
+      const frame = findInTree(root(), id)!
+      const merged = mergeResponsiveOverrides(frame, 'sm')
+      expect(merged.hidden).toBe(false) // sm wins over md
+    })
+  })
+
+  // ===== propertyHint =====
+
+  describe('propertyHint', () => {
+    it('defaults to null', () => {
+      expect(store().propertyHint).toBeNull()
+    })
+
+    it('sets and clears property hint', () => {
+      store().setPropertyHint('Width')
+      expect(store().propertyHint).toBe('Width')
+      store().setPropertyHint(null)
+      expect(store().propertyHint).toBeNull()
+    })
+  })
+
+  // ===== sectionReset dirty detection =====
+
+  describe('sectionReset dirty detection', () => {
+    it('layout is clean on fresh box', () => {
+      store().setStyleNewFrames(false)
+      const id = addChild('box')
+      const frame = findInTree(root(), id)!
+      expect(isLayoutDirty(frame)).toBe(false)
+    })
+
+    it('layout is dirty after changing padding', () => {
+      store().setStyleNewFrames(false)
+      const id = addChild('box')
+      store().updateFrame(id, {
+        padding: {
+          top: { mode: 'custom', value: 16 },
+          right: { mode: 'custom', value: 0 },
+          bottom: { mode: 'custom', value: 0 },
+          left: { mode: 'custom', value: 0 },
+        },
+      })
+      const frame = findInTree(root(), id)!
+      expect(isLayoutDirty(frame)).toBe(true)
+    })
+
+    it('layout reset restores to clean', () => {
+      store().setStyleNewFrames(false)
+      const id = addChild('box')
+      store().updateFrame(id, {
+        padding: {
+          top: { mode: 'custom', value: 16 },
+          right: { mode: 'custom', value: 0 },
+          bottom: { mode: 'custom', value: 0 },
+          left: { mode: 'custom', value: 0 },
+        },
+      })
+      const frame = findInTree(root(), id)!
+      store().updateFrame(id, layoutResetValues(frame))
+      const reset = findInTree(root(), id)!
+      expect(isLayoutDirty(reset)).toBe(false)
+    })
+
+    it('typography is clean on fresh text', () => {
+      const id = addChild('text')
+      const frame = findInTree(root(), id)!
+      expect(isTypographyDirty(frame)).toBe(false)
+    })
+
+    it('typography is dirty after changing fontWeight', () => {
+      const id = addChild('text')
+      store().updateFrame(id, { fontWeight: { mode: 'custom', value: 700 } })
+      const frame = findInTree(root(), id)!
+      expect(isTypographyDirty(frame)).toBe(true)
+    })
+
+    it('typography reset restores to clean', () => {
+      const id = addChild('text')
+      store().updateFrame(id, { fontWeight: { mode: 'custom', value: 700 } })
+      store().updateFrame(id, typographyResetValues())
+      const frame = findInTree(root(), id)!
+      expect(isTypographyDirty(frame)).toBe(false)
+    })
+
+    it('fill is clean on fresh frame', () => {
+      store().setStyleNewFrames(false)
+      const id = addChild('box')
+      expect(isFillDirty(findInTree(root(), id)!)).toBe(false)
+    })
+
+    it('fill is dirty after setting bg color', () => {
+      store().setStyleNewFrames(false)
+      const id = addChild('box')
+      store().updateFrame(id, { bg: { mode: 'custom', value: '#ff0000' } })
+      expect(isFillDirty(findInTree(root(), id)!)).toBe(true)
+    })
+
+    it('border is clean on fresh frame', () => {
+      store().setStyleNewFrames(false)
+      const id = addChild('box')
+      expect(isBorderDirty(findInTree(root(), id)!)).toBe(false)
+    })
+
+    it('effects is clean on fresh frame', () => {
+      store().setStyleNewFrames(false)
+      const id = addChild('box')
+      expect(isEffectsDirty(findInTree(root(), id)!)).toBe(false)
+    })
+
+    it('position is clean on fresh frame (static)', () => {
+      store().setStyleNewFrames(false)
+      const id = addChild('box')
+      expect(isPositionDirty(findInTree(root(), id)!)).toBe(false)
+    })
+
+    it('position is dirty when set to relative', () => {
+      store().setStyleNewFrames(false)
+      const id = addChild('box')
+      store().updateFrame(id, { position: 'relative' })
+      expect(isPositionDirty(findInTree(root(), id)!)).toBe(true)
+    })
+
+    it('transform is clean on fresh frame', () => {
+      store().setStyleNewFrames(false)
+      const id = addChild('box')
+      expect(isTransformDirty(findInTree(root(), id)!)).toBe(false)
+    })
+
+    it('transition is clean on fresh frame', () => {
+      store().setStyleNewFrames(false)
+      const id = addChild('box')
+      expect(isTransitionDirty(findInTree(root(), id)!)).toBe(false)
+    })
+  })
+
+  // ===== viewport & breakpoint switching =====
+
+  describe('viewport and breakpoint switching', () => {
+    it('setCanvasWidth persists to view prefs', () => {
+      store().setCanvasWidth(640)
+      expect(store().canvasWidth).toBe(640)
+    })
+
+    it('setCanvasWidth(null) sets fluid mode', () => {
+      store().setCanvasWidth(640)
+      store().setCanvasWidth(null)
+      expect(store().canvasWidth).toBeNull()
+    })
+
+    it('setActiveBreakpoint changes breakpoint', () => {
+      store().setActiveBreakpoint('sm')
+      expect(store().activeBreakpoint).toBe('sm')
+      store().setActiveBreakpoint('base')
+      expect(store().activeBreakpoint).toBe('base')
+    })
+
+    it('getEffectiveFrame returns merged frame at sm', () => {
+      const id = addChild('box')
+      store().setActiveBreakpoint('sm')
+      store().updateFrame(id, { hidden: true })
+
+      // getEffectiveFrame should merge sm overrides
+      const frame = findInTree(root(), id)!
+      const effective = store().getEffectiveFrame(frame)
+      expect(effective.hidden).toBe(true)
+      store().setActiveBreakpoint('base')
+    })
+
+    it('getEffectiveFrame returns original frame at base', () => {
+      const id = addChild('box')
+      store().setActiveBreakpoint('sm')
+      store().updateFrame(id, { hidden: true })
+      store().setActiveBreakpoint('base')
+
+      const frame = findInTree(root(), id)!
+      const effective = store().getEffectiveFrame(frame)
+      expect(effective.hidden).toBe(false) // base value
     })
   })
 })

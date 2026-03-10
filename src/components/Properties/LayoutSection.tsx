@@ -583,7 +583,6 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
               {frame.overflow !== 'visible' && <Check size={10} strokeWidth={3} />}
             </span>
             <span className={`text-[12px] c-dimmed ${frame.overflow !== 'visible' ? 'is-active' : ''}`}>Clip Overflow</span>
-            <span className="c-override-dot" />
           </button>
           <div className="flex-1" />
           <Popover
@@ -635,7 +634,6 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
               {frame.hidden && <Check size={10} strokeWidth={3} />}
             </span>
             <span className={`text-[12px] c-dimmed ${frame.hidden ? 'is-active' : ''}`}>Hide Element</span>
-            <span className="c-override-dot" />
           </button>
           <div className="flex-1" />
           <div className="c-slot-spacer" />

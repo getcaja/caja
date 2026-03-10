@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { ChevronRight, RotateCcw, Ellipsis } from 'lucide-react'
+import { ChevronRight, Ellipsis } from 'lucide-react'
 import { useFrameStore } from '../../store/frameStore'
 
 function getStorageKey(title: string) {
@@ -14,21 +14,23 @@ function readCollapsed(title: string, defaultCollapsed: boolean): boolean {
   return defaultCollapsed
 }
 
-function SectionMenu({ onReset, onResetOverrides, onClose }: {
+function SectionMenu({ onReset, onResetOverrides, onClose, triggerRef }: {
   onReset?: () => void
   onResetOverrides?: () => void
   onClose: () => void
+  triggerRef: React.RefObject<HTMLButtonElement | null>
 }) {
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
       if (ref.current?.contains(e.target as Node)) return
+      if (triggerRef.current?.contains(e.target as Node)) return
       onClose()
     }
     window.addEventListener('mousedown', onDown, true)
     return () => window.removeEventListener('mousedown', onDown, true)
-  }, [onClose])
+  }, [onClose, triggerRef])
 
   return (
     <div ref={ref} className="absolute right-0 top-full mt-1 c-menu-popup min-w-[200px] z-50">
@@ -37,8 +39,7 @@ function SectionMenu({ onReset, onResetOverrides, onClose }: {
           className="c-menu-item"
           onClick={() => { onReset(); onClose() }}
         >
-          <RotateCcw size={12} />
-          Reset to defaults
+          Reset Section to Defaults
         </button>
       )}
       {onResetOverrides && (
@@ -46,8 +47,7 @@ function SectionMenu({ onReset, onResetOverrides, onClose }: {
           className="c-menu-item"
           onClick={() => { onResetOverrides(); onClose() }}
         >
-          <RotateCcw size={12} />
-          Reset overrides
+          Reset Responsive Overrides
         </button>
       )}
     </div>
@@ -77,6 +77,7 @@ export function Section({
   const setPropertyHint = useFrameStore((s) => s.setPropertyHint)
   const [collapsed, setCollapsed] = useState(() => collapsible ? readCollapsed(title, defaultCollapsed) : false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const menuTriggerRef = useRef<HTMLButtonElement>(null)
 
   const toggle = () => {
     if (!collapsible) return
@@ -111,6 +112,7 @@ export function Section({
         {onReset && (
           <div className="relative">
             <button
+              ref={menuTriggerRef}
               onClick={(e) => { e.stopPropagation(); setMenuOpen((p) => !p) }}
               className={`c-slot ${menuOpen ? 'is-active' : ''}`}
               onMouseEnter={() => setPropertyHint(`${title} Options`)}
@@ -120,9 +122,10 @@ export function Section({
             </button>
             {menuOpen && (
               <SectionMenu
-                onReset={onReset}
-                onResetOverrides={hasOverrides && onResetOverrides ? onResetOverrides : undefined}
+                onReset={activeBreakpoint === 'base' ? onReset : undefined}
+                onResetOverrides={activeBreakpoint !== 'base' && hasOverrides && onResetOverrides ? onResetOverrides : undefined}
                 onClose={() => setMenuOpen(false)}
+                triggerRef={menuTriggerRef}
               />
             )}
           </div>

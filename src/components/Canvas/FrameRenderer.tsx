@@ -149,8 +149,8 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
   const commitText = () => {
     if (textRef.current && isText) {
       const newContent = textRef.current.innerText || ''
-      // If this was a pending insert and the user left it empty, remove the frame
-      if (pendingInsertRef.current && !newContent.trim()) {
+      // If content is empty after editing, remove the frame (like Figma)
+      if (!newContent.trim()) {
         pendingInsertRef.current = false
         setEditingText(false)
         useFrameStore.getState().removeFrame(frame.id)

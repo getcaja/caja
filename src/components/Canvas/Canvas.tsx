@@ -16,8 +16,9 @@ export function Canvas() {
   const checkScroll = useCallback(() => {
     const el = scrollRef.current
     if (!el) return
-    const remaining = el.scrollHeight - el.scrollTop - el.clientHeight
-    setNearBottom(remaining < BOTTOM_THRESHOLD)
+    const overflow = el.scrollHeight - el.clientHeight
+    const remaining = overflow - el.scrollTop
+    setNearBottom(overflow > BOTTOM_THRESHOLD && remaining < BOTTOM_THRESHOLD)
   }, [])
 
   useEffect(() => {
