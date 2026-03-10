@@ -4,6 +4,7 @@ import { Section } from '../ui/Section'
 import { ColorInput } from '../ui/ColorInput'
 import { ToggleGroup } from '../ui/ToggleGroup'
 import { SpacingControl } from '../ui/SpacingControl'
+import { BorderRadiusControl } from '../ui/BorderRadiusControl'
 import { BORDER_WIDTH_SCALE } from '../../data/scales'
 
 function borderWidthAsSpacing(frame: Frame): Spacing {
@@ -31,12 +32,19 @@ const STYLE_OPTIONS: { value: string; label: string; tooltip?: string }[] = [
 
 export function BorderSection({ frame, onReset }: { frame: Frame; onReset?: () => void }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
+  const updateBorderRadius = useFrameStore((s) => s.updateBorderRadius)
 
   const hasBorder = frame.border.style !== 'none'
 
   return (
     <Section title="Border" onReset={onReset}>
       <div className="flex flex-col gap-2">
+        {/* Border Radius */}
+        <BorderRadiusControl
+          value={frame.borderRadius}
+          onChange={(v) => updateBorderRadius(frame.id, v)}
+        />
+
         {/* Style toggle */}
         <div className="flex items-center gap-2">
           <ToggleGroup

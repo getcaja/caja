@@ -126,12 +126,16 @@ export function CanvasInline() {
   const ctxMenu = useCanvasContextMenu()
 
   // Canvas resize handles — drag to set width, double-click to reset to fluid
+  const setCanvasResizing = useFrameStore((s) => s.setCanvasResizing)
+  const [resizingSide, setResizingSide] = useState<'left' | 'right' | null>(null)
   const onHandleDown = useCallback((side: 'left' | 'right') => (e: React.MouseEvent) => {
     e.preventDefault()
     const canvasEl = canvasRef.current
     if (!canvasEl) return
     const startX = e.clientX
     const startWidth = canvasEl.offsetWidth
+    setCanvasResizing(true)
+    setResizingSide(side)
 
     const onMove = (me: MouseEvent) => {
       const delta = side === 'right'
@@ -139,7 +143,7 @@ export function CanvasInline() {
         : (startX - me.clientX) * 2
       const maxW = Math.max(320, workspaceW - GUTTER * 2)
       const newWidth = Math.round(Math.max(320, Math.min(maxW, startWidth + delta)))
-      // Snap to fluid when close to max
+      // Snap to full when close to max
       if (newWidth >= maxW - 16) {
         useFrameStore.getState().setCanvasWidth(null)
       } else {
@@ -152,13 +156,15 @@ export function CanvasInline() {
       window.removeEventListener('mouseup', onUp)
       document.body.style.cursor = ''
       document.body.style.userSelect = ''
+      setCanvasResizing(false)
+      setResizingSide(null)
     }
 
     document.body.style.cursor = 'col-resize'
     document.body.style.userSelect = 'none'
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
-  }, [workspaceW, GUTTER])
+  }, [workspaceW, GUTTER, setCanvasResizing])
 
   const onHandleDblClick = useCallback(() => {
     setCanvasWidth(null)
@@ -276,7 +282,7 @@ export function CanvasInline() {
       // Fluid mode — canvas inset by GUTTER on each side
       if (userZoom === 1) {
         wrapperStyle = { width: '100%', height: '100%' }
-        canvasStyle = { ...canvasResetStyle, width: fluidW, margin: '0 auto' }
+        canvasStyle = { ...canvasResetStyle, width: `calc(100% - ${GUTTER * 2}px)`, margin: '0 auto' }
       } else {
         const canvasW = fluidW
         const canvasH = workspaceH
@@ -332,17 +338,17 @@ export function CanvasInline() {
       {showHandles && (
         <>
           <div
-            className="c-canvas-handle"
+            className={`c-canvas-handle ${resizingSide === 'left' ? 'is-active' : ''}`}
             style={{ left: handleGutter - 4 }}
             onMouseDown={onHandleDown('left')}
             onDoubleClick={onHandleDblClick}
-          />
+          ><div /></div>
           <div
-            className="c-canvas-handle"
+            className={`c-canvas-handle ${resizingSide === 'right' ? 'is-active' : ''}`}
             style={{ right: handleGutter - 4 }}
             onMouseDown={onHandleDown('right')}
             onDoubleClick={onHandleDblClick}
-          />
+          ><div /></div>
         </>
       )}
       {/* SelectionOverlay must be OUTSIDE the @container div.

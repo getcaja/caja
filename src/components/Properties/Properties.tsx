@@ -5,7 +5,6 @@ import { PagePanel } from './PagePanel'
 import { ElementSection } from './ElementSection'
 import { LayoutSection } from './LayoutSection'
 import { TypographySection } from './TypographySection'
-import { AppearanceSection } from './AppearanceSection'
 import { FillSection } from './FillSection'
 import { BorderSection } from './BorderSection'
 import { EffectsSection } from './EffectsSection'
@@ -14,15 +13,14 @@ import { TransformSection } from './TransformSection'
 import { TransitionSection } from './TransitionSection'
 import { AdvancedSection } from './AdvancedSection'
 import {
-  typographyResetValues, layoutResetValues, fillResetValues, appearanceResetValues,
+  typographyResetValues, layoutResetValues, fillResetValues,
   borderResetValues, effectsResetValues, positionResetValues, transformResetValues, transitionResetValues,
 } from './sectionReset'
 
 const SECTION_KEYS: Record<string, string[]> = {
   Layout: ['display', 'direction', 'justify', 'align', 'gap', 'wrap', 'gridCols', 'gridRows', 'padding', 'margin', 'width', 'height', 'minWidth', 'maxWidth', 'minHeight', 'maxHeight', 'grow', 'shrink', 'alignSelf', 'hidden'],
   Typography: ['fontSize', 'fontWeight', 'lineHeight', 'textAlign'],
-  Fill: ['bg'],
-  Appearance: ['opacity'],
+  Fill: ['bg', 'opacity'],
 }
 
 function sectionHasOverrides(section: string, overrideKeys: Set<string>): boolean {
@@ -79,43 +77,38 @@ export function Properties() {
     <div key={frame.id} className="">
       <ElementSection frame={effective} isRoot={isRoot} />
       <PositionSection frame={effective}
-       
+
         onReset={() => resetSection(positionResetValues())}
       />
       <LayoutSection frame={effective} isRoot={isRoot}
         hasOverrides={sectionHasOverrides('Layout', overrideKeys)} onResetOverrides={makeResetHandler('Layout')}
-       
+
         onReset={() => resetSection(layoutResetValues(effective))}
       />
       {hasTextStyles && <TypographySection frame={effective}
         hasOverrides={sectionHasOverrides('Typography', overrideKeys)} onResetOverrides={makeResetHandler('Typography')}
-       
+
         onReset={() => resetSection(typographyResetValues())}
       />}
-      <AppearanceSection frame={effective}
-        hasOverrides={sectionHasOverrides('Appearance', overrideKeys)} onResetOverrides={makeResetHandler('Appearance')}
-       
-        onReset={() => resetSection(appearanceResetValues())}
-      />
       <FillSection frame={effective}
         hasOverrides={sectionHasOverrides('Fill', overrideKeys)} onResetOverrides={makeResetHandler('Fill')}
-       
+
         onReset={() => resetSection(fillResetValues())}
       />
       <BorderSection frame={effective}
-       
+
         onReset={() => resetSection(borderResetValues())}
       />
       <EffectsSection frame={effective}
-       
+
         onReset={() => resetSection(effectsResetValues())}
       />
       <TransformSection frame={effective}
-       
+
         onReset={() => resetSection(transformResetValues())}
       />
       <TransitionSection frame={effective}
-       
+
         onReset={() => resetSection(transitionResetValues())}
       />
       <AdvancedSection frame={effective} />

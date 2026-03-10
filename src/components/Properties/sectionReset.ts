@@ -65,6 +65,7 @@ export function isLayoutDirty(frame: Frame): boolean {
 }
 
 export function isFillDirty(frame: Frame): boolean {
+  if (!dvNumEq(frame.opacity, 100)) return true
   const hasBg = !dvStrEq(frame.bg, '') || !dvNumEq(frame.bgAlpha, 100)
   const hasImage = frame.bgImage !== ''
   // bgSize/bgPosition/bgRepeat only matter when there's a bg color or image
@@ -73,11 +74,6 @@ export function isFillDirty(frame: Frame): boolean {
     return true // bgImage set = always dirty (sub-fields are visible)
   }
   return hasBg
-}
-
-export function isAppearanceDirty(frame: Frame): boolean {
-  return !dvNumEq(frame.opacity, 100)
-    || frame.boxShadow !== 'none' || frame.cursor !== 'auto'
 }
 
 export function isBorderDirty(frame: Frame): boolean {
@@ -157,14 +153,7 @@ export function fillResetValues(): Partial<Frame> {
     bgSize: 'auto',
     bgPosition: 'center',
     bgRepeat: 'repeat',
-  }
-}
-
-export function appearanceResetValues(): Partial<Frame> {
-  return {
     opacity: dvNum(100),
-    boxShadow: 'none',
-    cursor: 'auto',
   }
 }
 

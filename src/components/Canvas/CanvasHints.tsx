@@ -3,7 +3,18 @@ import { useFrameStore, findInTree, isRootId } from '../../store/frameStore'
 /** Contextual keyboard shortcut hints — Safari-style bar at bottom-left of canvas. */
 export function CanvasHints() {
   const hint = useFrameStore((s) => {
-    if (!s.showHints || s.previewMode) return null
+    if (s.previewMode) return null
+
+    // Canvas resize — show breakpoint + live width (block other hints while dragging)
+    if (s.canvasResizing) {
+      const el = document.getElementById('caja-canvas')
+      const w = s.canvasWidth ?? (el ? el.offsetWidth : null)
+      if (w == null) return null
+      const bp = s.activeBreakpoint === 'sm' ? 'SM' : 'Base'
+      return `${bp} · ${Math.round(w)}px`
+    }
+
+    if (!s.showHints) return null
 
     if (s.canvasDragId) {
       return '\u2318 Hold to drop inside'

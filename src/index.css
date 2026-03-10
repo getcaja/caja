@@ -434,7 +434,7 @@ input[type=number] {
     white-space: nowrap;
   }
 
-  /* --- Canvas resize handles --- */
+  /* --- Canvas resize handles (same style as panel dividers) --- */
   .c-canvas-handle {
     position: absolute;
     top: 0;
@@ -443,21 +443,15 @@ input[type=number] {
     cursor: col-resize;
     z-index: 10;
   }
-  .c-canvas-handle::after {
-    content: '';
+  .c-canvas-handle > div {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 3px;
-    height: 40px;
-    border-radius: 2px;
-    background: var(--color-text-muted);
-    opacity: 0;
-    transition: opacity 0.15s;
+    inset: 0;
+    left: 2px;
+    width: 4px;
   }
-  .c-canvas-handle:hover::after {
-    opacity: 0.6;
+  .c-canvas-handle:hover > div,
+  .c-canvas-handle.is-active > div {
+    background: var(--color-accent);
   }
 
   /* --- Menus & popups --- */

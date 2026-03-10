@@ -1,12 +1,14 @@
 import { useState } from 'react'
-import { ImageIcon, Upload, X } from 'lucide-react'
+import { ImageIcon, Upload, X, Blend } from 'lucide-react'
 import type { Frame } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { importLocalAsset, isLocalAssetPath, getAssetDisplayName } from '../../lib/assetOps'
 import { Section } from '../ui/Section'
 import { ColorInput } from '../ui/ColorInput'
+import { TokenInput } from '../ui/TokenInput'
 import { Select } from '../ui/Select'
 import { ToggleGroup } from '../ui/ToggleGroup'
+import { OPACITY_SCALE } from '../../data/scales'
 
 const lbl = (text: string) => <span className="text-[12px]">{text}</span>
 
@@ -184,6 +186,24 @@ export function FillSection({ frame, hasOverrides, onResetOverrides, onReset }: 
             )}
           </>
         )}
+
+        {/* Opacity */}
+        <div className="flex items-center gap-2">
+          <TokenInput
+            scale={OPACITY_SCALE}
+            value={frame.opacity}
+            onChange={(v) => updateFrame(frame.id, { opacity: v })}
+            min={0}
+            max={100}
+            unit="%"
+            classPrefix="opacity"
+            defaultValue={100}
+            placeholder="100"
+            inlineLabel={<Blend size={12} />}
+            tooltip="Opacity"
+          />
+          <div className="c-slot-spacer" />
+        </div>
       </div>
     </Section>
   )

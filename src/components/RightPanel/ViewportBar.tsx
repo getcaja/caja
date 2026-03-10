@@ -6,7 +6,7 @@ import { canvasZoomTo } from '../Canvas/CanvasInline'
 import type { Frame, Breakpoint } from '../../types/frame'
 
 const BREAKPOINTS: { label: string; width: number | null; icon: typeof Monitor; bp: Breakpoint }[] = [
-  { label: 'Fluid', width: null, icon: Monitor, bp: 'base' },
+  { label: 'Full', width: null, icon: Monitor, bp: 'base' },
   { label: 'Mobile', width: 375, icon: Smartphone, bp: 'sm' },
 ]
 
