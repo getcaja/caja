@@ -5,6 +5,7 @@ import type { Spacing, DesignValue } from '../../types/frame'
 import type { ScaleOption } from '../../data/scales'
 import { TokenInput } from './TokenInput'
 import { SPACING_SCALE } from '../../data/scales'
+import { useFrameStore } from '../../store/frameStore'
 
 type SpacingMode = 'all' | 'axis' | 'sides'
 
@@ -109,7 +110,8 @@ function MixedPill({ label, scale, onChange, onPreview, onRevert, onReset, onOpe
           <div
             ref={pillRef}
             className="group c-scale-input flex items-center pr-6 overflow-hidden cursor-pointer relative"
-            title={`${tooltip} — values differ, click to edit`}
+            onMouseEnter={() => useFrameStore.getState().setPropertyHint(`${tooltip} — values differ`)}
+            onMouseLeave={() => useFrameStore.getState().setPropertyHint(null)}
             onClick={() => open ? handleClose() : handleOpen()}
           >
             <span className="w-4 shrink-0 flex items-center justify-center c-dimmed">{label}</span>

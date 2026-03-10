@@ -1,12 +1,14 @@
 import { useState } from 'react'
-import { ImageIcon, Upload, X } from 'lucide-react'
+import { ImageIcon, Upload, X, Contrast } from 'lucide-react'
 import type { Frame } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
 import { importLocalAsset, isLocalAssetPath, getAssetDisplayName } from '../../lib/assetOps'
 import { Section } from '../ui/Section'
 import { ColorInput } from '../ui/ColorInput'
+import { TokenInput } from '../ui/TokenInput'
 import { Select } from '../ui/Select'
 import { ToggleGroup } from '../ui/ToggleGroup'
+import { OPACITY_SCALE } from '../../data/scales'
 
 const lbl = (text: string) => <span className="text-[12px]">{text}</span>
 
@@ -37,14 +39,33 @@ const BG_REPEAT_OPTIONS = [
 
 type FillMode = 'solid' | 'image'
 
-export function FillSection({ frame, hasOverrides, onResetOverrides, isDirty, onReset }: { frame: Frame; hasOverrides?: boolean; onResetOverrides?: () => void; isDirty?: boolean; onReset?: () => void }) {
+export function FillSection({ frame, hasOverrides, onResetOverrides, onReset, overrideKeys }: { frame: Frame; hasOverrides?: boolean; onResetOverrides?: () => void; onReset?: () => void; overrideKeys?: Set<string> }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
   const filePath = useFrameStore((s) => s.filePath)
   const [mode, setMode] = useState<FillMode>(frame.bgImage ? 'image' : 'solid')
+  const ov = (...keys: string[]) => keys.some(k => overrideKeys?.has(k)) ? ' c-overridden' : ''
 
   return (
-    <Section title="Fill" hasOverrides={hasOverrides} onResetOverrides={onResetOverrides} isDirty={isDirty} onReset={onReset}>
+    <Section title="Fill" hasOverrides={hasOverrides} onResetOverrides={onResetOverrides} onReset={onReset}>
       <div className="flex flex-col gap-2">
+        {/* Element Opacity */}
+        <div className={`flex items-center gap-2${ov('opacity')}`}>
+          <TokenInput
+            scale={OPACITY_SCALE}
+            value={frame.opacity}
+            onChange={(v) => updateFrame(frame.id, { opacity: v })}
+            min={0}
+            max={100}
+            unit="%"
+            classPrefix="opacity"
+            defaultValue={100}
+            placeholder="100"
+            inlineLabel={<Contrast size={12} />}
+            tooltip="Opacity"
+          />
+          <div className="c-slot-spacer" />
+        </div>
+
         {/* Mode toggle */}
         <div className="flex items-center gap-2">
           <ToggleGroup
@@ -61,7 +82,7 @@ export function FillSection({ frame, hasOverrides, onResetOverrides, isDirty, on
 
         {/* Solid mode */}
         {mode === 'solid' && (
-          <div className="flex items-center gap-2">
+          <div className={`flex items-center gap-2${ov('bg', 'bgAlpha')}`}>
             <ColorInput
               value={frame.bg}
               onChange={(v) => updateFrame(frame.id, { bg: v })}
@@ -78,7 +99,7 @@ export function FillSection({ frame, hasOverrides, onResetOverrides, isDirty, on
         {/* Image mode */}
         {mode === 'image' && (
           <>
-            <div className="flex items-center gap-2">
+            <div className={`flex items-center gap-2${ov('bgImage')}`}>
               <div className="flex-1 min-w-0">
                 {frame.bgImage && isLocalAssetPath(frame.bgImage) ? (
                   /* Read-only display for local assets — show filename only */
@@ -148,27 +169,31 @@ export function FillSection({ frame, hasOverrides, onResetOverrides, isDirty, on
             {frame.bgImage && (
               <>
                 <div className="flex items-center gap-2">
-                  <Select
-                    value={frame.bgSize}
-                    options={BG_SIZE_OPTIONS}
-                    onChange={(v) => updateFrame(frame.id, { bgSize: v as Frame['bgSize'] })}
-                    className="flex-1"
-                    inlineLabel={lbl('Sz')}
-                    initialValue="auto"
-                    tooltip="Background Size"
-                  />
-                  <Select
-                    value={frame.bgPosition}
-                    options={BG_POSITION_OPTIONS}
-                    onChange={(v) => updateFrame(frame.id, { bgPosition: v as Frame['bgPosition'] })}
-                    className="flex-1"
-                    inlineLabel={lbl('Ps')}
-                    initialValue="center"
-                    tooltip="Background Position"
-                  />
+                  <div className={`contents${ov('bgSize')}`}>
+                    <Select
+                      value={frame.bgSize}
+                      options={BG_SIZE_OPTIONS}
+                      onChange={(v) => updateFrame(frame.id, { bgSize: v as Frame['bgSize'] })}
+                      className="flex-1"
+                      inlineLabel={lbl('Sz')}
+                      initialValue="auto"
+                      tooltip="Background Size"
+                    />
+                  </div>
+                  <div className={`contents${ov('bgPosition')}`}>
+                    <Select
+                      value={frame.bgPosition}
+                      options={BG_POSITION_OPTIONS}
+                      onChange={(v) => updateFrame(frame.id, { bgPosition: v as Frame['bgPosition'] })}
+                      className="flex-1"
+                      inlineLabel={lbl('Ps')}
+                      initialValue="center"
+                      tooltip="Background Position"
+                    />
+                  </div>
                   <div className="c-slot-spacer" />
                 </div>
-                <div className="flex items-center gap-2">
+                <div className={`flex items-center gap-2${ov('bgRepeat')}`}>
                   <Select
                     value={frame.bgRepeat}
                     options={BG_REPEAT_OPTIONS}
@@ -184,6 +209,7 @@ export function FillSection({ frame, hasOverrides, onResetOverrides, isDirty, on
             )}
           </>
         )}
+
       </div>
     </Section>
   )

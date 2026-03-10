@@ -64,6 +64,14 @@ export function CanvasInline() {
   const root = useFrameStore((s) => s.root)
   const editingComponentId = useFrameStore((s) => s.editingComponentId)
   const hover = useFrameStore((s) => s.hover)
+  const setActiveBreakpoint = useFrameStore((s) => s.setActiveBreakpoint)
+  // Derive activeBreakpoint from effective canvas width (fluid-first model)
+  const effectiveWidth = canvasWidth ?? workspaceW
+  useEffect(() => {
+    if (previewMode || editingComponentId) return
+    const bp = effectiveWidth < 640 ? 'sm' : 'base'
+    setActiveBreakpoint(bp)
+  }, [effectiveWidth, previewMode, editingComponentId, setActiveBreakpoint])
 
   // In edit mode, render only the master being edited
   const renderFrame = editingComponentId && root.type === 'box'
@@ -221,10 +229,10 @@ export function CanvasInline() {
     const userZoom = canvasZoom
 
     if (!canvasWidth) {
-      // Fluid mode — canvas fills available space, container queries respond naturally
+      // Fluid mode — canvas fills entire workspace, no gutter, no handles
       if (userZoom === 1) {
         wrapperStyle = { width: '100%', height: '100%' }
-        canvasStyle = { ...canvasResetStyle, width: '100%', margin: '0 auto' }
+        canvasStyle = { ...canvasResetStyle, width: '100%' }
       } else {
         const canvasW = workspaceW
         const canvasH = workspaceH

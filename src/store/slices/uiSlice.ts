@@ -104,7 +104,9 @@ export interface UiSlice {
   showGapOverlay: boolean
   showHints: boolean
   deepSelect: boolean
+  propertyHint: string | null
 
+  setPropertyHint: (hint: string | null) => void
   setDeepSelect: (value: boolean) => void
   setShowHints: (value: boolean) => void
   setShowMarginOverlay: (value: boolean) => void
@@ -149,7 +151,9 @@ export const createUiSlice: StateCreator<FrameStore, [], [], UiSlice> = (set, ge
     showGapOverlay: false,
     showHints: initialViewPrefs.showHints,
     deepSelect: false,
+    propertyHint: null,
 
+    setPropertyHint: (hint) => set({ propertyHint: hint }),
     setDeepSelect: (value) => set({ deepSelect: value }),
     setShowHints: (value) => {
       saveViewPrefs({ showHints: value })

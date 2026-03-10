@@ -5,7 +5,6 @@ import { PagePanel } from './PagePanel'
 import { ElementSection } from './ElementSection'
 import { LayoutSection } from './LayoutSection'
 import { TypographySection } from './TypographySection'
-import { AppearanceSection } from './AppearanceSection'
 import { FillSection } from './FillSection'
 import { BorderSection } from './BorderSection'
 import { EffectsSection } from './EffectsSection'
@@ -14,17 +13,14 @@ import { TransformSection } from './TransformSection'
 import { TransitionSection } from './TransitionSection'
 import { AdvancedSection } from './AdvancedSection'
 import {
-  isTypographyDirty, isLayoutDirty, isFillDirty, isAppearanceDirty,
-  isBorderDirty, isEffectsDirty, isPositionDirty, isTransformDirty, isTransitionDirty,
-  typographyResetValues, layoutResetValues, fillResetValues, appearanceResetValues,
+  typographyResetValues, layoutResetValues, fillResetValues,
   borderResetValues, effectsResetValues, positionResetValues, transformResetValues, transitionResetValues,
 } from './sectionReset'
 
 const SECTION_KEYS: Record<string, string[]> = {
-  Layout: ['display', 'direction', 'justify', 'align', 'gap', 'wrap', 'gridCols', 'gridRows', 'padding', 'margin', 'width', 'height', 'minWidth', 'maxWidth', 'minHeight', 'maxHeight', 'grow', 'shrink', 'alignSelf'],
+  Layout: ['display', 'direction', 'justify', 'align', 'gap', 'wrap', 'gridCols', 'gridRows', 'padding', 'margin', 'width', 'height', 'minWidth', 'maxWidth', 'minHeight', 'maxHeight', 'grow', 'shrink', 'alignSelf', 'hidden'],
   Typography: ['fontSize', 'fontWeight', 'lineHeight', 'textAlign'],
-  Fill: ['bg'],
-  Appearance: ['opacity', 'hidden'],
+  Fill: ['bg', 'opacity'],
 }
 
 function sectionHasOverrides(section: string, overrideKeys: Set<string>): boolean {
@@ -48,12 +44,19 @@ export function Properties() {
   // Store auto-selects root when selection clears; keep UI fallback as safety net
   const frame = selected ?? root
 
-  // Compute which keys have responsive overrides at the current breakpoint
+  // Compute which keys have responsive overrides that actually differ from base
   const overrideKeys = useMemo(() => {
     if (activeBreakpoint === 'base') return new Set<string>()
     const overrides = frame.responsive?.[activeBreakpoint]
     if (!overrides) return new Set<string>()
-    return new Set(Object.keys(overrides))
+    const keys = new Set<string>()
+    for (const key of Object.keys(overrides)) {
+      const ov = overrides[key as keyof typeof overrides]
+      const base = (frame as unknown as Record<string, unknown>)[key]
+      // Only mark as override if the value actually differs from base
+      if (JSON.stringify(ov) !== JSON.stringify(base)) keys.add(key)
+    }
+    return keys
   }, [frame, activeBreakpoint])
 
   const makeResetHandler = useCallback((section: string) => {
@@ -80,44 +83,31 @@ export function Properties() {
   return (
     <div key={frame.id} className="">
       <ElementSection frame={effective} isRoot={isRoot} />
-      <PositionSection frame={effective}
-        isDirty={isPositionDirty(effective)}
+      <PositionSection frame={effective} overrideKeys={overrideKeys}
         onReset={() => resetSection(positionResetValues())}
       />
-      <LayoutSection frame={effective} isRoot={isRoot}
+      <LayoutSection frame={effective} isRoot={isRoot} overrideKeys={overrideKeys}
         hasOverrides={sectionHasOverrides('Layout', overrideKeys)} onResetOverrides={makeResetHandler('Layout')}
-        isDirty={isLayoutDirty(effective)}
         onReset={() => resetSection(layoutResetValues(effective))}
       />
-      {hasTextStyles && <TypographySection frame={effective}
+      {hasTextStyles && <TypographySection frame={effective} overrideKeys={overrideKeys}
         hasOverrides={sectionHasOverrides('Typography', overrideKeys)} onResetOverrides={makeResetHandler('Typography')}
-        isDirty={isTypographyDirty(effective)}
         onReset={() => resetSection(typographyResetValues())}
       />}
-      <AppearanceSection frame={effective}
-        hasOverrides={sectionHasOverrides('Appearance', overrideKeys)} onResetOverrides={makeResetHandler('Appearance')}
-        isDirty={isAppearanceDirty(effective)}
-        onReset={() => resetSection(appearanceResetValues())}
-      />
-      <FillSection frame={effective}
+      <FillSection frame={effective} overrideKeys={overrideKeys}
         hasOverrides={sectionHasOverrides('Fill', overrideKeys)} onResetOverrides={makeResetHandler('Fill')}
-        isDirty={isFillDirty(effective)}
         onReset={() => resetSection(fillResetValues())}
       />
-      <BorderSection frame={effective}
-        isDirty={isBorderDirty(effective)}
+      <BorderSection frame={effective} overrideKeys={overrideKeys}
         onReset={() => resetSection(borderResetValues())}
       />
-      <EffectsSection frame={effective}
-        isDirty={isEffectsDirty(effective)}
+      <EffectsSection frame={effective} overrideKeys={overrideKeys}
         onReset={() => resetSection(effectsResetValues())}
       />
-      <TransformSection frame={effective}
-        isDirty={isTransformDirty(effective)}
+      <TransformSection frame={effective} overrideKeys={overrideKeys}
         onReset={() => resetSection(transformResetValues())}
       />
-      <TransitionSection frame={effective}
-        isDirty={isTransitionDirty(effective)}
+      <TransitionSection frame={effective} overrideKeys={overrideKeys}
         onReset={() => resetSection(transitionResetValues())}
       />
       <AdvancedSection frame={effective} />

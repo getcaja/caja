@@ -15,7 +15,7 @@ import { SPACING_SCALE, SIZE_CONSTRAINT_SCALE, GRID_COLS_SCALE, GRID_ROWS_SCALE,
 import { Select } from '../ui/Select'
 import { ALIGN_SELF_OPTIONS } from './constants'
 
-export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOverrides, isDirty, onReset }: { frame: Frame; isRoot?: boolean; hasOverrides?: boolean; onResetOverrides?: () => void; isDirty?: boolean; onReset?: () => void }) {
+export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOverrides, onReset, overrideKeys }: { frame: Frame; isRoot?: boolean; hasOverrides?: boolean; onResetOverrides?: () => void; onReset?: () => void; overrideKeys?: Set<string> }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
   const updateSize = useFrameStore((s) => s.updateSize)
   const updateSpacing = useFrameStore((s) => s.updateSpacing)
@@ -23,6 +23,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
   const setShowMarginOverlay = useFrameStore((s) => s.setShowMarginOverlay)
   const setShowPaddingOverlay = useFrameStore((s) => s.setShowPaddingOverlay)
   const setShowGapOverlay = useFrameStore((s) => s.setShowGapOverlay)
+  const setPropertyHint = useFrameStore((s) => s.setPropertyHint)
   const filteredSpacing = useMemo(() => filterSpacingScale(SPACING_SCALE, spacingGrid), [spacingGrid])
   const filteredGap = useMemo(() => filterSpacingScale(GAP_SCALE, spacingGrid), [spacingGrid])
   const filteredSize = useMemo(() => filterSpacingScale(SIZE_CONSTRAINT_SCALE, spacingGrid), [spacingGrid])
@@ -67,6 +68,8 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
   const isReverse = boxFrame?.direction?.endsWith('-reverse') ?? false
   const displayOptsActive = isInline || (isFlex && (boxFrame!.wrap || isReverse))
 
+  const ov = (...keys: string[]) => keys.some(k => overrideKeys?.has(k)) ? ' c-overridden' : ''
+
   const isRow = baseDir === 'row'
   const isSpaceBetween = boxFrame?.justify === 'between' || boxFrame?.justify === 'around'
   const justifyValues: ('start' | 'center' | 'end')[] = ['start', 'center', 'end']
@@ -75,12 +78,12 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
   const currentA = boxFrame?.align === 'stretch' ? 'start' : (boxFrame?.align as 'start' | 'center' | 'end') ?? 'start'
 
   return (
-    <Section title="Layout" hasOverrides={hasOverrides} onResetOverrides={onResetOverrides} isDirty={isDirty} onReset={onReset}>
+    <Section title="Layout" hasOverrides={hasOverrides} onResetOverrides={onResetOverrides} onReset={onReset}>
       <div className="flex flex-col gap-2">
         {/* Display mode */}
         {isBox && (
           <>
-            <div className="flex items-center gap-2">
+            <div className={`flex items-center gap-2${ov('display', 'direction')}`}>
               <ToggleGroup
                 value={displayMode}
                 options={[
@@ -116,8 +119,9 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                   trigger={
                     <button
                       type="button"
-                      title="Display Options"
                       className={`c-slot ${displayOptsActive ? 'is-active' : ''}`}
+                      onMouseEnter={() => setPropertyHint('Display Options')}
+                      onMouseLeave={() => setPropertyHint(null)}
                     >
                       <Settings2 size={12} />
                     </button>
@@ -186,30 +190,35 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
 
         {/* W + H + constraints */}
         <div className="flex items-center gap-2">
-          <SizeInput
-            value={frame.width}
-            onChange={(v) => updateSize(frame.id, 'width', v)}
-            label="W"
-            classPrefix="w"
-            parentIsFlex={parentIsFlex}
-            tooltip="Width"
-          />
-          <SizeInput
-            value={frame.height}
-            onChange={(v) => updateSize(frame.id, 'height', v)}
-            label="H"
-            classPrefix="h"
-            parentIsFlex={parentIsFlex}
-            tooltip="Height"
-          />
+          <div className={`contents${ov('width')}`}>
+            <SizeInput
+              value={frame.width}
+              onChange={(v) => updateSize(frame.id, 'width', v)}
+              label="W"
+              classPrefix="w"
+              parentIsFlex={parentIsFlex}
+              tooltip="Width"
+            />
+          </div>
+          <div className={`contents${ov('height')}`}>
+            <SizeInput
+              value={frame.height}
+              onChange={(v) => updateSize(frame.id, 'height', v)}
+              label="H"
+              classPrefix="h"
+              parentIsFlex={parentIsFlex}
+              tooltip="Height"
+            />
+          </div>
           <Popover
               open={constraintsOpen}
               onOpenChange={setConstraintsOpen}
               trigger={
                 <button
                   type="button"
-                  title="Size Constraints"
                   className={`c-slot ${constraintsActive || childPropsActive ? 'is-active' : ''}`}
+                  onMouseEnter={() => setPropertyHint('Size Constraints')}
+                  onMouseLeave={() => setPropertyHint(null)}
                 >
                   <Settings2 size={12} />
                 </button>
@@ -328,7 +337,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
           <>
             {/* Flex: 3x3 grid + gap + overflow — follows W|H column alignment */}
             {isFlex && (
-              <div className="flex gap-2 items-start">
+              <div className={`flex gap-2 items-start${ov('justify', 'align', 'gap')}`}>
                 <div className="flex-1 min-w-0">
                   <div
                     className="grid gap-[2px] rounded p-1 w-full h-[56px]"
@@ -337,6 +346,8 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                       gridTemplateColumns: 'repeat(3, 1fr)',
                       gridTemplateRows: 'repeat(3, 1fr)',
                     }}
+                    onMouseEnter={() => setPropertyHint('Alignment')}
+                    onMouseLeave={() => setPropertyHint(null)}
                   >
                   {(isRow ? alignValues : justifyValues).map((rowVal, ri) =>
                     (isRow ? justifyValues : alignValues).map((colVal, ci) => {
@@ -394,8 +405,9 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                     trigger={
                       <button
                         type="button"
-                        title="Flex Child"
                         className={`c-slot ${childPropsActive ? 'is-active' : ''}`}
+                        onMouseEnter={() => setPropertyHint('Flex Child')}
+                        onMouseLeave={() => setPropertyHint(null)}
                       >
                         <Settings2 size={12} />
                       </button>
@@ -479,34 +491,38 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
             {isGrid && (
               <>
                 <div className="flex items-center gap-2">
-                  <TokenInput
-                    scale={GRID_COLS_SCALE}
-                    value={boxFrame!.gridCols}
-                    onChange={(v) => updateFrame(frame.id, { gridCols: v })}
-                    min={0}
-                    inlineLabel={<Columns3 size={12} />}
-                    classPrefix="grid-cols"
-                    defaultValue={0}
-                    placeholder="Auto"
-                    unit=""
-                    tooltip="Columns"
-                  />
-                  <TokenInput
-                    scale={GRID_ROWS_SCALE}
-                    value={boxFrame!.gridRows}
-                    onChange={(v) => updateFrame(frame.id, { gridRows: v })}
-                    min={0}
-                    inlineLabel={<Rows3 size={12} />}
-                    classPrefix="grid-rows"
-                    defaultValue={0}
-                    placeholder="Auto"
-                    unit=""
-                    tooltip="Rows"
-                  />
+                  <div className={`contents${ov('gridCols')}`}>
+                    <TokenInput
+                      scale={GRID_COLS_SCALE}
+                      value={boxFrame!.gridCols}
+                      onChange={(v) => updateFrame(frame.id, { gridCols: v })}
+                      min={0}
+                      inlineLabel={<Columns3 size={12} />}
+                      classPrefix="grid-cols"
+                      defaultValue={0}
+                      placeholder="Auto"
+                      unit=""
+                      tooltip="Columns"
+                    />
+                  </div>
+                  <div className={`contents${ov('gridRows')}`}>
+                    <TokenInput
+                      scale={GRID_ROWS_SCALE}
+                      value={boxFrame!.gridRows}
+                      onChange={(v) => updateFrame(frame.id, { gridRows: v })}
+                      min={0}
+                      inlineLabel={<Rows3 size={12} />}
+                      classPrefix="grid-rows"
+                      defaultValue={0}
+                      placeholder="Auto"
+                      unit=""
+                      tooltip="Rows"
+                    />
+                  </div>
                   <div className="c-slot-spacer" />
                 </div>
                 <div
-                  className="flex items-center gap-2"
+                  className={`flex items-center gap-2${ov('gap')}`}
                   onMouseEnter={() => setShowGapOverlay(true)}
                   onMouseLeave={() => setShowGapOverlay(false)}
                 >
@@ -530,6 +546,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
 
         {/* Padding + Margin */}
         <div
+          className={ov('padding').trim() || undefined}
           onMouseEnter={() => setShowPaddingOverlay(true)}
           onMouseLeave={() => setShowPaddingOverlay(false)}
         >
@@ -542,6 +559,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
           />
         </div>
         <div
+          className={ov('margin').trim() || undefined}
           onMouseEnter={() => setShowMarginOverlay(true)}
           onMouseLeave={() => setShowMarginOverlay(false)}
         >
@@ -555,7 +573,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
         </div>
 
         {/* Clip */}
-        <div className="flex items-center gap-2">
+        <div className={`flex items-center gap-2${ov('overflow')}`}>
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); updateFrame(frame.id, { overflow: frame.overflow !== 'visible' ? 'visible' : 'hidden' }) }}
@@ -564,7 +582,7 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
             <span className={`c-checkbox ${frame.overflow !== 'visible' ? 'is-checked' : ''}`}>
               {frame.overflow !== 'visible' && <Check size={10} strokeWidth={3} />}
             </span>
-            <span className={`text-[12px] c-dimmed ${frame.overflow !== 'visible' ? 'is-active' : ''}`}>Clip Content</span>
+            <span className={`text-[12px] c-dimmed ${frame.overflow !== 'visible' ? 'is-active' : ''}`}>Clip Overflow</span>
           </button>
           <div className="flex-1" />
           <Popover
@@ -573,7 +591,8 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
               trigger={
                 <button
                   type="button"
-                  title="Overflow"
+                  onMouseEnter={() => setPropertyHint('Overflow')}
+                  onMouseLeave={() => setPropertyHint(null)}
                   className={`c-slot ${
                     frame.overflow === 'visible'
                       ? 'invisible'
@@ -602,6 +621,22 @@ export function LayoutSection({ frame, isRoot: _isRoot, hasOverrides, onResetOve
                 </button>
               </div>
             </Popover>
+        </div>
+
+        {/* Hidden (display:none) */}
+        <div className={`flex items-center gap-2${ov('hidden')}`}>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); updateFrame(frame.id, { hidden: !frame.hidden }) }}
+            className="flex items-center gap-2 cursor-pointer select-none"
+          >
+            <span className={`c-checkbox ${frame.hidden ? 'is-checked' : ''}`}>
+              {frame.hidden && <Check size={10} strokeWidth={3} />}
+            </span>
+            <span className={`text-[12px] c-dimmed ${frame.hidden ? 'is-active' : ''}`}>Hide Element</span>
+          </button>
+          <div className="flex-1" />
+          <div className="c-slot-spacer" />
         </div>
       </div>
     </Section>

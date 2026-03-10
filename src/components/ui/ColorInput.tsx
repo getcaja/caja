@@ -5,6 +5,7 @@ import { ColorGridPicker } from './ColorGridPicker'
 import { TokenInput } from './TokenInput'
 import { OPACITY_SCALE } from '../../data/scales'
 import type { DesignValue } from '../../types/frame'
+import { useFrameStore } from '../../store/frameStore'
 
 const VALID_HEX = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
 
@@ -81,14 +82,21 @@ export function ColorInput({
 
   const hasAlpha = alpha !== undefined && onAlphaChange !== undefined
 
+  // --- Property hint ---
+  const setPropertyHint = useFrameStore((s) => s.setPropertyHint)
+  const hintHandlers = tooltip ? {
+    onMouseEnter: () => setPropertyHint(tooltip),
+    onMouseLeave: () => setPropertyHint(null),
+  } : {}
+
   return (
     <div className="flex gap-2 flex-1 min-w-0">
-      <div className="relative flex-1 min-w-0">
+      <div className="relative flex-1 min-w-0" {...hintHandlers}>
         <div
           className="group c-scale-input flex items-center pr-6 overflow-hidden cursor-text relative"
           onClick={(e) => { if (e.target === e.currentTarget) inputRef.current?.focus() }}
         >
-          <span title={tooltip} className="w-4 shrink-0 flex items-center justify-center">
+          <span className="w-4 shrink-0 flex items-center justify-center">
             {isEmpty ? (
               <span
                 className="w-3 h-3 rounded-full border overflow-hidden"

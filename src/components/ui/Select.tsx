@@ -1,5 +1,6 @@
 import * as RadixSelect from '@radix-ui/react-select'
 import { ChevronDown, Check } from 'lucide-react'
+import { useFrameStore } from '../../store/frameStore'
 
 export interface SelectOption {
   value: string
@@ -19,12 +20,16 @@ interface SelectProps {
 
 export function Select({ value, options, onChange, className, tooltip, inlineLabel, initialValue }: SelectProps) {
   const isInitial = initialValue !== undefined && value === initialValue
+  const setPropertyHint = useFrameStore((s) => s.setPropertyHint)
+  const hintHandlers = tooltip ? {
+    onMouseEnter: () => setPropertyHint(tooltip),
+    onMouseLeave: () => setPropertyHint(null),
+  } : {}
 
   return (
-    <div className={`min-w-0 ${className ?? ''}`}>
+    <div className={`min-w-0 ${className ?? ''}`} {...hintHandlers}>
       <RadixSelect.Root value={value} onValueChange={onChange}>
         <RadixSelect.Trigger
-          title={tooltip}
           className="c-scale-input w-full flex items-center cursor-pointer"
         >
           {inlineLabel && (

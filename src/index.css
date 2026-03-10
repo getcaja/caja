@@ -43,6 +43,7 @@
 
   /* ── Semantic ── */
   --color-destructive: #ef4444;
+  --color-override: #d97706;
 
   /* ── Canvas ── */
   --color-canvas-bg: #121212;
@@ -334,6 +335,23 @@ input[type=number] {
     font-weight: 600;
   }
 
+  /* --- Breakpoint pill (section headers) --- */
+  .c-bp-pill {
+    padding: 2px 4px;
+    font-size: 10px;
+    line-height: 1;
+    font-weight: 600;
+    text-transform: uppercase;
+    border-radius: 3px;
+    color: color-mix(in srgb, var(--color-text-muted) 75%, transparent);
+    background: var(--color-surface-1);
+    user-select: none;
+  }
+  .c-bp-pill.is-active {
+    color: #fff;
+    background: var(--color-accent);
+  }
+
   /* --- Modals --- */
   .c-modal {
     background-color: var(--modal-bg);
@@ -400,6 +418,30 @@ input[type=number] {
     background-color: var(--color-accent);
     border-color: var(--color-accent);
     color: #fff; /* always white on accent bg */
+  }
+
+  /* --- Override indicator (accent dot on inline label/icon) --- */
+  .c-overridden .c-scale-input > span:first-child,
+  .c-overridden .c-toggle-group > button:first-child {
+    position: relative;
+  }
+  .c-overridden .c-scale-input > span:first-child::after,
+  .c-overridden .c-toggle-group > button:first-child::after {
+    content: '';
+    position: absolute;
+    top: 1px;
+    right: -1px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background-color: var(--color-accent);
+    box-shadow: 0 0 0 2px var(--color-surface-1);
+    pointer-events: none;
+  }
+  /* --- Toggle group (ToggleGroup.tsx) --- */
+  .c-toggle-group {
+    background-color: var(--color-surface-1);
+    border: 1px solid var(--input-border);
   }
 
   /* --- Canvas hints (Safari-style) --- */

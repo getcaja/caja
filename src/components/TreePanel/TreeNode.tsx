@@ -161,7 +161,17 @@ export const TreeNode = memo(function TreeNode({ frame, depth, parentId = null, 
     )
   }, [frame.responsive])
 
-  const trailing = undefined
+  // Semantic tag label — shown dimmed on the right (like Subframe)
+  const tagLabel = useMemo(() => {
+    if (isRoot && !editingComponentId) return 'body'
+    if (frame.type === 'box') return (frame as BoxElement).tag
+    if (frame.type === 'text') return (frame as import('../../types/frame').TextElement).tag
+    if (frame.type === 'button') return (frame as import('../../types/frame').ButtonElement).href ? 'a' : 'button'
+    if (frame.type === 'image') return 'img'
+    return frame.type // input, textarea, select
+  }, [frame, isRoot, editingComponentId])
+
+  const trailing = <span className="fg-subtle opacity-50 text-[10px] font-mono shrink-0 select-none">{tagLabel}</span>
 
   return (
     <>

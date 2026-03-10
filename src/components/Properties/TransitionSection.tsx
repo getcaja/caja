@@ -22,13 +22,14 @@ const EASE_OPTIONS = [
   { value: 'in-out', label: 'Ease In Out' },
 ]
 
-export function TransitionSection({ frame, isDirty, onReset }: { frame: Frame; isDirty?: boolean; onReset?: () => void }) {
+export function TransitionSection({ frame, onReset, overrideKeys }: { frame: Frame; onReset?: () => void; overrideKeys?: Set<string> }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
+  const ov = (...keys: string[]) => keys.some(k => overrideKeys?.has(k)) ? ' c-overridden' : ''
 
   return (
-    <Section title="Transition" defaultCollapsed isDirty={isDirty} onReset={onReset}>
+    <Section title="Transition" defaultCollapsed onReset={onReset}>
       <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2">
+        <div className={`flex items-center gap-2${ov('transition')}`}>
           <Select
             value={frame.transition}
             options={TRANSITION_OPTIONS}
@@ -42,27 +43,31 @@ export function TransitionSection({ frame, isDirty, onReset }: { frame: Frame; i
         </div>
         {frame.transition !== 'none' && (
           <div className="flex items-center gap-2">
-            <TokenInput
-              scale={DURATION_SCALE}
-              value={frame.duration}
-              onChange={(v) => updateFrame(frame.id, { duration: v })}
-              min={0}
-              inlineLabel={<Timer size={12} />}
-              classPrefix="duration"
-              defaultValue={0}
-              placeholder="0"
-              unit="ms"
-              tooltip="Duration"
-            />
-            <Select
-              value={frame.ease}
-              options={EASE_OPTIONS}
-              onChange={(v) => updateFrame(frame.id, { ease: v as Frame['ease'] })}
-              className="flex-1"
-              inlineLabel={<Spline size={12} />}
-              initialValue="linear"
-              tooltip="Easing"
-            />
+            <div className={`contents${ov('duration')}`}>
+              <TokenInput
+                scale={DURATION_SCALE}
+                value={frame.duration}
+                onChange={(v) => updateFrame(frame.id, { duration: v })}
+                min={0}
+                inlineLabel={<Timer size={12} />}
+                classPrefix="duration"
+                defaultValue={0}
+                placeholder="0"
+                unit="ms"
+                tooltip="Duration"
+              />
+            </div>
+            <div className={`contents${ov('ease')}`}>
+              <Select
+                value={frame.ease}
+                options={EASE_OPTIONS}
+                onChange={(v) => updateFrame(frame.id, { ease: v as Frame['ease'] })}
+                className="flex-1"
+                inlineLabel={<Spline size={12} />}
+                initialValue="linear"
+                tooltip="Easing"
+              />
+            </div>
             <div className="c-slot-spacer" />
           </div>
         )}

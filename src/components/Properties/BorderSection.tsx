@@ -4,6 +4,7 @@ import { Section } from '../ui/Section'
 import { ColorInput } from '../ui/ColorInput'
 import { ToggleGroup } from '../ui/ToggleGroup'
 import { SpacingControl } from '../ui/SpacingControl'
+import { BorderRadiusControl } from '../ui/BorderRadiusControl'
 import { BORDER_WIDTH_SCALE } from '../../data/scales'
 
 function borderWidthAsSpacing(frame: Frame): Spacing {
@@ -29,16 +30,26 @@ const STYLE_OPTIONS: { value: string; label: string; tooltip?: string }[] = [
   { value: 'dotted', label: 'Dotted', tooltip: 'Dotted Border' },
 ]
 
-export function BorderSection({ frame, isDirty, onReset }: { frame: Frame; isDirty?: boolean; onReset?: () => void }) {
+export function BorderSection({ frame, onReset, overrideKeys }: { frame: Frame; onReset?: () => void; overrideKeys?: Set<string> }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
+  const updateBorderRadius = useFrameStore((s) => s.updateBorderRadius)
+  const ov = (...keys: string[]) => keys.some(k => overrideKeys?.has(k)) ? ' c-overridden' : ''
 
   const hasBorder = frame.border.style !== 'none'
 
   return (
-    <Section title="Border" isDirty={isDirty} onReset={onReset}>
+    <Section title="Border" onReset={onReset}>
       <div className="flex flex-col gap-2">
+        {/* Border Radius */}
+        <div className={ov('borderRadius').trim() || undefined}>
+          <BorderRadiusControl
+            value={frame.borderRadius}
+            onChange={(v) => updateBorderRadius(frame.id, v)}
+          />
+        </div>
+
         {/* Style toggle */}
-        <div className="flex items-center gap-2">
+        <div className={`flex items-center gap-2${ov('border')}`}>
           <ToggleGroup
             value={frame.border.style}
             options={STYLE_OPTIONS}
@@ -64,7 +75,7 @@ export function BorderSection({ frame, isDirty, onReset }: { frame: Frame; isDir
 
         {/* Color */}
         {hasBorder && (
-          <div className="flex items-center gap-2">
+          <div className={`flex items-center gap-2${ov('border')}`}>
             <ColorInput
               value={frame.border.color}
               onChange={(v) => updateFrame(frame.id, { border: { ...frame.border, color: v } })}
@@ -78,14 +89,16 @@ export function BorderSection({ frame, isDirty, onReset }: { frame: Frame; isDir
 
         {/* Width */}
         {hasBorder && (
-          <SpacingControl
-            value={borderWidthAsSpacing(frame)}
-            onChange={(v) => updateFrame(frame.id, { border: { ...frame.border, ...v } })}
-            label="Width"
-            classPrefix="border"
-            labelPrefix="W"
-            scale={BORDER_WIDTH_SCALE}
-          />
+          <div className={ov('border').trim() || undefined}>
+            <SpacingControl
+              value={borderWidthAsSpacing(frame)}
+              onChange={(v) => updateFrame(frame.id, { border: { ...frame.border, ...v } })}
+              label="Width"
+              classPrefix="border"
+              labelPrefix="W"
+              scale={BORDER_WIDTH_SCALE}
+            />
+          </div>
         )}
 
       </div>

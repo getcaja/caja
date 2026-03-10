@@ -3,7 +3,9 @@ import { useFrameStore, findInTree, isRootId } from '../../store/frameStore'
 /** Contextual keyboard shortcut hints — Safari-style bar at bottom-left of canvas. */
 export function CanvasHints() {
   const hint = useFrameStore((s) => {
-    if (!s.showHints || s.previewMode) return null
+    if (s.previewMode) return null
+
+    if (!s.showHints) return null
 
     if (s.canvasDragId) {
       return '\u2318 Hold to drop inside'
@@ -26,6 +28,9 @@ export function CanvasHints() {
     if (s.selectedId && !isRootId(s.selectedId)) {
       return 'Esc to select parent'
     }
+
+    // Property panel hint (lowest priority)
+    if (s.propertyHint) return s.propertyHint
 
     return null
   })
