@@ -26,9 +26,11 @@ const FONT_FAMILY_OPTIONS = [
   { value: 'mono', label: 'Monospace' },
 ]
 
-export function TypographySection({ frame, hasOverrides, onResetOverrides, onReset }: { frame: TextStyles & { id: string; color: DesignValue<string>; colorAlpha: DesignValue<number> }; hasOverrides?: boolean; onResetOverrides?: () => void; onReset?: () => void }) {
+export function TypographySection({ frame, hasOverrides, onResetOverrides, onReset, overrideKeys }: { frame: TextStyles & { id: string; color: DesignValue<string>; colorAlpha: DesignValue<number> }; hasOverrides?: boolean; onResetOverrides?: () => void; onReset?: () => void; overrideKeys?: Set<string> }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
   const [moreOpen, setMoreOpen] = useState(false)
+
+  const ov = (...keys: string[]) => keys.some(k => overrideKeys?.has(k)) ? ' c-overridden' : ''
 
   const moreActive = frame.fontStyle !== 'normal'
     || frame.textDecoration !== 'none'
@@ -39,7 +41,7 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides, onRes
     <Section title="Typography" hasOverrides={hasOverrides} onResetOverrides={onResetOverrides} onReset={onReset}>
       <div className="flex flex-col gap-2">
         {/* Font family */}
-        <div className="flex items-center gap-2">
+        <div className={`flex items-center gap-2${ov('fontFamily')}`}>
           <Select
             options={FONT_FAMILY_OPTIONS}
             value={frame.fontFamily || '__default__'}
@@ -53,7 +55,7 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides, onRes
         </div>
 
         {/* Color */}
-        <div className="flex items-center gap-2">
+        <div className={`flex items-center gap-2${ov('color', 'colorAlpha')}`}>
           <ColorInput
             value={frame.color}
             onChange={(v) => updateFrame(frame.id, { color: v })}
@@ -68,84 +70,96 @@ export function TypographySection({ frame, hasOverrides, onResetOverrides, onRes
 
         {/* Weight + Size */}
         <div className="flex items-center gap-2">
-          <TokenInput
-            scale={FONT_WEIGHT_SCALE}
-            value={frame.fontWeight}
-            onChange={(v) => updateFrame(frame.id, { fontWeight: v })}
-            classPrefix="font"
-            defaultValue={0}
-            placeholder="400"
-            unit=""
-            inlineLabel={<Bold size={12} />}
-            tooltip="Font Weight"
-          />
-          <TokenInput
-            scale={FONT_SIZE_SCALE}
-            value={frame.fontSize}
-            onChange={(v) => {
-              updateFrame(frame.id, { fontSize: v })
-            }}
-            min={1}
-            defaultValue={0}
-            placeholder="16"
-            classPrefix="text"
-            inlineLabel={<ALargeSmall size={12} />}
-            tooltip="Font Size"
-          />
+          <div className={`contents${ov('fontWeight')}`}>
+            <TokenInput
+              scale={FONT_WEIGHT_SCALE}
+              value={frame.fontWeight}
+              onChange={(v) => updateFrame(frame.id, { fontWeight: v })}
+              classPrefix="font"
+              defaultValue={0}
+              placeholder="400"
+              unit=""
+              inlineLabel={<Bold size={12} />}
+              tooltip="Font Weight"
+            />
+          </div>
+          <div className={`contents${ov('fontSize')}`}>
+            <TokenInput
+              scale={FONT_SIZE_SCALE}
+              value={frame.fontSize}
+              onChange={(v) => {
+                updateFrame(frame.id, { fontSize: v })
+              }}
+              min={1}
+              defaultValue={0}
+              placeholder="16"
+              classPrefix="text"
+              inlineLabel={<ALargeSmall size={12} />}
+              tooltip="Font Size"
+            />
+          </div>
           <div className="c-slot-spacer" />
         </div>
 
         {/* Leading + Tracking */}
         <div className="flex items-center gap-2">
-          <TokenInput
-            scale={LINE_HEIGHT_SCALE}
-            value={frame.lineHeight}
-            onChange={(v) => updateFrame(frame.id, { lineHeight: v })}
-            min={0.5}
-            defaultValue={0}
-            unit=""
-            placeholder="Auto"
-            classPrefix="leading"
-            inlineLabel={<SeparatorHorizontal size={12} />}
-            tooltip="Line Height"
-          />
-          <TokenInput
-            scale={LETTER_SPACING_SCALE}
-            value={frame.letterSpacing}
-            onChange={(v) => updateFrame(frame.id, { letterSpacing: v })}
-            min={-10}
-            defaultValue={0}
-            unit="em"
-            placeholder="Auto"
-            classPrefix="tracking"
-            inlineLabel={<SeparatorVertical size={12} />}
-            tooltip="Letter Spacing"
-          />
+          <div className={`contents${ov('lineHeight')}`}>
+            <TokenInput
+              scale={LINE_HEIGHT_SCALE}
+              value={frame.lineHeight}
+              onChange={(v) => updateFrame(frame.id, { lineHeight: v })}
+              min={0.5}
+              defaultValue={0}
+              unit=""
+              placeholder="Auto"
+              classPrefix="leading"
+              inlineLabel={<SeparatorHorizontal size={12} />}
+              tooltip="Line Height"
+            />
+          </div>
+          <div className={`contents${ov('letterSpacing')}`}>
+            <TokenInput
+              scale={LETTER_SPACING_SCALE}
+              value={frame.letterSpacing}
+              onChange={(v) => updateFrame(frame.id, { letterSpacing: v })}
+              min={-10}
+              defaultValue={0}
+              unit="em"
+              placeholder="Auto"
+              classPrefix="tracking"
+              inlineLabel={<SeparatorVertical size={12} />}
+              tooltip="Letter Spacing"
+            />
+          </div>
           <div className="c-slot-spacer" />
         </div>
 
         {/* Align H + Align V + More */}
         <div className="flex items-center gap-2">
-          <ToggleGroup
-            value={frame.textAlign}
-            options={[
-              { value: 'left', label: <AlignLeft size={12} />, tooltip: 'Align Left' },
-              { value: 'center', label: <AlignCenter size={12} />, tooltip: 'Align Center' },
-              { value: 'right', label: <AlignRight size={12} />, tooltip: 'Align Right' },
-            ]}
-            onChange={(v) => updateFrame(frame.id, { textAlign: v as TextStyles['textAlign'] })}
-            className="flex-1"
-          />
-          <ToggleGroup
-            value={frame.textAlignVertical}
-            options={[
-              { value: 'start', label: <ArrowUpToLine size={12} />, tooltip: 'Align Top' },
-              { value: 'center', label: <AlignVerticalCenterIcon size={12} />, tooltip: 'Align Middle' },
-              { value: 'end', label: <ArrowDownToLine size={12} />, tooltip: 'Align Bottom' },
-            ]}
-            onChange={(v) => updateFrame(frame.id, { textAlignVertical: v as TextStyles['textAlignVertical'] })}
-            className="flex-1"
-          />
+          <div className={`contents${ov('textAlign')}`}>
+            <ToggleGroup
+              value={frame.textAlign}
+              options={[
+                { value: 'left', label: <AlignLeft size={12} />, tooltip: 'Align Left' },
+                { value: 'center', label: <AlignCenter size={12} />, tooltip: 'Align Center' },
+                { value: 'right', label: <AlignRight size={12} />, tooltip: 'Align Right' },
+              ]}
+              onChange={(v) => updateFrame(frame.id, { textAlign: v as TextStyles['textAlign'] })}
+              className="flex-1"
+            />
+          </div>
+          <div className={`contents${ov('textAlignVertical')}`}>
+            <ToggleGroup
+              value={frame.textAlignVertical}
+              options={[
+                { value: 'start', label: <ArrowUpToLine size={12} />, tooltip: 'Align Top' },
+                { value: 'center', label: <AlignVerticalCenterIcon size={12} />, tooltip: 'Align Middle' },
+                { value: 'end', label: <ArrowDownToLine size={12} />, tooltip: 'Align Bottom' },
+              ]}
+              onChange={(v) => updateFrame(frame.id, { textAlignVertical: v as TextStyles['textAlignVertical'] })}
+              className="flex-1"
+            />
+          </div>
           <Popover
             open={moreOpen}
             onOpenChange={setMoreOpen}

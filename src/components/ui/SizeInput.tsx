@@ -324,8 +324,15 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
 
   const hasFixedToken = isFixed && fixedToken !== null
 
+  // --- Property hint (show tooltip in canvas hint pill) ---
+  const setPropertyHint = useFrameStore((s) => s.setPropertyHint)
+  const hintHandlers = tooltip ? {
+    onMouseEnter: () => setPropertyHint(tooltip),
+    onMouseLeave: () => setPropertyHint(null),
+  } : {}
+
   return (
-    <div ref={containerRef} className="relative flex-1 min-w-0">
+    <div ref={containerRef} className="relative flex-1 min-w-0" {...hintHandlers}>
       {hasFixedToken ? (
         // Fixed + token: pill (non-editable) + Unlink
         <div
@@ -349,7 +356,7 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
             }
           }}
         >
-          <span title={tooltip} className="w-4 shrink-0 flex items-center justify-center fg-muted">{label}</span>
+          <span className="w-4 shrink-0 flex items-center justify-center fg-muted">{label}</span>
           <span className="c-pill">
             {filteredScale.find(s => s.token === fixedToken)?.label ?? `${fixedNumeric}px`}
           </span>
@@ -390,7 +397,7 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
             }
           }}
         >
-          <span title={tooltip} className="w-4 shrink-0 flex items-center justify-center fg-muted">{label}</span>
+          <span className="w-4 shrink-0 flex items-center justify-center fg-muted">{label}</span>
           <span className="c-pill">
             {pillText}
           </span>
@@ -415,7 +422,7 @@ export function SizeInput({ value, onChange, label, classPrefix: _classPrefix, p
           className="group c-scale-input flex items-center pr-6 overflow-hidden cursor-text relative"
           onClick={() => inputRef.current?.focus()}
         >
-          <span title={tooltip} className={`w-4 shrink-0 flex items-center justify-center c-dimmed ${isDefault ? '' : 'is-active'}`}>{label}</span>
+          <span className={`w-4 shrink-0 flex items-center justify-center c-dimmed ${isDefault ? '' : 'is-active'}`}>{label}</span>
 
           <input
             ref={inputRef}

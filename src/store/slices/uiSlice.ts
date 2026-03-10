@@ -105,7 +105,9 @@ export interface UiSlice {
   showHints: boolean
   deepSelect: boolean
   canvasResizing: boolean
+  propertyHint: string | null
 
+  setPropertyHint: (hint: string | null) => void
   setCanvasResizing: (value: boolean) => void
   setDeepSelect: (value: boolean) => void
   setShowHints: (value: boolean) => void
@@ -152,7 +154,9 @@ export const createUiSlice: StateCreator<FrameStore, [], [], UiSlice> = (set, ge
     showHints: initialViewPrefs.showHints,
     deepSelect: false,
     canvasResizing: false,
+    propertyHint: null,
 
+    setPropertyHint: (hint) => set({ propertyHint: hint }),
     setCanvasResizing: (value) => set({ canvasResizing: value }),
     setDeepSelect: (value) => set({ deepSelect: value }),
     setShowHints: (value) => {

@@ -254,6 +254,7 @@ export type ResponsiveOverrides = Partial<
     | 'minWidth' | 'maxWidth' | 'minHeight' | 'maxHeight'
     | 'grow' | 'shrink' | 'alignSelf'
     | 'bg' | 'opacity' | 'hidden'
+    | 'borderRadius' | 'border'
   > &
   Pick<BoxElement,
     | 'display' | 'direction' | 'justify' | 'align' | 'gap' | 'wrap'

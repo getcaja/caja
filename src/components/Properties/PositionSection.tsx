@@ -33,8 +33,15 @@ function AnchorBox({ frame }: { frame: Frame }) {
   const pinCls = (active: boolean) =>
     active ? 'bg-accent' : 'bg-surface-3 hover:bg-emphasis'
 
+  const setPropertyHint = useFrameStore((s) => s.setPropertyHint)
+
   return (
-    <div className="rounded-lg relative w-full h-full" style={{ backgroundColor: 'var(--input-bg)' }}>
+    <div
+      className="rounded-lg relative w-full h-full"
+      style={{ backgroundColor: 'var(--input-bg)' }}
+      onMouseEnter={() => setPropertyHint('Inset Anchors')}
+      onMouseLeave={() => setPropertyHint(null)}
+    >
       {/* Inner rectangle */}
       <div className="absolute inset-[30%] rounded border border-surface-3" />
       {/* Crosshair */}
@@ -69,16 +76,17 @@ function AnchorBox({ frame }: { frame: Frame }) {
   )
 }
 
-export function PositionSection({ frame, onReset }: { frame: Frame; onReset?: () => void }) {
+export function PositionSection({ frame, onReset, overrideKeys }: { frame: Frame; onReset?: () => void; overrideKeys?: Set<string> }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
   const updateSpacing = useFrameStore((s) => s.updateSpacing)
+  const ov = (...keys: string[]) => keys.some(k => overrideKeys?.has(k)) ? ' c-overridden' : ''
   const isPositioned = frame.position !== 'static' && frame.position !== 'relative'
 
   return (
     <Section title="Position" defaultCollapsed onReset={onReset}>
       <div className="flex flex-col gap-2">
         {/* Row: Select + action slot */}
-        <div className="flex items-center gap-2">
+        <div className={`flex items-center gap-2${ov('position')}`}>
           <Select
             value={frame.position}
             options={POSITION_OPTIONS}
@@ -94,7 +102,7 @@ export function PositionSection({ frame, onReset }: { frame: Frame; onReset?: ()
         {isPositioned && (
           <>
             {/* Row: AnchorBox | Top+Bottom | Right+Left | action slot */}
-            <div className="flex gap-2 items-start">
+            <div className={`flex gap-2 items-start${ov('inset')}`}>
               <div className="flex-1 min-w-0 self-stretch">
                 <AnchorBox frame={frame} />
               </div>
@@ -141,7 +149,7 @@ export function PositionSection({ frame, onReset }: { frame: Frame; onReset?: ()
               <div className="c-slot-spacer" />
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className={`flex items-center gap-2${ov('zIndex')}`}>
               <TokenInput
                 scale={Z_INDEX_SCALE}
                 value={frame.zIndex}

@@ -44,12 +44,19 @@ export function Properties() {
   // Store auto-selects root when selection clears; keep UI fallback as safety net
   const frame = selected ?? root
 
-  // Compute which keys have responsive overrides at the current breakpoint
+  // Compute which keys have responsive overrides that actually differ from base
   const overrideKeys = useMemo(() => {
     if (activeBreakpoint === 'base') return new Set<string>()
     const overrides = frame.responsive?.[activeBreakpoint]
     if (!overrides) return new Set<string>()
-    return new Set(Object.keys(overrides))
+    const keys = new Set<string>()
+    for (const key of Object.keys(overrides)) {
+      const ov = overrides[key as keyof typeof overrides]
+      const base = (frame as unknown as Record<string, unknown>)[key]
+      // Only mark as override if the value actually differs from base
+      if (JSON.stringify(ov) !== JSON.stringify(base)) keys.add(key)
+    }
+    return keys
   }, [frame, activeBreakpoint])
 
   const makeResetHandler = useCallback((section: string) => {
@@ -76,39 +83,31 @@ export function Properties() {
   return (
     <div key={frame.id} className="">
       <ElementSection frame={effective} isRoot={isRoot} />
-      <PositionSection frame={effective}
-
+      <PositionSection frame={effective} overrideKeys={overrideKeys}
         onReset={() => resetSection(positionResetValues())}
       />
-      <LayoutSection frame={effective} isRoot={isRoot}
+      <LayoutSection frame={effective} isRoot={isRoot} overrideKeys={overrideKeys}
         hasOverrides={sectionHasOverrides('Layout', overrideKeys)} onResetOverrides={makeResetHandler('Layout')}
-
         onReset={() => resetSection(layoutResetValues(effective))}
       />
-      {hasTextStyles && <TypographySection frame={effective}
+      {hasTextStyles && <TypographySection frame={effective} overrideKeys={overrideKeys}
         hasOverrides={sectionHasOverrides('Typography', overrideKeys)} onResetOverrides={makeResetHandler('Typography')}
-
         onReset={() => resetSection(typographyResetValues())}
       />}
-      <FillSection frame={effective}
+      <FillSection frame={effective} overrideKeys={overrideKeys}
         hasOverrides={sectionHasOverrides('Fill', overrideKeys)} onResetOverrides={makeResetHandler('Fill')}
-
         onReset={() => resetSection(fillResetValues())}
       />
-      <BorderSection frame={effective}
-
+      <BorderSection frame={effective} overrideKeys={overrideKeys}
         onReset={() => resetSection(borderResetValues())}
       />
-      <EffectsSection frame={effective}
-
+      <EffectsSection frame={effective} overrideKeys={overrideKeys}
         onReset={() => resetSection(effectsResetValues())}
       />
-      <TransformSection frame={effective}
-
+      <TransformSection frame={effective} overrideKeys={overrideKeys}
         onReset={() => resetSection(transformResetValues())}
       />
-      <TransitionSection frame={effective}
-
+      <TransitionSection frame={effective} overrideKeys={overrideKeys}
         onReset={() => resetSection(transitionResetValues())}
       />
       <AdvancedSection frame={effective} />

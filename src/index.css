@@ -43,6 +43,7 @@
 
   /* ── Semantic ── */
   --color-destructive: #ef4444;
+  --color-override: #d97706;
 
   /* ── Canvas ── */
   --color-canvas-bg: #121212;
@@ -419,6 +420,43 @@ input[type=number] {
     color: #fff; /* always white on accent bg */
   }
 
+  /* --- Override indicator (accent dot on inline label/icon) --- */
+  .c-overridden .c-scale-input > span:first-child,
+  .c-overridden .c-toggle-group > button:first-child {
+    position: relative;
+  }
+  .c-overridden .c-scale-input > span:first-child::after,
+  .c-overridden .c-toggle-group > button:first-child::after {
+    content: '';
+    position: absolute;
+    top: 1px;
+    right: -1px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background-color: var(--color-accent);
+    box-shadow: 0 0 0 2px var(--color-surface-1);
+    pointer-events: none;
+  }
+  /* Checkbox override: dot after label text */
+  .c-overridden .c-override-dot {
+    display: block;
+  }
+  .c-override-dot {
+    display: none;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background-color: var(--color-accent);
+    flex-shrink: 0;
+  }
+
+  /* --- Toggle group (ToggleGroup.tsx) --- */
+  .c-toggle-group {
+    background-color: var(--color-surface-1);
+    border: 1px solid var(--input-border);
+  }
+
   /* --- Canvas hints (Safari-style) --- */
   .c-canvas-hint {
     position: absolute;
@@ -432,26 +470,6 @@ input[type=number] {
     pointer-events: none;
     z-index: 10;
     white-space: nowrap;
-  }
-
-  /* --- Canvas resize handles (same style as panel dividers) --- */
-  .c-canvas-handle {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 8px;
-    cursor: col-resize;
-    z-index: 10;
-  }
-  .c-canvas-handle > div {
-    position: absolute;
-    inset: 0;
-    left: 2px;
-    width: 4px;
-  }
-  .c-canvas-handle:hover > div,
-  .c-canvas-handle.is-active > div {
-    background: var(--color-accent);
   }
 
   /* --- Menus & popups --- */

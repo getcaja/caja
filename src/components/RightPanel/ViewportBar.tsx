@@ -1,13 +1,14 @@
 import { useState, useRef, useMemo, useEffect } from 'react'
 import { useFrameStore } from '../../store/frameStore'
-import { ChevronDown, Monitor, Smartphone, RotateCcw } from 'lucide-react'
+import { ChevronDown, ArrowRightLeft, Monitor, Smartphone, RotateCcw } from 'lucide-react'
 import { ZOOM_LEVELS } from '../Canvas/ZoomBar'
 import { canvasZoomTo } from '../Canvas/CanvasInline'
 import type { Frame, Breakpoint } from '../../types/frame'
 
 const BREAKPOINTS: { label: string; width: number | null; icon: typeof Monitor; bp: Breakpoint }[] = [
-  { label: 'Full', width: null, icon: Monitor, bp: 'base' },
-  { label: 'Mobile', width: 375, icon: Smartphone, bp: 'sm' },
+  { label: 'Fluid', width: null, icon: ArrowRightLeft, bp: 'base' },
+  { label: 'Desktop', width: 1280, icon: Monitor, bp: 'base' },
+  { label: 'Mobile', width: 640, icon: Smartphone, bp: 'sm' },
 ]
 
 function Dropdown({ trigger, menu, menuClassName }: {
@@ -94,29 +95,39 @@ export function ViewportBar() {
   }, [root])
 
   const activeBpHasOverrides = activeBreakpoint !== 'base' && overrideCounts[activeBreakpoint] > 0
+  // Only show reset when a fixed breakpoint is explicitly selected (not in Dynamic/fluid mode)
+  const showReset = activeBpHasOverrides && canvasWidth != null
 
   const currentBp = BREAKPOINTS.find((bp) => bp.width === canvasWidth) ?? BREAKPOINTS[0]
+  const isCustomWidth = canvasWidth != null && !BREAKPOINTS.some((bp) => bp.width === canvasWidth)
+  const currentLabel = isCustomWidth ? `${canvasWidth}px` : currentBp.label
   const CurrentIcon = currentBp.icon
 
-  const breakpointMenu = BREAKPOINTS.map((bpItem) => {
+  const breakpointMenu = BREAKPOINTS.map((bpItem, i) => {
     const Icon = bpItem.icon
     const active = bpItem.width === canvasWidth
     const hasOverrides = bpItem.bp !== 'base' && overrideCounts[bpItem.bp] > 0
     return (
-      <button
-        key={bpItem.label}
-        className={`c-menu-item ${active ? 'c-menu-item-active' : ''}`}
-        onClick={() => { setCanvasWidth(bpItem.width); setActiveBreakpoint(bpItem.bp) }}
-      >
-        <span className="relative">
-          <Icon size={12} />
-          {hasOverrides && <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-accent" />}
-        </span>
-        {bpItem.label}
-        {bpItem.bp !== 'base' && <span className="px-1 py-px text-[9px] leading-none font-medium rounded bg-accent/15 text-accent-text uppercase">{bpItem.bp}</span>}
-        <span className="flex-1" />
-        {bpItem.width && <span className="fg-muted text-[10px]">{bpItem.width}px</span>}
-      </button>
+      <div key={bpItem.label}>
+        {i === 1 && <div className="h-px bg-border my-1" />}
+        <button
+          className={`c-menu-item ${active ? 'c-menu-item-active' : ''}`}
+          onClick={() => { setCanvasWidth(bpItem.width); setActiveBreakpoint(bpItem.bp) }}
+        >
+          <span className="relative">
+            <Icon size={12} />
+            {hasOverrides && <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-accent" />}
+          </span>
+          <span className="flex flex-col items-start">
+            <span>{bpItem.label}</span>
+            <span className="fg-muted text-[10px]">{
+              !bpItem.width ? 'Auto Switching' :
+              bpItem.bp === 'sm' ? 'sm < 640px' : 'baseline > 640px'
+            }</span>
+          </span>
+          <span className="flex-1" />
+        </button>
+      </div>
     )
   })
 
@@ -157,18 +168,18 @@ export function ViewportBar() {
             <button className="h-6 flex items-center gap-2 rounded fg-default" title={currentBp.label}>
               <span className="relative">
                 <CurrentIcon size={12} />
-                {activeBpHasOverrides && (
+                {showReset && (
                   <span className="absolute -top-0.5 -right-1 w-1.5 h-1.5 rounded-full bg-accent" />
                 )}
               </span>
-              <span className="text-[12px]">{currentBp.label}</span>
+              <span className="text-[12px]">{currentLabel}</span>
               <ChevronDown size={8} />
             </button>
           }
-          menuClassName="min-w-[180px]"
+          menuClassName="min-w-[220px]"
           menu={breakpointMenu}
         />
-        {activeBpHasOverrides && (
+        {showReset && (
           <button
             onClick={() => clearAllResponsiveOverrides(activeBreakpoint as 'md' | 'sm')}
             className="c-icon-btn w-5 h-5"

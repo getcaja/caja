@@ -1,4 +1,5 @@
 import * as RadixToggleGroup from '@radix-ui/react-toggle-group'
+import { useFrameStore } from '../../store/frameStore'
 
 interface ToggleGroupProps<T extends string> {
   value: T
@@ -20,14 +21,14 @@ export function ToggleGroup<T extends string>({
       type="single"
       value={value}
       onValueChange={(v) => { if (v) onChange(v as T) }}
-      className={`flex rounded overflow-hidden h-6 ${className ?? ''}`}
-      style={{ backgroundColor: 'var(--color-surface-1)', border: '1px solid var(--input-border)' }}
+      className={`c-toggle-group flex rounded overflow-hidden h-6 ${className ?? ''}`}
     >
       {options.map((opt) => (
         <RadixToggleGroup.Item
           key={opt.value}
           value={opt.value}
-          title={opt.tooltip}
+          onMouseEnter={opt.tooltip ? () => useFrameStore.getState().setPropertyHint(opt.tooltip!) : undefined}
+          onMouseLeave={opt.tooltip ? () => useFrameStore.getState().setPropertyHint(null) : undefined}
           className={`${compact ? '' : 'flex-1 '}px-1.5 text-[12px] flex items-center justify-center ${
             opt.disabled
               ? 'fg-disabled cursor-not-allowed'

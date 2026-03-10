@@ -74,6 +74,7 @@ export function Section({
   onReset?: () => void
 }) {
   const activeBreakpoint = useFrameStore((s) => s.activeBreakpoint)
+  const setPropertyHint = useFrameStore((s) => s.setPropertyHint)
   const [collapsed, setCollapsed] = useState(() => collapsible ? readCollapsed(title, defaultCollapsed) : false)
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -97,7 +98,12 @@ export function Section({
           />
         )}
         {icon && <span className="fg-icon-subtle">{icon}</span>}
-        <span className={`c-section-title${collapsible ? ' cursor-pointer select-none' : ''}`} onClick={collapsible ? toggle : undefined}>{title}</span>
+        <span
+          className={`c-section-title${collapsible ? ' cursor-pointer select-none' : ''}`}
+          onClick={collapsible ? toggle : undefined}
+          onMouseEnter={() => setPropertyHint(`${title} Section`)}
+          onMouseLeave={() => setPropertyHint(null)}
+        >{title}</span>
         <div className="flex-1" />
         {onReset && activeBreakpoint !== 'base' && (
           <span className={`c-bp-pill ${hasOverrides ? 'is-active' : ''}`}>{activeBreakpoint}</span>
@@ -107,6 +113,8 @@ export function Section({
             <button
               onClick={(e) => { e.stopPropagation(); setMenuOpen((p) => !p) }}
               className={`c-slot ${menuOpen ? 'is-active' : ''}`}
+              onMouseEnter={() => setPropertyHint(`${title} Options`)}
+              onMouseLeave={() => setPropertyHint(null)}
             >
               <Ellipsis size={12} />
             </button>

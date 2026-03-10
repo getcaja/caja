@@ -518,8 +518,27 @@ export const createCoreTreeSlice: StateCreator<FrameStore, [], [], CoreTreeSlice
 
   updateBorderRadius: (id, values) =>
     set((state) => {
+      const bp = state.activeBreakpoint
       const history = pushHistory(state)
-      const newRoot = updateInTree(state.root, id, (f) => ({ ...f, borderRadius: { ...f.borderRadius, ...values } })) as BoxElement
+      if (bp === 'base') {
+        const newRoot = updateInTree(state.root, id, (f) => ({ ...f, borderRadius: { ...f.borderRadius, ...values } })) as BoxElement
+        return { ...updateActiveRoot(state, newRoot), ...history }
+      }
+      // Write borderRadius to responsive overrides
+      const newRoot = updateInTree(state.root, id, (f) => {
+        const existingOverride = (f.responsive?.[bp]?.borderRadius ?? f.borderRadius) as BorderRadius
+        const newBR = { ...existingOverride, ...values }
+        const existing = f.responsive?.[bp] ?? {}
+        const merged = { ...existing, borderRadius: newBR } as ResponsiveOverrides
+        // Remove if matches base (unless larger bp overrides the same key)
+        const largerBpHasKey = bp === 'sm' && f.responsive?.md && 'borderRadius' in f.responsive.md
+        if (!largerBpHasKey && shallowEqual(merged.borderRadius, f.borderRadius)) {
+          delete merged.borderRadius
+        }
+        const responsive = { ...f.responsive, [bp]: Object.keys(merged).length > 0 ? merged : undefined }
+        if (!responsive.md && !responsive.sm) return { ...f, responsive: undefined } as Frame
+        return { ...f, responsive } as Frame
+      }) as BoxElement
       return { ...updateActiveRoot(state, newRoot), ...history }
     }),
 

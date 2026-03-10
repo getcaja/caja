@@ -39,16 +39,17 @@ const BG_REPEAT_OPTIONS = [
 
 type FillMode = 'solid' | 'image'
 
-export function FillSection({ frame, hasOverrides, onResetOverrides, onReset }: { frame: Frame; hasOverrides?: boolean; onResetOverrides?: () => void; onReset?: () => void }) {
+export function FillSection({ frame, hasOverrides, onResetOverrides, onReset, overrideKeys }: { frame: Frame; hasOverrides?: boolean; onResetOverrides?: () => void; onReset?: () => void; overrideKeys?: Set<string> }) {
   const updateFrame = useFrameStore((s) => s.updateFrame)
   const filePath = useFrameStore((s) => s.filePath)
   const [mode, setMode] = useState<FillMode>(frame.bgImage ? 'image' : 'solid')
+  const ov = (...keys: string[]) => keys.some(k => overrideKeys?.has(k)) ? ' c-overridden' : ''
 
   return (
     <Section title="Fill" hasOverrides={hasOverrides} onResetOverrides={onResetOverrides} onReset={onReset}>
       <div className="flex flex-col gap-2">
         {/* Element Opacity */}
-        <div className="flex items-center gap-2">
+        <div className={`flex items-center gap-2${ov('opacity')}`}>
           <TokenInput
             scale={OPACITY_SCALE}
             value={frame.opacity}
@@ -81,7 +82,7 @@ export function FillSection({ frame, hasOverrides, onResetOverrides, onReset }: 
 
         {/* Solid mode */}
         {mode === 'solid' && (
-          <div className="flex items-center gap-2">
+          <div className={`flex items-center gap-2${ov('bg', 'bgAlpha')}`}>
             <ColorInput
               value={frame.bg}
               onChange={(v) => updateFrame(frame.id, { bg: v })}
@@ -98,7 +99,7 @@ export function FillSection({ frame, hasOverrides, onResetOverrides, onReset }: 
         {/* Image mode */}
         {mode === 'image' && (
           <>
-            <div className="flex items-center gap-2">
+            <div className={`flex items-center gap-2${ov('bgImage')}`}>
               <div className="flex-1 min-w-0">
                 {frame.bgImage && isLocalAssetPath(frame.bgImage) ? (
                   /* Read-only display for local assets — show filename only */
@@ -168,27 +169,31 @@ export function FillSection({ frame, hasOverrides, onResetOverrides, onReset }: 
             {frame.bgImage && (
               <>
                 <div className="flex items-center gap-2">
-                  <Select
-                    value={frame.bgSize}
-                    options={BG_SIZE_OPTIONS}
-                    onChange={(v) => updateFrame(frame.id, { bgSize: v as Frame['bgSize'] })}
-                    className="flex-1"
-                    inlineLabel={lbl('Sz')}
-                    initialValue="auto"
-                    tooltip="Background Size"
-                  />
-                  <Select
-                    value={frame.bgPosition}
-                    options={BG_POSITION_OPTIONS}
-                    onChange={(v) => updateFrame(frame.id, { bgPosition: v as Frame['bgPosition'] })}
-                    className="flex-1"
-                    inlineLabel={lbl('Ps')}
-                    initialValue="center"
-                    tooltip="Background Position"
-                  />
+                  <div className={`contents${ov('bgSize')}`}>
+                    <Select
+                      value={frame.bgSize}
+                      options={BG_SIZE_OPTIONS}
+                      onChange={(v) => updateFrame(frame.id, { bgSize: v as Frame['bgSize'] })}
+                      className="flex-1"
+                      inlineLabel={lbl('Sz')}
+                      initialValue="auto"
+                      tooltip="Background Size"
+                    />
+                  </div>
+                  <div className={`contents${ov('bgPosition')}`}>
+                    <Select
+                      value={frame.bgPosition}
+                      options={BG_POSITION_OPTIONS}
+                      onChange={(v) => updateFrame(frame.id, { bgPosition: v as Frame['bgPosition'] })}
+                      className="flex-1"
+                      inlineLabel={lbl('Ps')}
+                      initialValue="center"
+                      tooltip="Background Position"
+                    />
+                  </div>
                   <div className="c-slot-spacer" />
                 </div>
-                <div className="flex items-center gap-2">
+                <div className={`flex items-center gap-2${ov('bgRepeat')}`}>
                   <Select
                     value={frame.bgRepeat}
                     options={BG_REPEAT_OPTIONS}

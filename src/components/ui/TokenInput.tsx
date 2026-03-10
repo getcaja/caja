@@ -89,9 +89,16 @@ export function TokenInput(props: TokenInputProps) {
     }
   }, [hasToken])
 
-  // --- Inline label (with optional title tooltip) ---
+  // --- Property hint (show tooltip in canvas hint pill) ---
+  const setPropertyHint = useFrameStore((s) => s.setPropertyHint)
+  const hintHandlers = tooltip ? {
+    onMouseEnter: () => setPropertyHint(tooltip),
+    onMouseLeave: () => setPropertyHint(null),
+  } : {}
+
+  // --- Inline label ---
   const inlineLabelEl = inlineLabel ? (
-    <span title={tooltip} className={`w-4 shrink-0 flex items-center justify-center c-dimmed ${isActive ? 'is-active' : ''}`}>{inlineLabel}</span>
+    <span className={`w-4 shrink-0 flex items-center justify-center c-dimmed ${isActive ? 'is-active' : ''}`}>{inlineLabel}</span>
   ) : null
 
   // --- Normalize items for dropdown ---
@@ -427,8 +434,8 @@ export function TokenInput(props: TokenInputProps) {
   // --- Render ---
   return (
     <div className="flex items-center gap-2 min-w-0 flex-1">
-      {label && !inlineLabel && <span title={tooltip || label} className="c-label">{label}</span>}
-      <div ref={containerRef} className="relative flex-1 min-w-0">
+      {label && !inlineLabel && <span className="c-label">{label}</span>}
+      <div ref={containerRef} className="relative flex-1 min-w-0" {...hintHandlers}>
         {hasToken ? (
           // Tokenized state — pill, click opens dropdown, button detaches
           <div
