@@ -3,7 +3,8 @@ import { useFrameStore } from '../../store/frameStore'
 import { ChevronDown, ArrowRightLeft, Monitor, Smartphone, MonitorUp, RotateCcw } from 'lucide-react'
 import { ZOOM_LEVELS } from '../Canvas/ZoomBar'
 import { canvasZoomTo } from '../Canvas/CanvasInline'
-import type { Frame } from '../../types/frame'
+import type { Frame, Breakpoint } from '../../types/frame'
+import { BP_LABEL } from '../../types/frame'
 
 // Preview presets — only control canvasWidth, breakpoint is derived from width
 const PRESETS: { label: string; width: number | null; icon: typeof Monitor; subtitle: string }[] = [
@@ -178,6 +179,16 @@ export function ViewportBar() {
             <RotateCcw size={10} />
           </button>
         )}
+      </div>
+      <div className="flex items-center h-6 rounded overflow-hidden">
+        {(['md', 'base', 'xl'] as Breakpoint[]).map((bp) => (
+          <span
+            key={bp}
+            className={`px-2 h-full flex items-center text-[12px] ${activeBreakpoint === bp ? 'fg-default c-segment-active' : 'c-dimmed'}`}
+          >
+            {BP_LABEL[bp]}
+          </span>
+        ))}
       </div>
       <Dropdown
         trigger={

@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { ChevronRight, Ellipsis } from 'lucide-react'
 import { useFrameStore } from '../../store/frameStore'
+import { BP_LABEL } from '../../types/frame'
+import type { Breakpoint } from '../../types/frame'
 
 function getStorageKey(title: string) {
   return `caja-section-${title}`
@@ -106,8 +108,8 @@ export function Section({
           onMouseLeave={() => setPropertyHint(null)}
         >{title}</span>
         <div className="flex-1" />
-        {onReset && activeBreakpoint !== 'base' && (
-          <span className={`c-bp-pill ${hasOverrides ? 'is-active' : ''}`}>{activeBreakpoint}</span>
+        {onReset && (
+          <span className={`c-bp-pill ${hasOverrides ? 'is-active' : ''}`}>{BP_LABEL[activeBreakpoint as Breakpoint]}</span>
         )}
         {onReset && (
           <div className="relative">

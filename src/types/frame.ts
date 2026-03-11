@@ -247,6 +247,13 @@ export interface Page {
 // Responsive breakpoints — desktop-first: base = 768–1280px (default), md = ≤768px (small), xl = ≥1280px (large)
 export type Breakpoint = 'base' | 'md' | 'xl'
 
+/** Caja UI labels for breakpoints (abstracts Tailwind internals) */
+export const BP_LABEL: Record<Breakpoint, string> = {
+  base: 'MD',
+  md: 'SM',
+  xl: 'LG',
+}
+
 // Sparse partial overrides — only properties that differ from base
 export type ResponsiveOverrides = Partial<
   Pick<BaseElement,

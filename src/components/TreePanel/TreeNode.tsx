@@ -146,23 +146,15 @@ export const TreeNode = memo(function TreeNode({ frame, depth, parentId = null, 
   const handleMouseEnter = useCallback(() => hover(frame.id, 'tree'), [frame.id, hover])
   const handleMouseLeave = useCallback(() => hover(null, 'tree'), [hover])
 
-  // Responsive override badges — show which breakpoints have overrides
+  // Responsive override dot — accent dot if frame has any responsive overrides
   const responsiveBadges = useMemo(() => {
     const resp = frame.responsive
     if (!resp) return null
-    const bps: string[] = []
-    if (resp.md && Object.keys(resp.md).length > 0) bps.push('SM')
-    if (resp.xl && Object.keys(resp.xl).length > 0) bps.push('LG')
-    if (bps.length === 0) return null
-    return (
-      <span className="flex items-center gap-0.5 shrink-0">
-        {bps.map((bp) => (
-          <span key={bp} className="px-1 py-px text-[9px] leading-none font-medium rounded bg-accent/15 text-accent-text select-none uppercase">
-            {bp}
-          </span>
-        ))}
-      </span>
-    )
+    const hasOverrides =
+      (resp.md && Object.keys(resp.md).length > 0) ||
+      (resp.xl && Object.keys(resp.xl).length > 0)
+    if (!hasOverrides) return null
+    return <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
   }, [frame.responsive])
 
   const handleToggleHidden = useCallback((e: React.MouseEvent) => {
