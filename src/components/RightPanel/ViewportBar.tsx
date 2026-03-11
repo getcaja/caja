@@ -1,18 +1,30 @@
 import { useState, useRef, useMemo, useEffect } from 'react'
 import { useFrameStore } from '../../store/frameStore'
-import { ChevronDown, ArrowRightLeft, Monitor, Smartphone, MonitorUp, RotateCcw } from 'lucide-react'
+import { ChevronDown, Monitor, Smartphone, Laptop, RotateCcw } from 'lucide-react'
 import { ZOOM_LEVELS } from '../Canvas/ZoomBar'
 import { canvasZoomTo } from '../Canvas/CanvasInline'
 import type { Frame, Breakpoint } from '../../types/frame'
-import { BP_LABEL } from '../../types/frame'
 
-// Preview presets — only control canvasWidth, breakpoint is derived from width
-const PRESETS: { label: string; width: number | null; icon: typeof Monitor; subtitle: string }[] = [
-  { label: 'Fluid', width: null, icon: ArrowRightLeft, subtitle: 'Auto Switching' },
-  { label: 'Mobile', width: 375, icon: Smartphone, subtitle: '375px' },
-  { label: 'Desktop', width: 1280, icon: Monitor, subtitle: '1280px' },
-  { label: 'Large', width: 1440, icon: MonitorUp, subtitle: '1440px' },
-]
+/** Viewport modes map to canvasWidth values: null = fluid (LG), number = fixed */
+export const VIEWPORT_MODES: Breakpoint[] = ['xl', 'base', 'md']
+
+export const MODE_WIDTH: Record<Breakpoint, number | null> = {
+  xl: null,
+  base: 1024,
+  md: 375,
+}
+
+const MODE_LABEL: Record<Breakpoint, string> = {
+  xl: 'LG',
+  base: 'MD',
+  md: 'SM',
+}
+
+const MODE_ICON: Record<Breakpoint, typeof Monitor> = {
+  xl: Monitor,
+  base: Laptop,
+  md: Smartphone,
+}
 
 function Dropdown({ trigger, menu, menuClassName }: {
   trigger: React.ReactNode
@@ -78,9 +90,10 @@ function Dropdown({ trigger, menu, menuClassName }: {
   )
 }
 
+const MODES: Breakpoint[] = VIEWPORT_MODES
+
 export function ViewportBar() {
   const canvasZoom = useFrameStore((s) => s.canvasZoom)
-  const canvasWidth = useFrameStore((s) => s.canvasWidth)
   const setCanvasWidth = useFrameStore((s) => s.setCanvasWidth)
   const activeBreakpoint = useFrameStore((s) => s.activeBreakpoint)
   const root = useFrameStore((s) => s.root)
@@ -97,35 +110,26 @@ export function ViewportBar() {
     return counts
   }, [root])
 
+  const canvasWidth = useFrameStore((s) => s.canvasWidth)
+
+  // Observe actual rendered canvas width
+  const [displayWidth, setDisplayWidth] = useState<number | null>(null)
+  useEffect(() => {
+    const el = document.getElementById('caja-canvas')
+    if (!el) return
+    const ro = new ResizeObserver(([entry]) => {
+      setDisplayWidth(Math.round(entry.contentRect.width))
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  const activeMode: Breakpoint = canvasWidth === null ? 'xl' : activeBreakpoint === 'md' ? 'md' : activeBreakpoint === 'xl' ? 'xl' : 'base'
   const activeBpHasOverrides = activeBreakpoint !== 'base' && overrideCounts[activeBreakpoint] > 0
-  // Only show reset when a fixed preset is selected (not in Fluid mode)
-  const showReset = activeBpHasOverrides && canvasWidth != null
 
-  const currentPreset = PRESETS.find((p) => p.width === canvasWidth) ?? PRESETS[0]
-  const isCustomWidth = canvasWidth != null && !PRESETS.some((p) => p.width === canvasWidth)
-  const currentLabel = isCustomWidth ? `${canvasWidth}px` : currentPreset.label
-  const CurrentIcon = currentPreset.icon
-
-  const presetMenu = PRESETS.map((preset, i) => {
-    const Icon = preset.icon
-    const active = preset.width === canvasWidth
-    return (
-      <div key={preset.label}>
-        {i === 1 && <div className="h-px bg-border my-1" />}
-        <button
-          className={`c-menu-item ${active ? 'c-menu-item-active' : ''}`}
-          onClick={() => setCanvasWidth(preset.width)}
-        >
-          <Icon size={12} />
-          <span className="flex flex-col items-start">
-            <span>{preset.label}</span>
-            <span className="fg-muted text-[10px]">{preset.subtitle}</span>
-          </span>
-          <span className="flex-1" />
-        </button>
-      </div>
-    )
-  })
+  const handleSegmentClick = (bp: Breakpoint) => {
+    setCanvasWidth(MODE_WIDTH[bp])
+  }
 
   const zoomIn = () => {
     const next = ZOOM_LEVELS.find((z) => z > canvasZoom + 0.001)
@@ -158,19 +162,30 @@ export function ViewportBar() {
 
   return (
     <div className="c-section-header px-4 justify-between border-b border-border">
-      <div className="flex items-center gap-1">
-        <Dropdown
-          trigger={
-            <button className="h-6 flex items-center gap-2 rounded fg-default" title={currentPreset.label}>
-              <CurrentIcon size={12} />
-              <span className="text-[12px]">{currentLabel}</span>
-              <ChevronDown size={8} />
-            </button>
-          }
-          menuClassName="min-w-[220px]"
-          menu={presetMenu}
-        />
-        {showReset && (
+      {/* Breakpoint segments — primary control */}
+      <div className="flex items-center gap-2">
+        {displayWidth != null && (
+          <span className="text-[12px] tabular-nums fg-muted min-w-[48px] text-right">{displayWidth}px</span>
+        )}
+        <div className="c-toggle-group flex items-center h-6 rounded overflow-hidden">
+          {MODES.map((bp) => {
+            const Icon = MODE_ICON[bp]
+            const isActive = activeMode === bp
+            const hasOverrides = bp !== 'base' && overrideCounts[bp] > 0
+            return (
+              <button
+                key={bp}
+                onClick={() => handleSegmentClick(bp)}
+                className={`px-2 h-full flex items-center gap-1 text-[12px] ${isActive ? 'fg-default c-segment-active' : 'c-dimmed-i'}`}
+                title={`${MODE_LABEL[bp]}${bp === 'base' ? '' : hasOverrides ? ` (${overrideCounts[bp]} overrides)` : ''}`}
+              >
+                <Icon size={12} />
+                {MODE_LABEL[bp]}
+              </button>
+            )
+          })}
+        </div>
+        {activeBpHasOverrides && (
           <button
             onClick={() => clearAllResponsiveOverrides(activeBreakpoint as 'md' | 'xl')}
             className="c-icon-btn w-5 h-5"
@@ -180,16 +195,7 @@ export function ViewportBar() {
           </button>
         )}
       </div>
-      <div className="flex items-center h-6 rounded overflow-hidden">
-        {(['md', 'base', 'xl'] as Breakpoint[]).map((bp) => (
-          <span
-            key={bp}
-            className={`px-2 h-full flex items-center text-[12px] ${activeBreakpoint === bp ? 'fg-default c-segment-active' : 'c-dimmed'}`}
-          >
-            {BP_LABEL[bp]}
-          </span>
-        ))}
-      </div>
+      {/* Zoom */}
       <Dropdown
         trigger={
           <button className="h-6 flex items-center gap-0.5 rounded fg-default" title="Zoom">

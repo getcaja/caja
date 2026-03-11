@@ -8,6 +8,7 @@ import { useInlineEdit } from './hooks/useInlineEdit'
 import { TreeRow } from './TreeRow'
 import { Frame as FrameIcon, Type, ImageIcon, RectangleHorizontal, TextCursorInput, AlignLeft, ListCollapse, Link, Diamond, LayoutGrid, Icon, FileCodeCorner, Eye, EyeOff } from 'lucide-react'
 import { layoutGridMoveHorizontal, layoutGridMoveVertical } from '@lucide/lab'
+import { BP_LABEL } from '../../types/frame'
 import type { BoxElement } from '../../types/frame'
 import { FrameContextMenu } from '../shared/FrameContextMenu'
 
@@ -146,15 +147,23 @@ export const TreeNode = memo(function TreeNode({ frame, depth, parentId = null, 
   const handleMouseEnter = useCallback(() => hover(frame.id, 'tree'), [frame.id, hover])
   const handleMouseLeave = useCallback(() => hover(null, 'tree'), [hover])
 
-  // Responsive override dot — accent dot if frame has any responsive overrides
+  // Responsive override badges — show which breakpoints have overrides
   const responsiveBadges = useMemo(() => {
     const resp = frame.responsive
     if (!resp) return null
-    const hasOverrides =
-      (resp.md && Object.keys(resp.md).length > 0) ||
-      (resp.xl && Object.keys(resp.xl).length > 0)
-    if (!hasOverrides) return null
-    return <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
+    const bps: string[] = []
+    if (resp.md && Object.keys(resp.md).length > 0) bps.push(BP_LABEL.md)
+    if (resp.xl && Object.keys(resp.xl).length > 0) bps.push(BP_LABEL.xl)
+    if (bps.length === 0) return null
+    return (
+      <span className="flex items-center gap-0.5 shrink-0">
+        {bps.map((bp) => (
+          <span key={bp} className="px-1 py-px text-[9px] leading-none font-medium rounded bg-accent/15 text-accent-text select-none uppercase">
+            {bp}
+          </span>
+        ))}
+      </span>
+    )
   }, [frame.responsive])
 
   const handleToggleHidden = useCallback((e: React.MouseEvent) => {

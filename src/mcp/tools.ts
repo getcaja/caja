@@ -688,8 +688,8 @@ const handlers: Record<string, ToolHandler> = {
       return { success: false, error: `Invalid breakpoint "${breakpoint}". Must be one of: base, md, xl` }
     }
     const store = getStore()
-    // Sync canvas width to match preview presets: base=Fluid, md=Mobile(375), xl=Large(1440)
-    const widthMap: Record<string, number | null> = { base: null, md: 375, xl: 1440 }
+    // Sync canvas width to match preview presets: xl=Fluid(null), base=1024, md=375
+    const widthMap: Record<string, number | null> = { xl: null, base: 1024, md: 375 }
     store.setCanvasWidth(widthMap[breakpoint])
     return {
       success: true,

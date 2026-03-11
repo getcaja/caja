@@ -3,6 +3,7 @@ import { useFrameStore } from './store/frameStore'
 import { TreePanel } from './components/TreePanel/TreePanel'
 import { Canvas } from './components/Canvas/Canvas'
 import { RightPanel } from './components/RightPanel/RightPanel'
+import { VIEWPORT_MODES, MODE_WIDTH } from './components/RightPanel/ViewportBar'
 import { ExportModal } from './components/Export/ExportModal'
 import { WelcomeModal } from './components/WelcomeModal'
 import { TooltipProvider } from './components/ui/Tooltip'
@@ -745,6 +746,20 @@ function App() {
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'p') {
         e.preventDefault()
         useFrameStore.getState().togglePreviewMode()
+      }
+      // Cmd+Arrow — cycle viewport modes: LG ←→ MD ←→ SM (clamps at edges)
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.shiftKey && !e.altKey) {
+        const tag = (e.target as HTMLElement).tagName
+        const isEditable = (e.target as HTMLElement).isContentEditable
+        if (tag !== 'INPUT' && tag !== 'TEXTAREA' && !isEditable) {
+          e.preventDefault()
+          const { canvasWidth, setCanvasWidth } = useFrameStore.getState()
+          // VIEWPORT_MODES = ['xl', 'base', 'md'], MODE_WIDTH: xl=null
+          const currentIdx = VIEWPORT_MODES.findIndex((m) => MODE_WIDTH[m] === canvasWidth)
+          const dir = e.key === 'ArrowRight' ? 1 : -1
+          const nextIdx = Math.max(0, Math.min(VIEWPORT_MODES.length - 1, (currentIdx === -1 ? 0 : currentIdx) + dir))
+          setCanvasWidth(MODE_WIDTH[VIEWPORT_MODES[nextIdx]])
+        }
       }
       // Canvas tool shortcuts — only when no modifier and not typing in an input
       if (!e.metaKey && !e.ctrlKey && !e.altKey) {
