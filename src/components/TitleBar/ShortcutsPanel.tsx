@@ -49,7 +49,10 @@ const sections: { title: string; shortcuts: [string, string][] }[] = [
     shortcuts: [
       ['Toggle left panel', `${CMD} 1`],
       ['Toggle right panel', `${CMD} 2`],
-      ['Preview mode', `${CMD} ${SHIFT} P`],
+      ['Toggle toolbar', `${CMD} 3`],
+      ['Preview mode', `${CMD} P`],
+      ['Next breakpoint', `${CMD} \u2192`],
+      ['Previous breakpoint', `${CMD} \u2190`],
       ['Zoom in', `${CMD} +`],
       ['Zoom out', `${CMD} -`],
       ['Zoom 100%', `${CMD} 0`],

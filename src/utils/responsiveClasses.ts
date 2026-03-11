@@ -28,3 +28,12 @@ export function toContainerQueries(classes: string): string {
     return max ? `@max-[${px}px]:` : `@min-[${px}px]:`
   })
 }
+
+/** Strip all responsive-prefixed classes (e.g. `max-md:!text-2xl`).
+ *  Used in the editor canvas where getEffectiveFrame already merges
+ *  overrides for the active breakpoint — container queries not needed. */
+const RESPONSIVE_CLASS_RE = /\S*\b(?:max-)?(sm|md|lg|xl|2xl):\S*/g
+
+export function stripResponsivePrefixes(classes: string): string {
+  return classes.replace(RESPONSIVE_CLASS_RE, '').replace(/\s{2,}/g, ' ').trim()
+}

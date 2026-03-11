@@ -1,5 +1,5 @@
 import type { StateCreator } from 'zustand'
-import type { Frame, BoxElement, TextElement, ImageElement, ButtonElement, InputElement, TextareaElement, SelectElement, DesignValue, Spacing, SizeValue, BorderRadius, Page, ResponsiveOverrides } from '../../types/frame'
+import type { Frame, BoxElement, TextElement, ImageElement, ButtonElement, InputElement, TextareaElement, SelectElement, DesignValue, Spacing, SizeValue, BorderRadius, Page, ResponsiveOverrides, Breakpoint } from '../../types/frame'
 import type { FrameStore } from '../frameStore'
 import {
   isRootId, findInTree, findParent, cloneWithNewIds, updateInTree,
@@ -41,13 +41,13 @@ function shallowEqual(a: unknown, b: unknown): boolean {
   return true
 }
 
-export type HistoryEntry = { root: BoxElement; selectedId: string | null; selectedIds: string[] }
+export type HistoryEntry = { root: BoxElement; selectedId: string | null; selectedIds: string[]; activeBreakpoint?: Breakpoint; canvasWidth?: number | null }
 
-export function pushHistory(state: { root: BoxElement; selectedId: string | null; selectedIds: Set<string>; past: Record<string, HistoryEntry[]>; future: Record<string, HistoryEntry[]>; activePageId: string; _previewSnapshot: BoxElement | null }): { past: Record<string, HistoryEntry[]>; future: Record<string, HistoryEntry[]>; dirty: boolean } {
+export function pushHistory(state: { root: BoxElement; selectedId: string | null; selectedIds: Set<string>; past: Record<string, HistoryEntry[]>; future: Record<string, HistoryEntry[]>; activePageId: string; activeBreakpoint: Breakpoint; canvasWidth: number | null; _previewSnapshot: BoxElement | null }): { past: Record<string, HistoryEntry[]>; future: Record<string, HistoryEntry[]>; dirty: boolean } {
   if (state._previewSnapshot) return { past: state.past, future: state.future, dirty: true }
   const pageId = state.activePageId
   const pagePast = state.past[pageId] || []
-  const entry: HistoryEntry = { root: cloneTree(state.root) as BoxElement, selectedId: state.selectedId, selectedIds: [...state.selectedIds] }
+  const entry: HistoryEntry = { root: cloneTree(state.root) as BoxElement, selectedId: state.selectedId, selectedIds: [...state.selectedIds], activeBreakpoint: state.activeBreakpoint, canvasWidth: state.canvasWidth }
   return {
     past: { ...state.past, [pageId]: [...pagePast.slice(-(MAX_HISTORY - 1)), entry] },
     future: { ...state.future, [pageId]: [] as HistoryEntry[] },
@@ -726,13 +726,14 @@ export const createCoreTreeSlice: StateCreator<FrameStore, [], [], CoreTreeSlice
       if (pagePast.length === 0) return {}
       const prev = pagePast[pagePast.length - 1]
       const pageFuture = state.future[pageId] || []
-      const current: HistoryEntry = { root: cloneTree(state.root) as BoxElement, selectedId: state.selectedId, selectedIds: [...state.selectedIds] }
+      const current: HistoryEntry = { root: cloneTree(state.root) as BoxElement, selectedId: state.selectedId, selectedIds: [...state.selectedIds], activeBreakpoint: state.activeBreakpoint, canvasWidth: state.canvasWidth }
       return {
         ...updateActiveRoot(state, prev.root),
         selectedId: prev.selectedId,
         selectedIds: new Set(prev.selectedIds),
         past: { ...state.past, [pageId]: pagePast.slice(0, -1) },
         future: { ...state.future, [pageId]: [current, ...pageFuture] },
+        ...(prev.activeBreakpoint != null ? { activeBreakpoint: prev.activeBreakpoint, canvasWidth: prev.canvasWidth ?? null } : {}),
       }
     }),
 
@@ -743,13 +744,14 @@ export const createCoreTreeSlice: StateCreator<FrameStore, [], [], CoreTreeSlice
       if (pageFuture.length === 0) return {}
       const next = pageFuture[0]
       const pagePast = state.past[pageId] || []
-      const current: HistoryEntry = { root: cloneTree(state.root) as BoxElement, selectedId: state.selectedId, selectedIds: [...state.selectedIds] }
+      const current: HistoryEntry = { root: cloneTree(state.root) as BoxElement, selectedId: state.selectedId, selectedIds: [...state.selectedIds], activeBreakpoint: state.activeBreakpoint, canvasWidth: state.canvasWidth }
       return {
         ...updateActiveRoot(state, next.root),
         selectedId: next.selectedId,
         selectedIds: new Set(next.selectedIds),
         past: { ...state.past, [pageId]: [...pagePast, current] },
         future: { ...state.future, [pageId]: pageFuture.slice(1) },
+        ...(next.activeBreakpoint != null ? { activeBreakpoint: next.activeBreakpoint, canvasWidth: next.canvasWidth ?? null } : {}),
       }
     }),
 })

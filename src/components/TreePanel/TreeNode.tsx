@@ -148,23 +148,29 @@ export const TreeNode = memo(function TreeNode({ frame, depth, parentId = null, 
   const handleMouseLeave = useCallback(() => hover(null, 'tree'), [hover])
 
   // Responsive override badges — show which breakpoints have overrides
+  const activeBreakpoint = useFrameStore((s) => s.activeBreakpoint)
   const responsiveBadges = useMemo(() => {
     const resp = frame.responsive
     if (!resp) return null
-    const bps: string[] = []
-    if (resp.md && Object.keys(resp.md).length > 0) bps.push(BP_LABEL.md)
-    if (resp.xl && Object.keys(resp.xl).length > 0) bps.push(BP_LABEL.xl)
-    if (bps.length === 0) return null
+    const entries: { label: string; bp: string }[] = []
+    if (resp.xl && Object.keys(resp.xl).length > 0) entries.push({ label: BP_LABEL.xl, bp: 'xl' })
+    if (resp.md && Object.keys(resp.md).length > 0) entries.push({ label: BP_LABEL.md, bp: 'md' })
+    if (entries.length === 0) return null
     return (
       <span className="flex items-center gap-0.5 shrink-0">
-        {bps.map((bp) => (
-          <span key={bp} className="px-1 py-px text-[9px] leading-none font-medium rounded bg-accent/15 text-accent-text select-none uppercase">
-            {bp}
+        {entries.map(({ label, bp }) => (
+          <span
+            key={bp}
+            className={`px-1 py-px text-[9px] leading-none font-medium rounded select-none uppercase ${
+              activeBreakpoint === bp ? 'bg-accent text-white' : 'bg-accent/15 text-accent-text'
+            }`}
+          >
+            {label}
           </span>
         ))}
       </span>
     )
-  }, [frame.responsive])
+  }, [frame.responsive, activeBreakpoint])
 
   const handleToggleHidden = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()

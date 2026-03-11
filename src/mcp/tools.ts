@@ -688,9 +688,10 @@ const handlers: Record<string, ToolHandler> = {
       return { success: false, error: `Invalid breakpoint "${breakpoint}". Must be one of: base, md, xl` }
     }
     const store = getStore()
-    // Sync canvas width: base=LG(fluid/null), xl=MD(1024), md=SM(375)
-    const widthMap: Record<string, number | null> = { base: null, xl: 1024, md: 375 }
+    // Sync canvas width + breakpoint: base=LG(fluid/null), xl=MD(1024), md=SM(480)
+    const widthMap: Record<string, number | null> = { base: null, xl: 1024, md: 480 }
     store.setCanvasWidth(widthMap[breakpoint])
+    store.setActiveBreakpoint(breakpoint)
     return {
       success: true,
       data: { breakpoint, canvasWidth: widthMap[breakpoint] },

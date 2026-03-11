@@ -108,10 +108,10 @@ export function Section({
           onMouseLeave={() => setPropertyHint(null)}
         >{title}</span>
         <div className="flex-1" />
-        {onReset && (
+        {onReset && activeBreakpoint !== 'base' && (
           <span className={`c-bp-pill ${hasOverrides ? 'is-active' : ''}`}>{BP_LABEL[activeBreakpoint as Breakpoint]}</span>
         )}
-        {onReset && (
+        {onReset && (activeBreakpoint === 'base' || hasOverrides) ? (
           <div className="relative">
             <button
               ref={menuTriggerRef}
@@ -131,7 +131,9 @@ export function Section({
               />
             )}
           </div>
-        )}
+        ) : onReset ? (
+          <div className="c-slot-spacer" />
+        ) : null}
       </div>
       {!collapsed && children}
     </div>

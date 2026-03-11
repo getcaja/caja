@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useLayoutEffect, useCallback, useSyncExter
 import { ImageIcon } from 'lucide-react'
 import type { Frame } from '../../types/frame'
 import { frameToClasses } from '../../utils/frameToClasses'
-import { toContainerQueries } from '../../utils/responsiveClasses'
+import { stripResponsivePrefixes, toContainerQueries } from '../../utils/responsiveClasses'
 import { useFrameStore, isRootId, findInTree, resolveToDirectChild } from '../../store/frameStore'
 import { getDrillContext, resolveToContextLevel } from '../../store/treeHelpers'
 import { pushNav } from '../../store/selectionHistory'
@@ -92,10 +92,11 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
   // A childless box that would collapse to 0×0 without min-size assist
   const isDragged = canvasDragId === frame.id
 
-  // Tailwind classes — effective frame already has overrides merged,
-  // so base classes reflect the active breakpoint. toContainerQueries
-  // only needed for any user-added responsive classes in tailwindClasses.
-  const tailwind = toContainerQueries(frameToClasses(frame))
+  // Tailwind classes — in editor mode, effective frame already has overrides
+  // merged so we strip responsive prefixes. In preview mode, use container
+  // queries so the page responds to actual width like a real browser.
+  const rawClasses = frameToClasses(frame)
+  const tailwind = previewMode ? toContainerQueries(rawClasses) : stripResponsivePrefixes(rawClasses)
 
   // In preview mode, infer cursor from semantic tag
   const previewCursor = previewMode && ('tag' in frame && frame.tag === 'a' || frame.type === 'button')

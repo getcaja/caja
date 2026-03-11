@@ -107,7 +107,7 @@ function DropdownButton({ icon, title, isActive, menu, menuClassName, children }
 }
 
 /* ---------- Toolbar ---------- */
-export function Toolbar({ hidden = false }: { hidden?: boolean }) {
+export function Toolbar() {
   const previewMode = useFrameStore((s) => s.previewMode)
   const canvasTool = useFrameStore((s) => s.canvasTool)
   const setCanvasTool = useFrameStore((s) => s.setCanvasTool)
@@ -182,7 +182,7 @@ export function Toolbar({ hidden = false }: { hidden?: boolean }) {
 
   if (!mounted) return null
 
-  const shouldHide = hidden || !animateIn
+  const shouldHide = !animateIn
 
   return (
     <div

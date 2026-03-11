@@ -1300,6 +1300,16 @@ pub fn run() {
                 .checked(true)
                 .build(app)?;
 
+            let preview_mode = MenuItemBuilder::with_id("preview-mode", "Preview")
+                .accelerator("CmdOrCtrl+P")
+                .build(app)?;
+            let next_breakpoint = MenuItemBuilder::with_id("next-breakpoint", "Next Breakpoint")
+                .accelerator("CmdOrCtrl+Right")
+                .build(app)?;
+            let prev_breakpoint = MenuItemBuilder::with_id("prev-breakpoint", "Previous Breakpoint")
+                .accelerator("CmdOrCtrl+Left")
+                .build(app)?;
+
             let collapse_all = MenuItemBuilder::with_id("collapse-all", "Collapse All Layers")
                 .build(app)?;
             let expand_all = MenuItemBuilder::with_id("expand-all", "Expand All Layers")
@@ -1311,6 +1321,11 @@ pub fn run() {
             let view_menu = SubmenuBuilder::new(app, "View")
                 .item(&toggle_left_panel)
                 .item(&toggle_right_panel)
+                .separator()
+                .item(&preview_mode)
+                .separator()
+                .item(&next_breakpoint)
+                .item(&prev_breakpoint)
                 .separator()
                 .item(&themes_submenu)
                 .item(&spacing_grid_submenu)

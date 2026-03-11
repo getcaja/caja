@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { frameToClasses } from '../frameToClasses'
-import { toContainerQueries } from '../responsiveClasses'
+import { toContainerQueries, stripResponsivePrefixes } from '../responsiveClasses'
 import { makeText, dvToken, dvColorToken } from './helpers'
 
 describe('responsive container query classes', () => {
@@ -34,5 +34,20 @@ describe('responsive container query classes', () => {
     })
     const raw = frameToClasses(frame)
     expect(raw).toContain('max-md:!hidden')
+  })
+})
+
+describe('stripResponsivePrefixes', () => {
+  it('removes all responsive-prefixed classes', () => {
+    const input = 'text-3xl font-semibold max-md:!text-2xl max-xl:!text-base text-indigo-600'
+    const result = stripResponsivePrefixes(input)
+    expect(result).toBe('text-3xl font-semibold text-indigo-600')
+    expect(result).not.toContain('max-md:')
+    expect(result).not.toContain('max-xl:')
+  })
+
+  it('returns unchanged string when no responsive classes present', () => {
+    const input = 'flex gap-4 p-8'
+    expect(stripResponsivePrefixes(input)).toBe('flex gap-4 p-8')
   })
 })

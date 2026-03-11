@@ -831,6 +831,32 @@ describe('frameStore', () => {
       expect(rootChildren()).toHaveLength(2)
       expect(rootChildren()[0].id).toBe(textId)
     })
+
+    it('undo restores active breakpoint context', () => {
+      const id = addChild('box')
+      // Make a change while in SM breakpoint
+      store().setActiveBreakpoint('md')
+      store().updateFrame(id, { hidden: true })
+      // Switch to LG
+      store().setActiveBreakpoint('base')
+      expect(store().activeBreakpoint).toBe('base')
+      // Undo should restore to SM where the change was made
+      store().undo()
+      expect(store().activeBreakpoint).toBe('md')
+    })
+
+    it('redo restores active breakpoint context', () => {
+      const id = addChild('box')
+      store().setActiveBreakpoint('xl')
+      store().updateFrame(id, { hidden: true })
+      store().setActiveBreakpoint('base')
+      // Undo restores to xl
+      store().undo()
+      expect(store().activeBreakpoint).toBe('xl')
+      // Redo restores to base (where we were when we undid)
+      store().redo()
+      expect(store().activeBreakpoint).toBe('base')
+    })
   })
 
   // ===== Utilities =====
@@ -1833,7 +1859,7 @@ describe('showMarginOverlay', () => {
       expect(frame.hidden).toBe(false) // original unchanged
     })
 
-    it('md and xl are independent (no cascade)', () => {
+    it('xl does not inherit from md (cascade is one-way)', () => {
       const id = addChild('box')
       store().setActiveBreakpoint('md')
       store().updateFrame(id, { hidden: true })
@@ -1843,6 +1869,32 @@ describe('showMarginOverlay', () => {
       // xl should NOT inherit md overrides
       const merged = mergeResponsiveOverrides(frame, 'xl')
       expect(merged.hidden).toBe(false) // no cascade from md
+    })
+
+    it('md inherits xl overrides (desktop-first cascade)', () => {
+      const id = addChild('box')
+      store().setActiveBreakpoint('xl')
+      store().updateFrame(id, { hidden: true })
+      store().setActiveBreakpoint('base')
+
+      const frame = findInTree(root(), id)!
+      // md (SM) should inherit xl (MD) overrides in desktop-first model
+      const merged = mergeResponsiveOverrides(frame, 'md')
+      expect(merged.hidden).toBe(true) // cascaded from xl
+    })
+
+    it('md own override wins over cascaded xl override', () => {
+      const id = addChild('text')
+      // Set xl to hide, md to show with different fontSize
+      store().setActiveBreakpoint('xl')
+      store().updateFrame(id, { hidden: true })
+      store().setActiveBreakpoint('md')
+      store().updateFrame(id, { hidden: true }) // md also hidden (own override, not just cascaded)
+      store().setActiveBreakpoint('base')
+
+      const frame = findInTree(root(), id)!
+      const mergedMd = mergeResponsiveOverrides(frame, 'md')
+      expect(mergedMd.hidden).toBe(true) // md has its own override matching xl
     })
 
     it('md overrides apply independently', () => {

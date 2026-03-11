@@ -51,6 +51,8 @@ export function canvasZoomTo(nextZoom: number) {
   })
 }
 
+export const CANVAS_GUTTER = 32
+
 export function CanvasInline() {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLDivElement>(null)
@@ -64,21 +66,9 @@ export function CanvasInline() {
   const root = useFrameStore((s) => s.root)
   const editingComponentId = useFrameStore((s) => s.editingComponentId)
   const hover = useFrameStore((s) => s.hover)
-  const setActiveBreakpoint = useFrameStore((s) => s.setActiveBreakpoint)
-  const setCanvasWidth = useFrameStore((s) => s.setCanvasWidth)
 
-  const GUTTER = 32
+  const GUTTER = CANVAS_GUTTER
   const fluidW = Math.max(320, workspaceW - GUTTER * 2)
-
-  // Derive activeBreakpoint from effective canvas width.
-  // Canvas is always fluid — canvasWidth is a max constraint, actual width = min(fluidW, canvasWidth)
-  // ≤768→md (SM), 768–1280→xl (MD override), ≥1280→base (LG baseline)
-  useEffect(() => {
-    if (previewMode || editingComponentId) return
-    const w = Math.min(fluidW, canvasWidth ?? Infinity)
-    const bp: import('../../types/frame').Breakpoint = w <= 768 ? 'md' : w >= 1280 ? 'base' : 'xl'
-    setActiveBreakpoint(bp)
-  }, [canvasWidth, fluidW, previewMode, editingComponentId, setActiveBreakpoint])
 
   // In edit mode, render only the master being edited
   const renderFrame = editingComponentId && root.type === 'box'
@@ -127,44 +117,15 @@ export function CanvasInline() {
 
   const ctxMenu = useCanvasContextMenu()
 
-  // Canvas resize handles — drag to set width, double-click to reset to fluid (LG)
-  const onHandleDown = useCallback((side: 'left' | 'right') => (e: React.MouseEvent) => {
-    e.preventDefault()
-    const canvasEl = canvasRef.current
-    if (!canvasEl) return
-    const startX = e.clientX
-    const startWidth = canvasEl.offsetWidth
-
-    const onMove = (me: MouseEvent) => {
-      const delta = side === 'right'
-        ? (me.clientX - startX) * 2
-        : (startX - me.clientX) * 2
-      const maxW = Math.max(320, workspaceW - GUTTER * 2)
-      const newWidth = Math.round(Math.max(320, Math.min(maxW, startWidth + delta)))
-      // Snap to fluid (LG) when close to max
-      if (newWidth >= maxW - 16) {
-        useFrameStore.getState().setCanvasWidth(null)
-      } else {
-        useFrameStore.getState().setCanvasWidth(newWidth)
-      }
-    }
-
-    const onUp = () => {
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onUp)
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
-    }
-
-    document.body.style.cursor = 'col-resize'
-    document.body.style.userSelect = 'none'
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
-  }, [workspaceW])
-
-  const onHandleDblClick = useCallback(() => {
-    setCanvasWidth(null)
-  }, [setCanvasWidth])
+  // Track actual canvas content height (for zoom != 1 where we need explicit dimensions)
+  const [contentH, setContentH] = useState(0)
+  useEffect(() => {
+    const el = canvasRef.current
+    if (!el) return
+    const ro = new ResizeObserver(() => setContentH(el.scrollHeight))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
 
   // Measure scroll container for workspace dimensions (used for zoomed sizing)
   useEffect(() => {
@@ -288,16 +249,11 @@ export function CanvasInline() {
       canvasStyle = { ...canvasResetStyle, width: widthExpr, margin: '0 auto' }
     } else {
       const canvasW = effectiveFluid
-      const canvasH = workspaceH
+      const canvasH = Math.max(workspaceH, contentH)
       wrapperStyle = { width: canvasW * userZoom, height: canvasH * userZoom, flexShrink: 0, position: 'relative', margin: 'auto' }
-      canvasStyle = { ...canvasResetStyle, position: 'absolute', top: 0, left: 0, width: canvasW, height: canvasH, transform: `scale(${userZoom})`, transformOrigin: 'top left' }
+      canvasStyle = { ...canvasResetStyle, position: 'absolute', top: 0, left: 0, width: canvasW, minHeight: workspaceH, transform: `scale(${userZoom})`, transformOrigin: 'top left' }
     }
   }
-
-  // Compute handle position — distance from wrapper edge to canvas edge
-  const showHandles = !previewMode && !editingComponentId
-  const effectiveCanvasW = Math.min(fluidW, canvasWidth ?? Infinity)
-  let handleGutter = Math.max(GUTTER, (workspaceW - effectiveCanvasW * canvasZoom) / 2)
 
   return (
     <div ref={wrapperRef} data-canvas-wrapper style={{ ...wrapperStyle, position: 'relative' }}>
@@ -315,30 +271,7 @@ export function CanvasInline() {
         </ErrorBoundary>
         <GoogleFontsLoader />
       </div>
-      {/* Canvas gutter masks — cover overflow on each side */}
-      {showHandles && handleGutter > 0 && (
-        <>
-          <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: handleGutter, background: 'var(--color-canvas-bg)', zIndex: 5 }} />
-          <div style={{ position: 'absolute', top: 0, bottom: 0, right: 0, width: handleGutter, background: 'var(--color-canvas-bg)', zIndex: 5 }} />
-        </>
-      )}
-      {/* Canvas resize handles */}
-      {showHandles && (
-        <>
-          <div
-            className="c-canvas-handle"
-            style={{ left: handleGutter - 6 }}
-            onMouseDown={onHandleDown('left')}
-            onDoubleClick={onHandleDblClick}
-          />
-          <div
-            className="c-canvas-handle"
-            style={{ right: handleGutter - 6 }}
-            onMouseDown={onHandleDown('right')}
-            onDoubleClick={onHandleDblClick}
-          />
-        </>
-      )}
+      {/* Canvas resize handles + gutter masks — see Canvas.tsx */}
       {/* SelectionOverlay must be OUTSIDE the @container div.
           container-type: inline-size implies layout containment which creates
           a new containing block for position:fixed — that would make the

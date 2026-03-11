@@ -64,8 +64,8 @@ export function TitleBar() {
       <div className="flex items-center gap-1.5 pr-3">
         <button
           onClick={() => { setPreviewMode(!previewMode); if (!previewMode) setCanvasTool('pointer') }}
-          className={`${btn} c-icon-btn ${previewMode ? 'is-active !bg-accent !fg-default' : ''}`}
-          title="Preview (⌘⇧P)"
+          className={`${btn} c-icon-btn ${previewMode ? 'is-active !bg-accent !text-white' : ''}`}
+          title="Preview (⌘P)"
         >
           <Eye size={12} />
         </button>

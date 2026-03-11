@@ -16,6 +16,7 @@ interface ViewPrefs {
   spacingGrid: SpacingGrid
   styleNewFrames: boolean
   showHints: boolean
+  showToolbar: boolean
 }
 
 export function loadViewPrefs(): ViewPrefs {
@@ -31,10 +32,11 @@ export function loadViewPrefs(): ViewPrefs {
         spacingGrid: (['off', '4px', '8px'].includes(parsed.spacingGrid) ? parsed.spacingGrid : '4px') as SpacingGrid,
         styleNewFrames: parsed.styleNewFrames ?? true,
         showHints: parsed.showHints ?? true,
+        showToolbar: parsed.showToolbar ?? true,
       }
     }
   } catch (err) { console.warn('Failed to load view preferences:', err) }
-  return { previewMode: false, canvasWidth: null, activeBreakpoint: 'base' as Breakpoint, collapsedIds: [], spacingGrid: '4px' as SpacingGrid, styleNewFrames: true, showHints: true }
+  return { previewMode: false, canvasWidth: null, activeBreakpoint: 'base' as Breakpoint, collapsedIds: [], spacingGrid: '4px' as SpacingGrid, styleNewFrames: true, showHints: true, showToolbar: true }
 }
 
 export function saveViewPrefs(prefs: Partial<ViewPrefs>) {
@@ -64,9 +66,16 @@ function ensureSpacingSides(s: unknown): Spacing | undefined {
 export function mergeResponsiveOverrides(frame: Frame, bp: 'md' | 'xl'): Frame {
   const resp = frame.responsive
   if (!resp) return frame
+  // Desktop-first cascade: SM inherits from MD which inherits from LG.
+  // When viewing SM (md), apply xl overrides first, then md overrides on top.
+  let result = { ...frame } as Frame
+  if (bp === 'md' && resp.xl && Object.keys(resp.xl).length > 0) {
+    result = { ...result, ...resp.xl } as Frame
+  }
   const overrides = resp[bp]
-  if (!overrides || Object.keys(overrides).length === 0) return frame
-  let result = { ...frame, ...overrides } as Frame
+  if (overrides && Object.keys(overrides).length > 0) {
+    result = { ...result, ...overrides } as Frame
+  }
   // Ensure spacing fields are complete after merge (responsive overrides can be partial)
   if (result.padding) result = { ...result, padding: ensureSpacingSides(result.padding)! }
   if (result.margin) result = { ...result, margin: ensureSpacingSides(result.margin)! }
@@ -92,10 +101,12 @@ export interface UiSlice {
   showPaddingOverlay: boolean
   showGapOverlay: boolean
   showHints: boolean
+  showToolbar: boolean
   deepSelect: boolean
   propertyHint: string | null
 
   setPropertyHint: (hint: string | null) => void
+  toggleToolbar: () => void
   setDeepSelect: (value: boolean) => void
   setShowHints: (value: boolean) => void
   setShowMarginOverlay: (value: boolean) => void
@@ -139,10 +150,16 @@ export const createUiSlice: StateCreator<FrameStore, [], [], UiSlice> = (set, ge
     showPaddingOverlay: false,
     showGapOverlay: false,
     showHints: initialViewPrefs.showHints,
+    showToolbar: initialViewPrefs.showToolbar,
     deepSelect: false,
     propertyHint: null,
 
     setPropertyHint: (hint) => set({ propertyHint: hint }),
+    toggleToolbar: () => {
+      const next = !get().showToolbar
+      saveViewPrefs({ showToolbar: next })
+      set({ showToolbar: next })
+    },
     setDeepSelect: (value) => set({ deepSelect: value }),
     setShowHints: (value) => {
       saveViewPrefs({ showHints: value })

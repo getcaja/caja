@@ -421,6 +421,21 @@ function App() {
           case 'keyboard-shortcuts':
             window.dispatchEvent(new Event('show-keyboard-shortcuts'))
             break
+          case 'preview-mode':
+            useFrameStore.getState().togglePreviewMode()
+            break
+          case 'next-breakpoint':
+          case 'prev-breakpoint': {
+            if (useFrameStore.getState().previewMode) break
+            const { activeBreakpoint, setCanvasWidth: setCW, setActiveBreakpoint: setAB } = useFrameStore.getState()
+            const curIdx = VIEWPORT_MODES.indexOf(activeBreakpoint)
+            const dir = e.payload === 'next-breakpoint' ? 1 : -1
+            const nIdx = Math.max(0, Math.min(VIEWPORT_MODES.length - 1, (curIdx === -1 ? 0 : curIdx) + dir))
+            const bp = VIEWPORT_MODES[nIdx]
+            setCW(MODE_WIDTH[bp])
+            setAB(bp)
+            break
+          }
           case 'reset-workspace':
             setLeftWidth(LEFT_DEFAULT)
             setRightWidth(RIGHT_DEFAULT)
@@ -742,22 +757,28 @@ function App() {
           return next
         })
       }
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === '3') {
+        e.preventDefault()
+        useFrameStore.getState().toggleToolbar()
+      }
       // Preview mode toggle
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'p') {
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === 'p') {
         e.preventDefault()
         useFrameStore.getState().togglePreviewMode()
       }
-      // Cmd+Arrow — cycle viewport modes: LG ←→ MD ←→ SM (clamps at edges)
-      if ((e.metaKey || e.ctrlKey) && (e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.shiftKey && !e.altKey) {
+      // Cmd+Arrow — cycle viewport modes: LG ←→ MD ←→ SM (clamps at edges, disabled in preview)
+      if (!useFrameStore.getState().previewMode && (e.metaKey || e.ctrlKey) && (e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.shiftKey && !e.altKey) {
         const tag = (e.target as HTMLElement).tagName
         const isEditable = (e.target as HTMLElement).isContentEditable
         if (tag !== 'INPUT' && tag !== 'TEXTAREA' && !isEditable) {
           e.preventDefault()
-          const { canvasWidth, setCanvasWidth } = useFrameStore.getState()
-          const currentIdx = VIEWPORT_MODES.findIndex((m) => MODE_WIDTH[m] === canvasWidth)
+          const { activeBreakpoint, setCanvasWidth, setActiveBreakpoint } = useFrameStore.getState()
+          const currentIdx = VIEWPORT_MODES.indexOf(activeBreakpoint)
           const dir = e.key === 'ArrowRight' ? 1 : -1
           const nextIdx = Math.max(0, Math.min(VIEWPORT_MODES.length - 1, (currentIdx === -1 ? 0 : currentIdx) + dir))
-          setCanvasWidth(MODE_WIDTH[VIEWPORT_MODES[nextIdx]])
+          const nextBp = VIEWPORT_MODES[nextIdx]
+          setCanvasWidth(MODE_WIDTH[nextBp])
+          setActiveBreakpoint(nextBp)
         }
       }
       // Canvas tool shortcuts — only when no modifier and not typing in an input

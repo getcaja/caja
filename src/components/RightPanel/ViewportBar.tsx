@@ -13,7 +13,7 @@ export const VIEWPORT_MODES: Breakpoint[] = ['base', 'xl', 'md']
 export const MODE_WIDTH: Record<Breakpoint, number | null> = {
   base: null,   // LG — fluid
   xl: 1024,     // MD
-  md: 375,      // SM
+  md: 480,      // SM
 }
 
 const MODE_ICON: Record<Breakpoint, typeof Monitor> = {
@@ -89,7 +89,13 @@ function Dropdown({ trigger, menu, menuClassName }: {
 export function ViewportBar() {
   const canvasZoom = useFrameStore((s) => s.canvasZoom)
   const setCanvasWidth = useFrameStore((s) => s.setCanvasWidth)
+  const setActiveBreakpoint = useFrameStore((s) => s.setActiveBreakpoint)
   const activeBreakpoint = useFrameStore((s) => s.activeBreakpoint)
+
+  const switchMode = (bp: Breakpoint) => {
+    setCanvasWidth(MODE_WIDTH[bp])
+    setActiveBreakpoint(bp)
+  }
 
   // Observe actual rendered canvas width
   const [displayWidth, setDisplayWidth] = useState<number | null>(null)
@@ -141,11 +147,10 @@ export function ViewportBar() {
             const isActive = activeBreakpoint === bp
             return (
               bp === 'base' ? (
-                <RadixTooltip.Root delayDuration={200}>
+                <RadixTooltip.Root key={bp} delayDuration={200}>
                   <RadixTooltip.Trigger asChild>
                     <button
-                      key={bp}
-                      onClick={() => setCanvasWidth(MODE_WIDTH[bp])}
+                      onClick={() => switchMode(bp)}
                       className={`px-2 h-full flex items-center gap-1 text-[12px] ${isActive ? 'fg-default c-segment-active' : 'c-dimmed-i'}`}
                     >
                       <Icon size={12} />
@@ -172,7 +177,7 @@ export function ViewportBar() {
               ) : (
                 <button
                   key={bp}
-                  onClick={() => setCanvasWidth(MODE_WIDTH[bp])}
+                  onClick={() => switchMode(bp)}
                   className={`px-2 h-full flex items-center gap-1 text-[12px] ${isActive ? 'fg-default c-segment-active' : 'c-dimmed-i'}`}
                   title={BP_LABEL[bp]}
                 >
