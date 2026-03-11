@@ -1,11 +1,27 @@
 import { check } from '@tauri-apps/plugin-updater'
 import { relaunch } from '@tauri-apps/plugin-process'
 import { ask, message } from '@tauri-apps/plugin-dialog'
+import { openUrl } from '@tauri-apps/plugin-opener'
 
-/** Format release notes for display in native dialog */
-function formatNotes(body: string | undefined): string {
-  if (!body) return ''
-  return '\n\n' + body
+const RELEASES_URL = 'https://github.com/getcaja/caja/releases'
+
+/** Prompt update with 3-button native dialog. Returns true if user chose to update. */
+async function promptUpdate(version: string): Promise<boolean> {
+  const result = await message(
+    `Version ${version} is available. Would you like to download it now?`,
+    {
+      title: 'Update Available',
+      kind: 'info',
+      buttons: { yes: 'Update', no: "Don't Update", cancel: 'View Changelog' },
+    },
+  )
+
+  if (result === 'View Changelog') {
+    await openUrl(`${RELEASES_URL}/tag/v${version}`)
+    return false
+  }
+
+  return result === 'Update'
 }
 
 /** Silent check on startup — only prompts if an update is available */
@@ -14,12 +30,7 @@ export async function checkForUpdatesOnStartup(): Promise<void> {
     const update = await check()
     if (!update) return
 
-    const shouldUpdate = await ask(
-      `Version ${update.version} is available.${formatNotes(update.body)}\n\nDownload and install?`,
-      { title: 'Update Available', kind: 'info', okLabel: 'Update', cancelLabel: 'Later' },
-    )
-
-    if (!shouldUpdate) return
+    if (!await promptUpdate(update.version)) return
 
     await update.downloadAndInstall()
 
@@ -49,12 +60,7 @@ export async function checkForUpdates(): Promise<void> {
       return
     }
 
-    const shouldUpdate = await ask(
-      `Version ${update.version} is available.${formatNotes(update.body)}\n\nDownload and install?`,
-      { title: 'Update Available', kind: 'info', okLabel: 'Update', cancelLabel: 'Later' },
-    )
-
-    if (!shouldUpdate) return
+    if (!await promptUpdate(update.version)) return
 
     await update.downloadAndInstall()
 
