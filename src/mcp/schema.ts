@@ -391,11 +391,11 @@ export const toolSchemas = {
   // --- Responsive tools ---
   set_breakpoint: {
     name: 'set_breakpoint',
-    description: 'Switch the active responsive breakpoint. Desktop-first: "base" = desktop/fluid (default), "sm" = mobile (≤640px). After switching, ALL update_frame/update_spacing/update_size calls write to that breakpoint\'s overrides instead of the base frame. Only changed properties are stored (sparse overrides). The canvas width is also adjusted to match (Fluid for base, 640px for sm). Call set_breakpoint({ breakpoint: "base" }) to return to desktop editing when done.',
+    description: 'Switch the active responsive breakpoint. Desktop-first: "base" = default (768–1280px), "md" = small/mobile (≤768px), "xl" = large (≥1280px). After switching, ALL update_frame/update_spacing/update_size calls write to that breakpoint\'s overrides instead of the base frame. Only changed properties are stored (sparse overrides). The canvas width is also adjusted to match. Call set_breakpoint({ breakpoint: "base" }) to return to default editing when done.',
     inputSchema: {
       type: 'object' as const,
       properties: {
-        breakpoint: { type: 'string', enum: ['base', 'sm'], description: 'The breakpoint to activate. "base" = desktop/fluid, "sm" = mobile ≤640px.' },
+        breakpoint: { type: 'string', enum: ['base', 'md', 'xl'], description: 'The breakpoint to activate. "base" = default (768–1280px), "md" = small ≤768px, "xl" = large ≥1280px.' },
       },
       required: ['breakpoint'],
     },
@@ -412,7 +412,7 @@ export const toolSchemas = {
 
   get_responsive_overrides: {
     name: 'get_responsive_overrides',
-    description: 'Get the responsive overrides for a frame. Returns the sparse override objects for the sm breakpoint, or null if no overrides exist. Use this to inspect what properties differ per breakpoint before making changes.',
+    description: 'Get the responsive overrides for a frame. Returns the sparse override objects for the md and xl breakpoints, or null if no overrides exist. Use this to inspect what properties differ per breakpoint before making changes.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -429,7 +429,7 @@ export const toolSchemas = {
       type: 'object' as const,
       properties: {
         id: { type: 'string', description: 'ID of the frame' },
-        breakpoint: { type: 'string', enum: ['sm'], description: 'The breakpoint to clear overrides for' },
+        breakpoint: { type: 'string', enum: ['md', 'xl'], description: 'The breakpoint to clear overrides for' },
         keys: {
           type: 'array',
           items: { type: 'string' },

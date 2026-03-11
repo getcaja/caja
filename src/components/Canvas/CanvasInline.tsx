@@ -65,11 +65,12 @@ export function CanvasInline() {
   const editingComponentId = useFrameStore((s) => s.editingComponentId)
   const hover = useFrameStore((s) => s.hover)
   const setActiveBreakpoint = useFrameStore((s) => s.setActiveBreakpoint)
-  // Derive activeBreakpoint from workspace width in fluid mode only.
-  // In preset mode (canvasWidth !== null), ViewportBar sets the breakpoint directly.
+  // Derive activeBreakpoint from effective canvas width (always — decoupled from preview switcher).
+  // Small ≤768px, Base 768–1280px, Large ≥1280px
   useEffect(() => {
-    if (canvasWidth !== null || previewMode || editingComponentId) return
-    const bp = workspaceW <= 640 ? 'sm' : 'base'
+    if (previewMode || editingComponentId) return
+    const w = canvasWidth ?? workspaceW
+    const bp: import('../../types/frame').Breakpoint = w <= 768 ? 'md' : w >= 1280 ? 'xl' : 'base'
     setActiveBreakpoint(bp)
   }, [canvasWidth, workspaceW, previewMode, editingComponentId, setActiveBreakpoint])
 

@@ -26,7 +26,7 @@ export function loadViewPrefs(): ViewPrefs {
       return {
         previewMode: parsed.previewMode ?? false,
         canvasWidth: parsed.canvasWidth ?? null,
-        activeBreakpoint: (['base', 'md', 'sm'].includes(parsed.activeBreakpoint) ? parsed.activeBreakpoint : 'base') as Breakpoint,
+        activeBreakpoint: (['base', 'md', 'xl'].includes(parsed.activeBreakpoint) ? parsed.activeBreakpoint : parsed.activeBreakpoint === 'sm' ? 'md' : 'base') as Breakpoint,
         collapsedIds: parsed.collapsedIds ?? [],
         spacingGrid: (['off', '4px', '8px'].includes(parsed.spacingGrid) ? parsed.spacingGrid : '4px') as SpacingGrid,
         styleNewFrames: parsed.styleNewFrames ?? true,
@@ -61,23 +61,12 @@ function ensureSpacingSides(s: unknown): Spacing | undefined {
   }
 }
 
-export function mergeResponsiveOverrides(frame: Frame, bp: 'md' | 'sm'): Frame {
+export function mergeResponsiveOverrides(frame: Frame, bp: 'md' | 'xl'): Frame {
   const resp = frame.responsive
   if (!resp) return frame
-  let result = frame as Frame
-  // Desktop-first cascade: md always applies at sm too
-  if (bp === 'sm' || bp === 'md') {
-    const md = resp.md
-    if (md && Object.keys(md).length > 0) {
-      result = { ...result, ...md } as Frame
-    }
-  }
-  if (bp === 'sm') {
-    const sm = resp.sm
-    if (sm && Object.keys(sm).length > 0) {
-      result = { ...result, ...sm } as Frame
-    }
-  }
+  const overrides = resp[bp]
+  if (!overrides || Object.keys(overrides).length === 0) return frame
+  let result = { ...frame, ...overrides } as Frame
   // Ensure spacing fields are complete after merge (responsive overrides can be partial)
   if (result.padding) result = { ...result, padding: ensureSpacingSides(result.padding)! }
   if (result.margin) result = { ...result, margin: ensureSpacingSides(result.margin)! }

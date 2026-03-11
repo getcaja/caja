@@ -63,7 +63,7 @@ export function Properties() {
     if (activeBreakpoint === 'base') return undefined
     const keys = SECTION_KEYS[section]
     if (!keys || !sectionHasOverrides(section, overrideKeys)) return undefined
-    return () => removeResponsiveKeys(frame.id, activeBreakpoint as 'md' | 'sm', keys)
+    return () => removeResponsiveKeys(frame.id, activeBreakpoint as 'md' | 'xl', keys)
   }, [frame, activeBreakpoint, overrideKeys, removeResponsiveKeys])
 
   // Section reset: single updateFrame call → one Cmd+Z

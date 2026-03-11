@@ -454,14 +454,14 @@ export function frameToClasses(frame: Frame): string {
 
 /**
  * Generate prefixed classes for responsive overrides.
- * Desktop-first: max-md: for tablet, max-sm: for mobile.
+ * Desktop-first: max-md: for small (≤768px), xl: for large (≥1280px).
  */
 function generateResponsiveClasses(frame: Frame): string {
   if (!frame.responsive) return ''
   const cls: string[] = []
-  const bps: Array<{ key: 'md' | 'sm'; prefix: string }> = [
+  const bps: Array<{ key: 'md' | 'xl'; prefix: string }> = [
     { key: 'md', prefix: 'max-md:' },
-    { key: 'sm', prefix: 'max-sm:' },
+    { key: 'xl', prefix: 'xl:' },
   ]
   for (const { key, prefix } of bps) {
     const overrides = frame.responsive[key]

@@ -1,14 +1,16 @@
 import { useState, useRef, useMemo, useEffect } from 'react'
 import { useFrameStore } from '../../store/frameStore'
-import { ChevronDown, ArrowRightLeft, Monitor, Smartphone, RotateCcw } from 'lucide-react'
+import { ChevronDown, ArrowRightLeft, Monitor, Smartphone, MonitorUp, RotateCcw } from 'lucide-react'
 import { ZOOM_LEVELS } from '../Canvas/ZoomBar'
 import { canvasZoomTo } from '../Canvas/CanvasInline'
-import type { Frame, Breakpoint } from '../../types/frame'
+import type { Frame } from '../../types/frame'
 
-const BREAKPOINTS: { label: string; width: number | null; icon: typeof Monitor; bp: Breakpoint }[] = [
-  { label: 'Fluid', width: null, icon: ArrowRightLeft, bp: 'base' },
-  { label: 'Desktop', width: 1280, icon: Monitor, bp: 'base' },
-  { label: 'Mobile', width: 640, icon: Smartphone, bp: 'sm' },
+// Preview presets — only control canvasWidth, breakpoint is derived from width
+const PRESETS: { label: string; width: number | null; icon: typeof Monitor; subtitle: string }[] = [
+  { label: 'Fluid', width: null, icon: ArrowRightLeft, subtitle: 'Auto Switching' },
+  { label: 'Mobile', width: 375, icon: Smartphone, subtitle: '375px' },
+  { label: 'Desktop', width: 1280, icon: Monitor, subtitle: '1280px' },
+  { label: 'Large', width: 1440, icon: MonitorUp, subtitle: '1440px' },
 ]
 
 function Dropdown({ trigger, menu, menuClassName }: {
@@ -80,14 +82,14 @@ export function ViewportBar() {
   const canvasWidth = useFrameStore((s) => s.canvasWidth)
   const setCanvasWidth = useFrameStore((s) => s.setCanvasWidth)
   const activeBreakpoint = useFrameStore((s) => s.activeBreakpoint)
-  const setActiveBreakpoint = useFrameStore((s) => s.setActiveBreakpoint)
   const root = useFrameStore((s) => s.root)
   const clearAllResponsiveOverrides = useFrameStore((s) => s.clearAllResponsiveOverrides)
 
   const overrideCounts = useMemo(() => {
-    const counts: Record<string, number> = { sm: 0 }
+    const counts: Record<string, number> = { md: 0, xl: 0 }
     const walk = (f: Frame) => {
-      if (f.responsive?.sm && Object.keys(f.responsive.sm).length > 0) counts.sm++
+      if (f.responsive?.md && Object.keys(f.responsive.md).length > 0) counts.md++
+      if (f.responsive?.xl && Object.keys(f.responsive.xl).length > 0) counts.xl++
       if (f.type === 'box') f.children.forEach(walk)
     }
     walk(root)
@@ -95,31 +97,28 @@ export function ViewportBar() {
   }, [root])
 
   const activeBpHasOverrides = activeBreakpoint !== 'base' && overrideCounts[activeBreakpoint] > 0
-  // Only show reset when a fixed breakpoint is explicitly selected (not in Dynamic/fluid mode)
+  // Only show reset when a fixed preset is selected (not in Fluid mode)
   const showReset = activeBpHasOverrides && canvasWidth != null
 
-  const currentBp = BREAKPOINTS.find((bp) => bp.width === canvasWidth) ?? BREAKPOINTS[0]
-  const isCustomWidth = canvasWidth != null && !BREAKPOINTS.some((bp) => bp.width === canvasWidth)
-  const currentLabel = isCustomWidth ? `${canvasWidth}px` : currentBp.label
-  const CurrentIcon = currentBp.icon
+  const currentPreset = PRESETS.find((p) => p.width === canvasWidth) ?? PRESETS[0]
+  const isCustomWidth = canvasWidth != null && !PRESETS.some((p) => p.width === canvasWidth)
+  const currentLabel = isCustomWidth ? `${canvasWidth}px` : currentPreset.label
+  const CurrentIcon = currentPreset.icon
 
-  const breakpointMenu = BREAKPOINTS.map((bpItem, i) => {
-    const Icon = bpItem.icon
-    const active = bpItem.width === canvasWidth
+  const presetMenu = PRESETS.map((preset, i) => {
+    const Icon = preset.icon
+    const active = preset.width === canvasWidth
     return (
-      <div key={bpItem.label}>
+      <div key={preset.label}>
         {i === 1 && <div className="h-px bg-border my-1" />}
         <button
           className={`c-menu-item ${active ? 'c-menu-item-active' : ''}`}
-          onClick={() => { setCanvasWidth(bpItem.width); setActiveBreakpoint(bpItem.bp) }}
+          onClick={() => setCanvasWidth(preset.width)}
         >
           <Icon size={12} />
           <span className="flex flex-col items-start">
-            <span>{bpItem.label}</span>
-            <span className="fg-muted text-[10px]">{
-              !bpItem.width ? 'Auto Switching' :
-              bpItem.bp === 'sm' ? 'Small · 640px' : 'Baseline · 1280px'
-            }</span>
+            <span>{preset.label}</span>
+            <span className="fg-muted text-[10px]">{preset.subtitle}</span>
           </span>
           <span className="flex-1" />
         </button>
@@ -161,18 +160,18 @@ export function ViewportBar() {
       <div className="flex items-center gap-1">
         <Dropdown
           trigger={
-            <button className="h-6 flex items-center gap-2 rounded fg-default" title={currentBp.label}>
+            <button className="h-6 flex items-center gap-2 rounded fg-default" title={currentPreset.label}>
               <CurrentIcon size={12} />
               <span className="text-[12px]">{currentLabel}</span>
               <ChevronDown size={8} />
             </button>
           }
           menuClassName="min-w-[220px]"
-          menu={breakpointMenu}
+          menu={presetMenu}
         />
         {showReset && (
           <button
-            onClick={() => clearAllResponsiveOverrides(activeBreakpoint as 'md' | 'sm')}
+            onClick={() => clearAllResponsiveOverrides(activeBreakpoint as 'md' | 'xl')}
             className="c-icon-btn w-5 h-5"
             title="Reset all overrides at this breakpoint"
           >

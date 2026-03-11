@@ -151,8 +151,8 @@ export const TreeNode = memo(function TreeNode({ frame, depth, parentId = null, 
     const resp = frame.responsive
     if (!resp) return null
     const bps: string[] = []
-    if (resp.md && Object.keys(resp.md).length > 0) bps.push('md')
-    if (resp.sm && Object.keys(resp.sm).length > 0) bps.push('sm')
+    if (resp.md && Object.keys(resp.md).length > 0) bps.push('SM')
+    if (resp.xl && Object.keys(resp.xl).length > 0) bps.push('LG')
     if (bps.length === 0) return null
     return (
       <span className="flex items-center gap-0.5 shrink-0">

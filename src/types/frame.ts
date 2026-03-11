@@ -109,7 +109,7 @@ interface BaseElement {
   tailwindClasses: string
 
   // Responsive overrides — sparse per-breakpoint property patches (desktop-first)
-  responsive?: Partial<Record<'md' | 'sm', ResponsiveOverrides>>
+  responsive?: Partial<Record<'md' | 'xl', ResponsiveOverrides>>
 
   // Origin tracking — populated when inserting from a component source (passive, informational)
   _origin?: { libraryId?: string; componentId?: string }
@@ -244,8 +244,8 @@ export interface Page {
   isComponentPage?: boolean  // hidden page that stores component masters
 }
 
-// Responsive breakpoints — desktop-first: base = desktop, md ≤768px, sm ≤640px
-export type Breakpoint = 'base' | 'md' | 'sm'
+// Responsive breakpoints — desktop-first: base = 768–1280px (default), md = ≤768px (small), xl = ≥1280px (large)
+export type Breakpoint = 'base' | 'md' | 'xl'
 
 // Sparse partial overrides — only properties that differ from base
 export type ResponsiveOverrides = Partial<

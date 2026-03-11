@@ -237,9 +237,19 @@ export function migrateFrame(raw: Record<string, unknown>): Frame {
   if (raw._componentId) result._componentId = raw._componentId as string
   if (raw._overrides) result._overrides = raw._overrides as Record<string, Record<string, unknown>>
 
-  // Preserve responsive overrides
+  // Preserve responsive overrides + migrate old sm → md
   if (raw.responsive && typeof raw.responsive === 'object') {
-    result.responsive = raw.responsive as Frame['responsive']
+    const resp = raw.responsive as Record<string, unknown>
+    const migrated: Record<string, unknown> = {}
+    if (resp.md) migrated.md = resp.md
+    if (resp.xl) migrated.xl = resp.xl
+    // Old sm key → merge into md (sm values win as they were more specific)
+    if (resp.sm && typeof resp.sm === 'object') {
+      migrated.md = { ...(migrated.md as Record<string, unknown> ?? {}), ...(resp.sm as Record<string, unknown>) }
+    }
+    if (Object.keys(migrated).length > 0) {
+      result.responsive = migrated as Frame['responsive']
+    }
   }
 
   // Final pass: normalizeFrame fills in any fields the manual migration missed

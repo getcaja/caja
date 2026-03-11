@@ -466,9 +466,9 @@ server.tool(
 
 server.tool(
   'set_breakpoint',
-  'Switch the active responsive breakpoint. Desktop-first: "base" = desktop (default), "md" = tablet (≤768px), "sm" = mobile (≤640px). After switching, ALL update_frame/update_spacing/update_size calls write to that breakpoint\'s overrides instead of the base frame. Only changed properties are stored (sparse overrides). The canvas width is also adjusted to match. Call set_breakpoint({ breakpoint: "base" }) to return to desktop editing when done.',
+  'Switch the active responsive breakpoint. 3-zone system: "base" = default (768–1280px), "md" = small (≤768px, max-md:), "xl" = large (≥1280px, xl:). After switching, ALL update_frame/update_spacing/update_size calls write to that breakpoint\'s overrides instead of the base frame. Only changed properties are stored (sparse overrides). The canvas width is also adjusted to match. Call set_breakpoint({ breakpoint: "base" }) to return to base editing when done.',
   {
-    breakpoint: z.enum(['base', 'md', 'sm']).describe('The breakpoint to activate. "base" = desktop, "md" = tablet ≤768px, "sm" = mobile ≤640px.'),
+    breakpoint: z.enum(['base', 'md', 'xl']).describe('The breakpoint to activate. "base" = default 768–1280px, "md" = small ≤768px, "xl" = large ≥1280px.'),
   },
   async ({ breakpoint }) => {
     const result = await callTool('set_breakpoint', { breakpoint })
@@ -488,7 +488,7 @@ server.tool(
 
 server.tool(
   'get_responsive_overrides',
-  'Get the responsive overrides for a frame. Returns the sparse override objects for each breakpoint (md, sm), or null if no overrides exist. Use this to inspect what properties differ per breakpoint before making changes.',
+  'Get the responsive overrides for a frame. Returns the sparse override objects for each breakpoint (md, xl), or null if no overrides exist. Use this to inspect what properties differ per breakpoint before making changes.',
   {
     id: z.string().describe('ID of the frame to inspect'),
   },
@@ -503,7 +503,7 @@ server.tool(
   'Clear responsive overrides for a frame at a breakpoint. If keys are provided, only those specific properties are removed. If no keys, all overrides at the breakpoint are cleared.',
   {
     id: z.string().describe('ID of the frame'),
-    breakpoint: z.enum(['md', 'sm']).describe('The breakpoint to clear overrides for'),
+    breakpoint: z.enum(['md', 'xl']).describe('The breakpoint to clear overrides for'),
     keys: z.array(z.string()).optional().describe('Optional list of specific property keys to remove. If omitted, all overrides at the breakpoint are cleared.'),
   },
   async ({ id, breakpoint, keys }) => {

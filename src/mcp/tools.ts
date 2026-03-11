@@ -59,7 +59,7 @@ export function summaryTree(frame: Frame): Record<string, unknown> {
   }
   // Flag frames with responsive overrides so agents know they exist
   if (frame.responsive) {
-    const bps = Object.keys(frame.responsive).filter((k) => frame.responsive?.[k as 'md' | 'sm'])
+    const bps = Object.keys(frame.responsive).filter((k) => frame.responsive?.[k as 'md' | 'xl'])
     if (bps.length > 0) node.responsive = bps
   }
   return node
@@ -196,7 +196,7 @@ const handlers: Record<string, ToolHandler> = {
     if (sanitized.responsive && typeof sanitized.responsive === 'object' && frame.responsive) {
       const incoming = sanitized.responsive as Record<string, ResponsiveOverrides | undefined>
       const merged: Frame['responsive'] = { ...frame.responsive }
-      for (const bp of ['md', 'sm'] as const) {
+      for (const bp of ['md', 'xl'] as const) {
         if (incoming[bp]) {
           merged[bp] = { ...(merged[bp] ?? {}), ...incoming[bp] }
         }
@@ -683,21 +683,20 @@ const handlers: Record<string, ToolHandler> = {
 
   set_breakpoint(params) {
     const { breakpoint } = params as { breakpoint: Breakpoint }
-    const valid: Breakpoint[] = ['base', 'sm']
+    const valid: Breakpoint[] = ['base', 'md', 'xl']
     if (!valid.includes(breakpoint)) {
-      return { success: false, error: `Invalid breakpoint "${breakpoint}". Must be one of: base, sm` }
+      return { success: false, error: `Invalid breakpoint "${breakpoint}". Must be one of: base, md, xl` }
     }
     const store = getStore()
-    // Sync canvas width to match UI presets: base=Fluid(null), sm=Mobile(640)
-    const widthMap: Record<string, number | null> = { base: null, sm: 640 }
+    // Sync canvas width to match preview presets: base=Fluid, md=Mobile(375), xl=Large(1440)
+    const widthMap: Record<string, number | null> = { base: null, md: 375, xl: 1440 }
     store.setCanvasWidth(widthMap[breakpoint])
-    store.setActiveBreakpoint(breakpoint)
     return {
       success: true,
       data: { breakpoint, canvasWidth: widthMap[breakpoint] },
       hint: breakpoint === 'base'
-        ? 'Editing base (desktop) properties. All update_frame/update_spacing/update_size calls write to the base frame.'
-        : `Editing ${breakpoint} overrides. All update_frame/update_spacing/update_size calls now write to the ${breakpoint} breakpoint. Only changed properties are stored as overrides. Call set_breakpoint({ breakpoint: "base" }) when done to return to desktop editing.`,
+        ? 'Editing default properties (768–1280px). All update_frame/update_spacing/update_size calls write to the base frame.'
+        : `Editing ${breakpoint} overrides (${breakpoint === 'md' ? '≤768px small' : '≥1280px large'}). All update_frame/update_spacing/update_size calls now write to the ${breakpoint} breakpoint. Only changed properties are stored as overrides. Call set_breakpoint({ breakpoint: "base" }) when done.`,
     }
   },
 
@@ -725,12 +724,12 @@ const handlers: Record<string, ToolHandler> = {
   },
 
   clear_responsive_overrides(params) {
-    const { id, breakpoint, keys } = params as { id: string; breakpoint: 'md' | 'sm'; keys?: string[] }
+    const { id, breakpoint, keys } = params as { id: string; breakpoint: 'md' | 'xl'; keys?: string[] }
     const store = getStore()
     const frame = findInTree(store.root, id)
     if (!frame) return { success: false, error: `Frame ${id} not found` }
-    if (breakpoint !== 'md' && breakpoint !== 'sm') {
-      return { success: false, error: `Invalid breakpoint "${breakpoint}". Must be "md" or "sm"` }
+    if (breakpoint !== 'md' && breakpoint !== 'xl') {
+      return { success: false, error: `Invalid breakpoint "${breakpoint}". Must be "md" or "xl"` }
     }
     if (keys && keys.length > 0) {
       store.removeResponsiveKeys(id, breakpoint, keys)

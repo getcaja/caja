@@ -1004,28 +1004,22 @@ describe('frameStore', () => {
   // ===== responsive override deduplication =====
 
   describe('responsive override deduplication', () => {
-    it('keeps sm override when md overrides the same key (cascade counteract)', () => {
+    it('keeps xl override that differs from base', () => {
       const id = addChild('box')
-      // Set hidden at md
-      store().setActiveBreakpoint('md')
+      // Set hidden at xl
+      store().setActiveBreakpoint('xl')
       store().updateFrame(id, { hidden: true })
-      expect(findInTree(root(), id)!.responsive?.md?.hidden).toBe(true)
-
-      // Set hidden: false at sm to counteract md
-      store().setActiveBreakpoint('sm')
-      store().updateFrame(id, { hidden: false })
-      // sm override must be kept even though it matches base (false)
-      expect(findInTree(root(), id)!.responsive?.sm?.hidden).toBe(false)
+      expect(findInTree(root(), id)!.responsive?.xl?.hidden).toBe(true)
       store().setActiveBreakpoint('base')
     })
 
-    it('strips sm override when md does NOT override the same key', () => {
+    it('strips xl override when it matches base', () => {
       const id = addChild('box')
-      // Set hidden: false at sm (no md override exists)
-      store().setActiveBreakpoint('sm')
+      // Set hidden: false at xl (matches base default of false)
+      store().setActiveBreakpoint('xl')
       store().updateFrame(id, { hidden: false })
-      // Should be stripped — matches base and md doesn't override it
-      expect(findInTree(root(), id)!.responsive?.sm?.hidden).toBeUndefined()
+      // Should be stripped — matches base
+      expect(findInTree(root(), id)!.responsive?.xl?.hidden).toBeUndefined()
       store().setActiveBreakpoint('base')
     })
 
@@ -1770,50 +1764,50 @@ describe('showMarginOverlay', () => {
   // ===== clearAllResponsiveOverrides =====
 
   describe('clearAllResponsiveOverrides', () => {
-    it('strips all sm overrides from every frame in the tree', () => {
+    it('strips all xl overrides from every frame in the tree', () => {
       const boxId = addChild('box')
       const textId = addChild('text', boxId)
 
-      // Add sm overrides to both
-      store().setActiveBreakpoint('sm')
+      // Add xl overrides to both
+      store().setActiveBreakpoint('xl')
       store().updateFrame(boxId, { hidden: true })
       store().updateFrame(textId, { hidden: true })
       store().setActiveBreakpoint('base')
 
-      expect(findInTree(root(), boxId)!.responsive?.sm?.hidden).toBe(true)
-      expect(findInTree(root(), textId)!.responsive?.sm?.hidden).toBe(true)
+      expect(findInTree(root(), boxId)!.responsive?.xl?.hidden).toBe(true)
+      expect(findInTree(root(), textId)!.responsive?.xl?.hidden).toBe(true)
 
-      store().clearAllResponsiveOverrides('sm')
+      store().clearAllResponsiveOverrides('xl')
 
-      expect(findInTree(root(), boxId)!.responsive?.sm).toBeUndefined()
-      expect(findInTree(root(), textId)!.responsive?.sm).toBeUndefined()
+      expect(findInTree(root(), boxId)!.responsive?.xl).toBeUndefined()
+      expect(findInTree(root(), textId)!.responsive?.xl).toBeUndefined()
     })
 
-    it('preserves md overrides when clearing sm', () => {
+    it('preserves md overrides when clearing xl', () => {
       const id = addChild('box')
       store().setActiveBreakpoint('md')
       store().updateFrame(id, { hidden: true })
-      store().setActiveBreakpoint('sm')
-      store().updateFrame(id, { hidden: false })
+      store().setActiveBreakpoint('xl')
+      store().updateFrame(id, { hidden: true })
       store().setActiveBreakpoint('base')
 
-      store().clearAllResponsiveOverrides('sm')
+      store().clearAllResponsiveOverrides('xl')
 
       expect(findInTree(root(), id)!.responsive?.md?.hidden).toBe(true)
-      expect(findInTree(root(), id)!.responsive?.sm).toBeUndefined()
+      expect(findInTree(root(), id)!.responsive?.xl).toBeUndefined()
     })
 
     it('is undoable', () => {
       const id = addChild('box')
-      store().setActiveBreakpoint('sm')
+      store().setActiveBreakpoint('xl')
       store().updateFrame(id, { hidden: true })
       store().setActiveBreakpoint('base')
 
-      store().clearAllResponsiveOverrides('sm')
-      expect(findInTree(root(), id)!.responsive?.sm).toBeUndefined()
+      store().clearAllResponsiveOverrides('xl')
+      expect(findInTree(root(), id)!.responsive?.xl).toBeUndefined()
 
       store().undo()
-      expect(findInTree(root(), id)!.responsive?.sm?.hidden).toBe(true)
+      expect(findInTree(root(), id)!.responsive?.xl?.hidden).toBe(true)
     })
   })
 
@@ -1823,44 +1817,47 @@ describe('showMarginOverlay', () => {
     it('returns frame unchanged for base breakpoint', () => {
       const id = addChild('box')
       const frame = findInTree(root(), id)!
-      // mergeResponsiveOverrides is only called with md|sm, but getEffectiveFrame handles base
+      // mergeResponsiveOverrides is only called with md|xl, but getEffectiveFrame handles base
       expect(store().getEffectiveFrame(frame)).toBe(frame)
     })
 
-    it('applies sm overrides', () => {
+    it('applies xl overrides', () => {
       const id = addChild('box')
-      store().setActiveBreakpoint('sm')
+      store().setActiveBreakpoint('xl')
       store().updateFrame(id, { hidden: true })
       store().setActiveBreakpoint('base')
 
       const frame = findInTree(root(), id)!
-      const merged = mergeResponsiveOverrides(frame, 'sm')
+      const merged = mergeResponsiveOverrides(frame, 'xl')
       expect(merged.hidden).toBe(true)
       expect(frame.hidden).toBe(false) // original unchanged
     })
 
-    it('cascades md into sm (desktop-first)', () => {
+    it('md and xl are independent (no cascade)', () => {
       const id = addChild('box')
       store().setActiveBreakpoint('md')
       store().updateFrame(id, { hidden: true })
       store().setActiveBreakpoint('base')
 
       const frame = findInTree(root(), id)!
-      const merged = mergeResponsiveOverrides(frame, 'sm')
-      expect(merged.hidden).toBe(true) // md cascades to sm
+      // xl should NOT inherit md overrides
+      const merged = mergeResponsiveOverrides(frame, 'xl')
+      expect(merged.hidden).toBe(false) // no cascade from md
     })
 
-    it('sm overrides take precedence over md in cascade', () => {
+    it('md overrides apply independently', () => {
       const id = addChild('box')
       store().setActiveBreakpoint('md')
       store().updateFrame(id, { hidden: true })
-      store().setActiveBreakpoint('sm')
+      store().setActiveBreakpoint('xl')
       store().updateFrame(id, { hidden: false })
       store().setActiveBreakpoint('base')
 
       const frame = findInTree(root(), id)!
-      const merged = mergeResponsiveOverrides(frame, 'sm')
-      expect(merged.hidden).toBe(false) // sm wins over md
+      const mergedMd = mergeResponsiveOverrides(frame, 'md')
+      const mergedXl = mergeResponsiveOverrides(frame, 'xl')
+      expect(mergedMd.hidden).toBe(true) // md has its own override
+      expect(mergedXl.hidden).toBe(false) // xl has its own override (matches base, but stored)
     })
   })
 
@@ -2008,18 +2005,18 @@ describe('showMarginOverlay', () => {
     })
 
     it('setActiveBreakpoint changes breakpoint', () => {
-      store().setActiveBreakpoint('sm')
-      expect(store().activeBreakpoint).toBe('sm')
+      store().setActiveBreakpoint('xl')
+      expect(store().activeBreakpoint).toBe('xl')
       store().setActiveBreakpoint('base')
       expect(store().activeBreakpoint).toBe('base')
     })
 
-    it('getEffectiveFrame returns merged frame at sm', () => {
+    it('getEffectiveFrame returns merged frame at xl', () => {
       const id = addChild('box')
-      store().setActiveBreakpoint('sm')
+      store().setActiveBreakpoint('xl')
       store().updateFrame(id, { hidden: true })
 
-      // getEffectiveFrame should merge sm overrides
+      // getEffectiveFrame should merge xl overrides
       const frame = findInTree(root(), id)!
       const effective = store().getEffectiveFrame(frame)
       expect(effective.hidden).toBe(true)
@@ -2028,7 +2025,7 @@ describe('showMarginOverlay', () => {
 
     it('getEffectiveFrame returns original frame at base', () => {
       const id = addChild('box')
-      store().setActiveBreakpoint('sm')
+      store().setActiveBreakpoint('xl')
       store().updateFrame(id, { hidden: true })
       store().setActiveBreakpoint('base')
 

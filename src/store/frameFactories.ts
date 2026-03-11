@@ -111,7 +111,7 @@ export function cloneSizeValue(sv: SizeValue | undefined): SizeValue | undefined
 function cloneResponsive(responsive: Frame['responsive']): Frame['responsive'] {
   if (!responsive) return undefined
   const result: Frame['responsive'] = {}
-  for (const key of ['md', 'sm'] as const) {
+  for (const key of ['md', 'xl'] as const) {
     const ov = responsive[key]
     if (!ov) continue
     result[key] = structuredClone(ov)
