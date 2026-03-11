@@ -5,23 +5,27 @@ import { openUrl } from '@tauri-apps/plugin-opener'
 
 const RELEASES_URL = 'https://github.com/getcaja/caja/releases'
 
-/** Prompt update with 3-button native dialog. Returns true if user chose to update. */
+/** Prompt update with 3-button native dialog. Returns true if user chose to update.
+ *  Re-shows the dialog after opening the changelog URL. */
 async function promptUpdate(version: string): Promise<boolean> {
-  const result = await message(
-    `Version ${version} is available. Would you like to download it now?`,
-    {
-      title: 'Update Available',
-      kind: 'info',
-      buttons: { yes: 'Update', no: "Don't Update", cancel: 'View Changelog' },
-    },
-  )
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const result = await message(
+      `Version ${version} is available. Would you like to download it now?`,
+      {
+        title: 'Update Available',
+        kind: 'info',
+        buttons: { yes: 'Update', no: "Don't Update", cancel: 'View Changelog' },
+      },
+    )
 
-  if (result === 'View Changelog') {
-    await openUrl(`${RELEASES_URL}/tag/v${version}`)
-    return false
+    if (result === 'View Changelog') {
+      await openUrl(`${RELEASES_URL}/tag/v${version}`)
+      continue // re-show dialog
+    }
+
+    return result === 'Update'
   }
-
-  return result === 'Update'
 }
 
 /** Silent check on startup — only prompts if an update is available */
