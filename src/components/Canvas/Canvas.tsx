@@ -28,7 +28,8 @@ export function Canvas() {
   const effectiveCanvasW = Math.min(fluidW, canvasWidth ?? Infinity)
   const gutterW = Math.max(CANVAS_GUTTER, (scrollW - effectiveCanvasW * canvasZoom) / 2)
   // Hide handles when canvas fills or overflows the viewport (zoom > ~1)
-  const showHandles = !previewMode && !editingComponentId && gutterW > CANVAS_GUTTER
+  // Hide handles when canvas overflows the viewport (scaled canvas wider than scroll area)
+  const showHandles = !previewMode && !editingComponentId && effectiveCanvasW * canvasZoom < scrollW
 
   // Canvas resize handles — drag to set width, double-click to reset to fluid
   const [handleDragging, setHandleDragging] = useState(false)
