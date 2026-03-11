@@ -244,14 +244,14 @@ export interface Page {
   isComponentPage?: boolean  // hidden page that stores component masters
 }
 
-// Responsive breakpoints — desktop-first: base = 768–1280px (default), md = ≤768px (small), xl = ≥1280px (large)
+// Responsive breakpoints — desktop-first: base = ≥1280px (LG, default), xl = 768–1280px (MD, override), md = ≤768px (SM, override)
 export type Breakpoint = 'base' | 'md' | 'xl'
 
 /** Caja UI labels for breakpoints (abstracts Tailwind internals) */
 export const BP_LABEL: Record<Breakpoint, string> = {
-  base: 'MD',
+  base: 'LG',
+  xl: 'MD',
   md: 'SM',
-  xl: 'LG',
 }
 
 // Sparse partial overrides — only properties that differ from base

@@ -19,11 +19,11 @@ describe('responsive container query classes', () => {
 
     // Raw classes should have viewport-style responsive prefixes with !important
     expect(raw).toContain('max-md:!text-2xl')
-    expect(raw).toContain('xl:!text-base')
+    expect(raw).toContain('max-xl:!text-base')
 
     // Container queries should use pixel breakpoints with !important
     expect(cq).toContain('@max-[768px]:!text-2xl')
-    expect(cq).toContain('@min-[1280px]:!text-base')
+    expect(cq).toContain('@max-[1280px]:!text-base')
   })
 
   it('generates responsive hidden with !important', () => {

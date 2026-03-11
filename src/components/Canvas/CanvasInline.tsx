@@ -70,14 +70,14 @@ export function CanvasInline() {
   const GUTTER = 32
   const fluidW = Math.max(320, workspaceW - GUTTER * 2)
 
-  // Derive activeBreakpoint from canvas width.
-  // null (LG) = always 'xl', fixed widths derive from thresholds: ≤768→md, 768–1280→base, ≥1280→xl
+  // Derive activeBreakpoint from effective canvas width (fluid uses actual rendered width).
+  // ≤768→md, 768–1280→xl (override), ≥1280→base (LG = baseline, edits go to frame directly)
   useEffect(() => {
     if (previewMode || editingComponentId) return
-    if (canvasWidth === null) { setActiveBreakpoint('xl'); return }
-    const bp: import('../../types/frame').Breakpoint = canvasWidth <= 768 ? 'md' : canvasWidth >= 1280 ? 'xl' : 'base'
+    const w = canvasWidth ?? fluidW
+    const bp: import('../../types/frame').Breakpoint = w <= 768 ? 'md' : w >= 1280 ? 'base' : 'xl'
     setActiveBreakpoint(bp)
-  }, [canvasWidth, workspaceW, previewMode, editingComponentId, setActiveBreakpoint])
+  }, [canvasWidth, fluidW, previewMode, editingComponentId, setActiveBreakpoint])
 
   // In edit mode, render only the master being edited
   const renderFrame = editingComponentId && root.type === 'box'
@@ -327,6 +327,13 @@ export function CanvasInline() {
         </ErrorBoundary>
         <GoogleFontsLoader />
       </div>
+      {/* Canvas gutter masks — cover overflow on each side */}
+      {showHandles && handleGutter > 0 && (
+        <>
+          <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: handleGutter, background: 'var(--color-canvas-bg)', zIndex: 5 }} />
+          <div style={{ position: 'absolute', top: 0, bottom: 0, right: 0, width: handleGutter, background: 'var(--color-canvas-bg)', zIndex: 5 }} />
+        </>
+      )}
       {/* Canvas resize handles */}
       {showHandles && (
         <>

@@ -1,30 +1,8 @@
-import { useState, useRef, useMemo, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useFrameStore } from '../../store/frameStore'
-import { ChevronDown, Monitor, Smartphone, Laptop, RotateCcw } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import { ZOOM_LEVELS } from '../Canvas/ZoomBar'
 import { canvasZoomTo } from '../Canvas/CanvasInline'
-import type { Frame, Breakpoint } from '../../types/frame'
-
-/** Viewport modes map to canvasWidth values: null = fluid (LG), number = fixed */
-export const VIEWPORT_MODES: Breakpoint[] = ['xl', 'base', 'md']
-
-export const MODE_WIDTH: Record<Breakpoint, number | null> = {
-  xl: null,
-  base: 1024,
-  md: 375,
-}
-
-const MODE_LABEL: Record<Breakpoint, string> = {
-  xl: 'LG',
-  base: 'MD',
-  md: 'SM',
-}
-
-const MODE_ICON: Record<Breakpoint, typeof Monitor> = {
-  xl: Monitor,
-  base: Laptop,
-  md: Smartphone,
-}
 
 function Dropdown({ trigger, menu, menuClassName }: {
   trigger: React.ReactNode
@@ -90,27 +68,8 @@ function Dropdown({ trigger, menu, menuClassName }: {
   )
 }
 
-const MODES: Breakpoint[] = VIEWPORT_MODES
-
 export function ViewportBar() {
   const canvasZoom = useFrameStore((s) => s.canvasZoom)
-  const setCanvasWidth = useFrameStore((s) => s.setCanvasWidth)
-  const activeBreakpoint = useFrameStore((s) => s.activeBreakpoint)
-  const root = useFrameStore((s) => s.root)
-  const clearAllResponsiveOverrides = useFrameStore((s) => s.clearAllResponsiveOverrides)
-
-  const overrideCounts = useMemo(() => {
-    const counts: Record<string, number> = { md: 0, xl: 0 }
-    const walk = (f: Frame) => {
-      if (f.responsive?.md && Object.keys(f.responsive.md).length > 0) counts.md++
-      if (f.responsive?.xl && Object.keys(f.responsive.xl).length > 0) counts.xl++
-      if (f.type === 'box') f.children.forEach(walk)
-    }
-    walk(root)
-    return counts
-  }, [root])
-
-  const canvasWidth = useFrameStore((s) => s.canvasWidth)
 
   // Observe actual rendered canvas width
   const [displayWidth, setDisplayWidth] = useState<number | null>(null)
@@ -123,13 +82,6 @@ export function ViewportBar() {
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
-
-  const activeMode: Breakpoint = canvasWidth === null ? 'xl' : activeBreakpoint === 'md' ? 'md' : activeBreakpoint === 'xl' ? 'xl' : 'base'
-  const activeBpHasOverrides = activeBreakpoint !== 'base' && overrideCounts[activeBreakpoint] > 0
-
-  const handleSegmentClick = (bp: Breakpoint) => {
-    setCanvasWidth(MODE_WIDTH[bp])
-  }
 
   const zoomIn = () => {
     const next = ZOOM_LEVELS.find((z) => z > canvasZoom + 0.001)
@@ -162,39 +114,9 @@ export function ViewportBar() {
 
   return (
     <div className="c-section-header px-4 justify-between border-b border-border">
-      {/* Breakpoint segments — primary control */}
-      <div className="flex items-center gap-2">
-        {displayWidth != null && (
-          <span className="text-[12px] tabular-nums fg-muted min-w-[48px] text-right">{displayWidth}px</span>
-        )}
-        <div className="c-toggle-group flex items-center h-6 rounded overflow-hidden">
-          {MODES.map((bp) => {
-            const Icon = MODE_ICON[bp]
-            const isActive = activeMode === bp
-            const hasOverrides = bp !== 'base' && overrideCounts[bp] > 0
-            return (
-              <button
-                key={bp}
-                onClick={() => handleSegmentClick(bp)}
-                className={`px-2 h-full flex items-center gap-1 text-[12px] ${isActive ? 'fg-default c-segment-active' : 'c-dimmed-i'}`}
-                title={`${MODE_LABEL[bp]}${bp === 'base' ? '' : hasOverrides ? ` (${overrideCounts[bp]} overrides)` : ''}`}
-              >
-                <Icon size={12} />
-                {MODE_LABEL[bp]}
-              </button>
-            )
-          })}
-        </div>
-        {activeBpHasOverrides && (
-          <button
-            onClick={() => clearAllResponsiveOverrides(activeBreakpoint as 'md' | 'xl')}
-            className="c-icon-btn w-5 h-5"
-            title="Reset all overrides at this breakpoint"
-          >
-            <RotateCcw size={10} />
-          </button>
-        )}
-      </div>
+      {displayWidth != null && (
+        <span className="text-[12px] tabular-nums fg-muted">{displayWidth}px</span>
+      )}
       {/* Zoom */}
       <Dropdown
         trigger={

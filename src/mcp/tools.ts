@@ -688,15 +688,15 @@ const handlers: Record<string, ToolHandler> = {
       return { success: false, error: `Invalid breakpoint "${breakpoint}". Must be one of: base, md, xl` }
     }
     const store = getStore()
-    // Sync canvas width to match preview presets: xl=Fluid(null), base=1024, md=375
-    const widthMap: Record<string, number | null> = { xl: null, base: 1024, md: 375 }
+    // Sync canvas width: base=LG(fluid/null), xl=MD(1024), md=SM(375)
+    const widthMap: Record<string, number | null> = { base: null, xl: 1024, md: 375 }
     store.setCanvasWidth(widthMap[breakpoint])
     return {
       success: true,
       data: { breakpoint, canvasWidth: widthMap[breakpoint] },
       hint: breakpoint === 'base'
-        ? 'Editing default properties (768–1280px). All update_frame/update_spacing/update_size calls write to the base frame.'
-        : `Editing ${breakpoint} overrides (${breakpoint === 'md' ? '≤768px small' : '≥1280px large'}). All update_frame/update_spacing/update_size calls now write to the ${breakpoint} breakpoint. Only changed properties are stored as overrides. Call set_breakpoint({ breakpoint: "base" }) when done.`,
+        ? 'Editing default properties (LG ≥1280px). All update_frame/update_spacing/update_size calls write to the base frame.'
+        : `Editing ${breakpoint === 'xl' ? 'MD (768–1280px)' : 'SM (≤768px)'} overrides. All update_frame/update_spacing/update_size calls now write to the ${breakpoint} breakpoint. Only changed properties are stored as overrides. Call set_breakpoint({ breakpoint: "base" }) when done.`,
     }
   },
 
