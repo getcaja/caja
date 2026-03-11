@@ -70,11 +70,12 @@ export function CanvasInline() {
   const GUTTER = 32
   const fluidW = Math.max(320, workspaceW - GUTTER * 2)
 
-  // Derive activeBreakpoint from effective canvas width (fluid uses actual rendered width).
-  // ≤768→md, 768–1280→xl (override), ≥1280→base (LG = baseline, edits go to frame directly)
+  // Derive activeBreakpoint from effective canvas width.
+  // Canvas is always fluid — canvasWidth is a max constraint, actual width = min(fluidW, canvasWidth)
+  // ≤768→md (SM), 768–1280→xl (MD override), ≥1280→base (LG baseline)
   useEffect(() => {
     if (previewMode || editingComponentId) return
-    const w = canvasWidth ?? fluidW
+    const w = Math.min(fluidW, canvasWidth ?? Infinity)
     const bp: import('../../types/frame').Breakpoint = w <= 768 ? 'md' : w >= 1280 ? 'base' : 'xl'
     setActiveBreakpoint(bp)
   }, [canvasWidth, fluidW, previewMode, editingComponentId, setActiveBreakpoint])
@@ -273,43 +274,30 @@ export function CanvasInline() {
   } else {
     const userZoom = canvasZoom
 
-    if (!canvasWidth) {
-      // Fluid mode (LG) — canvas inset by GUTTER on each side
-      // Use CSS calc() so the browser handles resize smoothly without React re-renders
-      if (userZoom === 1) {
-        wrapperStyle = { width: '100%', height: '100%' }
-        canvasStyle = { ...canvasResetStyle, width: `calc(100% - ${GUTTER * 2}px)`, margin: '0 auto' }
-      } else {
-        const canvasW = fluidW
-        const canvasH = workspaceH
-        wrapperStyle = { width: canvasW * userZoom, height: canvasH * userZoom, flexShrink: 0, position: 'relative', margin: 'auto' }
-        canvasStyle = { ...canvasResetStyle, position: 'absolute', top: 0, left: 0, width: canvasW, height: canvasH, transform: `scale(${userZoom})`, transformOrigin: 'top left' }
-      }
-    } else {
-      // Fixed breakpoint (tablet/mobile) — fixed width, auto-scale if workspace is narrower
-      const autoScale = Math.min(1, workspaceW / canvasWidth)
-      const zoom = userZoom * autoScale
-      const canvasW = canvasWidth
-      const canvasH = workspaceH // same layout as 100%, just scaled
+    // Canvas is always fluid — canvasWidth acts as a max-width constraint
+    // null = no constraint (LG), number = max-width (MD/SM preset)
+    const maxW = canvasWidth ?? Infinity
+    const effectiveFluid = Math.min(fluidW, maxW)
 
-      if (zoom === 1) {
-        wrapperStyle = { width: '100%', height: '100%' }
-        canvasStyle = { ...canvasResetStyle, width: canvasW, margin: '0 auto' }
-      } else {
-        wrapperStyle = { width: canvasW * zoom, height: canvasH * zoom, flexShrink: 0, position: 'relative', margin: 'auto' }
-        canvasStyle = { ...canvasResetStyle, position: 'absolute', top: 0, left: 0, width: canvasW, height: canvasH, transform: `scale(${zoom})`, transformOrigin: 'top left' }
-      }
+    if (userZoom === 1) {
+      wrapperStyle = { width: '100%', height: '100%' }
+      // Use CSS min() for smooth resize without React re-renders
+      const widthExpr = canvasWidth
+        ? `min(${canvasWidth}px, calc(100% - ${GUTTER * 2}px))`
+        : `calc(100% - ${GUTTER * 2}px)`
+      canvasStyle = { ...canvasResetStyle, width: widthExpr, margin: '0 auto' }
+    } else {
+      const canvasW = effectiveFluid
+      const canvasH = workspaceH
+      wrapperStyle = { width: canvasW * userZoom, height: canvasH * userZoom, flexShrink: 0, position: 'relative', margin: 'auto' }
+      canvasStyle = { ...canvasResetStyle, position: 'absolute', top: 0, left: 0, width: canvasW, height: canvasH, transform: `scale(${userZoom})`, transformOrigin: 'top left' }
     }
   }
 
   // Compute handle position — distance from wrapper edge to canvas edge
   const showHandles = !previewMode && !editingComponentId
-  let handleGutter = GUTTER
-  if (showHandles && canvasWidth) {
-    const autoScale = Math.min(1, workspaceW / canvasWidth)
-    const zoom = canvasZoom * autoScale
-    handleGutter = Math.max(GUTTER, (workspaceW - canvasWidth * zoom) / 2)
-  }
+  const effectiveCanvasW = Math.min(fluidW, canvasWidth ?? Infinity)
+  let handleGutter = Math.max(GUTTER, (workspaceW - effectiveCanvasW * canvasZoom) / 2)
 
   return (
     <div ref={wrapperRef} data-canvas-wrapper style={{ ...wrapperStyle, position: 'relative' }}>
