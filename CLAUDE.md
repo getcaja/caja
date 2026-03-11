@@ -15,3 +15,14 @@ To publish a new release:
 4. **Tag** with the SAME version: `git tag vX.Y.Z && git push origin vX.Y.Z`
 
 The GitHub Actions workflow triggers on tags matching `v*`. It creates a draft release named after the version in `tauri.conf.json`. If the tag and config version don't match, the re-sign step fails with "release not found".
+
+5. **Wait for CI** to finish: `gh run list --limit 1` to check status.
+6. **Edit release notes** on the draft release — these are shown in the in-app update modal:
+   ```
+   gh release edit vX.Y.Z --notes "$(cat <<'EOF'
+   - Feature or fix description
+   - Another change
+   EOF
+   )" --draft=false
+   ```
+   Use concise bullet points. The `--draft=false` publishes the release, which makes the auto-updater pick it up via `latest.json`.
