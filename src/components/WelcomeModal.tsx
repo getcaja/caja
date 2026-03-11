@@ -1,5 +1,5 @@
 import { Dialog } from './ui/Dialog'
-import { X, Smile, Cpu, Sparkles } from 'lucide-react'
+import { X, Smile, Cpu, Sparkles, Bug } from 'lucide-react'
 
 interface WelcomeModalProps {
   open: boolean
@@ -23,33 +23,35 @@ export function WelcomeModal({ open, onOpenChange }: WelcomeModalProps) {
 
         {/* Feature highlights */}
         <div className="px-4 py-5 flex flex-col gap-3">
-          <div className="flex items-start gap-2">
-            <div className="w-8 h-8 rounded-lg bg-surface-2 flex items-center justify-center shrink-0">
-              <Smile size={16} className="fg-muted" />
-            </div>
+          <div className="flex items-start gap-3">
+            <Smile size={16} className="fg-muted shrink-0 mt-0.5" />
             <div>
               <p className="text-[13px] fg-default font-medium">Free & open</p>
               <p className="text-[12px] fg-muted">Caja is free to use, open source and actively developed.</p>
             </div>
           </div>
 
-          <div className="flex items-start gap-2">
-            <div className="w-8 h-8 rounded-lg bg-surface-2 flex items-center justify-center shrink-0">
-              <Cpu size={16} className="fg-muted" />
-            </div>
+          <div className="flex items-start gap-3">
+            <Cpu size={16} className="fg-muted shrink-0 mt-0.5" />
             <div>
-              <p className="text-[13px] fg-default font-medium">Built-in MCP server</p>
-              <p className="text-[12px] fg-muted">Let AI agents build your layouts. Polish on the canvas, or both.</p>
+              <p className="text-[13px] fg-default font-medium">Built for you and agents</p>
+              <p className="text-[12px] fg-muted">Design by hand, delegate to AI via MCP, or mix both. You're always in control.</p>
             </div>
           </div>
 
-          <div className="flex items-start gap-2">
-            <div className="w-8 h-8 rounded-lg bg-surface-2 flex items-center justify-center shrink-0">
-              <Sparkles size={16} className="fg-muted" />
-            </div>
+          <div className="flex items-start gap-3">
+            <Sparkles size={16} className="fg-muted shrink-0 mt-0.5" />
             <div>
-              <p className="text-[13px] fg-default font-medium">Design with code</p>
-              <p className="text-[12px] fg-muted">The same technology that maps to your stack. No translation layer.</p>
+              <p className="text-[13px] fg-default font-medium">Same engine, no translation</p>
+              <p className="text-[12px] fg-muted">The canvas is the browser. Real HTML, real CSS, simplified by Tailwind.</p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <Bug size={16} className="fg-muted shrink-0 mt-0.5" />
+            <div>
+              <p className="text-[13px] fg-default font-medium">Early release</p>
+              <p className="text-[12px] fg-muted">This is an early version that may contain bugs. Feel free to report them on <a href="https://github.com/getcaja/caja/issues" target="_blank" rel="noopener noreferrer" className="underline fg-accent-text">GitHub</a>.</p>
             </div>
           </div>
         </div>

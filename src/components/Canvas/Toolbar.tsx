@@ -194,8 +194,8 @@ export function Toolbar() {
       }}
     >
       <div className={`flex items-stretch rounded-lg ${shouldHide ? 'pointer-events-none' : 'pointer-events-auto'}`} style={{ backgroundColor: 'var(--toolbar-bg)', border: '1px solid var(--color-float-border)', boxShadow: 'var(--elevation-toolbar)' }}>
-        <div className="flex items-center gap-0.5 py-1 pl-1.5 pr-1">
-          <div className="flex items-center gap-0.5">
+        <div className="flex items-center gap-1 py-1 px-1.5">
+          <div className="flex items-center gap-1">
             <button
               onClick={() => setCanvasTool('pointer')}
               className={`${btnIcon} ${canvasTool === 'pointer' ? 'bg-accent fg-default' : 'fg-default hover:bg-surface-1'}`}
