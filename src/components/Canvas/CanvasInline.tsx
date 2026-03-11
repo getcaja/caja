@@ -210,6 +210,7 @@ export function CanvasInline() {
     WebkitFontSmoothing: 'antialiased',
     minHeight: '100%',
     position: 'relative',
+    overflow: 'clip',
     backgroundColor: rootBgValue || '#ffffff',
   }
 

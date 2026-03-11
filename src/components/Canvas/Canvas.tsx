@@ -24,10 +24,11 @@ export function Canvas() {
   }, [])
 
   // Gutter masks + handles — computed at scroll container level so they work at all zoom levels
-  const showMasks = !previewMode && !editingComponentId
   const fluidW = Math.max(320, scrollW - CANVAS_GUTTER * 2)
   const effectiveCanvasW = Math.min(fluidW, canvasWidth ?? Infinity)
   const gutterW = Math.max(CANVAS_GUTTER, (scrollW - effectiveCanvasW * canvasZoom) / 2)
+  // Hide handles when canvas fills or overflows the viewport (zoom > ~1)
+  const showHandles = !previewMode && !editingComponentId && gutterW > CANVAS_GUTTER
 
   // Canvas resize handles — drag to set width, double-click to reset to fluid
   const [handleDragging, setHandleDragging] = useState(false)
@@ -86,17 +87,9 @@ export function Canvas() {
             </div>
           )}
         </div>
-        {/* Gutter masks + resize handles — at scroll container level for all zoom levels */}
-        {showMasks && (
+        {/* Resize handles — positioned at canvas edges */}
+        {showHandles && (
           <>
-            <div
-              className="absolute top-0 bottom-0 left-0 pointer-events-none"
-              style={{ width: gutterW, backgroundColor: 'var(--color-canvas-bg)' }}
-            />
-            <div
-              className="absolute top-0 bottom-0 right-0 pointer-events-none"
-              style={{ width: gutterW, backgroundColor: 'var(--color-canvas-bg)' }}
-            />
             <div
               className={`c-canvas-handle ${handleDragging || handleHovered ? 'is-active' : ''}`}
               style={{ left: gutterW - 6 }}
