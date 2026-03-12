@@ -109,8 +109,8 @@ export function Canvas() {
             />
           </>
         )}
+        {!previewMode && <CanvasHints />}
       </div>
-      {!previewMode && <CanvasHints />}
       {showToolbar && <Toolbar />}
     </div>
   )
