@@ -56,7 +56,8 @@ export function useTreeKeyboard(config: TreeKeyboardConfig) {
       }
 
       // Arrow keys — reorder (adapter receives raw key for direction filtering)
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && !e.defaultPrevented && config.reorder) {
+      // Skip when Cmd/Ctrl held — those combos are for breakpoint switching
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && !mod && !e.altKey && !e.defaultPrevented && config.reorder) {
         const primary = config.getPrimaryId()
         if (!primary) return
         e.preventDefault()
