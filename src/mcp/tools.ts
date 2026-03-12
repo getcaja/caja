@@ -79,8 +79,11 @@ const handlers: Record<string, ToolHandler> = {
 
     const store = getStore()
     const parent = findInTree(store.root, parent_id)
-    if (!parent || parent.type !== 'box') {
-      return { success: false, error: `Parent ${parent_id} not found or is not a box` }
+    if (!parent) {
+      return { success: false, error: `Parent "${parent_id}" not found in the tree. Use get_tree(summary: true) to see available frames.` }
+    }
+    if (parent.type !== 'box') {
+      return { success: false, error: `Parent "${parent_id}" is a "${parent.type}" element (name: "${parent.name}"). Only "box" elements can have children. In batch_update, $prev points to the LAST operation's result — to add multiple children to the same box, use $N (e.g. $0, $1) to reference that box's operation index.` }
     }
 
     // Merge classes (parsed) + explicit properties (wins)
@@ -430,8 +433,11 @@ const handlers: Record<string, ToolHandler> = {
 
     const store = getStore()
     const parent = findInTree(store.root, parent_id)
-    if (!parent || parent.type !== 'box') {
-      return { success: false, error: `Parent ${parent_id} not found or is not a box` }
+    if (!parent) {
+      return { success: false, error: `Parent "${parent_id}" not found in the tree. Use get_tree(summary: true) to see available frames.` }
+    }
+    if (parent.type !== 'box') {
+      return { success: false, error: `Parent "${parent_id}" is a "${parent.type}" element (name: "${parent.name}"). Only "box" elements can have children. In batch_update, $prev points to the LAST operation's result — to add multiple children to the same box, use $N (e.g. $0, $1) to reference that box's operation index.` }
     }
 
     const origin = { libraryId: 'internal', componentId: component.id }

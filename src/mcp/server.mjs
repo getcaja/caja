@@ -589,20 +589,45 @@ Custom: tailwindClasses (extra classes not parsed), className, htmlId
 
 ### batch_update is essential
 Always use batch_update for building sections. It's faster (single HTTP round-trip) and creates a single undo step.
-$prev refers to the previous operation's result ID. $0, $1, $N refer to the Nth operation (zero-indexed).
 
-Example — build a hero section in one call:
+**Variable substitution:**
+- \`$prev\` = result ID of the PREVIOUS operation (the one right before)
+- \`$0\`, \`$1\`, \`$N\` = result ID of the Nth operation (zero-indexed)
+
+**⚠️ CRITICAL: $prev vs $N when adding multiple children to the same parent**
+
+Only box elements can have children. $prev changes with every operation. If you add a text child and then use $prev for the next child, $prev now points to that text — NOT the box.
+
+WRONG — $prev points to the text, not the box:
+\`\`\`
+op 0: add box "Card"              → frame-10 (box)
+op 1: add text "Title" to $prev   → frame-11 (text)  ← $prev = frame-10 ✓
+op 2: add text "Body" to $prev    → ERROR! $prev = frame-11 (text, not box!)
+\`\`\`
+
+CORRECT — use $0 to always reference the box:
+\`\`\`
+op 0: add box "Card"              → frame-10 (box)
+op 1: add text "Title" to $0      → frame-11 ✓  ($0 = frame-10, the box)
+op 2: add text "Body" to $0       → frame-12 ✓  ($0 = frame-10, still the box)
+\`\`\`
+
+**Rule: When adding multiple children to the same parent, ALWAYS use $N to reference the parent box, NOT $prev.**
+Use $prev only when nesting (parent → child → grandchild).
+
+Example — build a hero section:
 \`\`\`json
 { "operations": [
   { "tool": "add_frame", "params": { "parent_id": "root-id", "element_type": "box", "classes": "flex flex-col items-center gap-6 py-24 px-8 text-center" } },
-  { "tool": "add_frame", "params": { "parent_id": "$prev", "element_type": "text", "properties": { "content": "Build faster", "tag": "h1" }, "classes": "text-6xl font-bold text-gray-900 tracking-tight max-w-4xl" } },
+  { "tool": "add_frame", "params": { "parent_id": "$0", "element_type": "text", "properties": { "content": "Build faster", "tag": "h1" }, "classes": "text-6xl font-bold text-gray-900 tracking-tight max-w-4xl" } },
   { "tool": "add_frame", "params": { "parent_id": "$0", "element_type": "text", "properties": { "content": "Ship products your users love." }, "classes": "text-xl text-gray-500 max-w-2xl" } },
   { "tool": "add_frame", "params": { "parent_id": "$0", "element_type": "box", "classes": "flex gap-4" } },
-  { "tool": "add_frame", "params": { "parent_id": "$prev", "element_type": "box", "classes": "flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-lg font-medium" } },
+  { "tool": "add_frame", "params": { "parent_id": "$3", "element_type": "box", "classes": "flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-lg font-medium" } },
   { "tool": "add_frame", "params": { "parent_id": "$prev", "element_type": "text", "properties": { "content": "Get started" } } },
   { "tool": "rename_frame", "params": { "id": "$0", "name": "Hero" } }
 ]}
 \`\`\`
+Note: ops 1,2,3 all use $0 (the hero box). Op 4 uses $3 (the button container). Op 5 uses $prev (nesting text inside button).
 
 ### Name everything
 Use rename_frame or properties.name to give semantic names. This makes the tree readable:
