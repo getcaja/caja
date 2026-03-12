@@ -563,6 +563,19 @@ Special: white, black, transparent, current
 
 Example: bg-blue-500, text-gray-900, border-emerald-200
 
+### ⚠️ Common Pitfalls
+
+**Color inheritance**: When you set a dark background (bg-gray-900, bg-[#1a1a2e], etc.), child text does NOT automatically become white. You MUST explicitly set text color on every text element or on the parent container. Rule: **always pair dark backgrounds with text-white (or a light text color) on the same element or its container**.
+\`\`\`
+WRONG:  box "bg-gray-900 p-8" → text "Hello"                    ← text inherits default dark color, invisible!
+RIGHT:  box "bg-gray-900 p-8 text-white" → text "Hello"         ← text inherits white from parent
+RIGHT:  box "bg-gray-900 p-8" → text "Hello" "text-white"       ← text explicitly white
+\`\`\`
+
+**Classes vs properties**: ALL Tailwind classes work. Use classes as the primary styling method. Properties (bg, color, fontSize, etc.) are for values that don't map to Tailwind well. If in doubt, use classes. They are never "partial" — the full Tailwind v4 spec runs in the browser.
+
+**Responsive overrides are sparse**: When you switch to md breakpoint and update a frame, only the properties you change are stored. Everything else inherits from base. This means: design base (desktop) fully first, then only adjust what breaks on small screens.
+
 ## Element Types
 - **box** = div container (flex/grid). This is your main building block.
 - **text** = text content. Set \`tag\` property: "h1", "h2", "h3", "h4", "h5", "h6", "p", "span", "a" (link)
