@@ -515,8 +515,62 @@ server.tool(
 // ── Resources ──
 
 server.resource(
+  'guide',
+  'caja://guide',
+  { description: 'How to use Caja MCP — read this first before doing anything else' },
+  async (uri) => {
+    return {
+      contents: [{
+        uri: uri.href,
+        mimeType: 'text/plain',
+        text: `# Caja MCP — Quick Start Guide
+
+Caja is a visual design tool running as a native desktop app. You are connected to its live canvas via MCP.
+DO NOT create files (HTML, CSS, etc.) — instead, use the MCP tools below to build layouts directly on the canvas.
+
+## Core Workflow
+1. Call get_tree(summary: true) to see the current canvas structure
+2. Use add_frame() to add elements (box, text, image, button, link, input, textarea, select)
+3. Use update_frame() with Tailwind classes to style them — e.g. classes: "flex gap-4 p-8 bg-blue-500 rounded-lg text-white"
+4. Use update_spacing() for padding/margin, update_size() for width/height
+5. Use batch_update() to do multiple operations in one step (faster, single undo)
+
+## Key Concepts
+- Everything is a frame (box = div, text = p/h1/span, image = img, etc.)
+- The root frame is "Body" — add children to it
+- Style with Tailwind classes string OR individual properties — classes are the fastest way
+- The canvas renders real HTML + CSS live, changes appear instantly
+
+## Building a Page
+\`\`\`
+1. get_tree(summary: true)           → see current structure
+2. add_frame(parent_id: "root", element_type: "box", classes: "flex flex-col min-h-screen")
+3. add_frame(parent_id: "$prev", element_type: "text", properties: { content: "Hello World", tag: "h1" }, classes: "text-4xl font-bold")
+\`\`\`
+
+## Tips
+- Use batch_update for bulk operations — supports $prev and $N variable substitution
+- Raw values auto-match to Tailwind tokens: gap: 16 → gap-4, bg: "#3b82f6" → bg-blue-500
+- For images, use placeholder URLs like https://placehold.co/600x400 or upload_asset() for real images
+- Use responsive tools (set_breakpoint) to adapt layouts for different screen sizes
+- Use screenshot() to see what the canvas looks like
+
+## Available Tools (${31} total)
+Frame: add_frame, update_frame, update_spacing, update_size, remove_frame, move_frame, wrap_frame, duplicate_frame, rename_frame, select_frame
+Tree: get_tree, get_selected, batch_update
+Responsive: set_breakpoint, get_breakpoint, get_responsive_overrides, clear_responsive_overrides
+Components: list_components, insert_component, save_component, delete_component, edit_component, exit_component_edit, export_library
+Media: screenshot, upload_asset
+Pages: new_file, list_pages, switch_page, add_page, remove_page`,
+      }],
+    }
+  }
+)
+
+server.resource(
+  'tree',
   'caja://tree',
-  'caja://tree',
+  { description: 'Full frame tree JSON — the complete layout structure on canvas' },
   async (uri) => {
     const result = await readResource(uri.href)
     return {
@@ -530,8 +584,9 @@ server.resource(
 )
 
 server.resource(
+  'selected',
   'caja://selected',
-  'caja://selected',
+  { description: 'Currently selected frame with all properties' },
   async (uri) => {
     const result = await readResource(uri.href)
     return {
@@ -545,8 +600,9 @@ server.resource(
 )
 
 server.resource(
+  'export',
   'caja://export',
-  'caja://export',
+  { description: 'Exported Tailwind CSS classes for all frames' },
   async (uri) => {
     const result = await readResource(uri.href)
     return {
@@ -560,8 +616,9 @@ server.resource(
 )
 
 server.resource(
+  'export-html',
   'caja://export/html',
-  'caja://export/html',
+  { description: 'Full HTML export of the current page' },
   async (uri) => {
     const result = await readResource(uri.href)
     return {
@@ -575,8 +632,9 @@ server.resource(
 )
 
 server.resource(
+  'components',
   'caja://components',
-  'caja://components',
+  { description: 'Component catalog — reusable frame trees' },
   async (uri) => {
     const result = await readResource(uri.href)
     return {
