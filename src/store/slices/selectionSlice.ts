@@ -7,15 +7,12 @@ export interface SelectionSlice {
   selectedId: string | null
   selectedIds: Set<string>
   pageSelected: boolean
-  hoveredId: string | null
-  isTreeHover: boolean
   clipboard: Frame[]
 
   select: (id: string | null) => void
   selectMulti: (id: string) => void
   selectRange: (targetId: string) => void
   selectAllSiblings: () => void
-  hover: (id: string | null, source?: 'tree') => void
   getSelected: () => Frame | null
   getParentDirection: (id: string) => BoxElement['direction']
   getParentDisplay: (id: string) => BoxElement['display'] | null
@@ -26,8 +23,6 @@ export const createSelectionSlice: StateCreator<FrameStore, [], [], SelectionSli
   selectedId: null, // Will be overridden by coreTreeSlice's initial state
   selectedIds: new Set<string>(),
   pageSelected: false,
-  hoveredId: null,
-  isTreeHover: false,
   clipboard: [] as Frame[],
 
   select: (id) => set({ selectedId: id, selectedIds: new Set(id ? [id] : []), pageSelected: false, showMarginOverlay: false, showPaddingOverlay: false, showGapOverlay: false }),
@@ -80,8 +75,6 @@ export const createSelectionSlice: StateCreator<FrameStore, [], [], SelectionSli
     const ids = new Set(parent.children.map((c) => c.id))
     return { selectedIds: ids, selectedId: id }
   }),
-
-  hover: (id, source) => set({ hoveredId: id, isTreeHover: source === 'tree' }),
 
   getSelected: () => {
     const { root, selectedId } = get()

@@ -11,6 +11,7 @@ vi.stubGlobal('localStorage', {
 import { useFrameStore, findInTree, isRootId, normalizeFrame, findTopLevelAncestor, resolveToDirectChild, getDrillContext, resolveToContextLevel, COMPONENT_PAGE_ID } from '../frameStore'
 import { appendCopySuffix } from '../treeHelpers'
 import { _resetLoadGuard } from '../slices/fileSlice'
+import { useHoverStore } from '../hoverStore'
 import { mergeResponsiveOverrides } from '../slices/uiSlice'
 import { isLayoutDirty, isTypographyDirty, isFillDirty, isBorderDirty, isEffectsDirty, isPositionDirty, isTransformDirty, isTransitionDirty, layoutResetValues, typographyResetValues, fillResetValues, borderResetValues, effectsResetValues, positionResetValues, transformResetValues, transitionResetValues } from '../../components/Properties/sectionReset'
 import type { BoxElement, Frame, InputElement, TextElement } from '../../types/frame'
@@ -1680,40 +1681,42 @@ describe('resolveToContextLevel', () => {
 
 // ── Hover source tracking ──
 
-describe('hover with isTreeHover', () => {
-  beforeEach(() => { storage.clear(); useFrameStore.setState(useFrameStore.getInitialState()) })
+describe('hover with isTreeHover (hoverStore)', () => {
+  const hoverState = () => useHoverStore.getState()
+
+  beforeEach(() => { useHoverStore.setState(useHoverStore.getInitialState()) })
 
   it('hover without source sets isTreeHover to false', () => {
-    store().hover('some-id')
-    expect(store().hoveredId).toBe('some-id')
-    expect(store().isTreeHover).toBe(false)
+    hoverState().hover('some-id')
+    expect(hoverState().hoveredId).toBe('some-id')
+    expect(hoverState().isTreeHover).toBe(false)
   })
 
   it('hover with tree source sets isTreeHover to true', () => {
-    store().hover('some-id', 'tree')
-    expect(store().hoveredId).toBe('some-id')
-    expect(store().isTreeHover).toBe(true)
+    hoverState().hover('some-id', 'tree')
+    expect(hoverState().hoveredId).toBe('some-id')
+    expect(hoverState().isTreeHover).toBe(true)
   })
 
   it('canvas hover after tree hover resets isTreeHover', () => {
-    store().hover('tree-id', 'tree')
-    expect(store().isTreeHover).toBe(true)
-    store().hover('canvas-id')
-    expect(store().isTreeHover).toBe(false)
-    expect(store().hoveredId).toBe('canvas-id')
+    hoverState().hover('tree-id', 'tree')
+    expect(hoverState().isTreeHover).toBe(true)
+    hoverState().hover('canvas-id')
+    expect(hoverState().isTreeHover).toBe(false)
+    expect(hoverState().hoveredId).toBe('canvas-id')
   })
 
   it('clearing hover with tree source preserves isTreeHover', () => {
-    store().hover(null, 'tree')
-    expect(store().hoveredId).toBeNull()
-    expect(store().isTreeHover).toBe(true)
+    hoverState().hover(null, 'tree')
+    expect(hoverState().hoveredId).toBeNull()
+    expect(hoverState().isTreeHover).toBe(true)
   })
 
   it('clearing hover without source resets isTreeHover', () => {
-    store().hover('id', 'tree')
-    store().hover(null)
-    expect(store().hoveredId).toBeNull()
-    expect(store().isTreeHover).toBe(false)
+    hoverState().hover('id', 'tree')
+    hoverState().hover(null)
+    expect(hoverState().hoveredId).toBeNull()
+    expect(hoverState().isTreeHover).toBe(false)
   })
 })
 

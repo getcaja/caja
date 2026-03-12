@@ -15,6 +15,7 @@ import { createComponentSlice } from './slices/componentSlice'
 import type { ComponentSlice } from './slices/componentSlice'
 import { createCanvasDragSlice } from './slices/canvasDragSlice'
 import type { CanvasDragSlice } from './slices/canvasDragSlice'
+import { useHoverStore } from './hoverStore'
 
 // Combined store type — intersection of all slices
 export type FrameStore =
@@ -44,6 +45,17 @@ function setupSubscribers() {
   let saveTimeout: ReturnType<typeof setTimeout>
   let propagateTimer: ReturnType<typeof setTimeout> | null = null
   let lastCompPageRoot: BoxElement | null = null
+
+  // Clear hover when page/preview/component editing changes
+  unsubs.push(useFrameStore.subscribe((state, prev) => {
+    if (
+      state.activePageId !== prev.activePageId ||
+      state.previewMode !== prev.previewMode ||
+      state.editingComponentId !== prev.editingComponentId
+    ) {
+      useHoverStore.getState().clearHover()
+    }
+  }))
 
   // Auto-select root when selection is empty (keeps tree + canvas + properties in sync)
   unsubs.push(useFrameStore.subscribe((state, prev) => {

@@ -46,7 +46,7 @@ export const createFileSlice: StateCreator<FrameStore, [], [], FileSlice> = (set
     set({
       pages, activePageId: pageId, root, filePath: null, projectName: null, dirty: false,
       selectedId: root.id, selectedIds: new Set([root.id]), past: {}, future: {},
-      collapsedIds: new Set(), hoveredId: null,
+      collapsedIds: new Set(),
       canvasTool: 'pointer' as const, pendingImageSrc: null,
       editingComponentId: null, _beforeEditState: null,
     })

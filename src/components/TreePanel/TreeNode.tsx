@@ -2,6 +2,7 @@ import { useRef, useCallback, useMemo, memo, type ReactNode } from 'react'
 import { useDraggable, useDroppable, useDndContext } from '@dnd-kit/core'
 import type { Frame } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
+import { useHoverStore } from '../../store/hoverStore'
 import { useTreeDnd } from './TreeDndContext'
 import { useContextMenu } from './hooks/useContextMenu'
 import { useInlineEdit } from './hooks/useInlineEdit'
@@ -28,7 +29,7 @@ export const TreeNode = memo(function TreeNode({ frame, depth, parentId = null, 
   const isCollapsed = useFrameStore(useCallback((s) => s.collapsedIds.has(frame.id), [frame.id]))
   const isDragSelected = useFrameStore(useCallback((s) => s.selectedIds.has(frame.id), [frame.id]))
   const select = useFrameStore((s) => s.select)
-  const hover = useFrameStore((s) => s.hover)
+  const hover = useHoverStore((s) => s.hover)
   const toggleCollapse = useFrameStore((s) => s.toggleCollapse)
   const renameFrame = useFrameStore((s) => s.renameFrame)
 

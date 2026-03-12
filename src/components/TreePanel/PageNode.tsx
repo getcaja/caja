@@ -1,5 +1,6 @@
 import type { Page } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
+import { useHoverStore } from '../../store/hoverStore'
 import { useContextMenu } from './hooks/useContextMenu'
 import { useInlineEdit } from './hooks/useInlineEdit'
 import { TreeRow } from './TreeRow'
@@ -26,7 +27,8 @@ export function PageNode({ page }: PageNodeProps) {
     if (!isActive) setActivePage(page.id)
     // Must set pageSelected atomically with selectedId=null,
     // otherwise the auto-select-root subscriber fires in between
-    useFrameStore.setState({ selectedId: null, selectedIds: new Set(), pageSelected: true, hoveredId: null })
+    useFrameStore.setState({ selectedId: null, selectedIds: new Set(), pageSelected: true })
+    useHoverStore.getState().clearHover()
   }
 
   return (

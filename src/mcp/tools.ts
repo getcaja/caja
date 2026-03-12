@@ -2,6 +2,7 @@
 // This is the single entry point for both the built-in chat and the external MCP server.
 
 import { useFrameStore, findInTree, cloneWithNewIds, normalizeFrame } from '../store/frameStore'
+import { useHoverStore } from '../store/hoverStore'
 import { useCatalogStore } from '../store/catalogStore'
 import type { Frame, SizeValue, Breakpoint, ResponsiveOverrides } from '../types/frame'
 import type { ToolName } from './schema'
@@ -333,7 +334,7 @@ const handlers: Record<string, ToolHandler> = {
     const store = getStore()
     const prevSelected = store.selectedId
     store.select(null)
-    store.hover(null)
+    useHoverStore.getState().clearHover()
 
     // Wait for React re-render + layout reflow (double rAF ensures paint completion)
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))

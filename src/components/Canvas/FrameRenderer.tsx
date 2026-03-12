@@ -5,6 +5,7 @@ import { frameToClasses } from '../../utils/frameToClasses'
 import { stripResponsivePrefixes, toContainerQueries } from '../../utils/responsiveClasses'
 import { useFrameStore, isRootId, findInTree, resolveToDirectChild } from '../../store/frameStore'
 import { getDrillContext, resolveToContextLevel } from '../../store/treeHelpers'
+import { useHoverStore } from '../../store/hoverStore'
 import { pushNav } from '../../store/selectionHistory'
 import { resolveCanvasDrop, getFrameDepth } from '../../utils/canvasDrop'
 import { resolveRenderSrc, subscribeAssets, getAssetSnapshot } from '../../lib/assetOps'
@@ -66,7 +67,7 @@ export function FrameRenderer({ frame: rawFrame }: FrameRendererProps) {
 
   const selectedId = useFrameStore((s) => s.selectedId)
   const select = useFrameStore((s) => s.select)
-  const hover = useFrameStore((s) => s.hover)
+  const hover = useHoverStore((s) => s.hover)
   const updateFrame = useFrameStore((s) => s.updateFrame)
   const expandToFrame = useFrameStore((s) => s.expandToFrame)
   const previewMode = useFrameStore((s) => s.previewMode)

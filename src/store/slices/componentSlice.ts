@@ -166,7 +166,6 @@ export const createComponentSlice: StateCreator<FrameStore, [], [], ComponentSli
       treePanelTab: 'components',
       selectedId: componentId,
       selectedIds: new Set([componentId]),
-      hoveredId: null,
     })
   },
 
@@ -185,8 +184,7 @@ export const createComponentSlice: StateCreator<FrameStore, [], [], ComponentSli
         treePanelTab: restore!.tab,
         selectedId: null,
         selectedIds: new Set(),
-        hoveredId: null,
-      })
+        })
     } else {
       // Fallback: just exit edit mode, stay on first regular page
       const regularPage = state.pages.find((p) => !p.isComponentPage) || state.pages[0]
@@ -198,8 +196,7 @@ export const createComponentSlice: StateCreator<FrameStore, [], [], ComponentSli
         treePanelTab: 'layers',
         selectedId: null,
         selectedIds: new Set(),
-        hoveredId: null,
-      })
+        })
     }
   },
 

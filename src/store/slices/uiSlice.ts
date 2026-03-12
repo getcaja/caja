@@ -227,11 +227,11 @@ export const createUiSlice: StateCreator<FrameStore, [], [], UiSlice> = (set, ge
     togglePreviewMode: () => set((s) => {
       const next = !s.previewMode
       saveViewPrefs({ previewMode: next, canvasWidth: s.canvasWidth })
-      return { previewMode: next, canvasTool: 'pointer' as const, ...(next ? { selectedId: null, hoveredId: null } : {}) }
+      return { previewMode: next, canvasTool: 'pointer' as const, ...(next ? { selectedId: null } : {}) }
     }),
     setPreviewMode: (value) => set((s) => {
       saveViewPrefs({ previewMode: value, canvasWidth: s.canvasWidth })
-      return { previewMode: value, canvasTool: 'pointer' as const, ...(value ? { selectedId: null, hoveredId: null } : {}) }
+      return { previewMode: value, canvasTool: 'pointer' as const, ...(value ? { selectedId: null } : {}) }
     }),
     setCanvasWidth: (width) => set((s) => {
       saveViewPrefs({ previewMode: s.previewMode, canvasWidth: width })

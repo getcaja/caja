@@ -1,7 +1,9 @@
 import { useFrameStore, findInTree, isRootId } from '../../store/frameStore'
+import { useHoverStore } from '../../store/hoverStore'
 
 /** Contextual keyboard shortcut hints — Safari-style bar at bottom-left of canvas. */
 export function CanvasHints() {
+  const hoveredId = useHoverStore((s) => s.hoveredId)
   const hint = useFrameStore((s) => {
     if (s.previewMode) return null
 
@@ -12,8 +14,8 @@ export function CanvasHints() {
     }
 
     // Show navigate hint when hovering a link with href
-    if (s.hoveredId) {
-      const frame = findInTree(s.root, s.hoveredId)
+    if (hoveredId) {
+      const frame = findInTree(s.root, hoveredId)
       if (frame && (frame.type === 'text' || frame.type === 'button') && frame.href) {
         return '\u2318 Click to follow link'
       }

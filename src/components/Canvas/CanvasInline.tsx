@@ -11,6 +11,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useFrameStore } from '../../store/frameStore'
+import { useHoverStore } from '../../store/hoverStore'
 import { FrameRenderer } from './FrameRenderer'
 import { SelectionOverlay } from './SelectionOverlay'
 import { GoogleFontsLoader } from './GoogleFontsLoader'
@@ -65,7 +66,7 @@ export function CanvasInline() {
   const rootBgValue = useFrameStore((s) => s.root.bg.value)
   const root = useFrameStore((s) => s.root)
   const editingComponentId = useFrameStore((s) => s.editingComponentId)
-  const hover = useFrameStore((s) => s.hover)
+  const hover = useHoverStore((s) => s.hover)
 
   const GUTTER = CANVAS_GUTTER
   const fluidW = Math.max(320, workspaceW - GUTTER * 2)

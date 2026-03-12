@@ -41,7 +41,7 @@ export const createPageSlice: StateCreator<FrameStore, [], [], PageSlice> = (set
       root: newRoot,
       selectedId: null,
       selectedIds: new Set(),
-      hoveredId: null,
+
       past: state.past,
       future: state.future,
       dirty: true,
@@ -68,7 +68,7 @@ export const createPageSlice: StateCreator<FrameStore, [], [], PageSlice> = (set
         root: newActive.root,
         selectedId: null,
         selectedIds: new Set(),
-        hoveredId: null,
+  
         pageSelected: true,
         past: pastRest,
         future: futureRest,
@@ -108,7 +108,7 @@ export const createPageSlice: StateCreator<FrameStore, [], [], PageSlice> = (set
       root: page.root,
       selectedId: null,
       selectedIds: new Set(),
-      hoveredId: null,
+
     }
   }),
 
@@ -131,7 +131,7 @@ export const createPageSlice: StateCreator<FrameStore, [], [], PageSlice> = (set
       root: clonedRoot,
       selectedId: null,
       selectedIds: new Set(),
-      hoveredId: null,
+
       dirty: true,
     }
   }),

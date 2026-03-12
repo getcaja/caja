@@ -15,6 +15,7 @@
 
 import { useEffect, useLayoutEffect, useState, useRef } from 'react'
 import { useFrameStore, findParent, isRootId } from '../../store/frameStore'
+import { useHoverStore } from '../../store/hoverStore'
 import { getDrillContext, resolveToContextLevel } from '../../store/treeHelpers'
 
 interface Rect { top: number; left: number; width: number; height: number }
@@ -422,7 +423,7 @@ export function SelectionOverlay() {
   const hoverElRef = useRef<HTMLElement | null>(null)
   const hoverChildRulesRef = useRef<HTMLStyleElement | null>(null)
   useEffect(() => {
-    const unsub = useFrameStore.subscribe((s) => {
+    const applyHover = () => {
       const prevEl = hoverElRef.current
       // Clear previous hover
       if (prevEl) {
@@ -434,13 +435,15 @@ export function SelectionOverlay() {
         hoverChildRulesRef.current.textContent = ''
       }
 
-      if (!s.hoveredId || s.previewMode || s.canvasDragId || !doc) return
+      const h = useHoverStore.getState()
+      const s = useFrameStore.getState()
+      if (!h.hoveredId || s.previewMode || s.canvasDragId || !doc) return
 
       // Resolve effective hover ID (drill-down for canvas, exact for tree)
-      let effectiveId: string | null = s.hoveredId
-      if (!s.isTreeHover && !s.deepSelect) {
+      let effectiveId: string | null = h.hoveredId
+      if (!h.isTreeHover && !s.deepSelect) {
         const contextId = getDrillContext(s.root, s.selectedId)
-        effectiveId = resolveToContextLevel(s.root, contextId, s.hoveredId)
+        effectiveId = resolveToContextLevel(s.root, contextId, h.hoveredId)
       }
       if (!effectiveId) return
 
@@ -463,9 +466,11 @@ export function SelectionOverlay() {
         if (id !== s.selectedId) excParts.push(`:not([data-frame-id="${id}"])`)
       }
       hoverChildRulesRef.current.textContent = `[data-frame-id="${effectiveId}"] > [data-frame-id]${excParts.join('')} { outline: 1px dotted var(--color-accent) !important; outline-offset: -1px; }`
-    })
+    }
+    // Subscribe to hover store (fires only on hover changes, not on every main store update)
+    const unsubHover = useHoverStore.subscribe(applyHover)
     return () => {
-      unsub()
+      unsubHover()
       if (hoverChildRulesRef.current) {
         hoverChildRulesRef.current.remove()
         hoverChildRulesRef.current = null
