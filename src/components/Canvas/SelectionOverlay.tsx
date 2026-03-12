@@ -116,14 +116,12 @@ export function buildOverlayRules(state: {
   selectedId: string | null
   selectedIds: Set<string>
   selectedParentId: string | null
-  hoveredId: string | null
   showSel: boolean
-  showHov: boolean
   canvasDragId: string | null
   showDragGuides: boolean
   dragTargetParentId: string | null
 }): string[] {
-  const { selectedId, selectedIds, selectedParentId, hoveredId, showSel, showHov, canvasDragId, showDragGuides, dragTargetParentId } = state
+  const { selectedId, selectedIds, selectedParentId, showSel, canvasDragId, showDragGuides, dragTargetParentId } = state
   const rules: string[] = []
   const color = 'var(--color-accent)'
 
@@ -136,9 +134,7 @@ export function buildOverlayRules(state: {
     if (selectedId) {
       rules.push(`[data-frame-id="${selectedId}"] { outline: 1px solid ${color} !important; outline-offset: -1px !important; }`)
       const excDrag = canvasDragId ? `:not([data-frame-id="${canvasDragId}"])` : ''
-      // Exclude hovered element so hover 2px outline (lower specificity) isn't masked by child-hints
-      const excHov = showHov && hoveredId ? `:not([data-frame-id="${hoveredId}"])` : ''
-      rules.push(`[data-frame-id="${selectedId}"] > [data-frame-id]${excDrag}${excHov} { outline: 1px dotted ${color} !important; outline-offset: -1px; }`)
+      rules.push(`[data-frame-id="${selectedId}"] > [data-frame-id]${excDrag} { outline: 1px dotted ${color} !important; outline-offset: -1px; }`)
     }
     // Secondary selections — thin 1px
     for (const id of selectedIds) {
@@ -147,24 +143,15 @@ export function buildOverlayRules(state: {
     }
   }
 
-  // Build exclusion selector for all selected elements (primary + secondary)
-  // so hover/drag child-hints never overwrite selection outlines
-  const selExclusions: string[] = []
-  if (selectedId) selExclusions.push(`:not([data-frame-id="${selectedId}"])`)
-  for (const id of selectedIds) {
-    if (id !== selectedId) selExclusions.push(`:not([data-frame-id="${id}"])`)
-  }
-  const selExcStr = selExclusions.join('')
-
-  if (showHov && hoveredId) {
-    // Hover — thick 2px (attention-grabbing, shows what you'll select)
-    rules.push(`[data-frame-id="${hoveredId}"] { outline: 2px solid ${color} !important; outline-offset: -2px !important; }`)
-    rules.push(`[data-frame-id="${hoveredId}"] > [data-frame-id]${selExcStr} { outline: 1px dotted ${color} !important; outline-offset: -1px; }`)
-  }
-
+  // Build exclusion selector for selected elements so drag child-hints don't overwrite
   if (showDragGuides && dragTargetParentId) {
+    const selExclusions: string[] = []
+    if (selectedId) selExclusions.push(`:not([data-frame-id="${selectedId}"])`)
+    for (const id of selectedIds) {
+      if (id !== selectedId) selExclusions.push(`:not([data-frame-id="${id}"])`)
+    }
     const exc = canvasDragId ? `:not([data-frame-id="${canvasDragId}"])` : ''
-    rules.push(`[data-frame-id="${dragTargetParentId}"] > [data-frame-id]${exc}${selExcStr} { outline: 1px dotted ${color} !important; outline-offset: -1px; }`)
+    rules.push(`[data-frame-id="${dragTargetParentId}"] > [data-frame-id]${exc}${selExclusions.join('')} { outline: 1px dotted ${color} !important; outline-offset: -1px; }`)
   }
 
   return rules
@@ -430,19 +417,61 @@ export function SelectionOverlay() {
   const isDragging = !!canvasDragId && canvasDragId === selectedId
   const showSel = !previewMode && (!!selectedId || selectedIds.size > 0) && !isDragging
 
-  // Drill-down hover: resolve hover to the current context level.
-  // Context = parent of selected (or root if nothing selected).
-  // Hover highlights what a click would select at the current drill depth.
-  // Tree hovers bypass drill-down — the user explicitly targets the element.
-  const effectiveHoveredId = useFrameStore((s) => {
-    if (!s.hoveredId) return null
-    // Tree hover or deep-select (Cmd held) → show exact element, no drill-down
-    if (s.isTreeHover || s.deepSelect) return s.hoveredId
-    // Canvas hover → resolve to current drill-down level
-    const contextId = getDrillContext(s.root, s.selectedId)
-    return resolveToContextLevel(s.root, contextId, s.hoveredId)
-  })
-  const showHov = !previewMode && !!effectiveHoveredId && !canvasDragId
+  // Hover outline — managed via direct DOM manipulation for performance.
+  // Bypasses React render cycle entirely (critical for 100+ frame trees).
+  const hoverElRef = useRef<HTMLElement | null>(null)
+  const hoverChildRulesRef = useRef<HTMLStyleElement | null>(null)
+  useEffect(() => {
+    const unsub = useFrameStore.subscribe((s) => {
+      const prevEl = hoverElRef.current
+      // Clear previous hover
+      if (prevEl) {
+        prevEl.style.outline = ''
+        prevEl.style.outlineOffset = ''
+        hoverElRef.current = null
+      }
+      if (hoverChildRulesRef.current) {
+        hoverChildRulesRef.current.textContent = ''
+      }
+
+      if (!s.hoveredId || s.previewMode || s.canvasDragId || !doc) return
+
+      // Resolve effective hover ID (drill-down for canvas, exact for tree)
+      let effectiveId: string | null = s.hoveredId
+      if (!s.isTreeHover && !s.deepSelect) {
+        const contextId = getDrillContext(s.root, s.selectedId)
+        effectiveId = resolveToContextLevel(s.root, contextId, s.hoveredId)
+      }
+      if (!effectiveId) return
+
+      const el = doc.querySelector(`[data-frame-id="${effectiveId}"]`) as HTMLElement | null
+      if (!el) return
+
+      el.style.outline = '2px solid var(--color-accent)'
+      el.style.outlineOffset = '-2px'
+      hoverElRef.current = el
+
+      // Child hints (dotted outlines on direct children)
+      if (!hoverChildRulesRef.current) {
+        hoverChildRulesRef.current = doc.createElement('style')
+        doc.head.appendChild(hoverChildRulesRef.current)
+      }
+      // Build exclusion for selected elements so hover child-hints don't mask selection
+      const excParts: string[] = []
+      if (s.selectedId) excParts.push(`:not([data-frame-id="${s.selectedId}"])`)
+      for (const id of s.selectedIds) {
+        if (id !== s.selectedId) excParts.push(`:not([data-frame-id="${id}"])`)
+      }
+      hoverChildRulesRef.current.textContent = `[data-frame-id="${effectiveId}"] > [data-frame-id]${excParts.join('')} { outline: 1px dotted var(--color-accent) !important; outline-offset: -1px; }`
+    })
+    return () => {
+      unsub()
+      if (hoverChildRulesRef.current) {
+        hoverChildRulesRef.current.remove()
+        hoverChildRulesRef.current = null
+      }
+    }
+  }, [doc])
 
   const dragTargetParentId = canvasDragOver?.parentId ?? null
   const showDragGuides = !previewMode && !!canvasDragId && !!dragTargetParentId
@@ -454,7 +483,7 @@ export function SelectionOverlay() {
     setLineRect(computeLineRect(doc, canvasDragOver))
   }, [isLineMode, canvasDragOver?.parentId, canvasDragOver?.index, canvasDragId, doc])
 
-  const rules = buildOverlayRules({ selectedId, selectedIds, selectedParentId, hoveredId: effectiveHoveredId, showSel, showHov, canvasDragId, showDragGuides, dragTargetParentId })
+  const rules = buildOverlayRules({ selectedId, selectedIds, selectedParentId, showSel, canvasDragId, showDragGuides, dragTargetParentId })
 
   // Margin overlays — blue semi-transparent rects showing margin areas.
   // Triggers: hover on canvas element, or hovering margin inputs in panel.
@@ -463,8 +492,6 @@ export function SelectionOverlay() {
   const showMarginOverlay = useFrameStore((s) => s.showMarginOverlay)
   const showPaddingOverlay = useFrameStore((s) => s.showPaddingOverlay)
   const showGapOverlay = useFrameStore((s) => s.showGapOverlay)
-  const isTreeHover = useFrameStore((s) => s.isTreeHover)
-
   const [marginInfos, setMarginInfos] = useState<MarginInfo[]>([])
   const [paddingInfos, setPaddingInfos] = useState<PaddingInfo[]>([])
   const [gapInfos, setGapInfos] = useState<GapInfo[]>([])
@@ -498,7 +525,7 @@ export function SelectionOverlay() {
       setGapInfos(gaps)
     })
     return () => cancelAnimationFrame(raf)
-  }, [selectedId, effectiveHoveredId, showSel, showHov, showMarginOverlay, showPaddingOverlay, showGapOverlay, isTreeHover, doc, zoom, root])
+  }, [selectedId, showSel, showMarginOverlay, showPaddingOverlay, showGapOverlay, doc, zoom, root])
 
   return (
     <>
