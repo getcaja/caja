@@ -523,37 +523,147 @@ server.resource(
       contents: [{
         uri: uri.href,
         mimeType: 'text/plain',
-        text: `# Caja MCP — Quick Start Guide
+        text: `# Caja MCP — Agent Guide
 
 Caja is a visual design tool running as a native desktop app. You are connected to its live canvas via MCP.
-DO NOT create files (HTML, CSS, etc.) — instead, use the MCP tools below to build layouts directly on the canvas.
+DO NOT create files (HTML, CSS, etc.) — use the MCP tools to build layouts directly on the canvas.
 
-## Core Workflow
-1. Call get_tree(summary: true) to see the current canvas structure
-2. Use add_frame() to add elements (box, text, image, button, link, input, textarea, select)
-3. Use update_frame() with Tailwind classes to style them — e.g. classes: "flex gap-4 p-8 bg-blue-500 rounded-lg text-white"
-4. Use update_spacing() for padding/margin, update_size() for width/height
-5. Use batch_update() to do multiple operations in one step (faster, single undo)
+## ⚡ The #1 Rule: Use Tailwind Classes
 
-## Key Concepts
-- Everything is a frame (box = div, text = p/h1/span, image = img, etc.)
-- The root frame is "Body" — add children to it
-- Style with Tailwind classes string OR individual properties — classes are the fastest way
-- The canvas renders real HTML + CSS live, changes appear instantly
+Caja runs the **Tailwind CSS v4 browser runtime** — every Tailwind class works, including arbitrary values.
+The \`classes\` parameter on add_frame and update_frame is the fastest and most powerful way to style:
 
-## Building a Page
 \`\`\`
-1. get_tree(summary: true)           → see current structure
-2. add_frame(parent_id: "root", element_type: "box", classes: "flex flex-col min-h-screen")
-3. add_frame(parent_id: "$prev", element_type: "text", properties: { content: "Hello World", tag: "h1" }, classes: "text-4xl font-bold")
+add_frame({ parent_id: "root", element_type: "box", classes: "flex flex-col gap-8 p-12 bg-white rounded-2xl shadow-lg" })
+add_frame({ parent_id: "$prev", element_type: "text", properties: { content: "Hello", tag: "h1" }, classes: "text-5xl font-bold text-gray-900 tracking-tight" })
 \`\`\`
 
-## Tips
-- Use batch_update for bulk operations — supports $prev and $N variable substitution
-- Raw values auto-match to Tailwind tokens: gap: 16 → gap-4, bg: "#3b82f6" → bg-blue-500
-- For images, use placeholder URLs like https://placehold.co/600x400 or upload_asset() for real images
-- Use responsive tools (set_breakpoint) to adapt layouts for different screen sizes
-- Use screenshot() to see what the canvas looks like
+Classes are parsed into structured properties automatically. You can combine classes + properties — explicit properties override parsed classes.
+
+### Supported Tailwind Classes (all of these work!)
+- **Layout**: flex, flex-col, flex-row, grid, grid-cols-2, grid-cols-3, inline-flex, block, inline-block
+- **Spacing**: p-4, px-8, py-12, pt-6, gap-4, gap-8 (also m-4, mx-auto, etc. via update_spacing)
+- **Sizing**: w-full, w-1/2, w-[600px], h-screen, min-h-screen, max-w-7xl, max-w-[1200px]
+- **Typography**: text-sm, text-lg, text-4xl, text-[40px], font-bold, font-semibold, font-medium, leading-tight, leading-relaxed, tracking-tight, uppercase, text-center
+- **Colors**: bg-white, bg-gray-900, bg-blue-500, bg-[#1a1a2e], text-white, text-gray-600, text-[#ff6b35]
+- **Borders**: rounded, rounded-lg, rounded-2xl, rounded-full, border, border-gray-200, border-2
+- **Effects**: shadow-sm, shadow-lg, shadow-2xl, opacity-50, blur-sm, backdrop-blur-lg
+- **Flexbox**: items-center, justify-between, justify-center, self-start, grow, shrink-0
+- **Grid**: grid-cols-1, grid-cols-2, grid-cols-3, col-span-2, row-span-2
+- **Overflow**: overflow-hidden, overflow-auto
+- **Position**: relative, absolute, fixed, sticky (use update_spacing for inset values)
+- **Transforms**: rotate-3, scale-105, translate-x-4
+- **Transitions**: transition-all, duration-300, ease-in-out
+- **Arbitrary values**: w-[500px], text-[40px], bg-[#1a1a2e], gap-[30px], rounded-[20px]
+
+### Color Palette (auto-matched to tokens)
+Standard Tailwind colors: slate, gray, zinc, neutral, stone, red, orange, amber, yellow, lime, green, emerald, teal, cyan, sky, blue, indigo, violet, purple, fuchsia, pink, rose
+Shades: 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950
+Special: white, black, transparent, current
+
+Example: bg-blue-500, text-gray-900, border-emerald-200
+
+## Element Types
+- **box** = div container (flex/grid). This is your main building block.
+- **text** = text content. Set \`tag\` property: "h1", "h2", "h3", "h4", "h5", "h6", "p", "span", "a" (link)
+- **image** = img. Set \`src\` property. Use https://placehold.co/WxH for placeholders.
+- **button** = clickable button
+- **input** = text input field. Set \`placeholder\` property.
+- **textarea** = multi-line input
+- **select** = dropdown. Set \`options\` property as array: [{ value: "opt1", label: "Option 1" }]
+- **link** = shorthand for text with tag "a"
+
+## Properties Reference
+Text: content, tag, fontFamily, textAlign, textTransform, whiteSpace, fontStyle, textDecoration
+Visual: bg, color, opacity, bgImage, bgSize, bgPosition, bgRepeat, boxShadow, cursor
+Layout: display, direction, justify, align, wrap, gap, grow, shrink, alignSelf
+Grid: gridCols, gridRows, colSpan, rowSpan
+Sizing: minWidth, maxWidth, minHeight, maxHeight (use update_size for width/height mode)
+Border: borderRadius (number=uniform, object={topLeft,topRight,bottomRight,bottomLeft}), overflow
+Position: position (relative/absolute/fixed/sticky), zIndex
+Transform: rotate, scaleVal, translateX, translateY, skewX, skewY
+Animation: transition, duration, ease, blur, backdropBlur
+Custom: tailwindClasses (extra classes not parsed), className, htmlId
+
+## Efficient Workflows
+
+### batch_update is essential
+Always use batch_update for building sections. It's faster (single HTTP round-trip) and creates a single undo step.
+$prev refers to the previous operation's result ID. $0, $1, $N refer to the Nth operation (zero-indexed).
+
+Example — build a hero section in one call:
+\`\`\`json
+{ "operations": [
+  { "tool": "add_frame", "params": { "parent_id": "root-id", "element_type": "box", "classes": "flex flex-col items-center gap-6 py-24 px-8 text-center" } },
+  { "tool": "add_frame", "params": { "parent_id": "$prev", "element_type": "text", "properties": { "content": "Build faster", "tag": "h1" }, "classes": "text-6xl font-bold text-gray-900 tracking-tight max-w-4xl" } },
+  { "tool": "add_frame", "params": { "parent_id": "$0", "element_type": "text", "properties": { "content": "Ship products your users love." }, "classes": "text-xl text-gray-500 max-w-2xl" } },
+  { "tool": "add_frame", "params": { "parent_id": "$0", "element_type": "box", "classes": "flex gap-4" } },
+  { "tool": "add_frame", "params": { "parent_id": "$prev", "element_type": "box", "classes": "flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-lg font-medium" } },
+  { "tool": "add_frame", "params": { "parent_id": "$prev", "element_type": "text", "properties": { "content": "Get started" } } },
+  { "tool": "rename_frame", "params": { "id": "$0", "name": "Hero" } }
+]}
+\`\`\`
+
+### Name everything
+Use rename_frame or properties.name to give semantic names. This makes the tree readable:
+Hero, Nav, FeatureGrid, PricingCard, Footer — not Frame 1, Frame 2, Frame 3.
+
+### Sizing: update_size
+Width/height have modes: "default" (auto), "hug" (shrink to content), "fill" (stretch to parent), "fixed" (exact pixels).
+\`\`\`
+update_size({ id: "hero", dimension: "width", size: { mode: "fill" } })
+update_size({ id: "sidebar", dimension: "width", size: { mode: "fixed", value: 280 } })
+\`\`\`
+
+### Spacing: update_spacing
+Padding, margin, and inset are set via update_spacing with { top, right, bottom, left } in pixels:
+\`\`\`
+update_spacing({ id: "card", field: "padding", values: { top: 32, right: 32, bottom: 32, left: 32 } })
+\`\`\`
+Or use Tailwind classes: p-8 (= 32px all), px-6 py-4, pt-12, etc.
+
+## Responsive Design
+Caja uses a 3-breakpoint system: base (768–1280px), md (≤768px mobile), xl (≥1280px large).
+
+1. **Design base first** — this is the default desktop layout
+2. **Switch to mobile**: set_breakpoint({ breakpoint: "md" })
+3. **Adjust for small screens**: stack columns, reduce font sizes, simplify grids
+4. **Return to base**: set_breakpoint({ breakpoint: "base" })
+
+Common mobile overrides:
+- Grid cols: grid-cols-3 → grid-cols-1
+- Flex direction: flex-row → flex-col
+- Font size: text-5xl → text-3xl
+- Padding: p-16 → p-6
+- Hide decorative elements (update_frame with hidden: true)
+
+## Design Patterns
+
+### Section container pattern
+Most landing page sections follow: full-width wrapper → max-width inner → content
+\`\`\`
+box "flex flex-col items-center py-20 px-8"        ← section (full-width, vertical padding)
+  box "flex flex-col gap-8 w-full max-w-6xl"       ← inner container (constrained width)
+    text "Section Title" tag:h2                      ← content
+    box "grid grid-cols-3 gap-6"                     ← grid layout
+\`\`\`
+
+### Button pattern
+A button is a box with text inside:
+\`\`\`
+box "flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+  text "Click me"
+\`\`\`
+
+### Card pattern
+\`\`\`
+box "flex flex-col gap-4 p-6 bg-white rounded-xl border border-gray-200 shadow-sm"
+  text "Card Title" tag:h3 classes:"text-lg font-semibold text-gray-900"
+  text "Description" classes:"text-gray-500"
+\`\`\`
+
+## Verification
+Call screenshot() after major sections to verify the visual result. Fix issues immediately rather than building blindly.
 
 ## Available Tools (${31} total)
 Frame: add_frame, update_frame, update_spacing, update_size, remove_frame, move_frame, wrap_frame, duplicate_frame, rename_frame, select_frame

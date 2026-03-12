@@ -44,8 +44,17 @@ describe('sanitizeDVNum', () => {
     expect(sanitizeDVNum(dv, SPACING_LOOKUP)).toBe(dv)
   })
 
-  it('string → undefined (rejected)', () => {
-    expect(sanitizeDVNum('16', SPACING_LOOKUP)).toBeUndefined()
+  it('string number → coerced to DV with token match', () => {
+    expect(sanitizeDVNum('16', SPACING_LOOKUP)).toEqual({ mode: 'token', token: '4', value: 16 })
+  })
+
+  it('string "bold" → font-weight 700', () => {
+    const FONT_WEIGHT_LOOKUP = new Map([[700, '700']])
+    expect(sanitizeDVNum('bold', FONT_WEIGHT_LOOKUP)).toEqual({ mode: 'token', token: '700', value: 700 })
+  })
+
+  it('non-numeric string → undefined', () => {
+    expect(sanitizeDVNum('hello', SPACING_LOOKUP)).toBeUndefined()
   })
 
   it('boolean → undefined (rejected)', () => {

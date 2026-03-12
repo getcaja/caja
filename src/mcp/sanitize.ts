@@ -55,8 +55,30 @@ export const COLOR_LOOKUP = buildColorLookup()
 
 // --- Sanitization functions ---
 
+// Named font-weight → numeric value (Tailwind convention)
+const FONT_WEIGHT_NAMES: Record<string, number> = {
+  thin: 100, hairline: 100,
+  extralight: 200, ultralight: 200,
+  light: 300,
+  normal: 400, regular: 400,
+  medium: 500,
+  semibold: 600, demibold: 600,
+  bold: 700,
+  extrabold: 800, ultrabold: 800,
+  black: 900, heavy: 900,
+}
+
 export function sanitizeDVNum(raw: unknown, lookup?: Map<number, string>): DesignValue<number> | undefined {
   if (raw === undefined || raw === null) return undefined
+  // Coerce string → number (handles "16", "700", "bold", etc.)
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim().toLowerCase()
+    const named = FONT_WEIGHT_NAMES[trimmed]
+    if (named !== undefined) return sanitizeDVNum(named, lookup)
+    const num = Number(trimmed)
+    if (!isNaN(num)) return sanitizeDVNum(num, lookup)
+    return undefined
+  }
   if (typeof raw === 'number') {
     if (lookup) {
       const token = lookup.get(raw)

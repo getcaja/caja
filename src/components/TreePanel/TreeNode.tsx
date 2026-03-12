@@ -1,4 +1,4 @@
-import { useRef, useCallback, useMemo, memo } from 'react'
+import { useRef, useCallback, useMemo, memo, type ReactNode } from 'react'
 import { useDraggable, useDroppable, useDndContext } from '@dnd-kit/core'
 import type { Frame } from '../../types/frame'
 import { useFrameStore } from '../../store/frameStore'
@@ -22,14 +22,15 @@ interface TreeNodeProps {
 }
 
 export const TreeNode = memo(function TreeNode({ frame, depth, parentId = null, index = 0, isRoot = false, insideInstance = false }: TreeNodeProps) {
-  const selectedId = useFrameStore((s) => s.selectedId)
-  const selectedIds = useFrameStore((s) => s.selectedIds)
-  const collapsedIds = useFrameStore((s) => s.collapsedIds)
+  // Derived boolean selectors — avoid subscribing to full Set objects
+  const isSelected = useFrameStore(useCallback((s) => s.selectedId === frame.id || s.selectedIds.has(frame.id), [frame.id]))
+  const isMulti = useFrameStore((s) => s.selectedIds.size > 1)
+  const isCollapsed = useFrameStore(useCallback((s) => s.collapsedIds.has(frame.id), [frame.id]))
+  const isDragSelected = useFrameStore(useCallback((s) => s.selectedIds.has(frame.id), [frame.id]))
   const select = useFrameStore((s) => s.select)
   const hover = useFrameStore((s) => s.hover)
   const toggleCollapse = useFrameStore((s) => s.toggleCollapse)
   const renameFrame = useFrameStore((s) => s.renameFrame)
-
 
   const { activeId, overId, overPosition, multiDragCount } = useTreeDnd()
   const { active: dndActive } = useDndContext()
@@ -38,14 +39,10 @@ export const TreeNode = memo(function TreeNode({ frame, depth, parentId = null, 
   const ctxMenu = useContextMenu()
   const rowRef = useRef<HTMLDivElement>(null)
 
-  const isSelected = selectedId === frame.id || selectedIds.has(frame.id)
-  const isMulti = selectedIds.size > 1
-
   const isBox = frame.type === 'box'
   const hasChildren = isBox && frame.children.length > 0
-  const isCollapsed = collapsedIds.has(frame.id)
   const isDragging = dndActive !== null && (
-    String(dndActive.id) === frame.id || (multiDragCount > 1 && selectedIds.has(frame.id))
+    String(dndActive.id) === frame.id || (multiDragCount > 1 && isDragSelected)
   )
   const isOver = overId === frame.id && !isDragging
 
@@ -82,28 +79,34 @@ export const TreeNode = memo(function TreeNode({ frame, depth, parentId = null, 
     [setDraggableRef, setDroppableRef],
   )
 
-  // Determine icon
-  const boxIcon = frame.type === 'box'
-    ? (frame as BoxElement).display === 'grid' ? <LayoutGrid size={12} />
-    : (frame as BoxElement).display === 'flex' || (frame as BoxElement).display === 'inline-flex'
-      ? (frame as BoxElement).direction === 'row' ? <Icon iconNode={layoutGridMoveHorizontal} size={12} /> : <Icon iconNode={layoutGridMoveVertical} size={12} />
-    : <FrameIcon size={12} />
-    : null
+  // Determine icon (memoized to preserve TreeRow memo)
+  const display = isBox ? (frame as BoxElement).display : undefined
+  const direction = isBox ? (frame as BoxElement).direction : undefined
+  const tag = frame.type === 'text' && 'tag' in frame ? (frame as { tag?: string }).tag : undefined
 
-  const iconEl = isMaster ? <Diamond size={12} fill="currentColor" />
-    : isInstance ? <Diamond size={12} />
-    : isRoot && !editingComponentId ? <FileCodeCorner size={12} />
-    : frame.type === 'text' && 'tag' in frame && frame.tag === 'a' ? <Link size={12} />
-    : frame.type === 'text' ? <Type size={12} />
-    : frame.type === 'image' ? <ImageIcon size={12} />
-    : frame.type === 'button' ? <RectangleHorizontal size={12} />
-    : frame.type === 'input' ? <TextCursorInput size={12} />
-    : frame.type === 'textarea' ? <AlignLeft size={12} />
-    : frame.type === 'select' ? <ListCollapse size={12} />
-    : boxIcon!
+  const iconEl: ReactNode = useMemo(() => {
+    const boxIcon = isBox
+      ? display === 'grid' ? <LayoutGrid size={12} />
+      : display === 'flex' || display === 'inline-flex'
+        ? direction === 'row' ? <Icon iconNode={layoutGridMoveHorizontal} size={12} /> : <Icon iconNode={layoutGridMoveVertical} size={12} />
+      : <FrameIcon size={12} />
+      : null
 
-  // Icon color class
-  const iconColor = isMaster || isInstance ? 'text-accent-text' : ''
+    const el = isMaster ? <Diamond size={12} fill="currentColor" />
+      : isInstance ? <Diamond size={12} />
+      : isRoot && !editingComponentId ? <FileCodeCorner size={12} />
+      : frame.type === 'text' && tag === 'a' ? <Link size={12} />
+      : frame.type === 'text' ? <Type size={12} />
+      : frame.type === 'image' ? <ImageIcon size={12} />
+      : frame.type === 'button' ? <RectangleHorizontal size={12} />
+      : frame.type === 'input' ? <TextCursorInput size={12} />
+      : frame.type === 'textarea' ? <AlignLeft size={12} />
+      : frame.type === 'select' ? <ListCollapse size={12} />
+      : boxIcon!
+
+    const iconColor = isMaster || isInstance ? 'text-accent-text' : ''
+    return <span className={iconColor}>{el}</span>
+  }, [isBox, display, direction, frame.type, tag, isMaster, isInstance, isRoot, editingComponentId])
 
   // Chevron state
   const chevron: 'expanded' | 'collapsed' | 'leaf' | 'none' = !isBox ? 'none'
@@ -146,6 +149,7 @@ export const TreeNode = memo(function TreeNode({ frame, depth, parentId = null, 
 
   const handleMouseEnter = useCallback(() => hover(frame.id, 'tree'), [frame.id, hover])
   const handleMouseLeave = useCallback(() => hover(null, 'tree'), [hover])
+  const handleChevronClick = useCallback(() => toggleCollapse(frame.id), [frame.id, toggleCollapse])
 
   // Responsive override badges — show which breakpoints have overrides
   const activeBreakpoint = useFrameStore((s) => s.activeBreakpoint)
@@ -177,23 +181,27 @@ export const TreeNode = memo(function TreeNode({ frame, depth, parentId = null, 
     toggleHidden(frame.id)
   }, [frame.id, toggleHidden])
 
-  const trailing = isRoot ? null : (
+  const stopDblClick = useCallback((e: React.MouseEvent) => e.stopPropagation(), [])
+
+  const trailing = useMemo(() => isRoot ? null : (
     <button
       className={`c-icon-btn shrink-0 ${isHidden ? 'is-active' : ''} ${isHidden ? '' : 'opacity-0 group-hover:opacity-100'}`}
       style={{ width: 20, height: 20 }}
       onClick={handleToggleHidden}
-      onDoubleClick={(e) => e.stopPropagation()}
+      onDoubleClick={stopDblClick}
     >
       {isHidden ? <EyeOff size={12} /> : <Eye size={12} />}
     </button>
-  )
+  ), [isRoot, isHidden, handleToggleHidden, stopDblClick])
+
+  const dndProps = useMemo(() => ({ ...listeners, ...attributes }), [listeners, attributes])
 
   return (
     <>
       <TreeRow
         id={frame.id}
         depth={depth}
-        icon={<span className={iconColor}>{iconEl}</span>}
+        icon={iconEl}
         name={displayName}
         nameClassName={nameClass}
         isSelected={isSelected}
@@ -209,14 +217,14 @@ export const TreeNode = memo(function TreeNode({ frame, depth, parentId = null, 
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         chevron={chevron}
-        onChevronClick={() => toggleCollapse(frame.id)}
+        onChevronClick={handleChevronClick}
         badges={responsiveBadges}
         trailing={trailing}
         isDragging={isDragging}
         dropPosition={dropPos}
         className={rowClassName}
         rowRef={setNodeRef}
-        dndProps={{ ...listeners, ...attributes }}
+        dndProps={dndProps}
       />
 
       {/* Right-click context menu (fixed position) */}

@@ -43,7 +43,6 @@ export function TreePanel() {
   const root = useFrameStore((s) => s.root)
   const pages = useFrameStore((s) => s.pages)
   const activePageId = useFrameStore((s) => s.activePageId)
-  const selectedId = useFrameStore((s) => s.selectedId)
   const addChild = useFrameStore((s) => s.addChild)
   const addPage = useFrameStore((s) => s.addPage)
   const rawTab = useFrameStore((s) => s.treePanelTab)
@@ -207,18 +206,9 @@ export function TreePanel() {
   const activePage = pages.find((p) => p.id === activePageId)
 
   function getTargetParentId(): string {
-    if (!selectedId) return root.id
-    function find(frame: import('../../types/frame').Frame): import('../../types/frame').Frame | null {
-      if (frame.id === selectedId) return frame
-      if (frame.type === 'box') {
-        for (const child of frame.children) {
-          const f = find(child)
-          if (f) return f
-        }
-      }
-      return null
-    }
-    const selected = find(root)
+    const sid = useFrameStore.getState().selectedId
+    if (!sid) return root.id
+    const selected = findInTree(root, sid)
     if (selected?.type === 'box') return selected.id
     return root.id
   }
