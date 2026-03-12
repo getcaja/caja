@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "build:mcp": "mkdir -p /tmp/caja-mcp-build src-tauri/binaries && esbuild src/mcp/server.mjs --bundle --platform=node --format=esm --outfile=/tmp/caja-mcp-build/caja-mcp.mjs --external:node:* && deno compile --allow-net --allow-read --allow-env --output src-tauri/binaries/caja-mcp-$(rustc -vV | sed -n 's/host: //p') /tmp/caja-mcp-build/caja-mcp.mjs",
+    "build:mcp": "mkdir -p src-tauri/binaries && bun build src/mcp/server.mjs --compile --outfile src-tauri/binaries/caja-mcp-$(rustc -vV | sed -n 's/host: //p')",
     "lint": "eslint .",
     "preview": "vite preview",
     "tauri": "tauri",

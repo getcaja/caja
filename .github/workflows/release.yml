@@ -16,11 +16,11 @@ jobs:
           - platform: macos-latest
             args: '--target aarch64-apple-darwin'
             arch: aarch64
-            deno_target: aarch64-apple-darwin
+            bun_target: bun-darwin-arm64
           - platform: macos-latest
             args: '--target x86_64-apple-darwin'
             arch: x64
-            deno_target: x86_64-apple-darwin
+            bun_target: bun-darwin-x64
     runs-on: ${{ matrix.platform }}
 
     steps:
@@ -30,9 +30,9 @@ jobs:
         with:
           node-version: lts/*
 
-      - uses: denoland/setup-deno@v2
+      - uses: oven-sh/setup-bun@v2
         with:
-          deno-version: v2.x
+          bun-version: latest
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -42,9 +42,8 @@ jobs:
 
       - name: Build MCP server binary
         run: |
-          mkdir -p /tmp/caja-mcp-build src-tauri/binaries
-          npx esbuild src/mcp/server.mjs --bundle --platform=node --format=esm --outfile=/tmp/caja-mcp-build/caja-mcp.mjs --external:'node:*'
-          deno compile --allow-net --allow-read --allow-env --target ${{ matrix.deno_target }} --output src-tauri/binaries/caja-mcp-${{ matrix.deno_target }} /tmp/caja-mcp-build/caja-mcp.mjs
+          mkdir -p src-tauri/binaries
+          bun build src/mcp/server.mjs --compile --outfile src-tauri/binaries/caja-mcp-${{ matrix.arch == 'aarch64' && 'aarch64-apple-darwin' || 'x86_64-apple-darwin' }} --target ${{ matrix.bun_target }}
 
       - uses: tauri-apps/tauri-action@v0
         env:
