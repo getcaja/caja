@@ -451,12 +451,12 @@ fn setup_traffic_light_delegate(window: &tauri::WebviewWindow, app_handle: &AppH
 // ── MCP Install Command ──
 
 fn resolve_server_path() -> Result<String, String> {
-    // 1. Production: compiled binary inside .app
+    // 1. Production: sidecar binary next to main executable (Contents/MacOS/)
     if let Ok(exe) = std::env::current_exe() {
         if let Some(dir) = exe.parent() {
-            let path = dir.join("../Resources/resources/caja-mcp");
-            if let Ok(canonical) = path.canonicalize() {
-                return Ok(canonical.to_string_lossy().to_string());
+            let path = dir.join("caja-mcp");
+            if path.exists() {
+                return Ok(path.to_string_lossy().to_string());
             }
         }
     }

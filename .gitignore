@@ -14,7 +14,8 @@ dist-ssr
 
 # Tauri / Rust
 src-tauri/target
-src-tauri/resources/caja-mcp
+src-tauri/binaries/caja-mcp-*
+src-tauri/resources/
 
 # Editor directories and files
 .vscode/*

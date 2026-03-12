@@ -40,14 +40,11 @@ jobs:
 
       - run: npm install
 
-      - name: Build and sign MCP server binary
-        env:
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+      - name: Build MCP server binary
         run: |
-          mkdir -p /tmp/caja-mcp-build
+          mkdir -p /tmp/caja-mcp-build src-tauri/binaries
           npx esbuild src/mcp/server.mjs --bundle --platform=node --format=esm --outfile=/tmp/caja-mcp-build/caja-mcp.mjs --external:'node:*'
-          deno compile --allow-net --allow-read --allow-env --target ${{ matrix.deno_target }} --output src-tauri/resources/caja-mcp /tmp/caja-mcp-build/caja-mcp.mjs
-          codesign --force --options runtime --sign "$APPLE_SIGNING_IDENTITY" --timestamp src-tauri/resources/caja-mcp
+          deno compile --allow-net --allow-read --allow-env --target ${{ matrix.deno_target }} --output src-tauri/binaries/caja-mcp-${{ matrix.deno_target }} /tmp/caja-mcp-build/caja-mcp.mjs
 
       - uses: tauri-apps/tauri-action@v0
         env:

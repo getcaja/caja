@@ -80,7 +80,7 @@ export function McpModal({ open, onOpenChange }: McpModalProps) {
     )
   }, [open])
 
-  const config = getSnippet(activeClient, serverPath ?? '/Applications/Caja.app/Contents/Resources/resources/caja-mcp')
+  const config = getSnippet(activeClient, serverPath ?? '/Applications/Caja.app/Contents/MacOS/caja-mcp')
 
   const handleInstall = useCallback(async () => {
     const result = await installMcp(activeClient)
