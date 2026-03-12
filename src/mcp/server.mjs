@@ -8,7 +8,7 @@
 //   "mcpServers": {
 //     "caja": {
 //       "command": "node",
-//       "args": ["/path/to/caja/src/mcp/server.mjs"]
+//       "args": ["/Applications/Caja.app/Contents/Resources/resources/caja-mcp.mjs"]
 //     }
 //   }
 // }

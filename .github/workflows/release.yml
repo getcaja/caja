@@ -16,9 +16,11 @@ jobs:
           - platform: macos-latest
             args: '--target aarch64-apple-darwin'
             arch: aarch64
+            deno_target: aarch64-apple-darwin
           - platform: macos-latest
             args: '--target x86_64-apple-darwin'
             arch: x64
+            deno_target: x86_64-apple-darwin
     runs-on: ${{ matrix.platform }}
 
     steps:
@@ -28,11 +30,21 @@ jobs:
         with:
           node-version: lts/*
 
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-darwin,x86_64-apple-darwin
 
       - run: npm install
+
+      - name: Build MCP server binary
+        run: |
+          mkdir -p /tmp/caja-mcp-build
+          npx esbuild src/mcp/server.mjs --bundle --platform=node --format=esm --outfile=/tmp/caja-mcp-build/caja-mcp.mjs --external:'node:*'
+          deno compile --allow-net --allow-read --allow-env --target ${{ matrix.deno_target }} --output src-tauri/resources/caja-mcp /tmp/caja-mcp-build/caja-mcp.mjs
 
       - uses: tauri-apps/tauri-action@v0
         env:

@@ -1,12 +1,13 @@
 {
   "name": "caja",
   "private": true,
-  "version": "0.1.29",
+  "version": "0.1.30",
   "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:mcp": "mkdir -p /tmp/caja-mcp-build && esbuild src/mcp/server.mjs --bundle --platform=node --format=esm --outfile=/tmp/caja-mcp-build/caja-mcp.mjs --external:node:* && deno compile --allow-net --allow-read --allow-env --output src-tauri/resources/caja-mcp /tmp/caja-mcp-build/caja-mcp.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "tauri": "tauri",

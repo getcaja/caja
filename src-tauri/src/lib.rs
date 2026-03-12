@@ -451,20 +451,32 @@ fn setup_traffic_light_delegate(window: &tauri::WebviewWindow, app_handle: &AppH
 // ── MCP Install Command ──
 
 fn resolve_server_path() -> Result<String, String> {
-    let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
-    let dev_path = cwd.join("../src/mcp/server.mjs");
-    if let Ok(canonical) = dev_path.canonicalize() {
-        return Ok(canonical.to_string_lossy().to_string());
-    }
+    // 1. Production: compiled binary inside .app
     if let Ok(exe) = std::env::current_exe() {
         if let Some(dir) = exe.parent() {
-            let path = dir.join("../Resources/src/mcp/server.mjs");
+            let path = dir.join("../Resources/resources/caja-mcp");
             if let Ok(canonical) = path.canonicalize() {
                 return Ok(canonical.to_string_lossy().to_string());
             }
         }
     }
-    Err("Could not locate server.mjs".into())
+    // 2. Dev: source file relative to cwd (requires node)
+    let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
+    let dev_path = cwd.join("../src/mcp/server.mjs");
+    if let Ok(canonical) = dev_path.canonicalize() {
+        return Ok(canonical.to_string_lossy().to_string());
+    }
+    Err("Could not locate caja-mcp".into())
+}
+
+/// Build the JSON entry for MCP config.
+/// If server_path ends in `.mjs`, use node + args. Otherwise it's a compiled binary.
+fn mcp_entry(server_path: &str) -> serde_json::Value {
+    if server_path.ends_with(".mjs") {
+        serde_json::json!({ "command": "node", "args": [server_path] })
+    } else {
+        serde_json::json!({ "command": server_path })
+    }
 }
 
 /// Merge caja entry into a JSON config file.
@@ -494,10 +506,7 @@ fn install_json_config(config_path: &std::path::Path, servers_key: &str, server_
         .or_insert(serde_json::json!({}));
     servers.as_object_mut().unwrap().insert(
         "caja".into(),
-        serde_json::json!({
-            "command": "node",
-            "args": [server_path]
-        }),
+        mcp_entry(server_path),
     );
 
     let json = serde_json::to_string_pretty(&config).map_err(|e| e.to_string())?;
@@ -521,10 +530,17 @@ fn install_codex_toml(config_path: &std::path::Path, server_path: &str) -> Resul
         return Ok("already".into());
     }
 
-    let block = format!(
-        "\n[mcp_servers.caja]\ncommand = \"node\"\nargs = [\"{}\"]\n",
-        server_path.replace('\\', "\\\\").replace('"', "\\\"")
-    );
+    let block = if server_path.ends_with(".mjs") {
+        format!(
+            "\n[mcp_servers.caja]\ncommand = \"node\"\nargs = [\"{}\"]\n",
+            server_path.replace('\\', "\\\\").replace('"', "\\\"")
+        )
+    } else {
+        format!(
+            "\n[mcp_servers.caja]\ncommand = \"{}\"\n",
+            server_path.replace('\\', "\\\\").replace('"', "\\\"")
+        )
+    };
 
     let mut new_content = content;
     if !new_content.is_empty() && !new_content.ends_with('\n') {

@@ -20,18 +20,19 @@ const CLIENTS: { id: Client; label: string }[] = [
 ]
 
 function getSnippet(client: Client, serverPath: string): string {
+  const isNode = serverPath.endsWith('.mjs')
+  const entry = isNode
+    ? { command: 'node', args: [serverPath] }
+    : { command: serverPath }
+
   if (client === 'codex') {
-    return `[mcp_servers.caja]\ncommand = "node"\nargs = ["${serverPath}"]`
+    if (isNode) {
+      return `[mcp_servers.caja]\ncommand = "node"\nargs = ["${serverPath}"]`
+    }
+    return `[mcp_servers.caja]\ncommand = "${serverPath}"`
   }
   const key = client === 'vscode' ? 'servers' : 'mcpServers'
-  return JSON.stringify({
-    [key]: {
-      caja: {
-        command: 'node',
-        args: [serverPath],
-      },
-    },
-  }, null, 2)
+  return JSON.stringify({ [key]: { caja: entry } }, null, 2)
 }
 
 function CopyButton({ text }: { text: string }) {
@@ -79,7 +80,7 @@ export function McpModal({ open, onOpenChange }: McpModalProps) {
     )
   }, [open])
 
-  const config = getSnippet(activeClient, serverPath ?? '/path/to/caja/src/mcp/server.mjs')
+  const config = getSnippet(activeClient, serverPath ?? '/Applications/Caja.app/Contents/Resources/resources/caja-mcp')
 
   const handleInstall = useCallback(async () => {
     const result = await installMcp(activeClient)
