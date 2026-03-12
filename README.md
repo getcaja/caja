@@ -1,12 +1,15 @@
 <p align="center">
-  <img src="caja-symbol.png" alt="Caja" width="80" />
+  <img src="caja-icon.png" alt="Caja" width="80" />
 </p>
 
 <h1 align="center">Caja</h1>
 
 <p align="center">
-  <strong>Design Is Code</strong><br>
-  What you design is what you ship.
+  <strong>Design, and done.</strong>
+</p>
+
+<p align="center">
+  A design tool built for the AI era. Your browser engine is the canvas,<br>no middleware, no translation layers. Design by hand, delegate to AI, or both.
 </p>
 
 <p align="center">
@@ -20,16 +23,22 @@
 
 ![Caja Screenshot](Screenshot.png)
 
-## What is Caja?
+## No Middle Man
 
-A visual editor where what you design is what you ship. Build layouts on canvas, let AI build for you, or both — no translation layer, the tech you already use.
+Your designs are the implementation. Real HTML, real CSS, real Tailwind. No rebuild, no translation layer. Every property on the canvas maps to a real Tailwind class, and every class maps back to the canvas.
 
-- **WYDIWYG** — What You Design Is What You Get. No translation layer, no compiled output — pure HTML + CSS
-- **AI-native** — Built for AI agents from day one. Claude, Cursor, or any MCP client builds layouts directly on canvas
-- **Bidirectional Tailwind** — Design visually, get real tokens. `gap-4` not `gap-[16px]`. Paste classes back, keep designing
-- **Components** — Save any frame as a reusable component with named slots. Export `.cjl` libraries to share across projects
-- **Native macOS app** — Fast, offline, local file storage. Built with Tauri
-- **Multi-page** — Create full sites with multiple pages and routing
+## Built for You and Agents
+
+Design by hand or connect Claude, Cursor, or any AI agent via MCP. Every change appears on canvas in real time. You and agents are both first-class citizens.
+
+## Features
+
+- **Tailwind CSS v4** — Design visually, get real tokens. `gap-4` not `gap-[16px]`
+- **Components** — Save any frame as a reusable component with named slots. Export `.cjl` libraries
+- **Responsive** — Large-first design with three breakpoints (LG, MD, SM)
+- **Multi-page** — Multiple pages with routing and link navigation
+- **Export** — JSX, HTML snippets, or full pages with embedded Tailwind CSS
+- **Native macOS** — Fast, offline, local files. Built with Tauri
 
 ## Getting Started
 
@@ -50,20 +59,27 @@ npm run tauri:dev
 
 ### AI Integration
 
-Caja includes a built-in MCP server with 33+ tools. Click the plug icon in the title bar or run:
+Caja includes a built-in MCP server with 31 tools. Add it to Claude Code, Cursor, or any MCP client:
 
-```
-Ask Claude: "Design a landing page in Caja"
+```json
+{
+  "mcpServers": {
+    "caja": {
+      "command": "/Applications/Caja.app/Contents/Resources/caja-mcp"
+    }
+  }
+}
 ```
 
-Create frames, style with Tailwind, manage pages, export patterns, and more — all from your AI agent of choice.
+Build layouts, style with Tailwind, manage pages, handle responsive overrides, and more — all from your agent.
 
 ## Tech Stack
 
-- **Frontend:** React 19, TypeScript, Tailwind CSS v4
-- **Desktop:** Tauri v2 (Rust)
-- **UI:** Radix primitives, Lucide icons
-- **AI:** Model Context Protocol (MCP)
+- [Tauri v2](https://v2.tauri.app/) — Native macOS app
+- [React 19](https://react.dev/) — UI framework
+- [Tailwind CSS v4](https://tailwindcss.com/) — Utility-first CSS
+- [Radix UI](https://www.radix-ui.com/) — Accessible UI primitives
+- [MCP](https://modelcontextprotocol.io/) — AI agent integration
 
 ## License
 

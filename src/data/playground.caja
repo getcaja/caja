@@ -3425,7 +3425,7 @@
                     "hidden": false,
                     "className": "",
                     "htmlId": "",
-                    "content": "Same engine, no translation.",
+                    "content": "No middle man.",
                     "color": {
                       "mode": "token",
                       "token": "black",
@@ -3695,7 +3695,7 @@
                     "hidden": false,
                     "className": "",
                     "htmlId": "",
-                    "content": "What if the rendering engine you design in was the same one your users see? Most tools use their own canvas, then you rebuild for the browser. Caja skips that step. The canvas IS the browser. Real HTML, real CSS, simplified by Tailwind. What you see is what you get.",
+                    "content": "Your designs are the implementation. Real HTML, real CSS, real Tailwind. No rebuild, no translation layer. What you see is what you get.",
                     "color": {
                       "mode": "token",
                       "token": "black",
@@ -4947,7 +4947,7 @@
                     "hidden": false,
                     "className": "",
                     "htmlId": "",
-                    "content": "Built for you. Built for agents.",
+                    "content": "Built for you and agents.",
                     "color": {
                       "mode": "token",
                       "token": "black",
@@ -5217,7 +5217,7 @@
                     "hidden": false,
                     "className": "",
                     "htmlId": "",
-                    "content": "Caja has a powerful built-in MCP server. Connect Claude, Cursor, or any AI agent and let it build pages, add components, and edit layouts while you watch. Every change appears on the canvas in real time. Accept it, undo it, refine it. You're always in control. Design by hand, delegate to an agent, or mix both. Both are first-class.",
+                    "content": "Design by hand or connect Claude, Cursor, or any AI agent via MCP. Every change appears on canvas in real time. You and agents are both first-class citizens.",
                     "color": {
                       "mode": "token",
                       "token": "black",
