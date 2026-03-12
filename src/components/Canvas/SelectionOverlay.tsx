@@ -454,18 +454,21 @@ export function SelectionOverlay() {
       el.style.outlineOffset = '-2px'
       hoverElRef.current = el
 
-      // Child hints (dotted outlines on direct children)
-      if (!hoverChildRulesRef.current) {
-        hoverChildRulesRef.current = doc.createElement('style')
-        doc.head.appendChild(hoverChildRulesRef.current)
+      // Child hints (dotted outlines on direct children) — only for canvas hover.
+      // Tree hover skips this: user already sees structure in the tree, and the CSS
+      // injection + recalc across 100+ elements is the main source of hover lag.
+      if (!h.isTreeHover) {
+        if (!hoverChildRulesRef.current) {
+          hoverChildRulesRef.current = doc.createElement('style')
+          doc.head.appendChild(hoverChildRulesRef.current)
+        }
+        const excParts: string[] = []
+        if (s.selectedId) excParts.push(`:not([data-frame-id="${s.selectedId}"])`)
+        for (const id of s.selectedIds) {
+          if (id !== s.selectedId) excParts.push(`:not([data-frame-id="${id}"])`)
+        }
+        hoverChildRulesRef.current.textContent = `[data-frame-id="${effectiveId}"] > [data-frame-id]${excParts.join('')} { outline: 1px dotted var(--color-accent) !important; outline-offset: -1px; }`
       }
-      // Build exclusion for selected elements so hover child-hints don't mask selection
-      const excParts: string[] = []
-      if (s.selectedId) excParts.push(`:not([data-frame-id="${s.selectedId}"])`)
-      for (const id of s.selectedIds) {
-        if (id !== s.selectedId) excParts.push(`:not([data-frame-id="${id}"])`)
-      }
-      hoverChildRulesRef.current.textContent = `[data-frame-id="${effectiveId}"] > [data-frame-id]${excParts.join('')} { outline: 1px dotted var(--color-accent) !important; outline-offset: -1px; }`
     }
     // Subscribe to hover store (fires only on hover changes, not on every main store update)
     const unsubHover = useHoverStore.subscribe(applyHover)

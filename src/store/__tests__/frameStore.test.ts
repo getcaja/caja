@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
 // Mock localStorage before importing the store (it subscribes at module level)
 const storage = new Map<string, string>()
@@ -1684,38 +1684,56 @@ describe('resolveToContextLevel', () => {
 describe('hover with isTreeHover (hoverStore)', () => {
   const hoverState = () => useHoverStore.getState()
 
-  beforeEach(() => { useHoverStore.setState(useHoverStore.getInitialState()) })
+  // hover() is rAF-throttled — flush pending callbacks between calls
+  const flushRAF = () => { vi.advanceTimersByTime(16) }
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+    // rAF polyfill for Node — maps to setTimeout so fake timers can flush it
+    globalThis.requestAnimationFrame = ((cb: FrameRequestCallback) => setTimeout(cb, 0)) as typeof requestAnimationFrame
+    globalThis.cancelAnimationFrame = ((id: number) => clearTimeout(id)) as typeof cancelAnimationFrame
+    useHoverStore.setState(useHoverStore.getInitialState())
+  })
+  afterEach(() => { vi.useRealTimers() })
 
   it('hover without source sets isTreeHover to false', () => {
     hoverState().hover('some-id')
+    flushRAF()
     expect(hoverState().hoveredId).toBe('some-id')
     expect(hoverState().isTreeHover).toBe(false)
   })
 
   it('hover with tree source sets isTreeHover to true', () => {
     hoverState().hover('some-id', 'tree')
+    flushRAF()
     expect(hoverState().hoveredId).toBe('some-id')
     expect(hoverState().isTreeHover).toBe(true)
   })
 
   it('canvas hover after tree hover resets isTreeHover', () => {
     hoverState().hover('tree-id', 'tree')
+    flushRAF()
     expect(hoverState().isTreeHover).toBe(true)
     hoverState().hover('canvas-id')
+    flushRAF()
     expect(hoverState().isTreeHover).toBe(false)
     expect(hoverState().hoveredId).toBe('canvas-id')
   })
 
   it('clearing hover with tree source preserves isTreeHover', () => {
     hoverState().hover(null, 'tree')
+    flushRAF()
     expect(hoverState().hoveredId).toBeNull()
     expect(hoverState().isTreeHover).toBe(true)
   })
 
-  it('clearing hover without source resets isTreeHover', () => {
-    hoverState().hover('id', 'tree')
-    hoverState().hover(null)
-    expect(hoverState().hoveredId).toBeNull()
+  it('rapid hovers are coalesced to last value', () => {
+    hoverState().hover('a', 'tree')
+    hoverState().hover('b', 'tree')
+    hoverState().hover('c')
+    flushRAF()
+    // Only the last hover should have been applied
+    expect(hoverState().hoveredId).toBe('c')
     expect(hoverState().isTreeHover).toBe(false)
   })
 })
